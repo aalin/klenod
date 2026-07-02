@@ -13,3 +13,10 @@ gem "minitest", "~> 6.0"
 gem "standard", "~> 1.3"
 
 gem "async", "~> 2.42"
+
+gem "syntax_tree", "~> 6.3"
+gem "syntax_tree-haml", "~> 4.0"
+
+gem "tsort", "~> 0.2.0"
+
+gem "mayu-css", "~> 0.1.5"
