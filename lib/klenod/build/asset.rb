@@ -2,6 +2,6 @@
 
 module Klenod
   module Build
-    Asset = Data.define(:logical_name, :content_hash, :output_path, :source_path, :bytes, :metadata)
+    Asset = Data.define(:logical_name, :content_hash, :output_path, :source_path, :bytes, :content_type, :metadata)
   end
 end

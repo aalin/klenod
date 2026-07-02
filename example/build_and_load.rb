@@ -19,3 +19,9 @@ exports = mod.const_get(:Exports)
 puts "Loaded bundle #{output}"
 puts "Title: #{exports::TITLE}"
 puts "Message: #{exports::MESSAGE}"
+puts "Title class: #{exports::TITLE_CLASS}"
+puts "Assets:"
+
+bundle.assets.each_key do |output_path|
+  puts "  - #{output_path}"
+end

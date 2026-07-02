@@ -37,7 +37,7 @@ module Klenod
             [entrypoint, load(entrypoint).id.to_s]
           end
 
-        Runtime::Bundle.new(loaded_entrypoints, runtime_module_specs, [])
+        Runtime::Bundle.new(loaded_entrypoints, runtime_module_specs, runtime_asset_specs)
       end
 
       def resolve_dependency(dependency)
@@ -102,12 +102,13 @@ module Klenod
         return cached if cached&.source_hash == source_hash && !force && !reevaluate
 
         transform = transform(module_id, source)
-        transformed_hash = Digest::SHA256.hexdigest(transform.code)
         resolved_dependencies = transform.dependencies.map { |dependency| resolve_dependency(dependency) }
 
         dependency_records = resolved_dependencies.to_h do |resolved_dependency|
           [resolved_dependency.dependency.id, load_module(resolved_dependency.module_id)]
         end
+        transform = finalize(module_id, transform, resolved_dependencies, dependency_records)
+        transformed_hash = Digest::SHA256.hexdigest(transform.code)
 
         imports =
           resolved_dependencies.to_h do |resolved_dependency|
@@ -202,7 +203,7 @@ module Klenod
             record.resolved_dependencies.to_h do |resolved_dependency|
               [
                 resolved_dependency.dependency.id,
-                resolved_dependency.module_id.to_s
+                runtime_import_spec(resolved_dependency, @records.fetch(resolved_dependency.module_id))
               ]
             end
 
@@ -218,6 +219,28 @@ module Klenod
             )
           ]
         end
+      end
+
+      def runtime_asset_specs
+        @records.values.flat_map(&:assets).to_h do |asset|
+          [
+            asset.output_path,
+            Runtime::AssetSpec.new(
+              asset.logical_name,
+              asset.content_hash,
+              asset.output_path,
+              asset.content_type,
+              asset.bytes,
+              asset.metadata
+            )
+          ]
+        end
+      end
+
+      def runtime_import_spec(resolved_dependency, record)
+        value = plugin_import_value(resolved_dependency, record)
+
+        Runtime::ImportSpec.new(record.id.to_s, value)
       end
 
       def resolver_extensions(plugins)
@@ -251,13 +274,26 @@ module Klenod
         end
       end
 
+      def finalize(module_id, result, resolved_dependencies, dependency_records)
+        @plugins.reduce(result) do |current, plugin|
+          plugin.finalize(module_id, current, resolved_dependencies, dependency_records, self)
+        end
+      end
+
       def import_value(resolved_dependency, record)
+        value = plugin_import_value(resolved_dependency, record)
+        return value unless value.nil?
+
+        @mods.fetch(record.id).const_get(:Exports)
+      end
+
+      def plugin_import_value(resolved_dependency, record)
         @plugins.each do |plugin|
           value = plugin.import_value(resolved_dependency, record, self)
           return value unless value.nil?
         end
 
-        @mods.fetch(record.id).const_get(:Exports)
+        nil
       end
     end
   end

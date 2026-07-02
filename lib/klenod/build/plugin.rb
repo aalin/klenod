@@ -15,6 +15,10 @@ module Klenod
         TransformResult.identity(code)
       end
 
+      def finalize(_module_id, result, _resolved_dependencies, _dependency_records, _context)
+        result
+      end
+
       def import_value(_resolved_dependency, _record, _context)
         nil
       end

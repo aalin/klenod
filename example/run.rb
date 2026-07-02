@@ -11,6 +11,7 @@ exports = mod.const_get(:Exports)
 puts "Loaded #{record.id}"
 puts "Title: #{exports::TITLE}"
 puts "Message: #{exports::MESSAGE}"
+puts "Title class: #{exports::TITLE_CLASS}"
 puts "Graph modules:"
 
 context.graph.records.each_key do |module_id|

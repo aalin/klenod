@@ -5,6 +5,11 @@ module Klenod
     ModuleSpec =
       Data.define(:id, :source, :imports, :source_map, :version, :constant_name)
 
+    ImportSpec = Data.define(:target_id, :value)
+
+    AssetSpec =
+      Data.define(:logical_name, :content_hash, :output_path, :content_type, :bytes, :metadata)
+
     class Bundle
       attr_reader :entrypoints, :modules, :assets
 
@@ -57,7 +62,15 @@ module Klenod
         spec = @modules.fetch(id)
         imports =
           spec.imports.to_h do |dependency_id, target_id|
-            [dependency_id, instantiate(target_id).const_get(:Exports)]
+            import_spec =
+              if target_id.is_a?(ImportSpec)
+                target_id
+              else
+                ImportSpec.new(target_id, nil)
+              end
+
+            value = import_spec.value || instantiate(import_spec.target_id).const_get(:Exports)
+            [dependency_id, value]
           end
 
         @mods[id] =

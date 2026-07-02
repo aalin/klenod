@@ -24,12 +24,14 @@ context.on_update do |event|
     exports = context.graph.mods.fetch(record.id).const_get(:Exports)
     puts "  title: #{exports::TITLE}"
     puts "  message: #{exports::MESSAGE}"
+    puts "  title class: #{exports::TITLE_CLASS}"
   end
 end
 
 exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 puts "Watching #{source_dir}"
 puts "Initial title: #{exports::TITLE}"
+puts "Initial title class: #{exports::TITLE_CLASS}"
 puts "Edit example/src/shared.rb to see an update."
 
 begin
