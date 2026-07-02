@@ -31,8 +31,12 @@ module Klenod
       end
 
       def bundle(entrypoints:)
-        loaded_entrypoints = entrypoints.map { |entrypoint| load(entrypoint).id }
-        Runtime::Bundle.new(loaded_entrypoints, @records, [])
+        loaded_entrypoints =
+          entrypoints.to_h do |entrypoint|
+            [entrypoint, load(entrypoint).id.to_s]
+          end
+
+        Runtime::Bundle.new(loaded_entrypoints, runtime_module_specs, [])
       end
 
       def resolve_dependency(dependency)
@@ -109,6 +113,30 @@ module Klenod
       end
 
       private
+
+      def runtime_module_specs
+        @records.to_h do |module_id, record|
+          imports =
+            record.resolved_dependencies.to_h do |resolved_dependency|
+              [
+                resolved_dependency.dependency.id,
+                resolved_dependency.module_id.to_s
+              ]
+            end
+
+          [
+            module_id.to_s,
+            Runtime::ModuleSpec.new(
+              module_id.to_s,
+              record.transformed_source,
+              imports,
+              record.source_map,
+              record.version,
+              Runtime::Mod.constant_name_for(module_id.to_s)
+            )
+          ]
+        end
+      end
 
       def resolver_extensions(plugins)
         image_extensions =

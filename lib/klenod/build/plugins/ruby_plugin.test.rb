@@ -22,6 +22,18 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
     assert_includes(result.code, "__klenod_import__(\"pages/page.rb:dependency:0\")")
   end
 
+  def test_rewrites_imports_with_whitespace
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        "Dep = import  (  \"../dep\"  )\n",
+        nil
+      )
+
+    assert_equal("../dep", result.dependencies.first.specifier)
+    assert_equal("Dep = __klenod_import__(\"pages/page.rb:dependency:0\")\n", result.code)
+  end
+
   def test_rejects_dynamic_imports
     assert_raises(Klenod::Build::DynamicImportError) do
       RubyPlugin.new.transform(

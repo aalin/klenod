@@ -3,6 +3,7 @@
 require "minitest/autorun"
 
 require_relative "mod"
+require_relative "bundle"
 
 class Klenod::Runtime::Mod::Test < Minitest::Test
   def test_evaluates_exports_with_import_helper
@@ -26,5 +27,38 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_equal(3, copy.version)
     assert_equal(mod.constant_name, copy.constant_name)
     assert_equal(1, copy.const_get(:Exports)::VALUE)
+  end
+
+  def test_bundle_load_instantiates_imported_modules
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"entry" => "entry.rb"},
+        {
+          "dep.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "dep.rb",
+              "VALUE = 41",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("dep.rb")
+            ),
+          "entry.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "Dep = __klenod_import__(\"dep\")\nVALUE = Dep::VALUE + 1",
+              {"dep" => "dep.rb"},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("entry.rb")
+            )
+        },
+        []
+      )
+
+    mod = bundle.load("entry")
+
+    assert_equal(42, mod.const_get(:Exports)::VALUE)
+    assert_equal(41, bundle.mod("dep.rb").const_get(:Exports)::VALUE)
   end
 end

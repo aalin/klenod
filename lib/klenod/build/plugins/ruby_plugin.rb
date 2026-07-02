@@ -12,6 +12,7 @@ module Klenod
     module Plugins
       class RubyPlugin < Plugin
         ImportCall = Data.define(:specifier, :location, :dynamic)
+        IMPORT_RE = /\Aimport\s*\(/
 
         def transform(module_id, code, _context)
           return TransformResult.identity(code) unless module_id.extname == ".rb"
@@ -43,11 +44,16 @@ module Klenod
         def import_calls(node)
           calls = []
           walk(node) do |child|
-            next unless child.instance_of?(::SyntaxTree::CallNode)
-            next unless child.instance_variable_get(:@receiver).nil?
-            next unless child.instance_variable_get(:@message)&.value == "import"
+            if child.instance_of?(::SyntaxTree::CallNode)
+              next unless child.instance_variable_get(:@receiver).nil?
+              next unless child.instance_variable_get(:@message)&.value == "import"
 
-            calls << build_import_call(child)
+              calls << build_import_call(child)
+            elsif child.instance_of?(::SyntaxTree::Command)
+              next unless child.instance_variable_get(:@message)&.value == "import"
+
+              calls << build_import_command(child)
+            end
           end
           calls
         end
@@ -55,7 +61,17 @@ module Klenod
         def build_import_call(node)
           arguments = node.instance_variable_get(:@arguments)
           parts = arguments&.instance_variable_get(:@arguments)&.instance_variable_get(:@parts) || []
-          first = parts.first
+          build_import_from_parts(node, parts)
+        end
+
+        def build_import_command(node)
+          arguments = node.instance_variable_get(:@arguments)
+          parts = arguments&.instance_variable_get(:@parts) || []
+          build_import_from_parts(node, parts)
+        end
+
+        def build_import_from_parts(node, parts)
+          first = unwrap_paren(parts.first)
           string_parts = first&.instance_variable_get(:@parts)
           literal =
             (parts.length == 1) &&
@@ -70,6 +86,14 @@ module Klenod
           )
         end
 
+        def unwrap_paren(node)
+          return node unless node.instance_of?(::SyntaxTree::Paren)
+
+          statements = node.instance_variable_get(:@contents)
+          body = statements&.instance_variable_get(:@body) || []
+          (body.length == 1) ? body.first : node
+        end
+
         def rewrite_imports(code, calls, dependencies)
           calls
             .zip(dependencies)
@@ -78,6 +102,11 @@ module Klenod
               next rewritten if call.dynamic
 
               location = call.location
+              original = code[location.start_char...location.end_char]
+              unless original.match?(IMPORT_RE)
+                raise DynamicImportError, "Could not safely rewrite import at #{location.start_line}:#{location.start_column}"
+              end
+
               rewritten[location.start_char...location.end_char] =
                 "__klenod_import__(#{dependency.id.inspect})"
             end

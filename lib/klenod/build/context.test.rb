@@ -4,6 +4,7 @@ require "fileutils"
 require "minitest/autorun"
 require "tmpdir"
 
+require_relative "../runtime"
 require_relative "context"
 
 class Klenod::Build::Context::Test < Minitest::Test
@@ -24,15 +25,18 @@ class Klenod::Build::Context::Test < Minitest::Test
 
   def test_build_writes_marshal_bundle
     Dir.mktmpdir do |dir|
-      File.write("#{dir}/entry.rb", "VALUE = 1\n")
+      File.write("#{dir}/dep.rb", "VALUE = 41\n")
+      File.write("#{dir}/entry.rb", "Dep = import(\"dep\")\nVALUE = Dep::VALUE + 1\n")
       output = "#{dir}/bundle.mpk"
 
       context = Klenod::Build::Context.new(source_dir: dir)
       bundle = context.build(entrypoints: ["entry"], output: output)
-      loaded = Marshal.load(File.binread(output))
+      loaded = Klenod::Runtime.load_bundle(output)
+      mod = loaded.load("entry")
 
       assert_equal(bundle.entrypoints, loaded.entrypoints)
-      assert_equal(1, loaded.modules.length)
+      assert_equal(2, loaded.modules.length)
+      assert_equal(42, mod.const_get(:Exports)::VALUE)
     end
   end
 end
