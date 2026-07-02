@@ -3,9 +3,9 @@
 module Klenod
   module Build
     TransformResult =
-      Data.define(:code, :dependencies, :source_map, :assets, :metadata) do
+      Data.define(:code, :dependencies, :source_map, :assets, :watched_patterns, :metadata) do
         def self.identity(code)
-          new(code, [], nil, [], {})
+          new(code, [], nil, [], [], {})
         end
       end
   end

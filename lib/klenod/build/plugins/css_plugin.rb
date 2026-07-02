@@ -40,6 +40,7 @@ module Klenod
             dependencies,
             nil,
             [],
+            [],
             {
               css_result: result,
               css_classes: result.classes.transform_keys(&:to_s)

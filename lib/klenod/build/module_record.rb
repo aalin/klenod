@@ -13,6 +13,7 @@ module Klenod
         :transformed_source,
         :source_map,
         :assets,
+        :watched_patterns,
         :version,
         :status
       )

@@ -1,0 +1,134 @@
+# frozen_string_literal: true
+
+require "fileutils"
+require "minitest/autorun"
+require "tmpdir"
+
+require_relative "../context"
+
+class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
+  ModuleId = Klenod::Build::ModuleId
+
+  def test_haml_records_companion_watched_patterns
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("pages/page.haml")
+
+      assert_equal(
+        ["pages/page.css", "pages/page.intl.*.toml"],
+        record.watched_patterns.map(&:glob)
+      )
+      assert_equal({}, context.graph.mods.fetch(record.id).const_get(:Exports)::Styles)
+      assert_equal({}, context.graph.mods.fetch(record.id).const_get(:Exports)::Translations)
+    end
+  end
+
+  def test_adding_companion_css_reloads_haml_and_imports_styles
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      css_path = "#{dir}/pages/page.css"
+      File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      haml_record = context.load("pages/page.haml")
+
+      assert_equal({}, context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles)
+
+      File.write(css_path, ".title { color: red; }\n")
+      result = context.invalidate_paths([css_path])
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+
+      assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_match(/title/, styles.fetch("title"))
+      assert(context.graph.records.key?(ModuleId.new("pages/page.css", nil)))
+    end
+  end
+
+  def test_editing_companion_intl_reloads_haml
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      intl_path = "#{dir}/pages/page.intl.en-US.toml"
+      File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      haml_record = context.load("pages/page.haml")
+
+      File.write(intl_path, "title = \"Hello\"\n")
+      result = context.invalidate_paths([intl_path])
+
+      assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(1, context.graph.records.fetch(haml_record.id).version)
+    end
+  end
+
+  def test_editing_companion_css_reloads_haml_and_updates_styles
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      css_path = "#{dir}/pages/page.css"
+      File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
+      File.write(css_path, ".title { color: red; }\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      haml_record = context.load("pages/page.haml")
+      old_asset_path = context.graph.records.fetch(ModuleId.new("pages/page.css", nil)).assets.first.output_path
+
+      File.write(css_path, ".title { color: blue; }\n")
+      result = context.invalidate_paths([css_path])
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      css_record = context.graph.records.fetch(ModuleId.new("pages/page.css", nil))
+
+      assert_equal(["pages/page.css", "pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_match(/title/, styles.fetch("title"))
+      refute_equal(old_asset_path, css_record.assets.first.output_path)
+      assert_includes(css_record.assets.first.bytes, "color: #00f")
+    end
+  end
+
+  def test_adding_editing_and_removing_companion_intl_reloads_haml
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      intl_path = "#{dir}/pages/page.intl.en-US.toml"
+      File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      haml_record = context.load("pages/page.haml")
+
+      File.write(intl_path, "title = \"Hello\"\n")
+      add_result = context.invalidate_paths([intl_path])
+      File.write(intl_path, "title = \"Hi\"\n")
+      edit_result = context.invalidate_paths([intl_path])
+      File.delete(intl_path)
+      remove_result = context.invalidate_paths([], removed_paths: [intl_path])
+
+      assert_equal(["pages/page.haml"], add_result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["pages/page.haml"], edit_result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["pages/page.haml"], remove_result.reloaded_module_ids.map(&:to_s))
+      assert_equal(3, context.graph.records.fetch(haml_record.id).version)
+    end
+  end
+
+  def test_removing_companion_css_reloads_haml_back_to_empty_styles
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      css_path = "#{dir}/pages/page.css"
+      File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
+      File.write(css_path, ".title { color: red; }\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      haml_record = context.load("pages/page.haml")
+
+      assert_match(/title/, context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles.fetch("title"))
+
+      File.delete(css_path)
+      result = context.invalidate_paths([], removed_paths: [css_path])
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+
+      assert_equal(["pages/page.css"], result.removed_module_ids.map(&:to_s))
+      assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal({}, styles)
+    end
+  end
+end

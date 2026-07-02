@@ -10,6 +10,7 @@ require_relative "module_id"
 require_relative "module_record"
 require_relative "resolver"
 require_relative "transform_result"
+require_relative "watched_pattern"
 
 module Klenod
   module Build
@@ -56,7 +57,9 @@ module Klenod
       def invalidate_paths(changed_paths, removed_paths: [])
         changed_module_ids = module_ids_for_paths(changed_paths)
         removed_module_ids = module_ids_for_paths(removed_paths)
-        affected_dependents = dependent_closure(changed_module_ids + removed_module_ids)
+        pattern_owner_ids = module_ids_for_watched_paths(changed_paths + removed_paths)
+        reload_module_ids = (changed_module_ids + pattern_owner_ids).uniq
+        affected_dependents = dependent_closure(reload_module_ids + removed_module_ids)
         errors = []
 
         removed_module_ids.each do |module_id|
@@ -65,7 +68,7 @@ module Klenod
         end
 
         reloaded_module_ids =
-          changed_module_ids.filter_map do |module_id|
+          reload_module_ids.filter_map do |module_id|
             load_module(module_id, force: true)
             module_id
           rescue => e
@@ -76,6 +79,7 @@ module Klenod
         reevaluated_module_ids =
           affected_dependents.filter_map do |module_id|
             next if removed_module_ids.include?(module_id)
+            next if reload_module_ids.include?(module_id)
 
             load_module(module_id, reevaluate: true)
             module_id
@@ -136,6 +140,7 @@ module Klenod
             transform.code,
             transform.source_map,
             transform.assets,
+            transform.watched_patterns,
             mod.version,
             :loaded
           )
@@ -162,6 +167,19 @@ module Klenod
           .compact
           .select { |module_id| @records.key?(module_id) }
           .uniq
+      end
+
+      def module_ids_for_watched_paths(paths)
+        relative_paths =
+          paths.filter_map do |path|
+            Pathname.new(path).expand_path.relative_path_from(@resolver.source_dir).to_s
+          rescue ArgumentError
+            nil
+          end
+
+        @records.filter_map do |module_id, record|
+          module_id if relative_paths.any? { |path| record.watched_patterns.any? { |pattern| pattern.match?(path) } }
+        end
       end
 
       def module_id_for_path(path)
@@ -269,6 +287,7 @@ module Klenod
             current.dependencies + result.dependencies,
             result.source_map || current.source_map,
             current.assets + result.assets,
+            current.watched_patterns + result.watched_patterns,
             current.metadata.merge(result.metadata)
           )
         end

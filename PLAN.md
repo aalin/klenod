@@ -21,24 +21,24 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 
 ## Next Milestone: Haml Companion Dependencies
 
-- [ ] Add a `WatchedPattern` or `DependencyPattern` value object:
-  - [ ] Store importer module id.
-  - [ ] Store source-root-relative glob.
-  - [ ] Store pattern kind, such as `:companion_style` or `:companion_intl`.
-- [ ] Extend `ModuleRecord` with watched patterns.
-- [ ] Extend graph invalidation:
-  - [ ] Match changed files against loaded module ids.
-  - [ ] Match added, changed, and removed files against watched patterns.
-  - [ ] Reload or reevaluate the owning module when a watched pattern matches.
-- [ ] Add Haml companion discovery:
-  - [ ] For `page.haml`, implicitly watch and import `page.css`.
-  - [ ] For `page.haml`, implicitly watch `page.intl.*.toml`.
-  - [ ] Return `{}` when optional companion files do not exist.
-- [ ] Add tests for companion invalidation:
-  - [ ] Adding `page.css` after `page.haml` is loaded updates the component.
-  - [ ] Editing `page.css` updates the component.
-  - [ ] Removing `page.css` updates the component back to empty styles.
-  - [ ] Adding, editing, and removing `page.intl.en-US.toml` invalidates `page.haml`.
+- [x] Add a `WatchedPattern` or `DependencyPattern` value object:
+  - [x] Store importer module id.
+  - [x] Store source-root-relative glob.
+  - [x] Store pattern kind, such as `:companion_style` or `:companion_intl`.
+- [x] Extend `ModuleRecord` with watched patterns.
+- [x] Extend graph invalidation:
+  - [x] Match changed files against loaded module ids.
+  - [x] Match added, changed, and removed files against watched patterns.
+  - [x] Reload or reevaluate the owning module when a watched pattern matches.
+- [x] Add Haml companion discovery:
+  - [x] For `page.haml`, implicitly watch and import `page.css`.
+  - [x] For `page.haml`, implicitly watch `page.intl.*.toml`.
+  - [x] Return `{}` when optional companion files do not exist.
+- [x] Add tests for companion invalidation:
+  - [x] Adding `page.css` after `page.haml` is loaded updates the component.
+  - [x] Editing `page.css` updates the component.
+  - [x] Removing `page.css` updates the component back to empty styles.
+  - [x] Adding, editing, and removing `page.intl.en-US.toml` invalidates `page.haml`.
 
 ## Haml Support
 

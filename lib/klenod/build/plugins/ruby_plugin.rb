@@ -36,7 +36,7 @@ module Klenod
                 .with(id: "#{module_id}:dependency:#{index}")
             end
 
-          TransformResult.new(rewrite_imports(code, calls, dependencies), dependencies, nil, [], {})
+          TransformResult.new(rewrite_imports(code, calls, dependencies), dependencies, nil, [], [], {})
         end
 
         private

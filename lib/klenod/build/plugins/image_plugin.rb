@@ -30,7 +30,7 @@ module Klenod
               {type: :image}
             )
 
-          TransformResult.new("", [], nil, [asset], {asset_bytes: code})
+          TransformResult.new("", [], nil, [asset], [], {asset_bytes: code})
         end
 
         def import_value(_resolved_dependency, record, _context)
