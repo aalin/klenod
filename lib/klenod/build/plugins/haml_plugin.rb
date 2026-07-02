@@ -5,6 +5,7 @@ require_relative "../dependency"
 require_relative "../module_id"
 require_relative "../transform_result"
 require_relative "../watched_pattern"
+require_relative "intl_plugin"
 
 module Klenod
   module Build
@@ -77,7 +78,7 @@ module Klenod
             dependencies << dependency
             styles_source = "__klenod_import__(#{dependency.id.inspect})"
           end
-          translations_source = "{}.freeze"
+          translations_source = deep_freeze_source(translations_for(context, module_id))
           component_class_name = component_class_name(module_id)
           haml_result =
             @transformer.call(
@@ -101,6 +102,22 @@ module Klenod
         end
 
         private
+
+        def translations_for(context, module_id)
+          intl_plugin = context.plugins.find { |plugin| plugin.respond_to?(:translations_for) }
+          intl_plugin ? intl_plugin.translations_for(context, module_id) : {}
+        end
+
+        def deep_freeze_source(value)
+          case value
+          when Hash
+            "{#{value.map { |key, child| "#{key.inspect} => #{deep_freeze_source(child)}" }.join(", ")}}.freeze"
+          when Array
+            "[#{value.map { |child| deep_freeze_source(child) }.join(", ")}].freeze"
+          else
+            value.inspect
+          end
+        end
 
         def component_class_name(module_id)
           basename = File.basename(module_id.path, ".haml")

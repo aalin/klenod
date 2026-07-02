@@ -115,6 +115,41 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_haml_loads_companion_intl_files_into_translations
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
+      File.write("#{dir}/pages/page.intl.en-US.toml", "title = \"Hello\"\n[count]\nvalue = 1\n")
+      File.write("#{dir}/pages/page.intl.sv-SE.toml", "title = \"Hej\"\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("pages/page.haml")
+      translations = context.graph.mods.fetch(record.id).const_get(:Exports)::Translations
+
+      assert_equal("Hello", translations.fetch("en-US").fetch("title"))
+      assert_equal(1, translations.fetch("en-US").fetch("count").fetch("value"))
+      assert_equal("Hej", translations.fetch("sv-SE").fetch("title"))
+      assert(translations.frozen?)
+      assert(translations.fetch("en-US").frozen?)
+    end
+  end
+
+  def test_haml_runtime_bundle_preserves_translations
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
+      File.write("#{dir}/pages/page.intl.en-US.toml", "title = \"Hello\"\n")
+      output = "#{dir}/bundle.mpk"
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.build(entrypoints: ["pages/page.haml"], output: output)
+      mod = Klenod::Runtime.load_bundle(output).load("pages/page.haml")
+      translations = mod.const_get(:Exports)::Translations
+
+      assert_equal("Hello", translations.fetch("en-US").fetch("title"))
+    end
+  end
+
   def test_adding_companion_css_reloads_haml_and_imports_styles
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -196,6 +231,41 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       assert_equal(["pages/page.haml"], edit_result.reloaded_module_ids.map(&:to_s))
       assert_equal(["pages/page.haml"], remove_result.reloaded_module_ids.map(&:to_s))
       assert_equal(3, context.graph.records.fetch(haml_record.id).version)
+    end
+  end
+
+  def test_editing_companion_intl_updates_translations
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      intl_path = "#{dir}/pages/page.intl.en-US.toml"
+      File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
+      File.write(intl_path, "title = \"Hello\"\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      haml_record = context.load("pages/page.haml")
+
+      File.write(intl_path, "title = \"Hi\"\n")
+      context.invalidate_paths([intl_path])
+      translations = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Translations
+
+      assert_equal("Hi", translations.fetch("en-US").fetch("title"))
+    end
+  end
+
+  def test_malformed_companion_intl_reports_load_error
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      intl_path = "#{dir}/pages/page.intl.en-US.toml"
+      File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.load("pages/page.haml")
+
+      File.write(intl_path, "title = \"Hello\"\ninvalid =\n")
+      result = context.invalidate_paths([intl_path])
+
+      assert_equal(["pages/page.haml"], result.errors.map { |module_id, _error| module_id.to_s })
+      assert_kind_of(TomlRB::ParseError, result.errors.first.last)
     end
   end
 

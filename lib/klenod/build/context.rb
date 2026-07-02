@@ -2,6 +2,7 @@
 
 require_relative "graph"
 require_relative "plugins/ruby_plugin"
+require_relative "plugins/intl_plugin"
 require_relative "plugins/haml_plugin"
 require_relative "plugins/css_plugin"
 require_relative "plugins/image_plugin"
@@ -11,6 +12,7 @@ module Klenod
     class Context
       DEFAULT_PLUGINS = [
         Plugins::RubyPlugin.new,
+        Plugins::IntlPlugin.new,
         Plugins::HamlPlugin.new,
         Plugins::CssPlugin.new,
         Plugins::ImagePlugin.new

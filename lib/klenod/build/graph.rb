@@ -18,6 +18,7 @@ module Klenod
       include TSort
 
       attr_reader :records, :mods
+      attr_reader :plugins
 
       def initialize(source_dir:, plugins:)
         @resolver = Resolver.new(source_dir: source_dir, extensions: resolver_extensions(plugins))

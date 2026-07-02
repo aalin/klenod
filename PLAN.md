@@ -57,12 +57,12 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 
 ## Translation Files
 
-- [ ] Choose and add a TOML parser dependency.
-- [ ] Add a TOML or intl plugin.
-- [ ] Parse files like `page.intl.en-US.toml`.
-- [ ] Expose translations grouped by locale.
-- [ ] Serialize translations into runtime bundles without build dependencies.
-- [ ] Add tests for malformed TOML and locale extraction.
+- [x] Choose and add a TOML parser dependency.
+- [x] Add a TOML or intl plugin.
+- [x] Parse files like `page.intl.en-US.toml`.
+- [x] Expose translations grouped by locale.
+- [x] Serialize translations into runtime bundles without build dependencies.
+- [x] Add tests for malformed TOML and locale extraction.
 
 ## Asset And CSS Follow-Ups
 
