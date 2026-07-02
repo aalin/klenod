@@ -5,6 +5,7 @@ require "tsort"
 
 require_relative "../runtime/mod"
 require_relative "../runtime/bundle"
+require_relative "invalidation_result"
 require_relative "module_id"
 require_relative "module_record"
 require_relative "resolver"
@@ -52,13 +53,53 @@ module Klenod
         @resolver.absolute_path(module_id)
       end
 
-      def load_module(module_id)
+      def invalidate_paths(changed_paths, removed_paths: [])
+        changed_module_ids = module_ids_for_paths(changed_paths)
+        removed_module_ids = module_ids_for_paths(removed_paths)
+        affected_dependents = dependent_closure(changed_module_ids + removed_module_ids)
+        errors = []
+
+        removed_module_ids.each do |module_id|
+          @records.delete(module_id)
+          @mods.delete(module_id)
+        end
+
+        reloaded_module_ids =
+          changed_module_ids.filter_map do |module_id|
+            load_module(module_id, force: true)
+            module_id
+          rescue => e
+            errors << [module_id, e]
+            nil
+          end
+
+        reevaluated_module_ids =
+          affected_dependents.filter_map do |module_id|
+            next if removed_module_ids.include?(module_id)
+
+            load_module(module_id, reevaluate: true)
+            module_id
+          rescue => e
+            errors << [module_id, e]
+            nil
+          end
+
+        InvalidationResult.new(
+          changed_module_ids.freeze,
+          removed_module_ids.freeze,
+          reloaded_module_ids.freeze,
+          reevaluated_module_ids.freeze,
+          errors.freeze
+        )
+      end
+
+      def load_module(module_id, force: false, reevaluate: false)
         absolute_path = @resolver.absolute_path(module_id)
         source = load_source(module_id, absolute_path)
         source_hash = Digest::SHA256.hexdigest(source)
         cached = @records[module_id]
 
-        return cached if cached&.source_hash == source_hash
+        return cached if cached&.source_hash == source_hash && !force && !reevaluate
 
         transform = transform(module_id, source)
         transformed_hash = Digest::SHA256.hexdigest(transform.code)
@@ -113,6 +154,47 @@ module Klenod
       end
 
       private
+
+      def module_ids_for_paths(paths)
+        paths
+          .map { |path| module_id_for_path(path) }
+          .compact
+          .select { |module_id| @records.key?(module_id) }
+          .uniq
+      end
+
+      def module_id_for_path(path)
+        absolute_path = Pathname.new(path).expand_path
+        relative = absolute_path.relative_path_from(@resolver.source_dir).to_s
+
+        @records.each_key.find { |module_id| module_id.path == relative }
+      rescue ArgumentError
+        nil
+      end
+
+      def dependent_closure(module_ids)
+        seen = Set.new
+        queue = module_ids.dup
+
+        until queue.empty?
+          module_id = queue.shift
+
+          direct_dependents(module_id).each do |dependent_id|
+            next if seen.include?(dependent_id)
+
+            seen << dependent_id
+            queue << dependent_id
+          end
+        end
+
+        seen.to_a
+      end
+
+      def direct_dependents(module_id)
+        @records.filter_map do |candidate_id, record|
+          candidate_id if record.resolved_dependencies.any? { |dependency| dependency.module_id == module_id }
+        end
+      end
 
       def runtime_module_specs
         @records.to_h do |module_id, record|

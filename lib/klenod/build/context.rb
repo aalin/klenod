@@ -36,6 +36,10 @@ module Klenod
         bundle
       end
 
+      def invalidate_paths(changed_paths, removed_paths: [])
+        @graph.invalidate_paths(changed_paths, removed_paths: removed_paths)
+      end
+
       def on_update(&block)
         @update_handlers << block
       end

@@ -4,7 +4,7 @@ require "listen"
 
 module Klenod
   module Dev
-    UpdateEvent = Data.define(:changed_paths, :removed_paths, :graph_version)
+    UpdateEvent = Data.define(:changed_paths, :removed_paths, :graph_version, :result)
 
     class Watcher
       def initialize(source_dir:, context:)
@@ -17,7 +17,11 @@ module Klenod
         @listener =
           Listen.to(@source_dir) do |modified, added, removed|
             @graph_version += 1
-            @context.emit_update(UpdateEvent.new((modified + added).freeze, removed.freeze, @graph_version))
+            changed_paths = (modified + added).freeze
+            removed_paths = removed.freeze
+            result = @context.invalidate_paths(changed_paths, removed_paths: removed_paths)
+
+            @context.emit_update(UpdateEvent.new(changed_paths, removed_paths, @graph_version, result))
           end
         @listener.start
       end
