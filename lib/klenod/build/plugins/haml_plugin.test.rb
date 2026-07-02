@@ -9,6 +9,13 @@ require_relative "../context"
 class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   ModuleId = Klenod::Build::ModuleId
 
+  module FakeFramework
+    class ComponentBase
+    end
+
+    DescriptorFactory = Object.new
+  end
+
   def test_haml_records_companion_watched_patterns
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -23,6 +30,27 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       )
       assert_equal({}, context.graph.mods.fetch(record.id).const_get(:Exports)::Styles)
       assert_equal({}, context.graph.mods.fetch(record.id).const_get(:Exports)::Translations)
+    end
+  end
+
+  def test_haml_generates_configured_component_class
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/hello-world.haml", "%h1 Hello\n")
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
+          descriptor_factory: "#{self.class.name}::FakeFramework::DescriptorFactory"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/hello-world.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_operator(exports::Default, :<, FakeFramework::ComponentBase)
+      assert_same(FakeFramework::DescriptorFactory, exports::Default.new.render)
+      assert_equal(exports::Default::Styles, exports::Styles)
+      assert_equal(exports::Default::Translations, exports::Translations)
     end
   end
 

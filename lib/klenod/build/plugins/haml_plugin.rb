@@ -10,6 +10,14 @@ module Klenod
   module Build
     module Plugins
       class HamlPlugin < Plugin
+        DEFAULT_COMPONENT_BASE_CLASS = "Object"
+        DEFAULT_DESCRIPTOR_FACTORY = "Object"
+
+        def initialize(component_base_class: DEFAULT_COMPONENT_BASE_CLASS, descriptor_factory: DEFAULT_DESCRIPTOR_FACTORY)
+          @component_base_class = component_base_class
+          @descriptor_factory = descriptor_factory
+        end
+
         def transform(module_id, _code, context)
           return super unless module_id.extname == ".haml"
 
@@ -33,8 +41,19 @@ module Klenod
 
           TransformResult.new(
             <<~RUBY,
+              class #{component_class_name(module_id)} < #{@component_base_class}
+                Translations = {}.freeze
+                DescriptorFactory = #{@descriptor_factory}
+
+                def render
+                  DescriptorFactory
+                end
+              end
+
+              Default = #{component_class_name(module_id)}
               Styles = #{styles_source}
-              Translations = {}.freeze
+              Default.const_set(:Styles, Styles)
+              Translations = Default::Translations
             RUBY
             dependencies,
             nil,
@@ -45,6 +64,18 @@ module Klenod
         end
 
         private
+
+        def component_class_name(module_id)
+          basename = File.basename(module_id.path, ".haml")
+          classified =
+            basename
+              .split(/[^A-Za-z0-9]+/)
+              .reject(&:empty?)
+              .map { |part| part[0].upcase + part[1..] }
+              .join
+
+          classified.empty? ? "Component" : classified
+        end
 
         def companion_patterns(module_id)
           base = module_id.path.delete_suffix(".haml")
