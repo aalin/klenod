@@ -10,15 +10,54 @@ module Klenod
   module Build
     module Plugins
       class HamlPlugin < Plugin
+        HamlTransformResult = Data.define(:code, :source_map, :metadata)
+
         DEFAULT_COMPONENT_BASE_CLASS = "Object"
         DEFAULT_DESCRIPTOR_FACTORY = "Object"
 
-        def initialize(component_base_class: DEFAULT_COMPONENT_BASE_CLASS, descriptor_factory: DEFAULT_DESCRIPTOR_FACTORY)
-          @component_base_class = component_base_class
-          @descriptor_factory = descriptor_factory
+        class DefaultTransformer
+          def call(
+            source:,
+            module_id:,
+            component_class_name:,
+            component_base_class:,
+            descriptor_factory:,
+            styles_source:,
+            translations_source:
+          )
+            HamlTransformResult.new(
+              <<~RUBY,
+                class #{component_class_name} < #{component_base_class}
+                  Translations = #{translations_source}
+                  DescriptorFactory = #{descriptor_factory}
+
+                  def render
+                    DescriptorFactory
+                  end
+                end
+
+                Default = #{component_class_name}
+                Styles = #{styles_source}
+                Default.const_set(:Styles, Styles)
+                Translations = Default::Translations
+              RUBY
+              nil,
+              {source: source, module_id: module_id}
+            )
+          end
         end
 
-        def transform(module_id, _code, context)
+        def initialize(
+          component_base_class: DEFAULT_COMPONENT_BASE_CLASS,
+          descriptor_factory: DEFAULT_DESCRIPTOR_FACTORY,
+          transformer: DefaultTransformer.new
+        )
+          @component_base_class = component_base_class
+          @descriptor_factory = descriptor_factory
+          @transformer = transformer
+        end
+
+        def transform(module_id, code, context)
           return super unless module_id.extname == ".haml"
 
           companion_css = companion_path(module_id, ".css")
@@ -38,28 +77,26 @@ module Klenod
             dependencies << dependency
             styles_source = "__klenod_import__(#{dependency.id.inspect})"
           end
+          translations_source = "{}.freeze"
+          component_class_name = component_class_name(module_id)
+          haml_result =
+            @transformer.call(
+              source: code,
+              module_id: module_id,
+              component_class_name: component_class_name,
+              component_base_class: @component_base_class,
+              descriptor_factory: @descriptor_factory,
+              styles_source: styles_source,
+              translations_source: translations_source
+            )
 
           TransformResult.new(
-            <<~RUBY,
-              class #{component_class_name(module_id)} < #{@component_base_class}
-                Translations = {}.freeze
-                DescriptorFactory = #{@descriptor_factory}
-
-                def render
-                  DescriptorFactory
-                end
-              end
-
-              Default = #{component_class_name(module_id)}
-              Styles = #{styles_source}
-              Default.const_set(:Styles, Styles)
-              Translations = Default::Translations
-            RUBY
+            haml_result.code,
             dependencies,
-            nil,
+            haml_result.source_map,
             [],
             companion_patterns(module_id),
-            {}
+            haml_result.metadata
           )
         end
 

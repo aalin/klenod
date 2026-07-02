@@ -16,6 +16,38 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     DescriptorFactory = Object.new
   end
 
+  class CapturingTransformer
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def call(**kwargs)
+      @calls << kwargs
+
+      Klenod::Build::Plugins::HamlPlugin::HamlTransformResult.new(
+        <<~RUBY,
+          class #{kwargs.fetch(:component_class_name)} < #{kwargs.fetch(:component_base_class)}
+            DescriptorFactory = #{kwargs.fetch(:descriptor_factory)}
+            Translations = #{kwargs.fetch(:translations_source)}
+
+            def render
+              [:custom, DescriptorFactory]
+            end
+          end
+
+          Default = #{kwargs.fetch(:component_class_name)}
+          Styles = #{kwargs.fetch(:styles_source)}
+          Default.const_set(:Styles, Styles)
+          Translations = Default::Translations
+        RUBY
+        :source_map,
+        {custom: true}
+      )
+    end
+  end
+
   def test_haml_records_companion_watched_patterns
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -51,6 +83,35 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       assert_same(FakeFramework::DescriptorFactory, exports::Default.new.render)
       assert_equal(exports::Default::Styles, exports::Styles)
       assert_equal(exports::Default::Translations, exports::Translations)
+    end
+  end
+
+  def test_haml_uses_custom_transformer_contract
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/custom.haml", "%h1 Custom\n")
+
+      transformer = CapturingTransformer.new
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
+          descriptor_factory: "#{self.class.name}::FakeFramework::DescriptorFactory",
+          transformer: transformer
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/custom.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+      call = transformer.calls.fetch(0)
+
+      assert_equal("%h1 Custom\n", call.fetch(:source))
+      assert_equal(ModuleId.new("pages/custom.haml", nil), call.fetch(:module_id))
+      assert_equal("Custom", call.fetch(:component_class_name))
+      assert_equal("#{self.class.name}::FakeFramework::ComponentBase", call.fetch(:component_base_class))
+      assert_equal("#{self.class.name}::FakeFramework::DescriptorFactory", call.fetch(:descriptor_factory))
+      assert_equal("{}.freeze", call.fetch(:styles_source))
+      assert_equal("{}.freeze", call.fetch(:translations_source))
+      assert_equal([:custom, FakeFramework::DescriptorFactory], exports::Default.new.render)
+      assert_equal(:source_map, record.source_map)
     end
   end
 
