@@ -3,7 +3,12 @@
 require "bundler/gem_tasks"
 require "minitest/test_task"
 
-Minitest::TestTask.create
+ENV["RUBOCOP_CACHE_ROOT"] ||= File.expand_path("tmp/rubocop_cache", __dir__)
+
+Minitest::TestTask.create do |test|
+  test.libs << "lib"
+  test.test_globs = ["lib/**/*.test.rb"]
+end
 
 require "standard/rake"
 

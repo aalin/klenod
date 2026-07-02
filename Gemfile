@@ -20,3 +20,7 @@ gem "syntax_tree-haml", "~> 4.0"
 gem "tsort", "~> 0.2.0"
 
 gem "mayu-css", "~> 0.1.5"
+
+gem "listen", "~> 3.10"
+
+gem "image_size", "~> 3.6"
