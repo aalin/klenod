@@ -56,6 +56,29 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, asset_path)
       assert_equal(asset.bytes, File.binread(written_path))
       assert_equal("text/css", asset.content_type)
+      assert_equal(context.asset(asset_path), context.assets.fetch(asset_path))
+      assert_equal([asset.logical_name], context.assets_for("styles/home.css").map(&:logical_name))
+      assert_includes(context.each_asset.to_a.map(&:output_path), asset_path)
+    end
+  end
+
+  def test_invalidate_paths_reports_asset_changes
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      css_path = "#{dir}/styles/home.css"
+      File.write(css_path, ".title { color: red; }\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.load("styles/home.css")
+      old_asset_path = context.assets_for("styles/home.css").first.output_path
+
+      File.write(css_path, ".title { color: blue; }\n")
+      result = context.invalidate_paths([css_path])
+      new_asset_path = context.assets_for("styles/home.css").first.output_path
+
+      assert_equal([new_asset_path], result.added_assets)
+      assert_equal([old_asset_path], result.removed_assets)
+      assert_equal([], result.changed_assets)
     end
   end
 

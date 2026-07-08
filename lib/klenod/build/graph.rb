@@ -42,6 +42,24 @@ module Klenod
         Runtime::Bundle.new(loaded_entrypoints, runtime_module_specs, runtime_asset_specs)
       end
 
+      def assets
+        runtime_asset_specs
+      end
+
+      def asset(output_path)
+        assets.fetch(output_path)
+      end
+
+      def assets_for(logical_name)
+        assets.values.select { |asset| asset.logical_name == logical_name.to_s }
+      end
+
+      def each_asset(&block)
+        return enum_for(:each_asset) unless block
+
+        assets.each_value(&block)
+      end
+
       def resolve_dependency(dependency)
         @plugins.each do |plugin|
           resolved = plugin.resolve(dependency, self)
@@ -56,6 +74,7 @@ module Klenod
       end
 
       def invalidate_paths(changed_paths, removed_paths: [])
+        previous_assets = runtime_asset_specs
         changed_module_ids = module_ids_for_paths(changed_paths)
         removed_module_ids = module_ids_for_paths(removed_paths)
         pattern_owner_ids = module_ids_for_watched_paths(changed_paths + removed_paths)
@@ -88,12 +107,16 @@ module Klenod
             errors << [module_id, e]
             nil
           end
+        asset_changes = diff_assets(previous_assets, runtime_asset_specs)
 
         InvalidationResult.new(
           changed_module_ids.freeze,
           removed_module_ids.freeze,
           reloaded_module_ids.freeze,
           reevaluated_module_ids.freeze,
+          asset_changes.fetch(:added).freeze,
+          asset_changes.fetch(:changed).freeze,
+          asset_changes.fetch(:removed).freeze,
           errors.freeze
         )
       end
@@ -254,6 +277,21 @@ module Klenod
             )
           ]
         end
+      end
+
+      def diff_assets(previous_assets, current_assets)
+        previous_paths = previous_assets.keys
+        current_paths = current_assets.keys
+        shared_paths = previous_paths & current_paths
+
+        {
+          added: current_paths - previous_paths,
+          changed:
+            shared_paths.select do |path|
+              previous_assets.fetch(path).content_hash != current_assets.fetch(path).content_hash
+            end,
+          removed: previous_paths - current_paths
+        }
       end
 
       def runtime_import_spec(resolved_dependency, record)

@@ -44,6 +44,20 @@ module Klenod
         @mods.fetch(id.to_s)
       end
 
+      def asset(output_path)
+        @assets.fetch(output_path)
+      end
+
+      def assets_for(logical_name)
+        @assets.values.select { |asset| asset.logical_name == logical_name.to_s }
+      end
+
+      def each_asset(&block)
+        return enum_for(:each_asset) unless block
+
+        @assets.each_value(&block)
+      end
+
       def marshal_dump
         [@entrypoints, @modules, @assets]
       end

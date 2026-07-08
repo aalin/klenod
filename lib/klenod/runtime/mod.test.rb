@@ -61,4 +61,22 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_equal(42, mod.const_get(:Exports)::VALUE)
     assert_equal(41, bundle.mod("dep.rb").const_get(:Exports)::VALUE)
   end
+
+  def test_bundle_asset_helpers
+    asset =
+      Klenod::Runtime::AssetSpec.new(
+        "styles/home.css",
+        "abc123",
+        "/assets/home.abc123.css",
+        "text/css",
+        ".title{}",
+        {}
+      )
+    bundle = Klenod::Runtime::Bundle.new({}, {}, {asset.output_path => asset})
+
+    assert_same(asset, bundle.asset("/assets/home.abc123.css"))
+    assert_equal([asset], bundle.assets_for("styles/home.css"))
+    assert_equal([asset], bundle.each_asset.to_a)
+    assert_raises(KeyError) { bundle.asset("/assets/missing.css") }
+  end
 end

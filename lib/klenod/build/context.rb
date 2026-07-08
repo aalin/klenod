@@ -47,6 +47,22 @@ module Klenod
         @graph.invalidate_paths(changed_paths, removed_paths: removed_paths)
       end
 
+      def assets
+        @graph.assets
+      end
+
+      def asset(output_path)
+        @graph.asset(output_path)
+      end
+
+      def assets_for(logical_name)
+        @graph.assets_for(logical_name)
+      end
+
+      def each_asset(&block)
+        @graph.each_asset(&block)
+      end
+
       def on_update(&block)
         @update_handlers << block
       end
