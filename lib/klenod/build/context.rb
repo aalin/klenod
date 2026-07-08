@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "fileutils"
+require "pathname"
+
 require_relative "graph"
 require_relative "plugins/ruby_plugin"
 require_relative "plugins/intl_plugin"
@@ -32,8 +35,10 @@ module Klenod
         @graph.load(specifier)
       end
 
-      def build(entrypoints:, output:)
+      def build(entrypoints:, output:, assets_dir: nil)
         bundle = @graph.bundle(entrypoints: entrypoints)
+        write_assets(bundle, assets_dir) if assets_dir
+        FileUtils.mkdir_p(File.dirname(output))
         File.binwrite(output, Marshal.dump(bundle))
         bundle
       end
@@ -48,6 +53,20 @@ module Klenod
 
       def emit_update(event)
         @update_handlers.each { |handler| handler.call(event) }
+      end
+
+      private
+
+      def write_assets(bundle, assets_dir)
+        assets_root = Pathname.new(assets_dir)
+
+        bundle.assets.each_value do |asset|
+          relative_path = asset.output_path.delete_prefix("/")
+          output_path = assets_root.join(relative_path)
+
+          FileUtils.mkdir_p(output_path.dirname)
+          File.binwrite(output_path, asset.bytes)
+        end
       end
     end
   end

@@ -40,6 +40,49 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_build_writes_css_assets_to_assets_dir
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\nTITLE = Styles.fetch(\"title\")\n")
+      output = "#{dir}/dist/klenod.bundle"
+      assets_dir = "#{dir}/dist/public"
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      bundle = context.build(entrypoints: ["entry"], output: output, assets_dir: assets_dir)
+      asset_path, asset = bundle.assets.first
+      written_path = File.join(assets_dir, asset_path.delete_prefix("/"))
+
+      assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, asset_path)
+      assert_equal(asset.bytes, File.binread(written_path))
+      assert_equal("text/css", asset.content_type)
+    end
+  end
+
+  def test_build_writes_image_assets_to_assets_dir
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/logo.png", "png bytes")
+      File.write(
+        "#{dir}/styles/home.css",
+        ".logo { background: url(\"../images/logo.png\"); }\n"
+      )
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\n")
+      output = "#{dir}/dist/klenod.bundle"
+      assets_dir = "#{dir}/dist/public"
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      bundle = context.build(entrypoints: ["entry"], output: output, assets_dir: assets_dir)
+      image_asset =
+        bundle.assets.values.find { |asset| asset.content_type == "image/png" }
+      written_path = File.join(assets_dir, image_asset.output_path.delete_prefix("/"))
+
+      assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.png\z}, image_asset.output_path)
+      assert_equal("png bytes", File.binread(written_path))
+    end
+  end
+
   def test_invalidate_paths_reloads_changed_module_and_reevaluates_dependents
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
