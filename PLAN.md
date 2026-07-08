@@ -50,10 +50,10 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 - [x] Generate Ruby source that evaluates into a component class inside `Klenod::Runtime::Mod`.
 - [x] Inject `Styles` from the companion CSS import.
 - [x] Inject `Translations` from companion TOML files.
-- [ ] Preserve source-map markers from Haml source to generated Ruby.
+- [x] Preserve source-map markers from Haml source to generated Ruby.
 - [x] Export the generated component class as `Default`.
 - [ ] Add Haml examples under `example/src/pages/`.
-- [ ] Add backtrace tests for errors raised from generated Haml Ruby.
+- [x] Add backtrace tests for errors raised from generated Haml Ruby.
 
 ## Translation Files
 

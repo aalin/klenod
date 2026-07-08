@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "../../source_map"
 require_relative "../plugin"
 require_relative "../dependency"
 require_relative "../module_id"
@@ -26,14 +27,39 @@ module Klenod
             styles_source:,
             translations_source:
           )
-            HamlTransformResult.new(
-              <<~RUBY,
+            code =
+              <<~RUBY
                 class #{component_class_name} < #{component_base_class}
                   Translations = #{translations_source}
                   DescriptorFactory = #{descriptor_factory}
 
                   def render
-                    DescriptorFactory
+                #{indent(compile_template(source), 4)}
+                  end
+
+                  HtmlString = Class.new(String)
+
+                  def h(tag, *children)
+                    attributes = children.last.is_a?(Hash) ? children.pop : {}
+                    rendered_attributes =
+                      attributes
+                        .compact
+                        .map { |name, value| %( \#{escape_html(name)}="\#{escape_html(value)}") }
+                        .join
+                    rendered_children = children.flatten.compact.map { |child| escape_html(child) }.join
+
+                    HtmlString.new("<\#{tag}\#{rendered_attributes}>\#{rendered_children}</\#{tag}>")
+                  end
+
+                  def escape_html(value)
+                    return value.to_s if value.is_a?(HtmlString)
+
+                    value
+                      .to_s
+                      .gsub("&", "&amp;")
+                      .gsub("<", "&lt;")
+                      .gsub(">", "&gt;")
+                      .gsub('"', "&quot;")
                   end
                 end
 
@@ -42,9 +68,99 @@ module Klenod
                 Default.const_set(:Styles, Styles)
                 Translations = Default::Translations
               RUBY
-              nil,
+
+            HamlTransformResult.new(
+              code,
+              SourceMap::SourceMap.parse(source, code),
               {source: source, module_id: module_id}
             )
+          end
+
+          private
+
+          TemplateNode = Data.define(:type, :line_no, :tag_name, :content, :children)
+
+          def compile_template(source)
+            nodes = parse_nodes(source)
+            return "nil" if nodes.empty?
+            return compile_node(nodes.fetch(0)) if nodes.length == 1
+
+            "[\n#{indent(nodes.map { |node| compile_node(node) }.join(",\n"), 2)}\n].join"
+          end
+
+          def parse_nodes(source)
+            root = TemplateNode.new(:root, 0, nil, nil, [])
+            stack = [[-1, root]]
+
+            source.each_line.with_index(1) do |line, line_no|
+              next if line.strip.empty?
+
+              indent = line[/\A */].length
+              node = parse_line(line.strip, line_no)
+
+              stack.pop while stack.last.fetch(0) >= indent
+              stack.last.fetch(1).children << node
+              stack << [indent, node]
+            end
+
+            root.children
+          end
+
+          def parse_line(line, line_no)
+            case line
+            when /\A%(?<tag>[A-Za-z][A-Za-z0-9:_-]*)=\s*(?<content>.+)\z/
+              TemplateNode.new(:dynamic_tag, line_no, $~[:tag], $~[:content], [])
+            when /\A%(?<tag>[A-Za-z][A-Za-z0-9:_-]*)(?:\s+(?<content>.*))?\z/
+              TemplateNode.new(:tag, line_no, $~[:tag], $~[:content], [])
+            when /\A=\s*(?<content>.+)\z/
+              TemplateNode.new(:expression, line_no, nil, $~[:content], [])
+            else
+              TemplateNode.new(:text, line_no, nil, line, [])
+            end
+          end
+
+          def compile_node(node)
+            mark = source_mark(node)
+            expression =
+              case node.type
+              when :tag
+                compile_tag(node)
+              when :dynamic_tag
+                compile_dynamic_tag(node)
+              when :expression
+                "(#{node.content})"
+              when :text
+                node.content.inspect
+              end
+
+            "#{mark}\n#{expression}"
+          end
+
+          def compile_dynamic_tag(node)
+            children = ["(#{node.content})"]
+            children.concat(node.children.map { |child| compile_node(child) })
+
+            "h(#{node.tag_name.inspect},\n#{indent(children.join(",\n"), 2)})"
+          end
+
+          def compile_tag(node)
+            children = []
+            children << node.content.inspect if node.content
+            children.concat(node.children.map { |child| compile_node(child) })
+
+            if children.empty?
+              "h(#{node.tag_name.inspect})"
+            else
+              "h(#{node.tag_name.inspect},\n#{indent(children.join(",\n"), 2)})"
+            end
+          end
+
+          def source_mark(node)
+            "# #{SourceMap::Mark.new(node.line_no, node.content || node.tag_name)}"
+          end
+
+          def indent(value, spaces)
+            value.lines.map { |line| "#{" " * spaces}#{line}" }.join
           end
         end
 

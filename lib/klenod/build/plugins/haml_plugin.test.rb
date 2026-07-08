@@ -4,6 +4,7 @@ require "fileutils"
 require "minitest/autorun"
 require "tmpdir"
 
+require_relative "../../backtrace_rewriter"
 require_relative "../context"
 
 class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
@@ -80,9 +81,55 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_operator(exports::Default, :<, FakeFramework::ComponentBase)
-      assert_same(FakeFramework::DescriptorFactory, exports::Default.new.render)
+      assert_same(FakeFramework::DescriptorFactory, exports::Default::DescriptorFactory)
+      assert_equal("<h1>Hello</h1>", exports::Default.new.render)
       assert_equal(exports::Default::Styles, exports::Styles)
       assert_equal(exports::Default::Translations, exports::Translations)
+    end
+  end
+
+  def test_default_haml_transformer_renders_static_html
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          %main
+            %h1 Hello
+            %p= "From Ruby"
+        HAML
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("pages/page.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal("<main><h1>Hello</h1><p>From Ruby</p></main>", exports::Default.new.render)
+      assert_kind_of(Klenod::SourceMap::SourceMap, record.source_map)
+    end
+  end
+
+  def test_default_haml_transformer_rewrites_error_backtraces_to_haml_lines
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          %main
+            %h1 Hello
+            = raise "boom"
+        HAML
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("pages/page.haml")
+      mod = context.graph.mods.fetch(record.id)
+      exports = mod.const_get(:Exports)
+
+      error = assert_raises(RuntimeError) { exports::Default.new.render }
+      Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
+
+      assert_match(/\Apages\/page\.haml:3:in /, error.backtrace.fetch(0))
     end
   end
 
