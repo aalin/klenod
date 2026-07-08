@@ -28,3 +28,5 @@ gem "image_size", "~> 3.6"
 gem "toml-rb", "~> 4.2"
 
 gem "async-http", "~> 0.95.1"
+
+gem "rmagick", "~> 7.0"

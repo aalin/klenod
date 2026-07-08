@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "digest"
+require "image_size"
 
 require_relative "../asset"
 require_relative "../plugin"
@@ -17,6 +18,7 @@ module Klenod
         def transform(module_id, code, _context)
           return super unless EXTENSIONS.include?(module_id.extname)
 
+          dimensions = image_dimensions(code)
           hash = Digest::SHA256.hexdigest(code)[0, 16]
           output_path = "/assets/#{asset_name(module_id)}.#{hash}#{module_id.extname}"
           asset =
@@ -27,7 +29,12 @@ module Klenod
               nil,
               code,
               content_type(module_id.extname),
-              {type: :image}
+              {
+                type: :image,
+                width: dimensions.width,
+                height: dimensions.height,
+                format: dimensions.format
+              }
             )
 
           TransformResult.new("", [], nil, [asset], [], {asset_bytes: code})
@@ -36,10 +43,26 @@ module Klenod
         def import_value(_resolved_dependency, record, _context)
           return nil unless EXTENSIONS.include?(record.id.extname)
 
-          Image.new(record.assets.first.output_path, nil, nil, {})
+          asset = record.assets.first
+
+          Image.new(
+            asset.output_path,
+            asset.metadata[:width],
+            asset.metadata[:height],
+            {}
+          )
         end
 
         private
+
+        Dimensions = Data.define(:width, :height, :format)
+
+        def image_dimensions(bytes)
+          size = ImageSize.new(bytes)
+          Dimensions.new(size.width, size.height, size.format)
+        rescue ImageSize::FormatError
+          Dimensions.new(nil, nil, nil)
+        end
 
         def asset_name(module_id)
           File.basename(module_id.path, module_id.extname).gsub(/[^A-Za-z0-9]+/, "_")
