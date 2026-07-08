@@ -1,39 +1,103 @@
 # Klenod
 
-TODO: Delete this and the text below, and describe your gem
+Klenod is an experimental Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. It loads files from a configured source directory, transforms them through plugins, evaluates them as stable `Klenod::Runtime::Mod` instances, and can serialize a runtime-only bundle with `Marshal.dump`.
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/klenod`. To experiment with that code, run `bin/console` for an interactive prompt.
+The project is still early, but the core shape is in place:
 
-## Installation
+- `Klenod::Build` owns resolving, transforms, plugins, graph construction, bundling, and emitted assets.
+- `Klenod::Dev` owns source watching and graph update events.
+- `Klenod::Runtime` owns production bundle loading without depending on build plugins.
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+## Basic Usage
 
-Install the gem and add to the application's Gemfile by executing:
+Create a build context with a source directory:
 
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+context = Klenod::Build::Context.new(source_dir: "src")
+record = context.load("pages/server")
+page = context.graph.mods.fetch(record.id).const_get(:Exports)
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+Ruby modules can import other modules with literal `import("...")` calls. Relative imports resolve from the importing file, while absolute imports are scoped to the configured source directory.
 
-```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+Shared = import("../shared")
+Styles = import("styles/home.css")
+Hero = import("./hero.png?width=320,640&format=png")
 ```
 
-## Usage
+Build output can be serialized for runtime loading:
 
-TODO: Write usage instructions here
+```ruby
+bundle = context.build(
+  entrypoints: ["pages/server"],
+  output: "dist/klenod.bundle",
+  assets_dir: "public"
+)
+```
+
+The runtime side can load the bundle without build plugins:
+
+```ruby
+bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
+page = bundle.load("pages/server")
+```
+
+## Asset Conventions
+
+Plugins emit assets through `Klenod::Build::Asset`. Assets have two stable identifiers:
+
+- `logical_name`: the source-root-relative file path without import query parameters, such as `images/hero.png`.
+- `output_path`: the public, content-hashed path served to browsers, such as `/assets/hero.320w.abc123.png`.
+
+The graph and runtime bundle expose the same lookup shape:
+
+```ruby
+context.asset("/assets/home.abc123.css")
+context.assets_for("styles/home.css")
+
+bundle.asset("/assets/home.abc123.css")
+bundle.assets_for("styles/home.css")
+```
+
+Build assets keep bytes so they can be served in development or written to disk. Runtime asset specs keep only metadata, content hashes, content types, logical names, and output paths.
+
+When `Context#build` receives `assets_dir:`, emitted assets are written under that directory using their public path without the leading slash. For example, `/assets/home.abc123.css` becomes `public/assets/home.abc123.css`.
+
+Import query parameters configure a specific import without changing the asset's logical name. For example, both of these imports belong to `images/hero.png`, and overlapping generated variants are reused:
+
+```ruby
+LargeHero = import("images/hero.png?width=640&format=png")
+ResponsiveHero = import("images/hero.png?width=320,640&format=png")
+```
+
+In development, frameworks using Klenod are expected to serve `context.asset(path).bytes` for requested asset paths and listen to update events from `Klenod::Dev::Watcher`.
+
+## Plugins
+
+The default build context includes plugins for Ruby, intl TOML files, Haml adapter output, CSS, and images. Plugins can:
+
+- resolve dependencies,
+- load source content,
+- transform source,
+- emit assets,
+- add watched companion file patterns,
+- provide import values for the importing module.
+
+CSS imports currently return class-name maps for Ruby or Haml importers. Image imports return an image object with `src`, dimensions, and generated `variants`.
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+Run the test suite with:
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```sh
+bundle exec rake
+```
 
-## Contributing
+The example app can be run from the repository root:
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/aalin/klenod.
+```sh
+bundle exec ruby example/server.rb
+```
 
-## License
-
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+It starts a small `async-http` server, serves emitted assets from the build context, and watches the source tree for graph updates.
