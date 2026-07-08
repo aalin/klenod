@@ -11,7 +11,17 @@ entrypoint = "pages/server"
 port = Integer(ENV.fetch("PORT", "9292"))
 endpoint = Async::HTTP::Endpoint.parse("http://localhost:#{port}")
 
-context = Klenod::Build::Context.new(source_dir: source_dir)
+context =
+  Klenod::Build::Context.new(
+    source_dir: source_dir,
+    plugins: [
+      Klenod::Build::Plugins::RubyPlugin.new,
+      Klenod::Build::Plugins::IntlPlugin.new,
+      Klenod::Build::Plugins::HamlPlugin.new,
+      Klenod::Build::Plugins::CssPlugin.new,
+      Klenod::Build::Plugins::ImagePlugin.new(widths: [320, 640], formats: ["png"])
+    ]
+  )
 record = context.load(entrypoint)
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
 page = context.graph.mods.fetch(record.id).const_get(:Exports)
