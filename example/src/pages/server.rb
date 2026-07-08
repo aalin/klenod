@@ -12,7 +12,7 @@ def self.call(_request, context)
       .map { |variant| "#{variant.src} #{variant.descriptor}" }
       .join(", ")
   body =
-    Page::Default
+    Page
       .new(
         name: Shared::NAME,
         tagline: Shared::TAGLINE,

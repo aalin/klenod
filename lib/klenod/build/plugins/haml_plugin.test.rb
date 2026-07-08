@@ -243,6 +243,47 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_haml_imports_haml_component_classes_for_capitalized_tags
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/components")
+      File.write(
+        "#{dir}/components/details.haml",
+        <<~HAML
+          :ruby
+            def initialize(summary:, children: nil)
+              @summary = summary
+              @children = children
+            end
+
+          %details
+            %summary= @summary
+            = @children
+        HAML
+      )
+      File.write(
+        "#{dir}/page.haml",
+        <<~HAML
+          :ruby
+            Details = import("components/details.haml")
+
+          %Details{ summary: "Mer information" }
+            %p Lorem ipsum
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin])
+      record = context.load("page.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+      details_class = context.graph.mods.fetch(ModuleId.new("components/details.haml", nil)).const_get(:Exports)::Default
+
+      assert_same(details_class, exports::Default.const_get(:Details))
+      assert_equal([details_class, [:p, "Lorem ipsum"], {summary: "Mer information"}], exports::Default.new.render)
+    end
+  end
+
   def test_default_haml_transformer_rewrites_error_backtraces_to_haml_lines
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
