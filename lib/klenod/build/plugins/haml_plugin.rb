@@ -40,20 +40,16 @@ module Klenod
             end
           end
 
-          def call(
-            source:,
-            module_id:,
-            component_class_name:,
-            component_base_class:,
-            factory:,
-            styles_source:,
-            translations_source:
-          )
-            component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
-            factory = ConstPath.parse(factory, name: "factory")
-            template = compile_template(source, factory: factory)
-            code =
-              format_ruby(
+          class RubyBuilder
+            def component_source(
+              component_class_name:,
+              component_base_class:,
+              translations_source:,
+              ruby_source:,
+              render_source:,
+              styles_source:
+            )
+              source =
                 <<~RUBY
                   # frozen_string_literal: true
 
@@ -75,10 +71,10 @@ module Klenod
                       self.class.__klenod_import__(dependency_id)
                     end
 
-                  #{indent(template.ruby_source, 2)}
+                  #{indent(ruby_source, 2)}
 
                     public def render
-                  #{indent(template.render_source, 4)}
+                  #{indent(render_source, 4)}
                     end
                   end
 
@@ -86,7 +82,95 @@ module Klenod
                   Styles = #{styles_source}
                   Default.const_set(:Styles, Styles)
                   Translations = Default::Translations
-              RUBY
+                RUBY
+
+              format(source)
+            end
+
+            def expressions(expressions)
+              case expressions.length
+              when 0 then "nil"
+              when 1 then expressions.fetch(0)
+              else "[\n#{indent(expressions.join(",\n"), 2)}\n]"
+              end
+            end
+
+            def source_mark(line_no, source)
+              "# #{SourceMap::Mark.new(line_no, source)}"
+            end
+
+            def marked_expression(mark, expression)
+              "#{mark}\n#{expression}"
+            end
+
+            def factory_call(factory:, tag:, children:, props:, mark:)
+              arguments = [tag, *children, keyword_props(props, mark: mark)].compact.join(",\n")
+
+              "#{factory}[\n#{indent(arguments, 2)}\n]"
+            end
+
+            def script_block(source, body)
+              "#{source}\n#{indent(body, 2)}\nend"
+            end
+
+            def silent_script(source)
+              "begin\n#{indent(source, 2)}\n  nil\nend"
+            end
+
+            def branches(branches)
+              branches.map { |source, body| "#{source}\n#{indent(body, 2)}" }.join("\n") + "\nend"
+            end
+
+            def ruby_filters(nodes)
+              return "" if nodes.empty?
+
+              nodes.map { |node| "begin\n#{indent(node, 2)}\nend" }.join("\n")
+            end
+
+            def format(source)
+              SyntaxTree.format(source)
+            rescue SyntaxTree::Parser::ParseError
+              source
+            end
+
+            def format_node(node)
+              SyntaxTree::Formatter.format(+"", node, 0)
+            end
+
+            def indent(value, spaces)
+              value.lines.map { |line| "#{" " * spaces}#{line}" }.join
+            end
+
+            private
+
+            def keyword_props(props, mark:)
+              return nil if props.empty?
+
+              "#{mark},\n**{#{props.map { |name, value| "#{name.inspect} => #{value}" }.join(", ")}}"
+            end
+          end
+
+          def call(
+            source:,
+            module_id:,
+            component_class_name:,
+            component_base_class:,
+            factory:,
+            styles_source:,
+            translations_source:
+          )
+            component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
+            factory = ConstPath.parse(factory, name: "factory")
+            builder = RubyBuilder.new
+            template = compile_template(source, factory: factory, builder: builder)
+            code =
+              builder.component_source(
+                component_class_name: component_class_name,
+                component_base_class: component_base_class,
+                translations_source: translations_source,
+                ruby_source: template.ruby_source,
+                render_source: template.render_source,
+                styles_source: styles_source
               )
 
             HamlTransformResult.new(
@@ -101,27 +185,21 @@ module Klenod
           Template = Data.define(:ruby_source, :render_source)
           RubyLine = Data.define(:line_no, :source)
 
-          def compile_template(source, factory:)
+          def compile_template(source, factory:, builder:)
             parsed = SyntaxTree::Haml.parse(source)
             render_nodes = parsed.children.reject { |node| ruby_filter?(node) }
             ruby_nodes = parsed.children.select { |node| ruby_filter?(node) }
-            ruby_source = compile_ruby_filters(ruby_nodes)
-            render_source = compile_nodes(render_nodes, factory: factory)
+            ruby_source = compile_ruby_filters(ruby_nodes, builder: builder)
+            render_source = compile_nodes(render_nodes, factory: factory, builder: builder)
 
             Template.new(ruby_source, render_source)
           end
 
-          def compile_nodes(nodes, factory:)
-            expressions = compile_node_expressions(nodes, factory: factory)
-
-            case expressions.length
-            when 0 then "nil"
-            when 1 then expressions.fetch(0)
-            else "[\n#{indent(expressions.join(",\n"), 2)}\n]"
-            end
+          def compile_nodes(nodes, factory:, builder:)
+            builder.expressions(compile_node_expressions(nodes, factory: factory, builder: builder))
           end
 
-          def compile_node_expressions(nodes, factory:)
+          def compile_node_expressions(nodes, factory:, builder:)
             expressions = []
             index = 0
 
@@ -137,9 +215,9 @@ module Klenod
                   index += 1
                 end
 
-                expressions << compile_script_group(group, factory: factory)
+                expressions << compile_script_group(group, factory: factory, builder: builder)
               else
-                expressions << compile_node(node, factory: factory)
+                expressions << compile_node(node, factory: factory, builder: builder)
                 index += 1
               end
             end
@@ -147,57 +225,55 @@ module Klenod
             expressions
           end
 
-          def compile_node(node, factory:)
-            mark = source_mark(node)
+          def compile_node(node, factory:, builder:)
+            mark = source_mark(node, builder: builder)
             expression =
               case node.type
               when :tag
-                compile_tag(node, factory: factory)
+                compile_tag(node, factory: factory, builder: builder)
               when :plain
                 node.value.fetch(:text).inspect
               when :script
-                compile_script(node, factory: factory)
+                compile_script(node, factory: factory, builder: builder)
               when :silent_script
-                compile_silent_script(node, factory: factory)
+                compile_silent_script(node, factory: factory, builder: builder)
               when :filter
                 compile_filter_node(node)
               end
 
-            "#{mark}\n#{expression}"
+            builder.marked_expression(mark, expression)
           end
 
-          def compile_script_group(nodes, factory:)
-            return compile_node(nodes.fetch(0), factory: factory) if nodes.length == 1
+          def compile_script_group(nodes, factory:, builder:)
+            return compile_node(nodes.fetch(0), factory: factory, builder: builder) if nodes.length == 1
 
             compile_branches(
               nodes.map { |node| [script_source(node), node.children] },
-              factory: factory
+              factory: factory,
+              builder: builder
             )
           end
 
-          def compile_script(node, factory:)
+          def compile_script(node, factory:, builder:)
             source = script_source(node)
             return "(#{source})" if node.children.empty?
 
-            "#{source}\n#{indent(compile_nodes(node.children, factory: factory), 2)}\nend"
+            builder.script_block(source, compile_nodes(node.children, factory: factory, builder: builder))
           end
 
-          def compile_silent_script(node, factory:)
+          def compile_silent_script(node, factory:, builder:)
             source = script_source(node)
-            return "begin\n#{indent(source, 2)}\n  nil\nend" if node.children.empty?
+            return builder.silent_script(source) if node.children.empty?
 
-            compile_branches(split_silent_script_branches(node), factory: factory)
+            compile_branches(split_silent_script_branches(node), factory: factory, builder: builder)
           end
 
-          def compile_branches(branches, factory:)
-            branches
-              .map
-              .with_index do |(source, children), _index|
-                body = compile_nodes(children, factory: factory)
-
-                "#{source}\n#{indent(body, 2)}"
+          def compile_branches(branches, factory:, builder:)
+            builder.branches(
+              branches.map do |source, children|
+                [source, compile_nodes(children, factory: factory, builder: builder)]
               end
-              .join("\n") + "\nend"
+            )
           end
 
           def split_silent_script_branches(node)
@@ -230,21 +306,25 @@ module Klenod
             script_node?(node) && %w[elsif else when in rescue ensure].include?(node.value.fetch(:keyword))
           end
 
-          def compile_tag(node, factory:)
+          def compile_tag(node, factory:, builder:)
             children = []
             value = node.value.fetch(:value)
             if value && !value.empty?
               children << (node.value.fetch(:parse) ? "(#{value})" : value.inspect)
             end
-            children.concat(compile_node_expressions(node.children, factory: factory))
+            children.concat(compile_node_expressions(node.children, factory: factory, builder: builder))
 
-            compile_factory_call(node, children, factory: factory)
+            compile_factory_call(node, children, factory: factory, builder: builder)
           end
 
-          def compile_factory_call(node, children, factory:)
-            arguments = [compile_tag_name(node), *children, compile_attributes(node)].compact.join(",\n")
-
-            "#{factory}[\n#{indent(arguments, 2)}\n]"
+          def compile_factory_call(node, children, factory:, builder:)
+            builder.factory_call(
+              factory: factory,
+              tag: compile_tag_name(node),
+              children: children,
+              props: attributes(node, builder: builder),
+              mark: source_mark(node, builder: builder)
+            )
           end
 
           def compile_tag_name(node)
@@ -252,25 +332,20 @@ module Klenod
             tag_name.match?(/\A[A-Z]/) ? tag_name : ":#{tag_name}"
           end
 
-          def compile_attributes(node)
-            attributes = static_attributes(node).merge(dynamic_attributes(node))
-            return nil if attributes.empty?
-
-            "#{source_mark(node)},\n**{#{attributes.map { |name, value| "#{name.inspect} => #{value}" }.join(", ")}}"
+          def attributes(node, builder:)
+            static_attributes(node).merge(dynamic_attributes(node, builder: builder))
           end
 
-          def compile_ruby_filters(nodes)
-            return "" if nodes.empty?
-
-            nodes.map { |node| "begin\n#{indent(compile_ruby_filter(node), 2)}\nend" }.join("\n")
+          def compile_ruby_filters(nodes, builder:)
+            builder.ruby_filters(nodes.map { |node| compile_ruby_filter(node, builder: builder) })
           end
 
-          def compile_ruby_filter(node)
+          def compile_ruby_filter(node, builder:)
             node.value.fetch(:text)
               .lines
               .map
               .with_index(node.line + 1) do |line, line_no|
-                "#{source_mark(RubyLine.new(line_no, line.strip))}\n#{line.chomp}"
+                "#{source_mark(RubyLine.new(line_no, line.strip), builder: builder)}\n#{line.chomp}"
               end
               .join("\n")
           end
@@ -292,7 +367,7 @@ module Klenod
               .to_h { |key, value| [key.to_sym, value.inspect] }
           end
 
-          def dynamic_attributes(node)
+          def dynamic_attributes(node, builder:)
             source = node.value.fetch(:dynamic_attributes).old
             return {} unless source
 
@@ -301,23 +376,23 @@ module Klenod
             return {} unless hash.is_a?(SyntaxTree::HashLiteral)
 
             hash.assocs.to_h do |assoc|
-              [attribute_key(assoc.key), format_node(assoc.value)]
+              [attribute_key(assoc.key, builder: builder), builder.format_node(assoc.value)]
             end
           end
 
-          def attribute_key(node)
+          def attribute_key(node, builder:)
             case node
             when SyntaxTree::Label
               node.value.delete_suffix(":").to_sym
             else
-              format_node(node).to_sym
+              builder.format_node(node).to_sym
             end
           end
 
-          def source_mark(node)
+          def source_mark(node, builder:)
             line_no = node.is_a?(RubyLine) ? node.line_no : node.line
 
-            "# #{SourceMap::Mark.new(line_no, source_for_mark(node))}"
+            builder.source_mark(line_no, source_for_mark(node))
           end
 
           def source_for_mark(node)
@@ -338,20 +413,6 @@ module Klenod
                 node.value.fetch(:name).to_s
               end
             end
-          end
-
-          def format_ruby(source)
-            SyntaxTree.format(source)
-          rescue SyntaxTree::Parser::ParseError
-            source
-          end
-
-          def format_node(node)
-            SyntaxTree::Formatter.format(+"", node, 0)
-          end
-
-          def indent(value, spaces)
-            value.lines.map { |line| "#{" " * spaces}#{line}" }.join
           end
         end
 
