@@ -92,14 +92,45 @@ module Klenod
             render_nodes = parsed.children.reject { |node| ruby_filter?(node) }
             ruby_nodes = parsed.children.select { |node| ruby_filter?(node) }
             ruby_source = compile_ruby_filters(ruby_nodes)
-            render_source =
-              case render_nodes.length
-              when 0 then "nil"
-              when 1 then compile_node(render_nodes.fetch(0), factory: factory)
-              else "[\n#{indent(render_nodes.map { |node| compile_node(node, factory: factory) }.join(",\n"), 2)}\n]"
-              end
+            render_source = compile_nodes(render_nodes, factory: factory)
 
             Template.new(ruby_source, render_source)
+          end
+
+          def compile_nodes(nodes, factory:)
+            expressions = compile_node_expressions(nodes, factory: factory)
+
+            case expressions.length
+            when 0 then "nil"
+            when 1 then expressions.fetch(0)
+            else "[\n#{indent(expressions.join(",\n"), 2)}\n]"
+            end
+          end
+
+          def compile_node_expressions(nodes, factory:)
+            expressions = []
+            index = 0
+
+            while index < nodes.length
+              node = nodes.fetch(index)
+
+              if script_node?(node) && !continuation?(node)
+                group = [node]
+                index += 1
+
+                while index < nodes.length && continuation?(nodes.fetch(index))
+                  group << nodes.fetch(index)
+                  index += 1
+                end
+
+                expressions << compile_script_group(group, factory: factory)
+              else
+                expressions << compile_node(node, factory: factory)
+                index += 1
+              end
+            end
+
+            expressions
           end
 
           def compile_node(node, factory:)
@@ -112,6 +143,8 @@ module Klenod
                 node.value.fetch(:text).inspect
               when :script
                 compile_script(node, factory: factory)
+              when :silent_script
+                compile_silent_script(node, factory: factory)
               when :filter
                 compile_filter_node(node)
               end
@@ -119,19 +152,68 @@ module Klenod
             "#{mark}\n#{expression}"
           end
 
+          def compile_script_group(nodes, factory:)
+            return compile_node(nodes.fetch(0), factory: factory) if nodes.length == 1
+
+            compile_branches(
+              nodes.map { |node| [script_source(node), node.children] },
+              factory: factory
+            )
+          end
+
           def compile_script(node, factory:)
-            source = node.value.fetch(:text).strip
+            source = script_source(node)
             return "(#{source})" if node.children.empty?
 
-            body =
-              case node.children.length
-              when 1
-                compile_node(node.children.fetch(0), factory: factory)
-              else
-                "[\n#{indent(node.children.map { |child| compile_node(child, factory: factory) }.join(",\n"), 2)}\n]"
-              end
+            "#{source}\n#{indent(compile_nodes(node.children, factory: factory), 2)}\nend"
+          end
 
-            "#{source}\n#{indent(body, 2)}\nend"
+          def compile_silent_script(node, factory:)
+            source = script_source(node)
+            return "begin\n#{indent(source, 2)}\n  nil\nend" if node.children.empty?
+
+            compile_branches(split_silent_script_branches(node), factory: factory)
+          end
+
+          def compile_branches(branches, factory:)
+            branches
+              .map
+              .with_index do |(source, children), _index|
+                body = compile_nodes(children, factory: factory)
+
+                "#{source}\n#{indent(body, 2)}"
+              end
+              .join("\n") + "\nend"
+          end
+
+          def split_silent_script_branches(node)
+            branches = []
+            current_source = script_source(node)
+            current_children = []
+
+            node.children.each do |child|
+              if continuation?(child)
+                branches << [current_source, current_children]
+                current_source = script_source(child)
+                current_children = child.children.dup
+              else
+                current_children << child
+              end
+            end
+
+            branches << [current_source, current_children]
+          end
+
+          def script_node?(node)
+            node.type == :script || node.type == :silent_script
+          end
+
+          def script_source(node)
+            node.value.fetch(:text).strip
+          end
+
+          def continuation?(node)
+            script_node?(node) && %w[elsif else when in rescue ensure].include?(node.value.fetch(:keyword))
           end
 
           def compile_tag(node, factory:)
@@ -140,7 +222,7 @@ module Klenod
             if value && !value.empty?
               children << (node.value.fetch(:parse) ? "(#{value})" : value.inspect)
             end
-            children.concat(node.children.map { |child| compile_node(child, factory: factory) })
+            children.concat(compile_node_expressions(node.children, factory: factory))
 
             compile_factory_call(node, children, factory: factory)
           end
@@ -232,6 +314,8 @@ module Klenod
               when :plain
                 node.value.fetch(:text)
               when :script
+                node.value.fetch(:text)
+              when :silent_script
                 node.value.fetch(:text)
               when :filter
                 node.value.fetch(:name).to_s

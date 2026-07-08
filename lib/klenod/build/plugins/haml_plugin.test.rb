@@ -178,6 +178,71 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_default_haml_transformer_supports_silent_control_flow
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/conditional.haml",
+        <<~HAML
+          :ruby
+            def initialize(show:)
+              @show = show
+            end
+
+          - if @show
+            %p Visible
+          - else
+            %p Empty
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/conditional.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([:p, "Visible"], exports::Default.new(show: true).render)
+      assert_equal([:p, "Empty"], exports::Default.new(show: false).render)
+      assert_match(/SourceMapMark:7:/, record.transformed_source)
+      assert_match(/SourceMapMark:9:/, record.transformed_source)
+    end
+  end
+
+  def test_default_haml_transformer_supports_output_control_flow
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/conditional.haml",
+        <<~HAML
+          :ruby
+            def initialize(show:)
+              @show = show
+            end
+
+          %section
+            = if @show
+              %p Visible
+            = else
+              %p Empty
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/conditional.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([:section, [:p, "Visible"]], exports::Default.new(show: true).render)
+      assert_equal([:section, [:p, "Empty"]], exports::Default.new(show: false).render)
+      assert_match(/SourceMapMark:8:/, record.transformed_source)
+      assert_match(/SourceMapMark:10:/, record.transformed_source)
+    end
+  end
+
   def test_default_haml_transformer_rewrites_error_backtraces_to_haml_lines
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
