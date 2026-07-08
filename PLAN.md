@@ -46,7 +46,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 - [x] Define the Haml plugin as an adapter around an external Haml component transformer.
 - [x] Add Haml plugin configuration:
   - [x] Component base class constant path, such as `Mayu::Component::Base`.
-  - [x] Descriptor factory constant path, such as `Mayu::Descriptors::H`.
+  - [x] Factory constant path, such as `Mayu::Descriptors::H`.
 - [x] Generate Ruby source that evaluates into a component class inside `Klenod::Runtime::Mod`.
 - [x] Inject `Styles` from the companion CSS import.
 - [x] Inject `Translations` from companion TOML files.

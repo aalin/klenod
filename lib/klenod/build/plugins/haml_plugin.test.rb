@@ -14,7 +14,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     class ComponentBase
     end
 
-    DescriptorFactory = Object.new
+    module H
+      def self.[](*children)
+        children
+      end
+    end
   end
 
   class CapturingTransformer
@@ -30,11 +34,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       Klenod::Build::Plugins::HamlPlugin::HamlTransformResult.new(
         <<~RUBY,
           class #{kwargs.fetch(:component_class_name)} < #{kwargs.fetch(:component_base_class)}
-            DescriptorFactory = #{kwargs.fetch(:descriptor_factory)}
+            H = #{kwargs.fetch(:factory)}
             Translations = #{kwargs.fetch(:translations_source)}
 
             def render
-              [:custom, DescriptorFactory]
+              [:custom, H]
             end
           end
 
@@ -74,21 +78,20 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       plugin =
         Klenod::Build::Plugins::HamlPlugin.new(
           component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
-          descriptor_factory: "#{self.class.name}::FakeFramework::DescriptorFactory"
+          factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
       record = context.load("pages/hello-world.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_operator(exports::Default, :<, FakeFramework::ComponentBase)
-      assert_same(FakeFramework::DescriptorFactory, exports::Default::DescriptorFactory)
-      assert_equal("<h1>Hello</h1>", exports::Default.new.render)
+      assert_equal([:h1, "Hello"], exports::Default.new.render)
       assert_equal(exports::Default::Styles, exports::Styles)
       assert_equal(exports::Default::Translations, exports::Translations)
     end
   end
 
-  def test_default_haml_transformer_renders_static_html
+  def test_default_haml_transformer_renders_with_configured_factory
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -100,12 +103,46 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         HAML
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
       record = context.load("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
-      assert_equal("<main><h1>Hello</h1><p>From Ruby</p></main>", exports::Default.new.render)
+      assert_equal([:main, [:h1, "Hello"], [:p, "From Ruby"]], exports::Default.new.render)
       assert_kind_of(Klenod::SourceMap::SourceMap, record.source_map)
+    end
+  end
+
+  def test_default_haml_transformer_supports_ruby_filter_and_attributes
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/handlers.haml",
+        <<~HAML
+          :ruby
+            def handle_click
+              :clicked
+            end
+
+          %button(onclick=handle_click) Click me
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/handlers.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_operator(exports::Default, :<, FakeFramework::ComponentBase)
+      assert_equal([:button, "Click me", {onclick: :clicked}], exports::Default.new.render)
+      assert_match(/SourceMapMark:2:/, record.transformed_source)
+      assert_match(/SourceMapMark:6:/, record.transformed_source)
     end
   end
 
@@ -121,7 +158,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         HAML
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
       record = context.load("pages/page.haml")
       mod = context.graph.mods.fetch(record.id)
       exports = mod.const_get(:Exports)
@@ -142,7 +183,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       plugin =
         Klenod::Build::Plugins::HamlPlugin.new(
           component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
-          descriptor_factory: "#{self.class.name}::FakeFramework::DescriptorFactory",
+          factory: "#{self.class.name}::FakeFramework::H",
           transformer: transformer
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
@@ -154,10 +195,10 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       assert_equal(ModuleId.new("pages/custom.haml", nil), call.fetch(:module_id))
       assert_equal("Custom", call.fetch(:component_class_name))
       assert_equal("#{self.class.name}::FakeFramework::ComponentBase", call.fetch(:component_base_class))
-      assert_equal("#{self.class.name}::FakeFramework::DescriptorFactory", call.fetch(:descriptor_factory))
+      assert_equal("#{self.class.name}::FakeFramework::H", call.fetch(:factory))
       assert_equal("{}.freeze", call.fetch(:styles_source))
       assert_equal("{}.freeze", call.fetch(:translations_source))
-      assert_equal([:custom, FakeFramework::DescriptorFactory], exports::Default.new.render)
+      assert_equal([:custom, FakeFramework::H], exports::Default.new.render)
       assert_equal(:source_map, record.source_map)
     end
   end
