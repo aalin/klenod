@@ -16,6 +16,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
     module H
       def self.[](tag, *children, **props)
+        return tag.new(**props, children: children).render if tag.is_a?(Class)
+
         props.empty? ? [tag, *children] : [tag, *children, props]
       end
     end
@@ -280,7 +282,14 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       details_class = context.graph.mods.fetch(ModuleId.new("components/details.haml", nil)).const_get(:Exports)::Default
 
       assert_same(details_class, exports::Default.const_get(:Details))
-      assert_equal([details_class, [:p, "Lorem ipsum"], {summary: "Mer information"}], exports::Default.new.render)
+      assert_equal(
+        [
+          :details,
+          [:summary, "Mer information"],
+          [[:p, "Lorem ipsum"]]
+        ],
+        exports::Default.new.render
+      )
     end
   end
 

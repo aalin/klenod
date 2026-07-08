@@ -9,6 +9,8 @@ module Example
     VOID_TAGS = %i[area base br col embed hr img input link meta param source track wbr].freeze
 
     def self.[](tag, *children, **props)
+      return tag.new(**props, children: children).render if tag.is_a?(Class)
+
       rendered_attributes =
         props
           .compact
