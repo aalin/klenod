@@ -97,7 +97,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       File.write(
         "#{dir}/pages/page.haml",
         <<~HAML
-          %main(class="shell".upcase)
+          %main{ class: "shell".upcase }
             %h1 Hello
             %p= "From Ruby"
         HAML
@@ -127,7 +127,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
               :clicked
             end
 
-          %button(onclick=handle_click) Click me
+          %button{ onclick: handle_click } Click me
         HAML
       )
       plugin =

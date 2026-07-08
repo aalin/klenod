@@ -8,10 +8,10 @@
     @image_alt = "Smoked fish"
   end
 
-%main(class=Styles.fetch("title"))
+%main{ class: Styles.fetch("title") }
   %h1= "Hello from #{@name}"
   %p= @tagline
-  %figure(class=Styles.fetch("figure"))
-    %img(class=Styles.fetch("image") src=@image.src srcset=@srcset sizes=@sizes width=@image.width height=@image.height alt=@image_alt)
-    %figcaption(class=Styles.fetch("caption")) Image imported through Klenod with generated variants.
+  %figure{ class: Styles.fetch("figure") }
+    %img{ class: Styles.fetch("image"), src: @image.src, srcset: @srcset, sizes: @sizes, width: @image.width, height: @image.height, alt: @image_alt }
+    %figcaption{ class: Styles.fetch("caption") } Image imported through Klenod with generated variants.
   %p Served through async-http and reloaded through Klenod watch events.

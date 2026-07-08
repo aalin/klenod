@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "syntax_tree"
+require "syntax_tree/haml"
 
 require_relative "../../source_map"
 require_relative "../plugin"
@@ -84,12 +85,12 @@ module Klenod
           private
 
           Template = Data.define(:ruby_source, :render_source)
-          TemplateNode = Data.define(:type, :line_no, :tag_name, :attributes, :content, :children)
+          RubyLine = Data.define(:line_no, :source)
 
           def compile_template(source, factory:)
-            parsed = parse_nodes(source)
-            render_nodes = parsed.children.reject { |node| node.type == :ruby_filter }
-            ruby_nodes = parsed.children.select { |node| node.type == :ruby_filter }
+            parsed = SyntaxTree::Haml.parse(source)
+            render_nodes = parsed.children.reject { |node| ruby_filter?(node) }
+            ruby_nodes = parsed.children.select { |node| ruby_filter?(node) }
             ruby_source = compile_ruby_filters(ruby_nodes)
             render_source =
               case render_nodes.length
@@ -101,121 +102,46 @@ module Klenod
             Template.new(ruby_source, render_source)
           end
 
-          def parse_nodes(source)
-            root = TemplateNode.new(:root, 0, nil, {}, nil, [])
-            stack = [[-1, root]]
-            lines = source.lines
-            index = 0
-
-            while index < lines.length
-              line = lines.fetch(index)
-              line_no = index + 1
-              if line.strip.empty?
-                index += 1
-                next
-              end
-
-              indent = line[/\A */].length
-              stripped = line.strip
-              if stripped == ":ruby"
-                filter_lines = []
-                index += 1
-
-                while index < lines.length
-                  child_line = lines.fetch(index)
-                  child_indent = child_line[/\A */].length
-                  break unless child_line.strip.empty? || child_indent > indent
-
-                  filter_lines << [index + 1, child_line[(indent + 2)..]&.chomp || ""]
-                  index += 1
-                end
-
-                node = TemplateNode.new(:ruby_filter, line_no, nil, {}, filter_lines, [])
-                stack.pop while stack.last.fetch(0) >= indent
-                stack.last.fetch(1).children << node
-                next
-              end
-
-              node = parse_line(stripped, line_no)
-
-              stack.pop while stack.last.fetch(0) >= indent
-              stack.last.fetch(1).children << node
-              stack << [indent, node]
-              index += 1
-            end
-
-            root
-          end
-
-          def parse_line(line, line_no)
-            case line
-            when /\A%(?<tag>[A-Za-z][A-Za-z0-9:_-]*)(?<attributes>\(.*\))?=\s*(?<content>.+)\z/
-              TemplateNode.new(:dynamic_tag, line_no, $~[:tag], parse_attributes($~[:attributes]), $~[:content], [])
-            when /\A%(?<tag>[A-Za-z][A-Za-z0-9:_-]*)(?<attributes>\(.*\))?(?:\s+(?<content>.*))?\z/
-              TemplateNode.new(:tag, line_no, $~[:tag], parse_attributes($~[:attributes]), $~[:content], [])
-            when /\A=\s*(?<content>.+)\z/
-              TemplateNode.new(:expression, line_no, nil, {}, $~[:content], [])
-            else
-              TemplateNode.new(:text, line_no, nil, {}, line, [])
-            end
-          end
-
-          def parse_attributes(source)
-            return {} unless source
-
-            source
-              .delete_prefix("(")
-              .delete_suffix(")")
-              .split(/\s+/)
-              .to_h do |part|
-                name, value = part.split("=", 2)
-                [name.to_sym, value]
-              end
-          end
-
           def compile_node(node, factory:)
             mark = source_mark(node)
             expression =
               case node.type
               when :tag
                 compile_tag(node, factory: factory)
-              when :dynamic_tag
-                compile_dynamic_tag(node, factory: factory)
-              when :expression
-                "(#{node.content})"
-              when :text
-                node.content.inspect
+              when :plain
+                node.value.fetch(:text).inspect
+              when :script
+                "(#{node.value.fetch(:text)})"
+              when :filter
+                compile_filter_node(node)
               end
 
             "#{mark}\n#{expression}"
           end
 
-          def compile_dynamic_tag(node, factory:)
-            children = ["(#{node.content})"]
-            children.concat(node.children.map { |child| compile_node(child, factory: factory) })
-
-            compile_factory_call(node, children, factory: factory)
-          end
-
           def compile_tag(node, factory:)
             children = []
-            children << node.content.inspect if node.content
+            value = node.value.fetch(:value)
+            if value && !value.empty?
+              children << (node.value.fetch(:parse) ? "(#{value})" : value.inspect)
+            end
             children.concat(node.children.map { |child| compile_node(child, factory: factory) })
 
             compile_factory_call(node, children, factory: factory)
           end
 
           def compile_factory_call(node, children, factory:)
-            arguments = [":#{node.tag_name}", *children, *compile_attributes(node)].join(",\n")
+            arguments = [":#{node.value.fetch(:name)}", *children, *compile_attributes(node)].join(",\n")
 
             "#{factory}[\n#{indent(arguments, 2)}\n]"
           end
 
           def compile_attributes(node)
-            return [] if node.attributes.empty?
+            attributes = static_attributes(node).merge(dynamic_attributes(node))
+            return [] if attributes.empty?
 
             [
-              "#{source_mark(node)},\n{#{node.attributes.map { |name, value| "#{name.inspect} => #{value}" }.join(", ")}}"
+              "#{source_mark(node)},\n{#{attributes.map { |name, value| "#{name.inspect} => #{value}" }.join(", ")}}"
             ]
           end
 
@@ -226,22 +152,86 @@ module Klenod
           end
 
           def compile_ruby_filter(node)
-            node
-              .content
-              .map do |line_no, line|
-                "#{source_mark(TemplateNode.new(:ruby_line, line_no, nil, {}, line.strip, []))}\n#{line}"
+            node.value.fetch(:text)
+              .lines
+              .map
+              .with_index(node.line + 1) do |line, line_no|
+                "#{source_mark(RubyLine.new(line_no, line.strip))}\n#{line.chomp}"
               end
               .join("\n")
           end
 
+          def compile_filter_node(node)
+            raise ArgumentError, "Only :ruby Haml filters are supported" unless ruby_filter?(node)
+
+            node.value.fetch(:text).inspect
+          end
+
+          def ruby_filter?(node)
+            node.type == :filter && node.value.fetch(:name) == "ruby"
+          end
+
+          def static_attributes(node)
+            node
+              .value
+              .fetch(:attributes)
+              .to_h { |key, value| [key.to_sym, value.inspect] }
+          end
+
+          def dynamic_attributes(node)
+            source = node.value.fetch(:dynamic_attributes).old
+            return {} unless source
+
+            ast = SyntaxTree.parse(source)
+            hash = ast&.statements&.body&.first
+            return {} unless hash.is_a?(SyntaxTree::HashLiteral)
+
+            hash.assocs.to_h do |assoc|
+              [attribute_key(assoc.key), format_node(assoc.value)]
+            end
+          end
+
+          def attribute_key(node)
+            case node
+            when SyntaxTree::Label
+              node.value.delete_suffix(":").to_sym
+            else
+              format_node(node).to_sym
+            end
+          end
+
           def source_mark(node)
-            "# #{SourceMap::Mark.new(node.line_no, node.content || node.tag_name)}"
+            line_no = node.is_a?(RubyLine) ? node.line_no : node.line
+
+            "# #{SourceMap::Mark.new(line_no, source_for_mark(node))}"
+          end
+
+          def source_for_mark(node)
+            case node
+            when RubyLine
+              node.source
+            else
+              case node.type
+              when :tag
+                node.value.fetch(:value) || node.value.fetch(:name)
+              when :plain
+                node.value.fetch(:text)
+              when :script
+                node.value.fetch(:text)
+              when :filter
+                node.value.fetch(:name).to_s
+              end
+            end
           end
 
           def format_ruby(source)
             SyntaxTree.format(source)
           rescue SyntaxTree::Parser::ParseError
             source
+          end
+
+          def format_node(node)
+            SyntaxTree::Formatter.format(+"", node, 0)
           end
 
           def indent(value, spaces)
