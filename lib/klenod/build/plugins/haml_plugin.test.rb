@@ -97,7 +97,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       File.write(
         "#{dir}/pages/page.haml",
         <<~HAML
-          %main
+          %main(class="shell".upcase)
             %h1 Hello
             %p= "From Ruby"
         HAML
@@ -111,7 +111,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       record = context.load("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
-      assert_equal([:main, [:h1, "Hello"], [:p, "From Ruby"]], exports::Default.new.render)
+      assert_equal([:main, [:h1, "Hello"], [:p, "From Ruby"], {class: "SHELL"}], exports::Default.new.render)
       assert_kind_of(Klenod::SourceMap::SourceMap, record.source_map)
     end
   end

@@ -4,6 +4,7 @@ require "async"
 require "async/http"
 require "protocol/http/response"
 
+require_relative "framework"
 require_relative "../lib/klenod"
 
 source_dir = File.expand_path("src", __dir__)
@@ -17,7 +18,10 @@ context =
     plugins: [
       Klenod::Build::Plugins::RubyPlugin.new,
       Klenod::Build::Plugins::IntlPlugin.new,
-      Klenod::Build::Plugins::HamlPlugin.new,
+      Klenod::Build::Plugins::HamlPlugin.new(
+        component_base_class: "Example::Component",
+        factory: "Example::H"
+      ),
       Klenod::Build::Plugins::CssPlugin.new,
       Klenod::Build::Plugins::ImagePlugin.new
     ]

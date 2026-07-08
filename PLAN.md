@@ -52,7 +52,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 - [x] Inject `Translations` from companion TOML files.
 - [x] Preserve source-map markers from Haml source to generated Ruby.
 - [x] Export the generated component class as `Default`.
-- [ ] Add Haml examples under `example/src/pages/`.
+- [x] Add Haml examples under `example/src/pages/`.
 - [x] Add backtrace tests for errors raised from generated Haml Ruby.
 
 ## Translation Files

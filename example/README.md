@@ -19,9 +19,11 @@ bundle exec ruby example/server.rb
 
 `server.rb` starts a small `async-http` server on `http://localhost:9292`. It watches the source tree, swaps to the latest loaded page after the dependency tree updates, and serves emitted CSS/image assets from the build context.
 
-The server page imports CSS and an image with query-driven variants:
+The server entry imports a Haml component and an image with query-driven variants:
 
 ```ruby
-Styles = import("../styles/home.css")
+Page = import("./page.haml")
 SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 ```
+
+`framework.rb` defines the example `Example::H` factory used by the Haml plugin. `src/pages/page.haml` renders through that factory and automatically imports its companion `src/pages/page.css` as `Styles`.

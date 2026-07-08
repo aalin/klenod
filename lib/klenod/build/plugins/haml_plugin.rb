@@ -149,9 +149,9 @@ module Klenod
 
           def parse_line(line, line_no)
             case line
-            when /\A%(?<tag>[A-Za-z][A-Za-z0-9:_-]*)(?<attributes>\([^)]*\))?=\s*(?<content>.+)\z/
+            when /\A%(?<tag>[A-Za-z][A-Za-z0-9:_-]*)(?<attributes>\(.*\))?=\s*(?<content>.+)\z/
               TemplateNode.new(:dynamic_tag, line_no, $~[:tag], parse_attributes($~[:attributes]), $~[:content], [])
-            when /\A%(?<tag>[A-Za-z][A-Za-z0-9:_-]*)(?<attributes>\([^)]*\))?(?:\s+(?<content>.*))?\z/
+            when /\A%(?<tag>[A-Za-z][A-Za-z0-9:_-]*)(?<attributes>\(.*\))?(?:\s+(?<content>.*))?\z/
               TemplateNode.new(:tag, line_no, $~[:tag], parse_attributes($~[:attributes]), $~[:content], [])
             when /\A=\s*(?<content>.+)\z/
               TemplateNode.new(:expression, line_no, nil, {}, $~[:content], [])

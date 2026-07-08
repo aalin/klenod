@@ -1,0 +1,25 @@
+.title {
+  color: rebeccapurple;
+  font-weight: 700;
+  max-width: 720px;
+  margin: 2rem auto;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.figure {
+  margin: 2rem 0;
+}
+
+.caption {
+  margin-top: 0.5rem;
+  color: #555;
+  font-size: 0.9rem;
+}
