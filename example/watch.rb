@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require_relative "../lib/klenod"
+require_relative "klenod_context"
 
 source_dir = File.expand_path("src", __dir__)
-context = Klenod::Build::Context.new(source_dir: source_dir)
-record = context.load("pages/home")
+context = Example.build_context(source_dir: source_dir)
+record = context.load("pages/server")
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
 
 context.on_update do |event|
@@ -22,17 +22,18 @@ context.on_update do |event|
     end
   else
     exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-    puts "  title: #{exports::TITLE}"
-    puts "  message: #{exports::MESSAGE}"
-    puts "  title class: #{exports::TITLE_CLASS}"
+    status, _headers, body = exports.call(nil, context)
+    puts "  status: #{status}"
+    puts "  body includes Haml page: #{body.join.include?("<main")}"
   end
 end
 
 exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+status, _headers, body = exports.call(nil, context)
 puts "Watching #{source_dir}"
-puts "Initial title: #{exports::TITLE}"
-puts "Initial title class: #{exports::TITLE_CLASS}"
-puts "Edit example/src/shared.rb to see an update."
+puts "Initial status: #{status}"
+puts "Initial body includes Haml page: #{body.join.include?("<main")}"
+puts "Edit example/src/pages/page.haml, example/src/pages/page.css, or example/src/shared.rb to see an update."
 
 begin
   watcher.start

@@ -4,28 +4,14 @@ require "async"
 require "async/http"
 require "protocol/http/response"
 
-require_relative "framework"
-require_relative "../lib/klenod"
+require_relative "klenod_context"
 
 source_dir = File.expand_path("src", __dir__)
 entrypoint = "pages/server"
 port = Integer(ENV.fetch("PORT", "9292"))
 endpoint = Async::HTTP::Endpoint.parse("http://localhost:#{port}")
 
-context =
-  Klenod::Build::Context.new(
-    source_dir: source_dir,
-    plugins: [
-      Klenod::Build::Plugins::RubyPlugin.new,
-      Klenod::Build::Plugins::IntlPlugin.new,
-      Klenod::Build::Plugins::HamlPlugin.new(
-        component_base_class: "Example::Component",
-        factory: "Example::H"
-      ),
-      Klenod::Build::Plugins::CssPlugin.new,
-      Klenod::Build::Plugins::ImagePlugin.new
-    ]
-  )
+context = Example.build_context(source_dir: source_dir)
 record = context.load(entrypoint)
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
 page = context.graph.mods.fetch(record.id).const_get(:Exports)
@@ -47,7 +33,7 @@ end
 
 puts "Serving http://localhost:#{port}"
 puts "Watching #{source_dir}"
-puts "Edit example/src/pages/server.rb or example/src/shared.rb to see updates."
+puts "Edit example/src/pages/page.haml, example/src/pages/page.css, or example/src/shared.rb to see updates."
 
 begin
   watcher.start

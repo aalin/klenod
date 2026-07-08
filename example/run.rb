@@ -1,17 +1,18 @@
 # frozen_string_literal: true
 
-require_relative "../lib/klenod"
+require_relative "klenod_context"
 
 source_dir = File.expand_path("src", __dir__)
-context = Klenod::Build::Context.new(source_dir: source_dir)
-record = context.load("pages/home")
+context = Example.build_context(source_dir: source_dir)
+record = context.load("pages/server")
 mod = context.graph.mods.fetch(record.id)
 exports = mod.const_get(:Exports)
+status, headers, body = exports.call(nil, context)
 
 puts "Loaded #{record.id}"
-puts "Title: #{exports::TITLE}"
-puts "Message: #{exports::MESSAGE}"
-puts "Title class: #{exports::TITLE_CLASS}"
+puts "Status: #{status}"
+puts "Content-Type: #{headers.fetch("content-type")}"
+puts "Body includes Haml page: #{body.join.include?("<main")}"
 puts "Graph modules:"
 
 context.graph.records.each_key do |module_id|

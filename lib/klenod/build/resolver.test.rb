@@ -50,6 +50,25 @@ class Klenod::Build::Resolver::Test < Minitest::Test
     end
   end
 
+  def test_rejects_ambiguous_extensionless_imports
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.rb", "")
+      File.write("#{dir}/pages/page.haml", "")
+
+      resolver = Resolver.new(source_dir: dir)
+      error =
+        assert_raises(Klenod::Build::ResolveError) do
+          resolver.resolve(
+            Dependency.create(specifier: "pages/page", importer_id: nil, kind: :entrypoint)
+          )
+        end
+
+      assert_includes(error.message, "Ambiguous import pages/page")
+      assert_includes(error.message, "Use an explicit extension")
+    end
+  end
+
   def test_rejects_source_dir_escape
     Dir.mktmpdir do |dir|
       resolver = Resolver.new(source_dir: dir)

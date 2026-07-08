@@ -11,7 +11,7 @@ bundle exec ruby example/watch.rb
 bundle exec ruby example/server.rb
 ```
 
-`run.rb` loads `src/pages/home.rb`, resolves its `import("../shared")`, evaluates both files as `Klenod::Runtime::Mod` instances, and prints exported constants from the entrypoint.
+`run.rb` loads `src/pages/server.rb`, which imports and renders `src/pages/page.haml`.
 
 `build_and_load.rb` writes `example/dist/klenod.bundle`, reloads it through the runtime API, and evaluates the entrypoint without using the build graph.
 
@@ -27,3 +27,5 @@ SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 ```
 
 `framework.rb` defines the example `Example::H` factory used by the Haml plugin. `src/pages/page.haml` renders through that factory and automatically imports its companion `src/pages/page.css` as `Styles`.
+
+The example uses explicit extensions for page imports. If both `page.rb` and `page.haml` exist, an extensionless import like `import("./page")` is ambiguous and Klenod asks for `import("./page.haml")` or `import("./page.rb")`.
