@@ -97,6 +97,81 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     end
   end
 
+  def test_ruby_import_query_generates_image_variants
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/hero.png", real_png_bytes(width: 4, height: 2))
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Hero = import("images/hero.png?width=2&format=png")
+          VARIANTS = Hero.variants
+        RUBY
+      )
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::ImagePlugin.new
+          ]
+        )
+
+      record = context.load("entry")
+      variants = context.graph.mods.fetch(record.id).const_get(:Exports)::VARIANTS
+      variant = variants.fetch(0)
+      assets = context.assets_for("images/hero.png")
+
+      assert_equal(2, assets.length)
+      assert_match(%r{\A/assets/hero\.2w\.[a-f0-9]{16}\.png\z}, variant.src)
+      assert_equal(2, variant.width)
+      assert_equal(1, variant.height)
+      assert_equal("2w", variant.descriptor)
+    end
+  end
+
+  def test_overlapping_image_import_queries_reuse_generated_variants
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/hero.png", real_png_bytes(width: 6, height: 3))
+      File.write(
+        "#{dir}/entry_a.rb",
+        <<~RUBY
+          HeroA = import("images/hero.png?width=2,3&format=png")
+          VARIANTS_A = HeroA.variants
+        RUBY
+      )
+      File.write(
+        "#{dir}/entry_b.rb",
+        <<~RUBY
+          HeroB = import("images/hero.png?width=3&format=png")
+          VARIANTS_B = HeroB.variants
+        RUBY
+      )
+      image_plugin = Klenod::Build::Plugins::ImagePlugin.new
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [Klenod::Build::Plugins::RubyPlugin.new, image_plugin]
+        )
+
+      record_a = context.load("entry_a")
+      record_b = context.load("entry_b")
+      variants_a = context.graph.mods.fetch(record_a.id).const_get(:Exports)::VARIANTS_A
+      variants_b = context.graph.mods.fetch(record_b.id).const_get(:Exports)::VARIANTS_B
+      shared_variant_a = variants_a.find { |variant| variant.descriptor == "3w" }
+      shared_variant_b = variants_b.fetch(0)
+      generated_3w_assets =
+        context
+          .assets_for("images/hero.png")
+          .select { |asset| asset.metadata[:type] == :image_variant && asset.metadata[:descriptor] == "3w" }
+
+      assert_equal(shared_variant_a.src, shared_variant_b.src)
+      assert_equal(1, generated_3w_assets.length)
+      assert_equal(shared_variant_b.src, generated_3w_assets.fetch(0).output_path)
+    end
+  end
+
   def test_runtime_bundle_preserves_image_variants
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")

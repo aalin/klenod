@@ -19,7 +19,7 @@ context =
       Klenod::Build::Plugins::IntlPlugin.new,
       Klenod::Build::Plugins::HamlPlugin.new,
       Klenod::Build::Plugins::CssPlugin.new,
-      Klenod::Build::Plugins::ImagePlugin.new(widths: [320, 640], formats: ["png"])
+      Klenod::Build::Plugins::ImagePlugin.new
     ]
   )
 record = context.load(entrypoint)

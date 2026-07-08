@@ -2,7 +2,7 @@
 
 Shared = import("../shared")
 Styles = import("../styles/home.css")
-SmokedFish = import("./smoked-fish.png")
+SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 
 def self.call(_request, context)
   css_asset = context.assets_for("styles/home.css").first
