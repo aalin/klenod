@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "rmagick"
 require "minitest/autorun"
 require "tmpdir"
 
 require_relative "../context"
+require_relative "ruby_plugin"
 
 class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
   def test_ruby_import_of_image_returns_dimensions
@@ -62,7 +64,71 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     end
   end
 
+  def test_ruby_import_of_image_returns_generated_variants
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/hero.png", real_png_bytes(width: 4, height: 2))
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Hero = import("images/hero.png")
+          VARIANTS = Hero.variants
+        RUBY
+      )
+      image_plugin = Klenod::Build::Plugins::ImagePlugin.new(widths: [2], formats: ["png"])
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [Klenod::Build::Plugins::RubyPlugin.new, image_plugin]
+        )
+
+      record = context.load("entry")
+      variants = context.graph.mods.fetch(record.id).const_get(:Exports)::VARIANTS
+      variant = variants.fetch(0)
+      variant_asset = context.assets_for("images/hero.png").find { |asset| asset.metadata[:type] == :image_variant }
+
+      assert_match(%r{\A/assets/hero\.2w\.[a-f0-9]{16}\.png\z}, variant.src)
+      assert_equal(2, variant.width)
+      assert_equal(1, variant.height)
+      assert_equal(:png, variant.format)
+      assert_equal("2w", variant.descriptor)
+      assert_equal(variant.src, variant_asset.output_path)
+      assert_equal("image/png", variant_asset.content_type)
+    end
+  end
+
+  def test_runtime_bundle_preserves_image_variants
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/hero.png", real_png_bytes(width: 6, height: 3))
+      File.write("#{dir}/entry.rb", "Hero = import(\"images/hero.png\")\nVARIANTS = Hero.variants\n")
+      output = "#{dir}/bundle.mpk"
+      image_plugin = Klenod::Build::Plugins::ImagePlugin.new(widths: [3], formats: ["png"])
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [Klenod::Build::Plugins::RubyPlugin.new, image_plugin]
+        )
+
+      bundle = context.build(entrypoints: ["entry"], output: output)
+      loaded = Klenod::Runtime.load_bundle(output)
+      variants = loaded.load("entry").const_get(:Exports)::VARIANTS
+
+      assert_equal(2, bundle.assets_for("images/hero.png").length)
+      assert_equal(1, variants.length)
+      assert_equal(3, variants.first.width)
+      assert_equal(2, variants.first.height)
+    end
+  end
+
   private
+
+  def real_png_bytes(width:, height:)
+    image = Magick::Image.new(width, height) { |info| info.background_color = "red" }
+    image.to_blob { |info| info.format = "PNG" }
+  ensure
+    image&.destroy!
+  end
 
   def png_bytes(width:, height:)
     signature = "\x89PNG\r\n\x1a\n".b
