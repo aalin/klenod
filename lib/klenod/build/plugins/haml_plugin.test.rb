@@ -198,14 +198,17 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       context = Klenod::Build::Context.new(source_dir: dir)
       haml_record = context.load("pages/page.haml")
       old_asset_path = context.graph.records.fetch(ModuleId.new("pages/page.css", nil)).assets.first.output_path
+      old_styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
 
-      File.write(css_path, ".title { color: blue; }\n")
+      File.write(css_path, ".heading { color: blue; }\n")
       result = context.invalidate_paths([css_path])
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
       css_record = context.graph.records.fetch(ModuleId.new("pages/page.css", nil))
 
       assert_equal(["pages/page.css", "pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
-      assert_match(/title/, styles.fetch("title"))
+      assert_match(/title/, old_styles.fetch("title"))
+      refute_includes(styles.keys, "title")
+      assert_match(/heading/, styles.fetch("heading"))
       refute_equal(old_asset_path, css_record.assets.first.output_path)
       assert_includes(css_record.assets.first.bytes, "color: #00f")
     end

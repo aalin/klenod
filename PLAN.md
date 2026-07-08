@@ -69,7 +69,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 - [ ] Decide and document asset output conventions.
 - [x] Add a public asset manifest API.
 - [x] Write emitted asset files during build.
-- [ ] Add CSS invalidation tests for class-map changes.
+- [x] Add CSS invalidation tests for class-map changes.
 - [ ] Improve CSS import behavior when CSS imports CSS.
 - [ ] Add image size detection with `image_size`.
 - [ ] Later: add RMagick-backed image variants.

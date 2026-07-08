@@ -68,4 +68,32 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       assert_equal(bundle.assets.keys, loaded.assets.keys)
     end
   end
+
+  def test_css_class_map_changes_reevaluate_ruby_importers
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      css_path = "#{dir}/styles/home.css"
+      File.write(css_path, ".title { color: red; }\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Styles = import("styles/home.css")
+          CLASSES = Styles.keys
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry_record = context.load("entry")
+
+      assert_equal(["title"], context.graph.mods.fetch(entry_record.id).const_get(:Exports)::CLASSES)
+
+      File.write(css_path, ".heading { color: red; }\n")
+      result = context.invalidate_paths([css_path])
+      classes = context.graph.mods.fetch(entry_record.id).const_get(:Exports)::CLASSES
+
+      assert_equal(["styles/home.css"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      assert_equal(["heading"], classes)
+    end
+  end
 end
