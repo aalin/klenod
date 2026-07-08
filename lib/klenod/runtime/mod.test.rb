@@ -69,7 +69,6 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
         "abc123",
         "/assets/home.abc123.css",
         "text/css",
-        ".title{}",
         {}
       )
     bundle = Klenod::Runtime::Bundle.new({}, {}, {asset.output_path => asset})

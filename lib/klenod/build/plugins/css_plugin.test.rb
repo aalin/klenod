@@ -59,8 +59,8 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
 
       context = Klenod::Build::Context.new(source_dir: dir)
       bundle = context.build(entrypoints: ["styles/home.css"], output: "#{dir}/bundle.mpk")
-      home_asset = bundle.assets_for("styles/home.css").fetch(0)
-      base_asset = bundle.assets_for("styles/base.css").fetch(0)
+      home_asset = context.assets_for("styles/home.css").fetch(0)
+      base_asset = context.assets_for("styles/base.css").fetch(0)
 
       assert_includes(home_asset.bytes, %(@import "#{base_asset.output_path}";))
       assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, home_asset.output_path)

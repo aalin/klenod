@@ -43,7 +43,7 @@ module Klenod
       end
 
       def assets
-        runtime_asset_specs
+        @records.values.flat_map(&:assets).to_h { |asset| [asset.output_path, asset] }
       end
 
       def asset(output_path)
@@ -272,7 +272,6 @@ module Klenod
               asset.content_hash,
               asset.output_path,
               asset.content_type,
-              asset.bytes,
               asset.metadata
             )
           ]

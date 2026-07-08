@@ -8,7 +8,7 @@ module Klenod
     ImportSpec = Data.define(:target_id, :value)
 
     AssetSpec =
-      Data.define(:logical_name, :content_hash, :output_path, :content_type, :bytes, :metadata)
+      Data.define(:logical_name, :content_hash, :output_path, :content_type, :metadata)
 
     class Bundle
       attr_reader :entrypoints, :modules, :assets

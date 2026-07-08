@@ -31,7 +31,6 @@ class Klenod::RuntimeBoundaryTest
           "abc123",
           "/assets/home.abc123.css",
           "text/css",
-          ".title{}",
           {}
         )
       bundle =
@@ -51,7 +50,7 @@ class Klenod::RuntimeBoundaryTest
         )
 
       abort "bad module" unless bundle.load("entry").const_get(:Exports)::VALUE == 1
-      abort "bad asset" unless bundle.asset(asset.output_path).bytes == ".title{}"
+      abort "bad asset" unless bundle.asset(asset.output_path).content_type == "text/css"
     RUBY
 
     stdout, stderr, status =

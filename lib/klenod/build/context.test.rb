@@ -50,12 +50,13 @@ class Klenod::Build::Context::Test < Minitest::Test
 
       context = Klenod::Build::Context.new(source_dir: dir)
       bundle = context.build(entrypoints: ["entry"], output: output, assets_dir: assets_dir)
-      asset_path, asset = bundle.assets.first
+      asset_path, runtime_asset = bundle.assets.first
+      asset = context.asset(asset_path)
       written_path = File.join(assets_dir, asset_path.delete_prefix("/"))
 
       assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, asset_path)
       assert_equal(asset.bytes, File.binread(written_path))
-      assert_equal("text/css", asset.content_type)
+      assert_equal("text/css", runtime_asset.content_type)
       assert_equal(context.asset(asset_path), context.assets.fetch(asset_path))
       assert_equal([asset.logical_name], context.assets_for("styles/home.css").map(&:logical_name))
       assert_includes(context.each_asset.to_a.map(&:output_path), asset_path)

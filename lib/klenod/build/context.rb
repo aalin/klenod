@@ -37,7 +37,7 @@ module Klenod
 
       def build(entrypoints:, output:, assets_dir: nil)
         bundle = @graph.bundle(entrypoints: entrypoints)
-        write_assets(bundle, assets_dir) if assets_dir
+        write_assets(@graph.assets, assets_dir) if assets_dir
         FileUtils.mkdir_p(File.dirname(output))
         File.binwrite(output, Marshal.dump(bundle))
         bundle
@@ -73,10 +73,10 @@ module Klenod
 
       private
 
-      def write_assets(bundle, assets_dir)
+      def write_assets(assets, assets_dir)
         assets_root = Pathname.new(assets_dir)
 
-        bundle.assets.each_value do |asset|
+        assets.each_value do |asset|
           relative_path = asset.output_path.delete_prefix("/")
           output_path = assets_root.join(relative_path)
 
