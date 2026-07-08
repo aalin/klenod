@@ -51,6 +51,62 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_css_importing_css_emits_both_assets_in_bundle_manifest
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/base.css", ".base { color: blue; }\n")
+      File.write("#{dir}/styles/home.css", "@import \"./base.css\";\n.title { color: red; }\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      bundle = context.build(entrypoints: ["styles/home.css"], output: "#{dir}/bundle.mpk")
+      home_asset = bundle.assets_for("styles/home.css").fetch(0)
+      base_asset = bundle.assets_for("styles/base.css").fetch(0)
+
+      assert_includes(home_asset.bytes, %(@import "#{base_asset.output_path}";))
+      assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, home_asset.output_path)
+      assert_match(%r{\A/assets/styles_base_css\.[a-f0-9]{16}\.css\z}, base_asset.output_path)
+      assert_equal(2, bundle.assets.length)
+    end
+  end
+
+  def test_css_importing_css_refinalizes_parent_when_child_asset_changes
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      base_path = "#{dir}/styles/base.css"
+      File.write(base_path, ".base { color: blue; }\n")
+      File.write("#{dir}/styles/home.css", "@import \"./base.css\";\n.title { color: red; }\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Styles = import("styles/home.css")
+          TITLE = Styles.fetch("title")
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry_record = context.load("entry")
+      old_home_asset = context.assets_for("styles/home.css").fetch(0)
+      old_base_asset = context.assets_for("styles/base.css").fetch(0)
+
+      File.write(base_path, ".base { color: green; }\n")
+      result = context.invalidate_paths([base_path])
+      new_home_asset = context.assets_for("styles/home.css").fetch(0)
+      new_base_asset = context.assets_for("styles/base.css").fetch(0)
+      title = context.graph.mods.fetch(entry_record.id).const_get(:Exports)::TITLE
+
+      assert_equal(["styles/base.css"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["styles/home.css", "entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      refute_equal(old_base_asset.output_path, new_base_asset.output_path)
+      refute_equal(old_home_asset.output_path, new_home_asset.output_path)
+      assert_includes(new_home_asset.bytes, new_base_asset.output_path)
+      assert_match(/title/, title)
+      assert_includes(result.added_assets, new_base_asset.output_path)
+      assert_includes(result.added_assets, new_home_asset.output_path)
+      assert_includes(result.removed_assets, old_base_asset.output_path)
+      assert_includes(result.removed_assets, old_home_asset.output_path)
+    end
+  end
+
   def test_runtime_bundle_preserves_css_import_value_and_asset_manifest
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
