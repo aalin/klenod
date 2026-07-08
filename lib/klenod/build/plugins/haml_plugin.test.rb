@@ -146,6 +146,38 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_default_haml_transformer_supports_script_blocks_with_children
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/list.haml",
+        <<~HAML
+          :ruby
+            Item = Data.define(:name)
+
+            def initialize
+              @items = [Item.new("A"), Item.new("B")]
+            end
+
+          %ul
+            = @items.map do |item|
+              %li= item.name
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/list.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([:ul, [[:li, "A"], [:li, "B"]]], exports::Default.new.render)
+      assert_match(/SourceMapMark:8:/, record.transformed_source)
+      assert_match(/SourceMapMark:9:/, record.transformed_source)
+    end
+  end
+
   def test_default_haml_transformer_rewrites_error_backtraces_to_haml_lines
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

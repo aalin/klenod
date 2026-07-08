@@ -111,12 +111,27 @@ module Klenod
               when :plain
                 node.value.fetch(:text).inspect
               when :script
-                "(#{node.value.fetch(:text)})"
+                compile_script(node, factory: factory)
               when :filter
                 compile_filter_node(node)
               end
 
             "#{mark}\n#{expression}"
+          end
+
+          def compile_script(node, factory:)
+            source = node.value.fetch(:text).strip
+            return "(#{source})" if node.children.empty?
+
+            body =
+              case node.children.length
+              when 1
+                compile_node(node.children.fetch(0), factory: factory)
+              else
+                "[\n#{indent(node.children.map { |child| compile_node(child, factory: factory) }.join(",\n"), 2)}\n]"
+              end
+
+            "#{source}\n#{indent(body, 2)}\nend"
           end
 
           def compile_tag(node, factory:)
