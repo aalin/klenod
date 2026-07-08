@@ -228,18 +228,16 @@ module Klenod
           end
 
           def compile_factory_call(node, children, factory:)
-            arguments = [":#{node.value.fetch(:name)}", *children, *compile_attributes(node)].join(",\n")
+            arguments = [":#{node.value.fetch(:name)}", *children, compile_attributes(node)].compact.join(",\n")
 
             "#{factory}[\n#{indent(arguments, 2)}\n]"
           end
 
           def compile_attributes(node)
             attributes = static_attributes(node).merge(dynamic_attributes(node))
-            return [] if attributes.empty?
+            return nil if attributes.empty?
 
-            [
-              "#{source_mark(node)},\n{#{attributes.map { |name, value| "#{name.inspect} => #{value}" }.join(", ")}}"
-            ]
+            "#{source_mark(node)},\n**{#{attributes.map { |name, value| "#{name.inspect} => #{value}" }.join(", ")}}"
           end
 
           def compile_ruby_filters(nodes)

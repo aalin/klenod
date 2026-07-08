@@ -15,8 +15,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
 
     module H
-      def self.[](*children)
-        children
+      def self.[](tag, *children, **props)
+        props.empty? ? [tag, *children] : [tag, *children, props]
       end
     end
   end

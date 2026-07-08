@@ -8,10 +8,9 @@ module Example
     HtmlString = Class.new(String)
     VOID_TAGS = %i[area base br col embed hr img input link meta param source track wbr].freeze
 
-    def self.[](tag, *children)
-      attributes = children.last.is_a?(Hash) ? children.pop : {}
+    def self.[](tag, *children, **props)
       rendered_attributes =
-        attributes
+        props
           .compact
           .reject { |_name, value| value == false }
           .map { |name, value| %( #{escape_html(name)}="#{escape_html(value)}") }
