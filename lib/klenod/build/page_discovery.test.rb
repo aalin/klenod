@@ -18,7 +18,8 @@ class Klenod::Build::PageDiscovery::Test < Minitest::Test
       File.write("#{dir}/pages/layout.haml", "")
       File.write("#{dir}/pages/components/Card.haml", "")
 
-      routes = Klenod::Build::PageDiscovery.new(source_dir: dir).call
+      manifest = Klenod::Build::PageDiscovery.new(source_dir: dir).call
+      routes = manifest.routes
 
       assert_equal(
         [
@@ -27,6 +28,9 @@ class Klenod::Build::PageDiscovery::Test < Minitest::Test
         ],
         routes.map { |route| [route.path, route.module_id] }
       )
+      assert_equal(["pages/page.haml", "pages/blog/page.rb"], manifest.entrypoints)
+      assert_equal(routes.fetch(1), manifest.fetch("/blog"))
+      assert_equal(routes, manifest.each_route.to_a)
       assert_equal([], routes.fetch(0).segments)
       assert_equal([[:blog, :static, nil, "blog"]], segment_values(routes.fetch(1)))
       assert_equal([Klenod::Build::ModuleId.new("pages/layout.haml", nil)], routes.fetch(0).layout_module_ids)
@@ -41,9 +45,11 @@ class Klenod::Build::PageDiscovery::Test < Minitest::Test
 
       context = Klenod::Build::Context.new(source_dir: dir)
       routes = context.page_routes(pages_dir: "app")
+      manifest = context.route_manifest(pages_dir: "app")
 
       assert_equal("/about", routes.fetch(0).path)
       assert_equal(Klenod::Build::ModuleId.new("app/about/page.haml", nil), routes.fetch(0).module_id)
+      assert_equal(routes, manifest.routes)
     end
   end
 
@@ -60,7 +66,7 @@ class Klenod::Build::PageDiscovery::Test < Minitest::Test
       File.write("#{dir}/pages/(marketing)/about/page.haml", "")
       File.write("#{dir}/pages/dashboard/@modal/settings/page.haml", "")
 
-      routes = Klenod::Build::PageDiscovery.new(source_dir: dir).call
+      routes = Klenod::Build::PageDiscovery.new(source_dir: dir).call.routes
       routes_by_path = routes.to_h { |route| [route.path, route] }
 
       assert_equal([:static, :dynamic], routes_by_path.fetch("/blog/:slug").segments.map(&:kind))
@@ -91,7 +97,7 @@ class Klenod::Build::PageDiscovery::Test < Minitest::Test
       File.write("#{dir}/pages/blog/post/page.haml", "")
       File.write("#{dir}/pages/docs/page.haml", "")
 
-      routes = Klenod::Build::PageDiscovery.new(source_dir: dir).call
+      routes = Klenod::Build::PageDiscovery.new(source_dir: dir).call.routes
       routes_by_path = routes.to_h { |route| [route.path, route] }
 
       assert_equal(
@@ -113,7 +119,7 @@ class Klenod::Build::PageDiscovery::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/pages/about")
       File.write("#{dir}/pages/about/page.haml", "")
 
-      route = Klenod::Build::PageDiscovery.new(source_dir: dir).call.fetch(0)
+      route = Klenod::Build::PageDiscovery.new(source_dir: dir).call.routes.fetch(0)
 
       assert_equal([], route.layout_module_ids)
     end
@@ -121,7 +127,7 @@ class Klenod::Build::PageDiscovery::Test < Minitest::Test
 
   def test_missing_pages_directory_returns_no_routes
     Dir.mktmpdir do |dir|
-      routes = Klenod::Build::PageDiscovery.new(source_dir: dir).call
+      routes = Klenod::Build::PageDiscovery.new(source_dir: dir).call.routes
 
       assert_equal([], routes)
     end

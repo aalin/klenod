@@ -71,6 +71,10 @@ module Klenod
       end
 
       def page_routes(pages_dir: "pages")
+        route_manifest(pages_dir: pages_dir).routes
+      end
+
+      def route_manifest(pages_dir: "pages")
         PageDiscovery.new(source_dir: @source_dir, pages_dir: pages_dir).call
       end
 

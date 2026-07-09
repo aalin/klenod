@@ -37,6 +37,32 @@ module Klenod
       end
     end
 
+    RouteManifest = Data.define(:routes) do
+      def entrypoints
+        routes.map { |route| route.module_id.to_s }
+      end
+
+      def [](path)
+        routes_by_path.fetch(path)
+      end
+
+      def fetch(path, *fallback, &block)
+        routes_by_path.fetch(path, *fallback, &block)
+      end
+
+      def each_route(&block)
+        return enum_for(:each_route) unless block
+
+        routes.each(&block)
+      end
+
+      private
+
+      def routes_by_path
+        routes.to_h { |route| [route.path, route] }
+      end
+    end
+
     class PageDiscovery
       PAGE_EXTENSIONS = [".rb", ".haml"].freeze
 
@@ -46,15 +72,19 @@ module Klenod
       end
 
       def call
-        route_files
-          .group_by { |path| route_path_for(route_segments_for(path)) }
-          .map { |route_path, paths| route_for(route_path, paths) }
-          .sort_by(&:path)
+        RouteManifest.new(routes)
       end
 
       private
 
       attr_reader :source_dir, :pages_dir
+
+      def routes
+        route_files
+          .group_by { |path| route_path_for(route_segments_for(path)) }
+          .map { |route_path, paths| route_for(route_path, paths) }
+          .sort_by(&:path)
+      end
 
       def route_files
         root = source_dir.join(pages_dir)

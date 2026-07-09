@@ -80,9 +80,13 @@ Frameworks can discover app-style pages under `pages/`:
 ```ruby
 context.page_routes
 # => [#<data Klenod::Build::PageRoute path="/" module_id=pages/page.haml>]
+
+manifest = context.route_manifest
+manifest.entrypoints
+# => ["pages/page.haml"]
 ```
 
-Only `page.rb` and `page.haml` files are route entrypoints for now. For example, `pages/page.haml` maps to `/`, and `pages/blog/page.rb` maps to `/blog`. Layouts and path params are planned separately.
+Only `page.rb` and `page.haml` files are route entrypoints for now. For example, `pages/page.haml` maps to `/`, and `pages/blog/page.rb` maps to `/blog`. Layouts and path params are represented structurally, but request matching and layout composition are left to a router/framework layer.
 
 Routes also expose parsed segments for future router layers. The discovery layer preserves NextJS-style structure without deciding rendering policy:
 
