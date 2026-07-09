@@ -11,7 +11,7 @@ bundle exec ruby example/watch.rb
 bundle exec ruby example/server.rb
 ```
 
-`run.rb` loads `src/pages/server.rb`, which imports `virtual:router`, matches `/`, and renders `src/pages/page.haml`.
+`run.rb` loads `src/pages/server.rb`, which imports `virtual:router`, matches `/`, renders `src/pages/page.haml`, and wraps it in `src/pages/layout.haml`.
 
 `build_and_load.rb` writes `example/dist/klenod.bundle`, reloads it through the runtime API, and evaluates the entrypoint without using the build graph.
 
@@ -35,6 +35,8 @@ Router = import("virtual:router")
 SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 ```
 
-`Router::Default.match(path).page` returns the matched component class. `framework.rb` defines the example `Example::H` factory used by the Haml plugin. `src/pages/page.haml` renders through that factory, imports `src/components/Figure.haml`, and automatically imports its companion `src/pages/page.css` as `Styles`.
+`Router::Default.match(path).page` returns the matched component class. The server entry wraps the rendered page through `match.layouts`, passing the current HTML as `children: [inner]` and an empty `slots: {}` hash. The nested route `src/pages/blog/[slug]/page.haml` demonstrates dynamic params at `/blog/hello`.
+
+`framework.rb` defines the example `Example::H` factory used by the Haml plugin. `src/pages/page.haml` renders through that factory, imports `src/components/Figure.haml`, and automatically imports its companion `src/pages/page.css` as `Styles`.
 
 The example uses explicit extensions for page imports. If both `page.rb` and `page.haml` exist, an extensionless import like `import("./page")` is ambiguous and Klenod asks for `import("./page.haml")` or `import("./page.rb")`.

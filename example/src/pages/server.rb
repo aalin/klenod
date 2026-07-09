@@ -21,9 +21,17 @@ def self.call(request, context)
         name: Shared::NAME,
         tagline: Shared::TAGLINE,
         image: SmokedFish,
-        srcset: srcset
+        srcset: srcset,
+        params: match.params
       )
       .render
+  body =
+    match
+      .layouts
+      .reverse_each
+      .reduce(body) do |inner, layout|
+        layout.new(children: [inner], slots: {}).render
+      end
 
   [
     200,

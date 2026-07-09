@@ -1,0 +1,16 @@
+:ruby
+  def initialize(children:, slots: {})
+    @children = children
+    @slots = slots
+  end
+
+%body
+  %header
+    %a{ href: "/" } Klenod example
+    %nav
+      %a{ href: "/" } Home
+      %a{ href: "/blog/hello" } Blog
+  = @children
+  - if @slots[:modal]
+    %aside
+      = @slots[:modal]

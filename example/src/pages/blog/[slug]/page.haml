@@ -1,0 +1,11 @@
+:ruby
+  def initialize(name:, tagline:, image:, srcset:, params: {})
+    @name = name
+    @tagline = tagline
+    @slug = params.fetch(:slug)
+  end
+
+%article
+  %h1= "Blog post: #{@slug}"
+  %p= "Rendered for #{@name}"
+  %p= @tagline
