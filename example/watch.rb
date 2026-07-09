@@ -15,6 +15,9 @@ context.on_update do |event|
   puts "  removed: #{result.removed_module_ids.join(", ")}"
   puts "  reloaded: #{result.reloaded_module_ids.join(", ")}"
   puts "  reevaluated: #{result.reevaluated_module_ids.join(", ")}"
+  puts "  assets added: #{event.asset_changes.added.join(", ")}"
+  puts "  assets changed: #{event.asset_changes.changed.join(", ")}"
+  puts "  assets removed: #{event.asset_changes.removed.join(", ")}"
 
   if result.errors.any?
     result.errors.each do |module_id, error|

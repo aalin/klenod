@@ -80,6 +80,11 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal([new_asset_path], result.added_assets)
       assert_equal([old_asset_path], result.removed_assets)
       assert_equal([], result.changed_assets)
+      assert_equal([new_asset_path], result.asset_changes.added)
+      assert_equal([old_asset_path], result.asset_changes.removed)
+      assert_equal([], result.asset_changes.changed)
+      assert_equal([new_asset_path, old_asset_path], result.asset_changes.paths)
+      refute(result.asset_changes.empty?)
     end
   end
 

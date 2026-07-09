@@ -135,9 +135,9 @@ module Klenod
           removed_module_ids.freeze,
           reloaded_module_ids.freeze,
           reevaluated_module_ids.freeze,
-          asset_changes.fetch(:added).freeze,
-          asset_changes.fetch(:changed).freeze,
-          asset_changes.fetch(:removed).freeze,
+          asset_changes.added.freeze,
+          asset_changes.changed.freeze,
+          asset_changes.removed.freeze,
           errors.freeze
         )
       end
@@ -304,14 +304,13 @@ module Klenod
         current_paths = current_assets.keys
         shared_paths = previous_paths & current_paths
 
-        {
-          added: current_paths - previous_paths,
-          changed:
-            shared_paths.select do |path|
-              previous_assets.fetch(path).content_hash != current_assets.fetch(path).content_hash
-            end,
-          removed: previous_paths - current_paths
-        }
+        AssetChanges.new(
+          current_paths - previous_paths,
+          shared_paths.select do |path|
+            previous_assets.fetch(path).content_hash != current_assets.fetch(path).content_hash
+          end,
+          previous_paths - current_paths
+        )
       end
 
       def runtime_import_spec(resolved_dependency, record)

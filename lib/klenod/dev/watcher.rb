@@ -4,7 +4,11 @@ require "listen"
 
 module Klenod
   module Dev
-    UpdateEvent = Data.define(:changed_paths, :removed_paths, :graph_version, :result)
+    UpdateEvent = Data.define(:changed_paths, :removed_paths, :graph_version, :result) do
+      def asset_changes
+        result.asset_changes
+      end
+    end
 
     class Watcher
       def initialize(source_dir:, context:)

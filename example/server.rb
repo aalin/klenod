@@ -28,6 +28,11 @@ context.on_update do |event|
     record = context.graph.records.fetch(record.id)
     page = context.graph.mods.fetch(record.id).const_get(:Exports)
     puts "Update ##{event.graph_version}: dependency tree updated"
+    unless event.asset_changes.empty?
+      puts "  assets added: #{event.asset_changes.added.join(", ")}" unless event.asset_changes.added.empty?
+      puts "  assets changed: #{event.asset_changes.changed.join(", ")}" unless event.asset_changes.changed.empty?
+      puts "  assets removed: #{event.asset_changes.removed.join(", ")}" unless event.asset_changes.removed.empty?
+    end
   end
 end
 
