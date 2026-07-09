@@ -26,6 +26,37 @@ Styles = import("styles/home.css")
 Hero = import("./hero.png?width=320,640&format=png")
 ```
 
+## Entry Handles
+
+Frameworks should usually keep a loaded entry handle instead of storing raw graph records:
+
+```ruby
+entry = context.entry("pages/server")
+page = entry.exports
+stylesheets = entry.assets(type: :css)
+```
+
+`entry.exports` always resolves through the current graph state, so the same handle can be reused after development updates. `entry.assets` returns assets reachable from that entry and is recursive by default; pass `recursive: false` to include only assets emitted directly by the entry module.
+
+Watch-mode consumers can apply a graph update and keep using the same entry handle:
+
+```ruby
+context.on_update do |event|
+  update = context.apply_update(event, entry: entry, assets_dir: "public")
+
+  if update.success?
+    page = update.entry.exports
+    css_assets = update.entry.assets(type: :css)
+  else
+    update.errors.each_value do |error|
+      warn "#{error.class}: #{error.message}"
+    end
+  end
+end
+```
+
+`apply_update` refreshes the entry, mirrors changed assets when `assets_dir:` is provided, and returns an applied update object with `entry`, `exports`, `asset_write_result`, and `errors`.
+
 Use `lazy_import("...")` to record a dependency without loading it while the importing module is evaluated. It returns a `Klenod::Runtime::LazyImport`; call `#call` or `#value` to load and cache the imported value.
 
 ```ruby
@@ -143,8 +174,6 @@ asset.wait
   [asset.bytes]
 ]
 ```
-
-In watch mode, `context.apply_update(event, entry: entry, assets_dir: assets_dir)` refreshes the current entry handle and mirrors asset changes when the update has no errors.
 
 ## Development
 
