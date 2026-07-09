@@ -10,7 +10,7 @@
     @image_alt = "Smoked fish"
   end
 
-%main{ class: Styles.fetch("title") }
+%main{ class: Styles.fetch(:title) }
   %h1= "Hello from #{@name}"
   %p= @tagline
   %Figure{ image: @image, srcset: @srcset, sizes: @sizes, alt: @image_alt, caption: "Image imported through Klenod with generated variants." }

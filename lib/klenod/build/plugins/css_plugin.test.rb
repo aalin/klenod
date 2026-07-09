@@ -13,7 +13,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/pages")
       FileUtils.mkdir_p("#{dir}/styles")
       File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
-      File.write("#{dir}/pages/home.rb", "Styles = import(\"../styles/home.css\")\nTITLE = Styles.fetch(\"title\")\n")
+      File.write("#{dir}/pages/home.rb", "Styles = import(\"../styles/home.css\")\nTITLE = Styles.fetch(:title)\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
       record = context.load("pages/home")
@@ -36,8 +36,8 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         "#{dir}/pages/home.rb",
         <<~RUBY
           Styles = import("../styles/home.css")
-          IMAGE = Styles.fetch("img")
-          TITLE = Styles.fetch("title")
+          IMAGE = Styles.fetch(:__img)
+          TITLE = Styles.fetch(:title)
         RUBY
       )
 
@@ -49,7 +49,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
 
       assert_match(/img/, mod.const_get(:Exports)::IMAGE)
       assert_match(/title/, mod.const_get(:Exports)::TITLE)
-      assert_match(/img/, asset.metadata.fetch(:classes).fetch("img"))
+      assert_match(/img/, asset.metadata.fetch(:classes).fetch(:__img))
       assert_includes(asset.bytes, "width: 100%")
     end
   end
@@ -106,7 +106,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         "#{dir}/entry.rb",
         <<~RUBY
           Styles = import("styles/home.css")
-          TITLE = Styles.fetch("title")
+          TITLE = Styles.fetch(:title)
         RUBY
       )
 
@@ -138,7 +138,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
       File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
-      File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\nTITLE = Styles.fetch(\"title\")\n")
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\nTITLE = Styles.fetch(:title)\n")
       output = "#{dir}/bundle.mpk"
 
       context = Klenod::Build::Context.new(source_dir: dir)
@@ -168,7 +168,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       context = Klenod::Build::Context.new(source_dir: dir)
       entry_record = context.load("entry")
 
-      assert_equal(["title"], context.graph.mods.fetch(entry_record.id).const_get(:Exports)::CLASSES)
+      assert_equal([:title], context.graph.mods.fetch(entry_record.id).const_get(:Exports)::CLASSES)
 
       File.write(css_path, ".heading { color: red; }\n")
       result = context.invalidate_paths([css_path])
@@ -176,7 +176,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
 
       assert_equal(["styles/home.css"], result.reloaded_module_ids.map(&:to_s))
       assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
-      assert_equal(["heading"], classes)
+      assert_equal([:heading], classes)
     end
   end
 end

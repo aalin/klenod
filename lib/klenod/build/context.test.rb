@@ -44,7 +44,7 @@ class Klenod::Build::Context::Test < Minitest::Test
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
       File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
-      File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\nTITLE = Styles.fetch(\"title\")\n")
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\nTITLE = Styles.fetch(:title)\n")
       output = "#{dir}/dist/klenod.bundle"
       assets_dir = "#{dir}/dist/public"
 

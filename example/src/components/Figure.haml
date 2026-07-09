@@ -8,9 +8,9 @@
     @children = children
   end
 
-%figure{ class: Styles.fetch("figure") }
+%figure{ class: Styles.fetch(:figure) }
   - if @children&.any?
     = @children
   - else
-    %img{ class: Styles.fetch("image"), src: @image.src, srcset: @srcset, sizes: @sizes, width: @image.width, height: @image.height, alt: @alt }
-  %figcaption{ class: Styles.fetch("caption") }= @caption
+    %img{ class: Styles.fetch(:image), src: @image.src, srcset: @srcset, sizes: @sizes, width: @image.width, height: @image.height, alt: @alt }
+  %figcaption{ class: Styles.fetch(:caption) }= @caption
