@@ -634,6 +634,60 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_apply_update_refreshes_entry_exports_and_writes_assets
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      css_path = "#{dir}/styles/home.css"
+      assets_dir = "#{dir}/public"
+      File.write(css_path, ".title { color: red; }\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Styles = import("styles/home.css")
+          CLASSES = Styles.keys
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry_record = context.load("entry")
+      context.write_assets(assets_dir)
+
+      File.write(css_path, ".heading { color: blue; }\n")
+      result = context.invalidate_paths([css_path])
+      event = Struct.new(:result, :asset_updates).new(result, result.asset_updates)
+
+      applied = context.apply_update(event, entry: entry_record, assets_dir: assets_dir)
+
+      assert(applied.success?)
+      assert_equal(entry_record.id, applied.entry_record.id)
+      assert_equal([:heading], applied.exports::CLASSES)
+      assert_equal([], applied.errors)
+      assert_equal(result.added_assets.sort, applied.asset_write_result.written_paths.map { |path| "/#{Pathname.new(path).relative_path_from(Pathname.new(assets_dir))}" }.sort)
+      assert_equal(result.removed_assets.sort, applied.asset_write_result.removed_paths.map { |path| "/#{Pathname.new(path).relative_path_from(Pathname.new(assets_dir))}" }.sort)
+    end
+  end
+
+  def test_apply_update_does_not_refresh_or_write_assets_when_update_has_errors
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/dep.rb", "VALUE = 1\n")
+      File.write("#{dir}/entry.rb", "Dep = import(\"dep\")\nVALUE = Dep::VALUE\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry_record = context.load("entry")
+      File.delete("#{dir}/dep.rb")
+      result = context.invalidate_paths([], removed_paths: ["#{dir}/dep.rb"])
+      event = Struct.new(:result, :asset_updates).new(result, result.asset_updates)
+
+      applied = context.apply_update(event, entry: entry_record, assets_dir: "#{dir}/public")
+
+      refute(applied.success?)
+      assert_nil(applied.entry_record)
+      assert_nil(applied.exports)
+      assert_nil(applied.asset_write_result)
+      assert_equal(result.errors, applied.errors)
+    end
+  end
+
   def test_write_asset_updates_removes_failed_generated_asset_files
     Dir.mktmpdir do |dir|
       assets_dir = "#{dir}/public"

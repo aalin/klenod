@@ -11,6 +11,7 @@ write_result = assets_dir && context.write_assets(assets_dir)
 
 context.on_update do |event|
   result = event.result
+  update = context.apply_update(event, entry: record, assets_dir: assets_dir)
 
   puts "Update ##{event.graph_version}"
   puts "  changed: #{result.changed_module_ids.join(", ")}"
@@ -21,17 +22,17 @@ context.on_update do |event|
   puts "  assets changed: #{event.asset_changes.changed.join(", ")}"
   puts "  assets removed: #{event.asset_changes.removed.join(", ")}"
 
-  if result.errors.any?
-    result.errors.each do |module_id, error|
+  if update.errors.any?
+    update.errors.each do |module_id, error|
       warn "  error in #{module_id}: #{error.class}: #{error.message}"
     end
   else
-    asset_write_result = assets_dir && context.write_asset_updates(event.asset_updates, assets_dir: assets_dir)
-    if asset_write_result && !asset_write_result.empty?
-      puts "  asset files written: #{asset_write_result.written_paths.join(", ")}"
-      puts "  asset files removed: #{asset_write_result.removed_paths.join(", ")}"
+    record = update.entry_record
+    if update.asset_write_result && !update.asset_write_result.empty?
+      puts "  asset files written: #{update.asset_write_result.written_paths.join(", ")}"
+      puts "  asset files removed: #{update.asset_write_result.removed_paths.join(", ")}"
     end
-    exports = context.exports(record)
+    exports = update.exports
     status, _headers, body = exports.call(nil, context)
     puts "  status: #{status}"
     puts "  body includes Haml page: #{body.join.include?("<main")}"

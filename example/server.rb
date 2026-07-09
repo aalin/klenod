@@ -19,26 +19,25 @@ page = context.exports(record)
 context.write_assets(assets_dir) if assets_dir
 
 context.on_update do |event|
-  result = event.result
+  update = context.apply_update(event, entry: record, assets_dir: assets_dir)
 
-  if result.errors.any?
+  if update.errors.any?
     warn "Update ##{event.graph_version} failed"
-    result.errors.each do |module_id, error|
+    update.errors.each do |module_id, error|
       warn "  #{module_id}: #{error.class}: #{error.message}"
     end
   else
-    record = context.graph.records.fetch(record.id)
-    page = context.exports(record)
-    asset_write_result = assets_dir && context.write_asset_updates(event.asset_updates, assets_dir: assets_dir)
+    record = update.entry_record
+    page = update.exports
     puts "Update ##{event.graph_version}: dependency tree updated"
     unless event.asset_changes.empty?
       puts "  assets added: #{event.asset_changes.added.join(", ")}" unless event.asset_changes.added.empty?
       puts "  assets changed: #{event.asset_changes.changed.join(", ")}" unless event.asset_changes.changed.empty?
       puts "  assets removed: #{event.asset_changes.removed.join(", ")}" unless event.asset_changes.removed.empty?
     end
-    if asset_write_result && !asset_write_result.empty?
-      puts "  asset files written: #{asset_write_result.written_paths.join(", ")}" unless asset_write_result.written_paths.empty?
-      puts "  asset files removed: #{asset_write_result.removed_paths.join(", ")}" unless asset_write_result.removed_paths.empty?
+    if update.asset_write_result && !update.asset_write_result.empty?
+      puts "  asset files written: #{update.asset_write_result.written_paths.join(", ")}" unless update.asset_write_result.written_paths.empty?
+      puts "  asset files removed: #{update.asset_write_result.removed_paths.join(", ")}" unless update.asset_write_result.removed_paths.empty?
     end
   end
 end

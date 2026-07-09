@@ -19,6 +19,12 @@ module Klenod
       end
     end
 
+    AppliedUpdate = Data.define(:event, :entry_record, :exports, :asset_write_result, :errors) do
+      def success?
+        errors.empty?
+      end
+    end
+
     class Context
       DEFAULT_PLUGINS = [
         Plugins::RubyPlugin.new,
@@ -128,6 +134,21 @@ module Klenod
           end
 
         AssetWriteResult.new(written_paths.freeze, removed_paths.freeze)
+      end
+
+      def apply_update(event, entry:, assets_dir: nil)
+        return AppliedUpdate.new(event, nil, nil, nil, event.result.errors.freeze) if event.result.errors.any?
+
+        entry_record = @graph.records.fetch(entry.respond_to?(:id) ? entry.id : entry)
+        asset_write_result = assets_dir && write_asset_updates(event.asset_updates, assets_dir: assets_dir)
+
+        AppliedUpdate.new(
+          event,
+          entry_record,
+          exports(entry_record),
+          asset_write_result,
+          [].freeze
+        )
       end
 
       def on_update(&block)
