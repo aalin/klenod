@@ -9,6 +9,7 @@ require_relative "../context"
 
 class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   ModuleId = Klenod::Build::ModuleId
+  HAML_FIXTURE_DIR = File.expand_path("__test__/haml", __dir__)
 
   module FakeFramework
     class ComponentBase
@@ -593,6 +594,17 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal(result.code, result.ast.source)
   end
 
+  def test_default_haml_transformer_matches_golden_files
+    Dir.glob("#{HAML_FIXTURE_DIR}/*.haml").sort.each do |path|
+      expected_path = path.delete_suffix(".haml") + ".rb"
+      actual = transform_haml_fixture(path)
+
+      File.write(expected_path, actual) unless File.exist?(expected_path)
+
+      assert_equal(File.read(expected_path), actual, "Expected #{expected_path} to match #{path}")
+    end
+  end
+
   def test_default_haml_transformer_compiles_template_to_fragments
     transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
@@ -615,6 +627,24 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, template.render)
     assert_kind_of(SyntaxTree::Statements, template.ruby.node)
     assert_kind_of(SyntaxTree::Node, template.render.node)
+  end
+
+  def transform_haml_fixture(path)
+    basename = File.basename(path, ".haml")
+    module_id = ModuleId.new("__test__/haml/#{File.basename(path)}", nil)
+
+    Klenod::Build::Plugins::HamlPlugin::DefaultTransformer
+      .new
+      .call(
+        source: File.read(path),
+        module_id: module_id,
+        component_class_name: basename.split(/[^A-Za-z0-9]+/).map { _1[0].upcase + _1[1..] }.join,
+        component_base_class: "TestFramework::ComponentBase",
+        factory: "TestFramework::H",
+        styles_source: "{}.freeze",
+        translations_source: "{}.freeze"
+      )
+      .code
   end
 
   def test_default_haml_transformer_compiles_ruby_filter_to_statement_fragment

@@ -1,0 +1,10 @@
+:ruby
+  def initialize(show:)
+    @show = show
+  end
+
+%section
+  = if @show
+    %p Visible
+  = else
+    %p Empty

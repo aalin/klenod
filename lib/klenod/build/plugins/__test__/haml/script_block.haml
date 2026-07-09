@@ -1,0 +1,10 @@
+:ruby
+  Item = Data.define(:name)
+
+  def initialize
+    @items = [Item.new("A"), Item.new("B")]
+  end
+
+%ul
+  = @items.map do |item|
+    %li= item.name
