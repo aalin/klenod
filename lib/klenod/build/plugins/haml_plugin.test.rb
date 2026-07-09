@@ -451,6 +451,23 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_kind_of(SyntaxTree::Node, template.render.node)
   end
 
+  def test_default_haml_transformer_compiles_ruby_filter_to_statement_fragment
+    transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    parsed = SyntaxTree::Haml.parse(<<~HAML)
+      :ruby
+        def title
+          "Hello"
+        end
+    HAML
+    fragment = transformer.send(:compile_ruby_filter, parsed.children.fetch(0), builder: builder)
+
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(SyntaxTree::Statements, fragment.node)
+    assert_kind_of(SyntaxTree::Comment, fragment.node.body.first)
+    assert_includes(fragment.source, "SourceMapMark:2:")
+  end
+
   def test_default_haml_transformer_renders_with_configured_factory
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

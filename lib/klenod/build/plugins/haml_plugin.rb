@@ -326,7 +326,12 @@ module Klenod
             def ast_ruby_filters(nodes)
               begins =
                 nodes.map do |node|
-                  statements = parse_statements(node)
+                  statements =
+                    if node.is_a?(Fragment)
+                      node.node
+                    else
+                      parse_statements(node)
+                    end
                   return nil unless statements
 
                   ast_begin(statements.body)
@@ -694,13 +699,16 @@ module Klenod
           end
 
           def compile_ruby_filter(node, builder:)
-            node.value.fetch(:text)
-              .lines
-              .map
-              .with_index(node.line + 1) do |line, line_no|
-                "#{source_mark(RubyLine.new(line_no, line.strip), builder: builder)}\n#{line.chomp}"
-              end
-              .join("\n")
+            source =
+              node.value.fetch(:text)
+                .lines
+                .map
+                .with_index(node.line + 1) do |line, line_no|
+                  "#{source_mark(RubyLine.new(line_no, line.strip), builder: builder)}\n#{line.chomp}"
+                end
+                .join("\n")
+
+            builder.statements(source)
           end
 
           def compile_filter_node(node, builder:)
