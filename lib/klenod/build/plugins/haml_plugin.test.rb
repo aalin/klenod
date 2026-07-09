@@ -55,13 +55,32 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_ruby_builder_fragments_keep_parsed_syntax_tree_nodes
+  def test_ruby_builder_builds_unmarked_factory_calls_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     fragment =
       builder.factory_call(
         factory: "#{self.class.name}::FakeFramework::H",
         tag: ":p",
         children: ["\"Hello\""],
+        props: {class: "\"intro\""}
+      )
+
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(SyntaxTree::ARef, fragment.node)
+    assert_includes(fragment.source, "#{self.class.name}::FakeFramework::H[")
+    assert_includes(fragment.source, ":p")
+    assert_includes(fragment.source, '"Hello"')
+    assert_includes(fragment.source, '**{ class: "intro" }')
+  end
+
+  def test_ruby_builder_preserves_source_map_marks_when_composing_factory_calls
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    child = builder.marked_expression(builder.source_mark(2, "Hello"), builder.expression("\"Hello\""))
+    fragment =
+      builder.factory_call(
+        factory: "#{self.class.name}::FakeFramework::H",
+        tag: ":p",
+        children: [child],
         props: {class: "\"intro\""},
         mark: builder.source_mark(1, "p")
       )
@@ -69,8 +88,12 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
     assert_kind_of(SyntaxTree::ARef, fragment.node)
     assert_includes(fragment.source, "# SourceMapMark:1:")
+    assert_includes(fragment.source, "# SourceMapMark:2:")
     assert_includes(fragment.source, '**{:class => "intro"}')
+  end
 
+  def test_ruby_builder_fragments_keep_parsed_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     unmarked = builder.expression('H[:p, **{:class => "intro"}]')
 
     assert_kind_of(SyntaxTree::ARef, unmarked.node)

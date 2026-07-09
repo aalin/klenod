@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "syntax_tree"
+require "syntax_tree/dsl"
 require "syntax_tree/haml"
 
 require_relative "../../source_map"
@@ -38,7 +39,13 @@ module Klenod
           end
 
           class RubyBuilder
+            include SyntaxTree::DSL
+
             Fragment = Data.define(:source, :node) do
+              def marked?
+                source.include?(SourceMap::MARK_PREFIX)
+              end
+
               def to_s
                 source
               end
@@ -132,7 +139,9 @@ module Klenod
               expression("#{mark}\n#{to_source(expression)}")
             end
 
-            def factory_call(factory:, tag:, children:, props:, mark:)
+            def factory_call(factory:, tag:, children:, props:, mark: nil)
+              return ast_factory_call(factory: factory, tag: tag, children: children, props: props) unless marked?(children)
+
               arguments = [tag, *children.map { |child| to_source(child) }, keyword_props(props, mark: mark)].compact.join(",\n")
 
               expression("#{factory}[\n#{indent(arguments, 2)}\n]")
@@ -172,10 +181,45 @@ module Klenod
 
             private
 
+            def ast_factory_call(factory:, tag:, children:, props:)
+              parts = [
+                expression_node(factory),
+                expression_node(tag),
+                *children.map { |child| expression_node(to_source(child)) },
+                ast_keyword_props(props)
+              ].compact
+              factory_node = parts.shift
+
+              node = ARef(factory_node, Args(parts))
+
+              Fragment.new(format_node(node), node)
+            end
+
+            def ast_keyword_props(props)
+              return nil if props.empty?
+
+              AssocSplat(
+                HashLiteral(
+                  LBrace("{"),
+                  props.map { |name, value| Assoc(Label("#{name}:"), expression_node(value)) }
+                )
+              )
+            end
+
             def keyword_props(props, mark:)
               return nil if props.empty?
 
               "#{mark},\n**{#{props.map { |name, value| "#{name.inspect} => #{value}" }.join(", ")}}"
+            end
+
+            def marked?(values)
+              values.any? { |value| value.respond_to?(:marked?) && value.marked? }
+            end
+
+            def expression_node(source)
+              source = source.to_s
+
+              parse_expression(source) || raise(ArgumentError, "Could not parse Ruby expression: #{source.inspect}")
             end
 
             def parse_expression(source)
