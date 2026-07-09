@@ -98,6 +98,31 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_entry_returns_loaded_module_handle
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Styles = import("styles/home.css")
+          VALUE = 42
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry = context.entry("entry")
+
+      assert_equal(Klenod::Build::ModuleId.new("entry.rb", nil), entry.id)
+      assert_equal("entry.rb", entry.to_s)
+      assert_equal(42, entry.exports::VALUE)
+      assert_same(entry.exports, context.exports(entry))
+      assert_equal(["styles/home.css"], entry.assets(type: :css).map(&:logical_name))
+      assert_equal([], entry.assets(type: :css, recursive: false))
+      assert_same(entry.record, context.graph.records.fetch(entry.id))
+    end
+  end
+
   def test_assets_for_module_returns_reachable_filtered_assets
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/components")

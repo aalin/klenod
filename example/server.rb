@@ -13,13 +13,13 @@ assets_dir = ENV["ASSETS_DIR"] && File.expand_path(ENV.fetch("ASSETS_DIR"))
 endpoint = Async::HTTP::Endpoint.parse("http://localhost:#{port}")
 
 context = Example.build_context(source_dir: source_dir)
-record = context.load(entrypoint)
+entry = context.entry(entrypoint)
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
-page = context.exports(record)
+page = entry.exports
 context.write_assets(assets_dir) if assets_dir
 
 context.on_update do |event|
-  update = context.apply_update(event, entry: record, assets_dir: assets_dir)
+  update = context.apply_update(event, entry: entry, assets_dir: assets_dir)
 
   if update.errors.any?
     warn "Update ##{event.graph_version} failed"
@@ -27,7 +27,6 @@ context.on_update do |event|
       warn "  #{module_id}: #{error.class}: #{error.message}"
     end
   else
-    record = update.entry_record
     page = update.exports
     puts "Update ##{event.graph_version}: dependency tree updated"
     unless event.asset_changes.empty?

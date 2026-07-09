@@ -4,6 +4,7 @@ require "fileutils"
 require "pathname"
 
 require_relative "graph"
+require_relative "loaded_module"
 require_relative "page_discovery"
 require_relative "plugins/ruby_plugin"
 require_relative "plugins/intl_plugin"
@@ -58,6 +59,14 @@ module Klenod
         @graph.load(specifier)
       end
 
+      def entry(specifier)
+        loaded(load(specifier))
+      end
+
+      def loaded(record_or_module_id)
+        LoadedModule.new(self, record_or_module_id.respond_to?(:id) ? record_or_module_id.id : record_or_module_id)
+      end
+
       def build(entrypoints:, output:, assets_dir: nil)
         bundle = @graph.bundle(entrypoints: entrypoints)
         wait_for_assets
@@ -80,6 +89,8 @@ module Klenod
       end
 
       def exports(record_or_module_id)
+        return record_or_module_id.exports if record_or_module_id.is_a?(LoadedModule)
+
         @graph.exports(record_or_module_id)
       end
 
@@ -92,6 +103,7 @@ module Klenod
       end
 
       def assets_for_module(record_or_module_id, type: nil, content_type: nil, recursive: true)
+        record_or_module_id = record_or_module_id.id if record_or_module_id.is_a?(LoadedModule)
         @graph.assets_for_module(record_or_module_id, type: type, content_type: content_type, recursive: recursive)
       end
 

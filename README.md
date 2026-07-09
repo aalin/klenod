@@ -14,8 +14,8 @@ Create a build context with a source directory:
 
 ```ruby
 context = Klenod::Build::Context.new(source_dir: "src")
-record = context.load("pages/server")
-page = context.exports(record)
+entry = context.entry("pages/server")
+page = entry.exports
 ```
 
 Ruby modules can import other modules with literal `import("...")` calls. Relative imports resolve from the importing file, while absolute imports are scoped to the configured source directory.

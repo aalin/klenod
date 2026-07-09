@@ -5,13 +5,13 @@ require_relative "klenod_context"
 source_dir = File.expand_path("src", __dir__)
 assets_dir = ENV["ASSETS_DIR"] && File.expand_path(ENV.fetch("ASSETS_DIR"))
 context = Example.build_context(source_dir: source_dir)
-record = context.load("pages/server")
+entry = context.entry("pages/server")
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
 write_result = assets_dir && context.write_assets(assets_dir)
 
 context.on_update do |event|
   result = event.result
-  update = context.apply_update(event, entry: record, assets_dir: assets_dir)
+  update = context.apply_update(event, entry: entry, assets_dir: assets_dir)
 
   puts "Update ##{event.graph_version}"
   puts "  changed: #{result.changed_module_ids.join(", ")}"
@@ -27,7 +27,6 @@ context.on_update do |event|
       warn "  error in #{module_id}: #{error.class}: #{error.message}"
     end
   else
-    record = update.entry_record
     if update.asset_write_result && !update.asset_write_result.empty?
       puts "  asset files written: #{update.asset_write_result.written_paths.join(", ")}"
       puts "  asset files removed: #{update.asset_write_result.removed_paths.join(", ")}"
@@ -39,7 +38,7 @@ context.on_update do |event|
   end
 end
 
-exports = context.exports(record)
+exports = entry.exports
 status, _headers, body = exports.call(nil, context)
 puts "Watching #{source_dir}"
 puts "Mirroring assets to #{assets_dir}" if assets_dir
