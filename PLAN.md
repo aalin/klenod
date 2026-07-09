@@ -82,6 +82,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 - [x] Support import-query image variants with cross-import dedupe.
 - [x] Add generated asset objects that can defer variant bytes until `wait` or `bytes`.
 - [x] Add a build-owned generated asset queue with configurable concurrency.
+- [x] Cover dev cleanup for stale and failed generated assets.
 
 ## Dev Server And Runtime
 

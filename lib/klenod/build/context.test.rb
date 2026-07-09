@@ -604,6 +604,36 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_write_asset_updates_removes_failed_generated_asset_files
+    Dir.mktmpdir do |dir|
+      assets_dir = "#{dir}/public"
+      stale_path = "/assets/stale.png"
+      stale_disk_path = File.join(assets_dir, stale_path.delete_prefix("/"))
+      FileUtils.mkdir_p(File.dirname(stale_disk_path))
+      File.binwrite(stale_disk_path, "stale bytes")
+      failed_asset =
+        Klenod::Build::Asset.generated(
+          "images/stale.png",
+          "stale",
+          stale_path,
+          nil,
+          "image/png",
+          {}
+        ) do
+          raise "broken"
+        end
+      assert_raises(RuntimeError) { failed_asset.wait }
+      update = Klenod::Build::AssetUpdate.new(stale_path, failed_asset, nil)
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      write_result = context.write_asset_updates([update], assets_dir: assets_dir)
+
+      assert_equal([stale_disk_path], write_result.removed_paths)
+      assert_equal([], write_result.written_paths)
+      refute(File.exist?(stale_disk_path))
+    end
+  end
+
   def test_build_writes_image_assets_to_assets_dir
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")

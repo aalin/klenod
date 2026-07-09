@@ -267,6 +267,65 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     end
   end
 
+  def test_image_variant_invalidation_removes_stale_mirrored_assets
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      image_path = "#{dir}/images/hero.png"
+      assets_dir = "#{dir}/public"
+      File.binwrite(image_path, real_png_bytes(width: 4, height: 2))
+      File.write("#{dir}/entry.rb", "Hero = import(\"images/hero.png\")\nVARIANTS = Hero.variants\n")
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::ImagePlugin.new(widths: [2], formats: ["png"])
+          ]
+        )
+
+      context.load("entry")
+      old_assets = context.assets_for("images/hero.png")
+      old_original = old_assets.find { |asset| asset.metadata[:type] == :image }
+      old_variant = old_assets.find { |asset| asset.metadata[:type] == :image_variant }
+      old_original_disk_path = File.join(assets_dir, old_original.output_path.delete_prefix("/"))
+      old_variant_disk_path = File.join(assets_dir, old_variant.output_path.delete_prefix("/"))
+
+      write_result = context.write_assets(assets_dir)
+
+      assert_includes(write_result.written_paths, old_original_disk_path)
+      assert_includes(write_result.written_paths, old_variant_disk_path)
+      assert(File.exist?(old_original_disk_path))
+      assert(File.exist?(old_variant_disk_path))
+
+      File.binwrite(image_path, real_png_bytes(width: 8, height: 4))
+      result = context.invalidate_paths([image_path])
+      new_assets = context.assets_for("images/hero.png")
+      new_original = new_assets.find { |asset| asset.metadata[:type] == :image }
+      new_variant = new_assets.find { |asset| asset.metadata[:type] == :image_variant }
+      new_original_disk_path = File.join(assets_dir, new_original.output_path.delete_prefix("/"))
+      new_variant_disk_path = File.join(assets_dir, new_variant.output_path.delete_prefix("/"))
+
+      assert_equal(["images/hero.png"], result.reloaded_module_ids.map(&:to_s))
+      assert_includes(result.removed_assets, old_original.output_path)
+      assert_includes(result.removed_assets, old_variant.output_path)
+      assert_includes(result.added_assets, new_original.output_path)
+      assert_includes(result.added_assets, new_variant.output_path)
+      assert_raises(KeyError) { context.asset(old_original.output_path) }
+      assert_raises(KeyError) { context.asset(old_variant.output_path) }
+
+      update_write_result = context.write_asset_updates(result.asset_updates, assets_dir: assets_dir)
+
+      assert_includes(update_write_result.removed_paths, old_original_disk_path)
+      assert_includes(update_write_result.removed_paths, old_variant_disk_path)
+      assert_includes(update_write_result.written_paths, new_original_disk_path)
+      assert_includes(update_write_result.written_paths, new_variant_disk_path)
+      refute(File.exist?(old_original_disk_path))
+      refute(File.exist?(old_variant_disk_path))
+      assert(File.exist?(new_original_disk_path))
+      assert(File.exist?(new_variant_disk_path))
+    end
+  end
+
   private
 
   def real_png_bytes(width:, height:)
