@@ -2,6 +2,20 @@
 
 module Klenod
   module Build
+    AssetUpdate = Data.define(:output_path, :previous_asset, :current_asset) do
+      def added?
+        previous_asset.nil? && !current_asset.nil?
+      end
+
+      def changed?
+        !previous_asset.nil? && !current_asset.nil?
+      end
+
+      def removed?
+        !previous_asset.nil? && current_asset.nil?
+      end
+    end
+
     AssetChanges = Data.define(:added, :changed, :removed) do
       def empty?
         added.empty? && changed.empty? && removed.empty?
@@ -21,6 +35,7 @@ module Klenod
         :added_assets,
         :changed_assets,
         :removed_assets,
+        :asset_updates,
         :errors
       ) do
         def asset_changes

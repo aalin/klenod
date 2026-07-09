@@ -71,11 +71,13 @@ class Klenod::Build::Context::Test < Minitest::Test
 
       context = Klenod::Build::Context.new(source_dir: dir)
       context.load("styles/home.css")
-      old_asset_path = context.assets_for("styles/home.css").first.output_path
+      old_asset = context.assets_for("styles/home.css").first
+      old_asset_path = old_asset.output_path
 
       File.write(css_path, ".title { color: blue; }\n")
       result = context.invalidate_paths([css_path])
-      new_asset_path = context.assets_for("styles/home.css").first.output_path
+      new_asset = context.assets_for("styles/home.css").first
+      new_asset_path = new_asset.output_path
 
       assert_equal([new_asset_path], result.added_assets)
       assert_equal([old_asset_path], result.removed_assets)
@@ -85,6 +87,16 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal([], result.asset_changes.changed)
       assert_equal([new_asset_path, old_asset_path], result.asset_changes.paths)
       refute(result.asset_changes.empty?)
+
+      added_update = result.asset_updates.find(&:added?)
+      removed_update = result.asset_updates.find(&:removed?)
+
+      assert_equal(new_asset_path, added_update.output_path)
+      assert_nil(added_update.previous_asset)
+      assert_equal(new_asset, added_update.current_asset)
+      assert_equal(old_asset_path, removed_update.output_path)
+      assert_equal(old_asset, removed_update.previous_asset)
+      assert_nil(removed_update.current_asset)
     end
   end
 

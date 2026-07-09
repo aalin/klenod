@@ -8,6 +8,10 @@ module Klenod
       def asset_changes
         result.asset_changes
       end
+
+      def asset_updates
+        result.asset_updates
+      end
     end
 
     class Watcher

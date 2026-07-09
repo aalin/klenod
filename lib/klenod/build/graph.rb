@@ -95,7 +95,7 @@ module Klenod
       end
 
       def invalidate_paths(changed_paths, removed_paths: [])
-        previous_assets = runtime_asset_specs
+        previous_assets = assets
         changed_module_ids = module_ids_for_paths(changed_paths)
         removed_module_ids = module_ids_for_paths(removed_paths)
         pattern_owner_ids = module_ids_for_watched_paths(changed_paths + removed_paths)
@@ -128,7 +128,8 @@ module Klenod
             errors << [module_id, e]
             nil
           end
-        asset_changes = diff_assets(previous_assets, runtime_asset_specs)
+        asset_updates = diff_assets(previous_assets, assets)
+        asset_changes = asset_changes_for(asset_updates)
 
         InvalidationResult.new(
           changed_module_ids.freeze,
@@ -138,6 +139,7 @@ module Klenod
           asset_changes.added.freeze,
           asset_changes.changed.freeze,
           asset_changes.removed.freeze,
+          asset_updates.freeze,
           errors.freeze
         )
       end
@@ -304,12 +306,28 @@ module Klenod
         current_paths = current_assets.keys
         shared_paths = previous_paths & current_paths
 
-        AssetChanges.new(
-          current_paths - previous_paths,
-          shared_paths.select do |path|
-            previous_assets.fetch(path).content_hash != current_assets.fetch(path).content_hash
+        [
+          *(current_paths - previous_paths).map do |path|
+            AssetUpdate.new(path, nil, current_assets.fetch(path))
           end,
-          previous_paths - current_paths
+          *shared_paths.filter_map do |path|
+            previous_asset = previous_assets.fetch(path)
+            current_asset = current_assets.fetch(path)
+            next if previous_asset.content_hash == current_asset.content_hash
+
+            AssetUpdate.new(path, previous_asset, current_asset)
+          end,
+          *(previous_paths - current_paths).map do |path|
+            AssetUpdate.new(path, previous_assets.fetch(path), nil)
+          end
+        ]
+      end
+
+      def asset_changes_for(asset_updates)
+        AssetChanges.new(
+          asset_updates.select(&:added?).map(&:output_path),
+          asset_updates.select(&:changed?).map(&:output_path),
+          asset_updates.select(&:removed?).map(&:output_path)
         )
       end
 
