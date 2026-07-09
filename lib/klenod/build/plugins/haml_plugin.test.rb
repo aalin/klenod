@@ -1097,6 +1097,63 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_haml_css_filter_loads_as_virtual_css_module
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          :css
+            .title { color: red; }
+
+          %h1 Hello
+        HAML
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      haml_record = context.load("pages/page.haml")
+      virtual_css_id = ModuleId.new("pages/page.haml.inline.0.css", nil)
+      css_record = context.graph.records.fetch(virtual_css_id)
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+
+      assert_equal([virtual_css_id], haml_record.resolved_dependencies.map(&:module_id))
+      assert_match(/title/, styles.fetch("title"))
+      assert_equal(1, css_record.assets.length)
+      assert_match(%r{\A/assets/pages_page_haml_inline_0_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
+      assert_includes(css_record.assets.first.bytes, "color: red")
+    end
+  end
+
+  def test_removing_haml_css_filter_removes_virtual_css_module
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      haml_path = "#{dir}/pages/page.haml"
+      File.write(
+        haml_path,
+        <<~HAML
+          :css
+            .title { color: red; }
+
+          %h1 Hello
+        HAML
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      haml_record = context.load("pages/page.haml")
+      virtual_css_id = ModuleId.new("pages/page.haml.inline.0.css", nil)
+
+      assert(context.graph.records.key?(virtual_css_id))
+
+      File.write(haml_path, "%h1 Hello\n")
+      result = context.invalidate_paths([haml_path])
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+
+      assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      refute(context.graph.records.key?(virtual_css_id))
+      assert_equal({}, styles)
+    end
+  end
+
   def test_editing_companion_intl_reloads_haml
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

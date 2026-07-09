@@ -25,6 +25,8 @@ module Klenod
         @plugins = plugins
         @records = {}
         @mods = {}
+        @virtual_sources = {}
+        @virtual_owners = {}
       end
 
       def load(specifier)
@@ -61,6 +63,10 @@ module Klenod
       end
 
       def resolve_dependency(dependency)
+        if (virtual_module_id = dependency.metadata[:virtual_module_id])
+          return ResolvedDependency.new(dependency, virtual_module_id, {virtual: true})
+        end
+
         @plugins.each do |plugin|
           resolved = plugin.resolve(dependency, self)
           return resolved if resolved
@@ -71,6 +77,21 @@ module Klenod
 
       def absolute_path(module_id)
         @resolver.absolute_path(module_id)
+      end
+
+      def register_virtual_module(module_id, source, owner_id: nil)
+        @virtual_sources[module_id] = source
+        @virtual_owners[module_id] = owner_id if owner_id
+      end
+
+      def unregister_virtual_modules(owner_id)
+        module_ids = @virtual_owners.filter_map { |module_id, owner| module_id if owner == owner_id }
+        module_ids.each do |module_id|
+          @virtual_sources.delete(module_id)
+          @virtual_owners.delete(module_id)
+          @records.delete(module_id)
+          @mods.delete(module_id)
+        end
       end
 
       def invalidate_paths(changed_paths, removed_paths: [])
@@ -313,6 +334,7 @@ module Klenod
           loaded = plugin.load(module_id, self)
           return loaded if loaded
         end
+        return @virtual_sources.fetch(module_id) if @virtual_sources.key?(module_id)
 
         absolute_path.binread
       end

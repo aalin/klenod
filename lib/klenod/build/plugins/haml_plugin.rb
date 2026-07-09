@@ -739,7 +739,7 @@ module Klenod
 
           def compile_template(source, factory:, builder:)
             parsed = SyntaxTree::Haml.parse(source)
-            render_nodes = parsed.children.reject { |node| ruby_filter?(node) }
+            render_nodes = parsed.children.reject { |node| ruby_filter?(node) || css_filter?(node) }
             ruby_nodes = parsed.children.select { |node| ruby_filter?(node) }
             ruby = compile_ruby_filters(ruby_nodes, builder: builder)
             render = compile_nodes(render_nodes, factory: factory, builder: builder)
@@ -915,6 +915,10 @@ module Klenod
             node.type == :filter && node.value.fetch(:name) == "ruby"
           end
 
+          def css_filter?(node)
+            node.type == :filter && node.value.fetch(:name) == "css"
+          end
+
           def static_attributes(node, builder:)
             node
               .value
@@ -985,8 +989,9 @@ module Klenod
 
           companion_css = companion_path(module_id, ".css")
           dependencies = []
+          style_dependencies = []
           builder = DefaultTransformer::RubyBuilder.new
-          styles_source = builder.frozen_literal({}).source
+          context.unregister_virtual_modules(module_id)
 
           if context.absolute_path(companion_css).file?
             dependency =
@@ -999,8 +1004,24 @@ module Klenod
                 )
                 .with(id: "#{module_id}:companion_style")
             dependencies << dependency
-            styles_source = builder.import_call(dependency.id).source
+            style_dependencies << dependency
           end
+          inline_css_sources(code).each_with_index do |source, index|
+            virtual_module_id = ModuleId.new("#{module_id.path}.inline.#{index}.css", nil)
+            context.register_virtual_module(virtual_module_id, source, owner_id: module_id)
+            dependency =
+              Dependency
+                .create(
+                  specifier: virtual_module_id.to_s,
+                  importer_id: module_id,
+                  kind: :inline_style,
+                  metadata: {virtual_module_id: virtual_module_id}
+                )
+                .with(id: "#{module_id}:inline_style:#{index}")
+            dependencies << dependency
+            style_dependencies << dependency
+          end
+          styles_source = styles_source_for(builder, style_dependencies)
           translations_source = builder.frozen_literal(translations_for(context, module_id)).source
           component_class_name = component_class_name(module_id)
           haml_result =
@@ -1048,6 +1069,22 @@ module Klenod
               .join
 
           classified.empty? ? "Component" : classified
+        end
+
+        def inline_css_sources(source)
+          SyntaxTree::Haml
+            .parse(source)
+            .children
+            .select { |node| node.type == :filter && node.value.fetch(:name) == "css" }
+            .map { |node| node.value.fetch(:text) }
+        end
+
+        def styles_source_for(builder, dependencies)
+          imports = dependencies.map { |dependency| builder.import_call(dependency.id) }
+          return builder.frozen_literal({}).source if imports.empty?
+          return imports.fetch(0).source if imports.length == 1
+
+          builder.expression("[#{imports.map(&:source).join(", ")}].reduce({}) { |classes, styles| classes.merge(styles) }.freeze").source
         end
 
         def companion_patterns(module_id)
