@@ -8,5 +8,14 @@ module Klenod
     class ResolveError < Error; end
     class DynamicImportError < Error; end
     class UnsupportedFileError < Error; end
+
+    class ImportCycleError < Error
+      attr_reader :cycle
+
+      def initialize(cycle)
+        @cycle = cycle.freeze
+        super("Import cycle detected: #{cycle.join(" -> ")}")
+      end
+    end
   end
 end

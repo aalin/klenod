@@ -137,6 +137,58 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_direct_eager_import_cycle_raises_useful_error
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/entry.rb", "SelfImport = import(\"entry\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      error = assert_raises(Klenod::Build::ImportCycleError) { context.load("entry") }
+
+      assert_equal(
+        [Klenod::Build::ModuleId.new("entry.rb", nil), Klenod::Build::ModuleId.new("entry.rb", nil)],
+        error.cycle
+      )
+      assert_equal("Import cycle detected: entry.rb -> entry.rb", error.message)
+    end
+  end
+
+  def test_indirect_eager_import_cycle_raises_useful_error
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/a.rb", "B = import(\"b\")\n")
+      File.write("#{dir}/b.rb", "C = import(\"c\")\n")
+      File.write("#{dir}/c.rb", "A = import(\"a\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      error = assert_raises(Klenod::Build::ImportCycleError) { context.load("a") }
+
+      assert_equal(["a.rb", "b.rb", "c.rb", "a.rb"], error.cycle.map(&:to_s))
+      assert_equal("Import cycle detected: a.rb -> b.rb -> c.rb -> a.rb", error.message)
+    end
+  end
+
+  def test_lazy_import_cycle_does_not_fail_initial_load
+    Dir.mktmpdir do |dir|
+      File.write(
+        "#{dir}/a.rb",
+        <<~RUBY
+          B = lazy_import("b")
+
+          def self.value
+            B.call::VALUE + 1
+          end
+        RUBY
+      )
+      File.write("#{dir}/b.rb", "A = import(\"a\")\nVALUE = 41\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("a")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      refute(exports::B.loaded?)
+      assert_equal(42, exports.value)
+    end
+  end
+
   def test_lazy_import_defers_loading_until_called
     Dir.mktmpdir do |dir|
       File.write("#{dir}/dep.rb", "VALUE = 41\n")
