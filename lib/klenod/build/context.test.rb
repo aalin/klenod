@@ -8,6 +8,18 @@ require_relative "../runtime"
 require_relative "context"
 
 class Klenod::Build::Context::Test < Minitest::Test
+  module TestFramework
+    class Component
+    end
+
+    module H
+      def self.[](tag, *children, **props)
+        props = props.compact
+        props.empty? ? [tag, *children] : [tag, *children, props]
+      end
+    end
+  end
+
   def test_loads_entrypoint_and_dependencies_lazily
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -37,6 +49,72 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(bundle.entrypoints, loaded.entrypoints)
       assert_equal(2, loaded.modules.length)
       assert_equal(42, mod.const_get(:Exports)::VALUE)
+    end
+  end
+
+  def test_build_bundle_round_trips_haml_css_intl_and_image_assets
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/logo.png", png_bytes(width: 2, height: 3))
+      File.write("#{dir}/pages/page.css", "main { color: red; }\n.hero { display: block; }\n")
+      File.write("#{dir}/pages/page.intl.en-US.toml", "title = \"Hello bundle\"\n")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          :ruby
+            def initialize(image:)
+              @image = image
+            end
+
+          %main
+            %h1= Translations.fetch("en-US").fetch("title")
+            %img.hero{ src: @image.src, width: @image.width, height: @image.height, alt: "Logo" }
+        HAML
+      )
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Page = import("pages/page.haml")
+          Logo = import("images/logo.png")
+
+          def self.call(context)
+            [Page.new(image: Logo).render, context.assets_for("pages/page.css").map(&:output_path), Logo.src]
+          end
+        RUBY
+      )
+      output = "#{dir}/dist/klenod.bundle"
+      assets_dir = "#{dir}/dist/public"
+      plugins = default_plugins_with(
+        Klenod::Build::Plugins::HamlPlugin.new(
+          component_base_class: "#{self.class.name}::TestFramework::Component",
+          factory: "#{self.class.name}::TestFramework::H"
+        )
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: plugins)
+      bundle = context.build(entrypoints: ["entry"], output: output, assets_dir: assets_dir)
+      loaded = Klenod::Runtime.load_bundle(output)
+      rendered, css_asset_paths, image_src = loaded.load("entry").const_get(:Exports).call(loaded)
+      heading = rendered.fetch(1)
+      image = rendered.fetch(2)
+      main_props = rendered.fetch(3)
+      image_props = image.fetch(1)
+
+      assert_equal(bundle.entrypoints, loaded.entrypoints)
+      assert_equal([:main, heading, image, main_props], rendered)
+      assert_equal([:h1, "Hello bundle"], heading)
+      assert_match(/main/, main_props.fetch(:class))
+      assert_equal(2, image_props.fetch(:width))
+      assert_equal(3, image_props.fetch(:height))
+      assert_match(/hero/, image_props.fetch(:class))
+      assert_equal(css_asset_paths, loaded.assets_for("pages/page.css").map(&:output_path))
+      assert_equal(image_src, loaded.assets_for("images/logo.png").fetch(0).output_path)
+      loaded.each_asset do |asset|
+        disk_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))
+
+        assert(File.exist?(disk_path), "Expected #{disk_path} to exist")
+      end
     end
   end
 
@@ -182,5 +260,22 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(["dep.rb"], result.removed_module_ids.map(&:to_s))
       assert_equal(["entry.rb"], result.errors.map { |module_id, _error| module_id.to_s })
     end
+  end
+
+  private
+
+  def default_plugins_with(plugin)
+    Klenod::Build::Context::DEFAULT_PLUGINS.map do |default_plugin|
+      default_plugin.is_a?(Klenod::Build::Plugins::HamlPlugin) ? plugin : default_plugin
+    end
+  end
+
+  def png_bytes(width:, height:)
+    signature = "\x89PNG\r\n\x1a\n".b
+    ihdr_data = [width, height, 8, 2, 0, 0, 0].pack("NNCCCCC")
+    ihdr = [ihdr_data.bytesize].pack("N") + "IHDR" + ihdr_data + [0].pack("N")
+    iend = [0].pack("N") + "IEND" + [0].pack("N")
+
+    signature + ihdr + iend
   end
 end
