@@ -94,19 +94,26 @@ module Klenod
               render_source:,
               styles_source:
             )
+              component_class_name = expression_fragment(component_class_name)
+              component_base_class = expression_fragment(component_base_class)
+              translations_source = expression_fragment(translations_source)
+              ruby_source = statements_fragment(ruby_source)
+              render_source = expression_fragment(render_source)
+              styles_source = expression_fragment(styles_source)
+
               source =
                 <<~RUBY
                   # frozen_string_literal: true
 
                   KlenodImport = method(:__klenod_import__)
 
-                  class #{component_class_name} < #{component_base_class}
+                  class #{to_source(component_class_name)} < #{to_source(component_base_class)}
                     def self.module_path
                       __FILE__
                     end
 
                     Self = self
-                    Translations = #{translations_source}
+                    Translations = #{to_source(translations_source)}
 
                     def self.__klenod_import__(dependency_id)
                       KlenodImport.call(dependency_id)
@@ -119,12 +126,12 @@ module Klenod
                   #{indent(ruby_source, 2)}
 
                     public def render
-                  #{indent(to_source(render_source), 4)}
+                  #{indent(render_source, 4)}
                     end
                   end
 
-                  Default = #{component_class_name}
-                  Styles = #{styles_source}
+                  Default = #{to_source(component_class_name)}
+                  Styles = #{to_source(styles_source)}
                   Default.const_set(:Styles, Styles)
                   Translations = Default::Translations
                 RUBY
@@ -172,6 +179,14 @@ module Klenod
 
             def fragment(node)
               Fragment.new(format_node(node), node)
+            end
+
+            def expression_fragment(value)
+              value.is_a?(Fragment) ? value : expression(value.to_s)
+            end
+
+            def statements_fragment(value)
+              value.is_a?(Fragment) ? value : statements(value.to_s)
             end
 
             def to_source(value)

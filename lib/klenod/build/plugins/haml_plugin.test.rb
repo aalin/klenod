@@ -178,6 +178,32 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal(2, fragment.statement_body.length)
   end
 
+  def test_ruby_builder_normalizes_values_into_expression_fragments
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    existing = builder.expression("Page")
+
+    assert_same(existing, builder.expression_fragment(existing))
+
+    fragment = builder.expression_fragment("Object")
+
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(SyntaxTree::VarRef, fragment.node)
+    assert_equal("Object", fragment.source)
+  end
+
+  def test_ruby_builder_normalizes_values_into_statement_fragments
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    existing = builder.statements("def title\n  \"Hello\"\nend\n")
+
+    assert_same(existing, builder.statements_fragment(existing))
+
+    fragment = builder.statements_fragment("first\nsecond\n")
+
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(SyntaxTree::Statements, fragment.node)
+    assert_equal(2, fragment.statement_body.length)
+  end
+
   def test_ruby_builder_builds_parenthesized_expressions_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     fragment = builder.parenthesized_expression("title.upcase")
