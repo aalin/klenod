@@ -1,0 +1,16 @@
+:ruby
+  def initialize(image:, srcset:, sizes:, alt:, caption:, children: nil)
+    @image = image
+    @srcset = srcset
+    @sizes = sizes
+    @alt = alt
+    @caption = caption
+    @children = children
+  end
+
+%figure{ class: Styles.fetch("figure") }
+  - if @children&.any?
+    = @children
+  - else
+    %img{ class: Styles.fetch("image"), src: @image.src, srcset: @srcset, sizes: @sizes, width: @image.width, height: @image.height, alt: @alt }
+  %figcaption{ class: Styles.fetch("caption") }= @caption

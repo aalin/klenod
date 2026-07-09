@@ -5,7 +5,10 @@ Page = import("./page.haml")
 SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 
 def self.call(_request, context)
-  css_asset = context.assets_for("pages/page.css").first
+  css_assets = [
+    context.assets_for("pages/page.css").first,
+    context.assets_for("components/Figure.css").first
+  ].compact
   srcset =
     SmokedFish
       .variants
@@ -30,7 +33,7 @@ def self.call(_request, context)
         <html>
           <head>
             <title>Klenod example</title>
-            #{%(<link rel="stylesheet" href="#{css_asset.output_path}">) if css_asset}
+            #{css_assets.map { |asset| %(<link rel="stylesheet" href="#{asset.output_path}">) }.join("\n")}
           </head>
           <body>
             #{body}
