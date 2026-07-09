@@ -1084,7 +1084,13 @@ module Klenod
           return builder.frozen_literal({}).source if imports.empty?
           return imports.fetch(0).source if imports.length == 1
 
-          builder.expression("[#{imports.map(&:source).join(", ")}].reduce({}) { |classes, styles| classes.merge(styles) }.freeze").source
+          builder
+            .expression(
+              "[#{imports.map(&:source).join(", ")}].reduce({}) do |classes, styles|\n" \
+                "  classes.merge(styles) { |_name, *class_names| class_names.join(\" \") }\n" \
+                "end.freeze"
+            )
+            .source
         end
 
         def companion_patterns(module_id)

@@ -1124,6 +1124,35 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_haml_joins_duplicate_class_names_from_companion_and_inline_css
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.css", ".title { color: red; }\n")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          :css
+            .title { color: blue; }
+
+          %h1 Hello
+        HAML
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      haml_record = context.load("pages/page.haml")
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      title_classes = styles.fetch("title").split
+
+      assert_equal(
+        [ModuleId.new("pages/page.css", nil), ModuleId.new("pages/page.haml.inline.0.css", nil)],
+        haml_record.resolved_dependencies.map(&:module_id)
+      )
+      assert_equal(2, title_classes.length)
+      assert(title_classes.all? { |class_name| class_name.include?("title") })
+      assert_equal(title_classes.uniq, title_classes)
+    end
+  end
+
   def test_removing_haml_css_filter_removes_virtual_css_module
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
