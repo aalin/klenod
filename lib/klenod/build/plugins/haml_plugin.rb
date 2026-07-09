@@ -126,7 +126,7 @@ module Klenod
             def statements(source)
               node = parse_statements(source)
 
-              Fragment.new(node ? format(source) : source, node)
+              Fragment.new(node ? format_node(node) : source, node)
             end
 
             def program(source)
@@ -149,6 +149,17 @@ module Klenod
 
             def frozen_literal(value)
               fragment(frozen_literal_node(value))
+            end
+
+            def import_call(dependency_id)
+              fragment(
+                CallNode(
+                  nil,
+                  nil,
+                  Ident("__klenod_import__"),
+                  ArgParen(Args([literal_node(dependency_id)]))
+                )
+              )
             end
 
             def symbol(value)
@@ -300,7 +311,7 @@ module Klenod
                   ast_begin(statements.body)
                 end
 
-              statements(format_node(Statements(begins)))
+              fragment(Statements(begins))
             end
 
             def ast_begin(statement_nodes)
@@ -713,7 +724,7 @@ module Klenod
                 )
                 .with(id: "#{module_id}:companion_style")
             dependencies << dependency
-            styles_source = builder.expression("__klenod_import__(#{dependency.id.inspect})").source
+            styles_source = builder.import_call(dependency.id).source
           end
           translations_source = builder.frozen_literal(translations_for(context, module_id)).source
           component_class_name = component_class_name(module_id)

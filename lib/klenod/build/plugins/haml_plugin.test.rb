@@ -138,6 +138,14 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_includes(literal.source, ".freeze")
   end
 
+  def test_ruby_builder_builds_import_calls_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment = builder.import_call("pages/page.haml:companion_style")
+
+    assert_kind_of(SyntaxTree::CallNode, fragment.node)
+    assert_equal('__klenod_import__("pages/page.haml:companion_style")', fragment.source)
+  end
+
   def test_ruby_builder_wraps_existing_syntax_tree_nodes_as_fragments
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     node = SyntaxTree.parse("title.upcase").statements.body.first
