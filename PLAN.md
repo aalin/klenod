@@ -89,6 +89,10 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 ## Routing And App Structure
 
 - [x] Add NextJS-style page discovery under `src/pages/`.
+- [ ] Add a NextJS-inspired router:
+  - [ ] In development, keep routing dynamic so startup does not load every page.
+  - [ ] Load only the page module needed for the requested route.
+  - [ ] In build mode, use discovered routes as entrypoints for route manifest generation.
 - [ ] Add `layout.haml` support.
 - [ ] Add path params.
 - [ ] Decide whether routing belongs in a router plugin.
