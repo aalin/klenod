@@ -5,8 +5,7 @@ require_relative "klenod_context"
 source_dir = File.expand_path("src", __dir__)
 context = Example.build_context(source_dir: source_dir)
 entry = context.entry("pages/server")
-exports = entry.exports
-status, headers, body = exports.call(nil, context)
+status, headers, body = entry.call(nil, context)
 
 puts "Loaded #{entry.id}"
 puts "Status: #{status}"

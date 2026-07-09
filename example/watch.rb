@@ -31,15 +31,13 @@ context.on_update do |event|
       puts "  asset files written: #{update.asset_write_result.written_paths.join(", ")}"
       puts "  asset files removed: #{update.asset_write_result.removed_paths.join(", ")}"
     end
-    exports = update.entry.exports
-    status, _headers, body = exports.call(nil, context)
+    status, _headers, body = update.entry.call(nil, context)
     puts "  status: #{status}"
     puts "  body includes Haml page: #{body.join.include?("<main")}"
   end
 end
 
-exports = entry.exports
-status, _headers, body = exports.call(nil, context)
+status, _headers, body = entry.call(nil, context)
 puts "Watching #{source_dir}"
 puts "Mirroring assets to #{assets_dir}" if assets_dir
 puts "Initial asset files written: #{write_result.written_paths.length}" if write_result

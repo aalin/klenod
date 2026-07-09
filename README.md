@@ -32,11 +32,12 @@ Frameworks should usually keep a loaded entry handle instead of storing raw grap
 
 ```ruby
 entry = context.entry("pages/server")
+status, headers, body = entry.call(request, context)
 page = entry.exports
 stylesheets = entry.assets(type: :css)
 ```
 
-`entry.exports` always resolves through the current graph state, so the same handle can be reused after development updates. `entry.assets` returns assets reachable from that entry and is recursive by default; pass `recursive: false` to include only assets emitted directly by the entry module.
+`entry.call(...)` delegates to the current exports object, which is useful for callable entries. `entry.exports` always resolves through the current graph state, so the same handle can be reused after development updates. `entry.assets` returns assets reachable from that entry and is recursive by default; pass `recursive: false` to include only assets emitted directly by the entry module.
 
 Watch-mode consumers can apply a graph update and keep using the same entry handle:
 
@@ -45,7 +46,7 @@ context.on_update do |event|
   update = context.apply_update(event, entry: entry, assets_dir: "public")
 
   if update.success?
-    page = update.entry.exports
+    status, headers, body = update.entry.call(nil, context)
     css_assets = update.entry.assets(type: :css)
   else
     update.errors.each_value do |error|
@@ -166,12 +167,12 @@ Generated asset work runs through a build-owned queue. Configure it with `asset_
 
 ```ruby
 asset = context.asset(request.path)
-asset.wait
+bytes = context.asset_bytes(request.path, assets_dir: "public")
 
 [
   200,
   {"content-type" => asset.content_type},
-  [asset.bytes]
+  [bytes]
 ]
 ```
 

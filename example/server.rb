@@ -15,7 +15,6 @@ endpoint = Async::HTTP::Endpoint.parse("http://localhost:#{port}")
 context = Example.build_context(source_dir: source_dir)
 entry = context.entry(entrypoint)
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
-page = entry.exports
 context.write_assets(assets_dir) if assets_dir
 
 context.on_update do |event|
@@ -27,7 +26,6 @@ context.on_update do |event|
       warn "  #{module_id}: #{error.class}: #{error.message}"
     end
   else
-    page = update.entry.exports
     puts "Update ##{event.graph_version}: dependency tree updated"
     unless event.asset_changes.empty?
       puts "  assets added: #{event.asset_changes.added.join(", ")}" unless event.asset_changes.added.empty?
@@ -54,20 +52,13 @@ begin
       Async::HTTP::Server.for(endpoint) do |request|
         if request.path.start_with?("/assets/")
           asset = context.asset(request.path)
-          bytes =
-            if assets_dir
-              asset.wait
-              File.binread(File.join(assets_dir, asset.output_path.delete_prefix("/")))
-            else
-              context.asset_bytes(request.path)
-            end
           Protocol::HTTP::Response[
             200,
             {"content-type" => asset.content_type},
-            [bytes]
+            [context.asset_bytes(request.path, assets_dir: assets_dir)]
           ]
         else
-          status, headers, body = page.call(request, context)
+          status, headers, body = entry.call(request, context)
           Protocol::HTTP::Response[status, headers, body]
         end
       rescue KeyError

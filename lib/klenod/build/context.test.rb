@@ -107,6 +107,10 @@ class Klenod::Build::Context::Test < Minitest::Test
         <<~RUBY
           Styles = import("styles/home.css")
           VALUE = 42
+
+          def self.call(request, context)
+            [200, {"content-type" => "text/plain"}, [VALUE.to_s]]
+          end
         RUBY
       )
 
@@ -116,6 +120,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(Klenod::Build::ModuleId.new("entry.rb", nil), entry.id)
       assert_equal("entry.rb", entry.to_s)
       assert_equal(42, entry.exports::VALUE)
+      assert_equal([200, {"content-type" => "text/plain"}, ["42"]], entry.call(nil, context))
       assert_same(entry.exports, context.exports(entry))
       assert_equal(["styles/home.css"], entry.assets(type: :css).map(&:logical_name))
       assert_equal([], entry.assets(type: :css, recursive: false))
@@ -612,6 +617,25 @@ class Klenod::Build::Context::Test < Minitest::Test
       refute(variant_asset.ready?)
       assert_match(/\A.PNG/, context.asset_bytes(variant_asset.output_path))
       assert(variant_asset.ready?)
+    end
+  end
+
+  def test_asset_bytes_reads_mirrored_assets_from_assets_dir
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      assets_dir = "#{dir}/public"
+      File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.load("entry")
+      asset = context.assets_for("styles/home.css").first
+      context.write_assets(assets_dir)
+      mirrored_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))
+
+      File.binwrite(mirrored_path, "mirrored bytes")
+
+      assert_equal("mirrored bytes", context.asset_bytes(asset.output_path, assets_dir: assets_dir))
     end
   end
 

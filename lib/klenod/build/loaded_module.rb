@@ -18,6 +18,10 @@ module Klenod
         context.exports(id)
       end
 
+      def call(...)
+        exports.call(...)
+      end
+
       def assets(type: nil, content_type: nil, recursive: true)
         context.assets_for_module(id, type: type, content_type: content_type, recursive: recursive)
       end

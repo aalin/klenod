@@ -10,8 +10,7 @@ class Klenod::ExampleTest < Minitest::Test
     source_dir = File.expand_path("src", __dir__)
     context = Example.build_context(source_dir: source_dir)
     entry = context.entry("pages/server")
-    page = entry.exports
-    status, headers, body = page.call(nil, context)
+    status, headers, body = entry.call(nil, context)
     html = body.join
 
     assert_equal(200, status)

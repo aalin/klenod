@@ -100,8 +100,12 @@ module Klenod
         @graph.exports(record_or_module_id)
       end
 
-      def asset_bytes(output_path)
-        asset(output_path).bytes
+      def asset_bytes(output_path, assets_dir: nil)
+        asset = asset(output_path)
+        return asset.bytes unless assets_dir
+
+        asset.wait
+        File.binread(asset_disk_path(asset.output_path, Pathname.new(assets_dir)))
       end
 
       def assets_for(logical_name)
