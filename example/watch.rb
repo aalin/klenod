@@ -31,14 +31,14 @@ context.on_update do |event|
       puts "  asset files written: #{asset_write_result.written_paths.join(", ")}"
       puts "  asset files removed: #{asset_write_result.removed_paths.join(", ")}"
     end
-    exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+    exports = context.exports(record)
     status, _headers, body = exports.call(nil, context)
     puts "  status: #{status}"
     puts "  body includes Haml page: #{body.join.include?("<main")}"
   end
 end
 
-exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+exports = context.exports(record)
 status, _headers, body = exports.call(nil, context)
 puts "Watching #{source_dir}"
 puts "Mirroring assets to #{assets_dir}" if assets_dir

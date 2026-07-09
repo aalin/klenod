@@ -5,10 +5,7 @@ Page = import("./page.haml")
 SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 
 def self.call(_request, context)
-  css_assets = [
-    context.assets_for("pages/page.css").first,
-    context.assets_for("components/Figure.css").first
-  ].compact
+  css_assets = context.assets_for_module(__FILE__, type: :css)
   srcset =
     SmokedFish
       .variants

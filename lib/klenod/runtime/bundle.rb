@@ -40,6 +40,10 @@ module Klenod
         instantiate(id)
       end
 
+      def exports(entrypoint = nil)
+        load(entrypoint).const_get(:Exports)
+      end
+
       def mod(id)
         @mods.fetch(id.to_s)
       end
@@ -50,6 +54,12 @@ module Klenod
 
       def assets_for(logical_name)
         @assets.values.select { |asset| asset.logical_name == logical_name.to_s }
+      end
+
+      def assets_for_module(module_ref, type: nil, content_type: nil)
+        reachable_module_ids(module_ref)
+          .flat_map { |module_id| assets_for(module_id) }
+          .select { |asset| asset_matches?(asset, type: type, content_type: content_type) }
       end
 
       def each_asset(&block)
@@ -68,6 +78,43 @@ module Klenod
       end
 
       private
+
+      def module_id_for_ref(module_ref)
+        id = module_ref.respond_to?(:path) ? module_ref.path : module_ref.to_s
+        return id if @modules.key?(id)
+
+        raise KeyError, "No module in bundle for #{module_ref.inspect}"
+      end
+
+      def reachable_module_ids(module_ref)
+        root_id = module_id_for_ref(module_ref)
+        seen = []
+        queue = [root_id]
+
+        until queue.empty?
+          module_id = queue.shift
+          next if seen.include?(module_id)
+          next unless @modules.key?(module_id)
+
+          seen << module_id
+          queue.concat(
+            @modules
+              .fetch(module_id)
+              .imports
+              .values
+              .map { |import_spec| import_spec.is_a?(ImportSpec) ? import_spec.target_id : import_spec }
+          )
+        end
+
+        seen
+      end
+
+      def asset_matches?(asset, type:, content_type:)
+        return false if type && asset.metadata[:type] != type
+        return false if content_type && asset.content_type != content_type
+
+        true
+      end
 
       def instantiate(id)
         id = id.to_s

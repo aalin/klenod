@@ -10,7 +10,7 @@ class Klenod::ExampleTest < Minitest::Test
     source_dir = File.expand_path("src", __dir__)
     context = Example.build_context(source_dir: source_dir)
     record = context.load("pages/server")
-    page = context.graph.mods.fetch(record.id).const_get(:Exports)
+    page = context.exports(record)
     status, headers, body = page.call(nil, context)
     html = body.join
 
@@ -34,7 +34,7 @@ class Klenod::ExampleTest < Minitest::Test
       context = Example.build_context(source_dir: source_dir)
       bundle = context.build(entrypoints: ["pages/server"], output: output, assets_dir: assets_dir)
       loaded = Klenod::Runtime.load_bundle(output)
-      page = loaded.load("pages/server").const_get(:Exports)
+      page = loaded.exports("pages/server")
       status, _headers, body = page.call(nil, loaded)
 
       assert_equal(200, status)

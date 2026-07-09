@@ -73,12 +73,20 @@ module Klenod
         @graph.asset(output_path)
       end
 
+      def exports(record_or_module_id)
+        @graph.exports(record_or_module_id)
+      end
+
       def asset_bytes(output_path)
         asset(output_path).bytes
       end
 
       def assets_for(logical_name)
         @graph.assets_for(logical_name)
+      end
+
+      def assets_for_module(record_or_module_id, type: nil, content_type: nil)
+        @graph.assets_for_module(record_or_module_id, type: type, content_type: content_type)
       end
 
       def each_asset(&block)

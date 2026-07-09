@@ -5,8 +5,7 @@ require_relative "klenod_context"
 source_dir = File.expand_path("src", __dir__)
 context = Example.build_context(source_dir: source_dir)
 record = context.load("pages/server")
-mod = context.graph.mods.fetch(record.id)
-exports = mod.const_get(:Exports)
+exports = context.exports(record)
 status, headers, body = exports.call(nil, context)
 
 puts "Loaded #{record.id}"

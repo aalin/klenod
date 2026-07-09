@@ -72,6 +72,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     mod = bundle.load("entry")
 
     assert_equal(42, mod.const_get(:Exports)::VALUE)
+    assert_same(mod.const_get(:Exports), bundle.exports("entry"))
     assert_equal(41, bundle.mod("dep.rb").const_get(:Exports)::VALUE)
   end
 
@@ -127,5 +128,65 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_equal([asset], bundle.assets_for("styles/home.css"))
     assert_equal([asset], bundle.each_asset.to_a)
     assert_raises(KeyError) { bundle.asset("/assets/missing.css") }
+  end
+
+  def test_bundle_assets_for_module_returns_reachable_filtered_assets
+    css_asset =
+      Klenod::Runtime::AssetSpec.new(
+        "styles/card.css",
+        "abc123",
+        "/assets/card.abc123.css",
+        "text/css",
+        {type: :css}
+      )
+    image_asset =
+      Klenod::Runtime::AssetSpec.new(
+        "images/logo.png",
+        "def456",
+        "/assets/logo.def456.png",
+        "image/png",
+        {type: :image}
+      )
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"entry" => "entry.rb"},
+        {
+          "entry.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "",
+              {"component" => Klenod::Runtime::ImportSpec.new("components/card.rb", nil, true)},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("entry.rb")
+            ),
+          "components/card.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "components/card.rb",
+              "",
+              {"styles" => Klenod::Runtime::ImportSpec.new("styles/card.css", {title: "title_hash"}, true)},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("components/card.rb")
+            ),
+          "styles/card.css" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "styles/card.css",
+              "",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("styles/card.css")
+            )
+        },
+        {
+          css_asset.output_path => css_asset,
+          image_asset.output_path => image_asset
+        }
+      )
+
+    assert_equal([css_asset], bundle.assets_for_module("entry.rb", type: :css))
+    assert_equal([css_asset], bundle.assets_for_module("entry.rb", content_type: "text/css"))
+    assert_equal([], bundle.assets_for_module("entry.rb", type: :image))
   end
 end

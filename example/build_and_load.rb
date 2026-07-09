@@ -14,8 +14,7 @@ context = Example.build_context(source_dir: source_dir)
 context.build(entrypoints: ["pages/server"], output: output, assets_dir: assets_dir)
 
 bundle = Klenod::Runtime.load_bundle(output)
-mod = bundle.load("pages/server")
-exports = mod.const_get(:Exports)
+exports = bundle.exports("pages/server")
 status, headers, body = exports.call(nil, bundle)
 
 puts "Loaded bundle #{output}"

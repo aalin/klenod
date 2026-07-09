@@ -15,7 +15,7 @@ Create a build context with a source directory:
 ```ruby
 context = Klenod::Build::Context.new(source_dir: "src")
 record = context.load("pages/server")
-page = context.graph.mods.fetch(record.id).const_get(:Exports)
+page = context.exports(record)
 ```
 
 Ruby modules can import other modules with literal `import("...")` calls. Relative imports resolve from the importing file, while absolute imports are scoped to the configured source directory.
@@ -50,7 +50,7 @@ The runtime side can load the bundle without build plugins:
 
 ```ruby
 bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
-page = bundle.load("pages/server")
+page = bundle.exports("pages/server")
 ```
 
 ## Asset Conventions
@@ -65,9 +65,11 @@ The graph and runtime bundle expose the same lookup shape:
 ```ruby
 context.asset("/assets/home.abc123.css")
 context.assets_for("styles/home.css")
+context.assets_for_module("pages/server.rb", type: :css)
 
 bundle.asset("/assets/home.abc123.css")
 bundle.assets_for("styles/home.css")
+bundle.assets_for_module("pages/server.rb", type: :css)
 ```
 
 Build assets keep bytes so they can be served in development or written to disk. Runtime asset specs keep only metadata, content hashes, content types, logical names, and output paths.

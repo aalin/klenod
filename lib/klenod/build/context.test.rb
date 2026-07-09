@@ -86,6 +86,36 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_exports_returns_loaded_module_exports
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/entry.rb", "VALUE = 42\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("entry")
+
+      assert_equal(42, context.exports(record)::VALUE)
+      assert_same(context.exports(record), context.exports(record.id))
+    end
+  end
+
+  def test_assets_for_module_returns_reachable_filtered_assets
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/components")
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/card.css", ".title { color: red; }\n")
+      File.write("#{dir}/components/card.rb", "Styles = import(\"../styles/card.css\")\n")
+      File.write("#{dir}/entry.rb", "Card = import(\"components/card\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("entry")
+      assets = context.assets_for_module(record, type: :css)
+
+      assert_equal(["styles/card.css"], assets.map(&:logical_name))
+      assert_equal([], context.assets_for_module(record, type: :image))
+      assert_equal(assets, context.assets_for_module(record.id, content_type: "text/css"))
+    end
+  end
+
   def test_loads_sibling_dependencies_with_async
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/deps")

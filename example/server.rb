@@ -15,7 +15,7 @@ endpoint = Async::HTTP::Endpoint.parse("http://localhost:#{port}")
 context = Example.build_context(source_dir: source_dir)
 record = context.load(entrypoint)
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
-page = context.graph.mods.fetch(record.id).const_get(:Exports)
+page = context.exports(record)
 context.write_assets(assets_dir) if assets_dir
 
 context.on_update do |event|
@@ -28,7 +28,7 @@ context.on_update do |event|
     end
   else
     record = context.graph.records.fetch(record.id)
-    page = context.graph.mods.fetch(record.id).const_get(:Exports)
+    page = context.exports(record)
     asset_write_result = assets_dir && context.write_asset_updates(event.asset_updates, assets_dir: assets_dir)
     puts "Update ##{event.graph_version}: dependency tree updated"
     unless event.asset_changes.empty?

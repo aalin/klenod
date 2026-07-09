@@ -73,8 +73,19 @@ module Klenod
         assets.fetch(output_path)
       end
 
+      def exports(record_or_module_id)
+        module_id = module_id_for_ref(record_or_module_id)
+        @mods.fetch(module_id).const_get(:Exports)
+      end
+
       def assets_for(logical_name)
         assets.values.select { |asset| asset.logical_name == logical_name.to_s }
+      end
+
+      def assets_for_module(record_or_module_id, type: nil, content_type: nil)
+        reachable_module_ids(record_or_module_id)
+          .flat_map { |module_id| @records.fetch(module_id).assets }
+          .select { |asset| asset_matches?(asset, type: type, content_type: content_type) }
       end
 
       def each_asset(&block)
@@ -226,6 +237,42 @@ module Klenod
       end
 
       private
+
+      def module_id_for_ref(record_or_module_id)
+        case record_or_module_id
+        when ModuleRecord
+          record_or_module_id.id
+        when ModuleId
+          record_or_module_id
+        else
+          @records.each_key.find { |module_id| module_id.to_s == record_or_module_id.to_s } ||
+            raise(KeyError, "No module loaded for #{record_or_module_id.inspect}")
+        end
+      end
+
+      def reachable_module_ids(record_or_module_id)
+        root_id = module_id_for_ref(record_or_module_id)
+        seen = Set.new
+        queue = [root_id]
+
+        until queue.empty?
+          module_id = queue.shift
+          next if seen.include?(module_id)
+          next unless @records.key?(module_id)
+
+          seen << module_id
+          queue.concat(@records.fetch(module_id).resolved_dependencies.map(&:module_id))
+        end
+
+        seen.to_a
+      end
+
+      def asset_matches?(asset, type:, content_type:)
+        return false if type && asset.metadata[:type] != type
+        return false if content_type && asset.content_type != content_type
+
+        true
+      end
 
       def loading_stack
         Fiber[:klenod_loading_stack] || []
