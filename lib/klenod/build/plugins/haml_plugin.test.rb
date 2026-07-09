@@ -100,6 +100,31 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal('H[:p, **{ class: "intro" }]', unmarked.source)
   end
 
+  def test_ruby_builder_marked_expressions_preserve_wrapped_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    child = builder.expression('"Hello"')
+    marked = builder.marked_expression(builder.source_mark(1, "Hello"), child)
+
+    assert_same(child.node, marked.node)
+    assert_includes(marked.source, "# SourceMapMark:1:")
+    assert_includes(marked.source, '"Hello"')
+  end
+
+  def test_ruby_builder_builds_empty_expression_lists_from_nil_node
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment = builder.expressions([])
+
+    assert_kind_of(SyntaxTree::VarRef, fragment.node)
+    assert_equal("nil", fragment.source)
+  end
+
+  def test_ruby_builder_reuses_single_expression_list_fragment
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    child = builder.expression('"Hello"')
+
+    assert_same(child, builder.expressions([child]))
+  end
+
   def test_ruby_builder_builds_unmarked_expression_lists_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     fragment =

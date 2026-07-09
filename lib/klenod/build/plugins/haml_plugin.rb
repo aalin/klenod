@@ -138,7 +138,7 @@ module Klenod
             end
 
             def marked_expression(mark, expression)
-              expression("#{mark}\n#{to_source(expression)}")
+              Fragment.new("#{mark}\n#{to_source(expression)}", expression.is_a?(Fragment) ? expression.node : parse_expression(expression.to_s))
             end
 
             def factory_call(factory:, tag:, children:, props:, mark: nil)
@@ -186,9 +186,13 @@ module Klenod
             def ast_expressions(expressions)
               case expressions.length
               when 0
-                expression("nil")
+                node = VarRef(Kw("nil"))
+
+                Fragment.new(format_node(node), node)
               when 1
-                expression(to_source(expressions.fetch(0)))
+                expression = expressions.fetch(0)
+
+                expression.is_a?(Fragment) ? expression : self.expression(to_source(expression))
               else
                 node = ArrayLiteral(LBracket("["), Args(expressions.map { |item| expression_node(to_source(item)) }))
 
