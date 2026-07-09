@@ -98,6 +98,8 @@ module Klenod
             end
 
             def expressions(expressions)
+              return ast_expressions(expressions) unless marked?(expressions)
+
               sources = expressions.map { |expression| to_source(expression) }
               source =
                 case sources.length
@@ -180,6 +182,19 @@ module Klenod
             end
 
             private
+
+            def ast_expressions(expressions)
+              case expressions.length
+              when 0
+                expression("nil")
+              when 1
+                expression(to_source(expressions.fetch(0)))
+              else
+                node = ArrayLiteral(LBracket("["), Args(expressions.map { |item| expression_node(to_source(item)) }))
+
+                Fragment.new(format_node(node), node)
+              end
+            end
 
             def ast_factory_call(factory:, tag:, children:, props:)
               parts = [

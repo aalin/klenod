@@ -100,6 +100,28 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal('H[:p, **{ class: "intro" }]', unmarked.source)
   end
 
+  def test_ruby_builder_builds_unmarked_expression_lists_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment =
+      builder.expressions([
+        builder.expression('H[:p, "Hello"]'),
+        builder.expression('H[:span, "World"]')
+      ])
+
+    assert_kind_of(SyntaxTree::ArrayLiteral, fragment.node)
+    assert_equal('[H[:p, "Hello"], H[:span, "World"]]', fragment.source)
+  end
+
+  def test_ruby_builder_preserves_source_map_marks_when_composing_expression_lists
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    child = builder.marked_expression(builder.source_mark(1, "Hello"), builder.expression('"Hello"'))
+    fragment = builder.expressions([child, builder.expression('"World"')])
+
+    assert_kind_of(SyntaxTree::ArrayLiteral, fragment.node)
+    assert_includes(fragment.source, "# SourceMapMark:1:")
+    assert_includes(fragment.source, '"World"')
+  end
+
   def test_haml_records_companion_watched_patterns
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
