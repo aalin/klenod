@@ -136,13 +136,19 @@ module Klenod
               skeleton = class_skeleton_fragment(component_class_name, component_base_class)
               body =
                 [
-                  statements("def self.module_path\n  __FILE__\nend\n"),
+                  method_definition("def self.module_path", body: expression("__FILE__")),
                   constant_assignment("Self", "self"),
                   constant_assignment("Translations", translations_source),
-                  statements("def self.__klenod_import__(dependency_id)\n  KlenodImport.call(dependency_id)\nend\n"),
-                  statements("def __klenod_import__(dependency_id)\n  self.class.__klenod_import__(dependency_id)\nend\n"),
+                  method_definition(
+                    "def self.__klenod_import__(dependency_id)",
+                    body: call(receiver: "KlenodImport", name: "call", arguments: ["dependency_id"])
+                  ),
+                  method_definition(
+                    "def __klenod_import__(dependency_id)",
+                    body: call(receiver: "self.class", name: "__klenod_import__", arguments: ["dependency_id"])
+                  ),
                   ruby_source,
-                  statements("public def render\n#{indent(render_source, 2)}\nend\n")
+                  public_method_definition("def render", body: render_source)
                 ].flat_map { |fragment| statement_body_for(fragment) }
 
               fragment(
@@ -254,6 +260,27 @@ module Klenod
               )
             end
 
+            def method_definition(signature, body:)
+              skeleton = method_skeleton(signature)
+
+              fragment(replace_method_body(skeleton, body))
+            end
+
+            def public_method_definition(signature, body:)
+              return statements("public #{signature}\n#{indent(body, 2)}\nend\n") if body.respond_to?(:marked?) && body.marked?
+
+              skeleton = public_method_skeleton(signature)
+              method_node = skeleton.arguments.parts.fetch(0)
+
+              fragment(
+                skeleton.copy(
+                  arguments: skeleton.arguments.copy(
+                    parts: [replace_method_body(method_node, body)]
+                  )
+                )
+              )
+            end
+
             def nil_expression
               fragment(nil_node)
             end
@@ -282,6 +309,25 @@ module Klenod
               raise ArgumentError, "Could not parse component class: #{class_source.inspect}" unless node.is_a?(SyntaxTree::ClassDeclaration)
 
               fragment(node)
+            end
+
+            def method_skeleton(signature)
+              source = "#{signature}\n  nil\nend\n"
+              node = parse_statements(source)&.body&.fetch(0)
+              raise ArgumentError, "Could not parse method definition: #{source.inspect}" unless node.is_a?(SyntaxTree::DefNode)
+
+              node
+            end
+
+            def public_method_skeleton(signature)
+              source = "public #{signature}\n  nil\nend\n"
+              node = parse_statements(source)&.body&.fetch(0)
+              method_node = node&.arguments&.parts&.fetch(0, nil)
+              unless node.is_a?(SyntaxTree::Command) && node.message.value == "public" && method_node.is_a?(SyntaxTree::DefNode)
+                raise ArgumentError, "Could not parse public method definition: #{source.inspect}"
+              end
+
+              node
             end
 
             def source_mark(line_no, source)
@@ -427,6 +473,18 @@ module Klenod
               Begin(
                 BodyStmt(
                   Statements(statement_nodes),
+                  nil,
+                  nil,
+                  nil,
+                  nil
+                )
+              )
+            end
+
+            def replace_method_body(method_node, body)
+              method_node.copy(
+                bodystmt: BodyStmt(
+                  Statements(Array(body).flat_map { |statement| statement_body_for(statement) }),
                   nil,
                   nil,
                   nil,

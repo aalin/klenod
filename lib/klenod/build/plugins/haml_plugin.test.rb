@@ -197,6 +197,29 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal("Default.const_set(:Styles, Styles)", receiver_call.source)
   end
 
+  def test_ruby_builder_builds_method_definitions_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment = builder.method_definition("def title", body: builder.literal("Hello"))
+
+    assert_kind_of(SyntaxTree::DefNode, fragment.node)
+    assert_equal(<<~RUBY.chomp, fragment.source)
+      def title
+        "Hello"
+      end
+    RUBY
+  end
+
+  def test_ruby_builder_builds_public_method_definitions_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    body = builder.marked_expression(builder.source_mark(3, "title"), builder.expression("title"))
+    fragment = builder.public_method_definition("def render", body: body)
+
+    assert_kind_of(SyntaxTree::Statements, fragment.node)
+    assert_includes(fragment.source, "public def render")
+    assert_includes(fragment.source, "# SourceMapMark:3:")
+    assert_includes(fragment.source, "title")
+  end
+
   def test_ruby_builder_wraps_existing_syntax_tree_nodes_as_fragments
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     node = SyntaxTree.parse("title.upcase").statements.body.first
