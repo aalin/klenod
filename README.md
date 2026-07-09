@@ -144,7 +144,7 @@ asset.wait
 ]
 ```
 
-In watch mode, `context.apply_update(event, entry: record, assets_dir: assets_dir)` refreshes the current entry exports and mirrors asset changes when the update has no errors.
+In watch mode, `context.apply_update(event, entry: entry, assets_dir: assets_dir)` refreshes the current entry handle and mirrors asset changes when the update has no errors.
 
 ## Development
 

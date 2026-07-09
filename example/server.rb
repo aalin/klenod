@@ -27,7 +27,7 @@ context.on_update do |event|
       warn "  #{module_id}: #{error.class}: #{error.message}"
     end
   else
-    page = update.exports
+    page = update.entry.exports
     puts "Update ##{event.graph_version}: dependency tree updated"
     unless event.asset_changes.empty?
       puts "  assets added: #{event.asset_changes.added.join(", ")}" unless event.asset_changes.added.empty?

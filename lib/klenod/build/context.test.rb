@@ -683,17 +683,18 @@ class Klenod::Build::Context::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      entry_record = context.load("entry")
+      entry = context.entry("entry")
       context.write_assets(assets_dir)
 
       File.write(css_path, ".heading { color: blue; }\n")
       result = context.invalidate_paths([css_path])
       event = Struct.new(:result, :asset_updates).new(result, result.asset_updates)
 
-      applied = context.apply_update(event, entry: entry_record, assets_dir: assets_dir)
+      applied = context.apply_update(event, entry: entry, assets_dir: assets_dir)
 
       assert(applied.success?)
-      assert_equal(entry_record.id, applied.entry_record.id)
+      assert_same(entry, applied.entry)
+      assert_equal(entry.id, applied.entry_record.id)
       assert_equal([:heading], applied.exports::CLASSES)
       assert_equal([], applied.errors)
       assert_equal(result.added_assets.sort, applied.asset_write_result.written_paths.map { |path| "/#{Pathname.new(path).relative_path_from(Pathname.new(assets_dir))}" }.sort)
@@ -707,14 +708,15 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/entry.rb", "Dep = import(\"dep\")\nVALUE = Dep::VALUE\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      entry_record = context.load("entry")
+      entry = context.entry("entry")
       File.delete("#{dir}/dep.rb")
       result = context.invalidate_paths([], removed_paths: ["#{dir}/dep.rb"])
       event = Struct.new(:result, :asset_updates).new(result, result.asset_updates)
 
-      applied = context.apply_update(event, entry: entry_record, assets_dir: "#{dir}/public")
+      applied = context.apply_update(event, entry: entry, assets_dir: "#{dir}/public")
 
       refute(applied.success?)
+      assert_nil(applied.entry)
       assert_nil(applied.entry_record)
       assert_nil(applied.exports)
       assert_nil(applied.asset_write_result)

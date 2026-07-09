@@ -31,7 +31,7 @@ context.on_update do |event|
       puts "  asset files written: #{update.asset_write_result.written_paths.join(", ")}"
       puts "  asset files removed: #{update.asset_write_result.removed_paths.join(", ")}"
     end
-    exports = update.exports
+    exports = update.entry.exports
     status, _headers, body = exports.call(nil, context)
     puts "  status: #{status}"
     puts "  body includes Haml page: #{body.join.include?("<main")}"

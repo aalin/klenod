@@ -20,9 +20,13 @@ module Klenod
       end
     end
 
-    AppliedUpdate = Data.define(:event, :entry_record, :exports, :asset_write_result, :errors) do
+    AppliedUpdate = Data.define(:event, :entry, :exports, :asset_write_result, :errors) do
       def success?
         errors.empty?
+      end
+
+      def entry_record
+        entry&.record
       end
     end
 
@@ -64,6 +68,8 @@ module Klenod
       end
 
       def loaded(record_or_module_id)
+        return record_or_module_id if record_or_module_id.is_a?(LoadedModule)
+
         LoadedModule.new(self, record_or_module_id.respond_to?(:id) ? record_or_module_id.id : record_or_module_id)
       end
 
@@ -151,13 +157,14 @@ module Klenod
       def apply_update(event, entry:, assets_dir: nil)
         return AppliedUpdate.new(event, nil, nil, nil, event.result.errors.freeze) if event.result.errors.any?
 
-        entry_record = @graph.records.fetch(entry.respond_to?(:id) ? entry.id : entry)
+        entry = loaded(entry)
+        entry.record
         asset_write_result = assets_dir && write_asset_updates(event.asset_updates, assets_dir: assets_dir)
 
         AppliedUpdate.new(
           event,
-          entry_record,
-          exports(entry_record),
+          entry,
+          entry.exports,
           asset_write_result,
           [].freeze
         )
