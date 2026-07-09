@@ -12,6 +12,12 @@ require_relative "plugins/image_plugin"
 
 module Klenod
   module Build
+    AssetWriteResult = Data.define(:written_paths, :removed_paths) do
+      def empty?
+        written_paths.empty? && removed_paths.empty?
+      end
+    end
+
     class Context
       DEFAULT_PLUGINS = [
         Plugins::RubyPlugin.new,
@@ -37,7 +43,7 @@ module Klenod
 
       def build(entrypoints:, output:, assets_dir: nil)
         bundle = @graph.bundle(entrypoints: entrypoints)
-        write_assets(@graph.assets, assets_dir) if assets_dir
+        write_assets(assets_dir) if assets_dir
         FileUtils.mkdir_p(File.dirname(output))
         File.binwrite(output, Marshal.dump(bundle))
         bundle
@@ -63,6 +69,27 @@ module Klenod
         @graph.each_asset(&block)
       end
 
+      def write_assets(assets_dir)
+        assets_root = Pathname.new(assets_dir)
+        written_paths = assets.each_value.map { |asset| write_asset(asset, assets_root) }
+
+        AssetWriteResult.new(written_paths.freeze, [].freeze)
+      end
+
+      def write_asset_updates(asset_updates, assets_dir:)
+        assets_root = Pathname.new(assets_dir)
+        removed_paths =
+          asset_updates.filter_map do |update|
+            remove_asset(update.output_path, assets_root) if update.removed?
+          end
+        written_paths =
+          asset_updates.filter_map do |update|
+            write_asset(update.current_asset, assets_root) if update.current_asset
+          end
+
+        AssetWriteResult.new(written_paths.freeze, removed_paths.freeze)
+      end
+
       def on_update(&block)
         @update_handlers << block
       end
@@ -73,16 +100,23 @@ module Klenod
 
       private
 
-      def write_assets(assets, assets_dir)
-        assets_root = Pathname.new(assets_dir)
+      def write_asset(asset, assets_root)
+        output_path = asset_disk_path(asset.output_path, assets_root)
 
-        assets.each_value do |asset|
-          relative_path = asset.output_path.delete_prefix("/")
-          output_path = assets_root.join(relative_path)
+        FileUtils.mkdir_p(output_path.dirname)
+        File.binwrite(output_path, asset.bytes)
+        output_path.to_s
+      end
 
-          FileUtils.mkdir_p(output_path.dirname)
-          File.binwrite(output_path, asset.bytes)
-        end
+      def remove_asset(output_path, assets_root)
+        path = asset_disk_path(output_path, assets_root)
+
+        FileUtils.rm_f(path)
+        path.to_s
+      end
+
+      def asset_disk_path(output_path, assets_root)
+        assets_root.join(output_path.delete_prefix("/"))
       end
     end
   end

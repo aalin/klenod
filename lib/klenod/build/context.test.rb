@@ -67,17 +67,26 @@ class Klenod::Build::Context::Test < Minitest::Test
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
       css_path = "#{dir}/styles/home.css"
+      assets_dir = "#{dir}/public"
       File.write(css_path, ".title { color: red; }\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
       context.load("styles/home.css")
       old_asset = context.assets_for("styles/home.css").first
       old_asset_path = old_asset.output_path
+      old_disk_path = File.join(assets_dir, old_asset_path.delete_prefix("/"))
+
+      write_result = context.write_assets(assets_dir)
+
+      assert_equal([old_disk_path], write_result.written_paths)
+      assert_equal([], write_result.removed_paths)
+      assert_equal(old_asset.bytes, File.binread(old_disk_path))
 
       File.write(css_path, ".title { color: blue; }\n")
       result = context.invalidate_paths([css_path])
       new_asset = context.assets_for("styles/home.css").first
       new_asset_path = new_asset.output_path
+      new_disk_path = File.join(assets_dir, new_asset_path.delete_prefix("/"))
 
       assert_equal([new_asset_path], result.added_assets)
       assert_equal([old_asset_path], result.removed_assets)
@@ -97,6 +106,13 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(old_asset_path, removed_update.output_path)
       assert_equal(old_asset, removed_update.previous_asset)
       assert_nil(removed_update.current_asset)
+
+      update_write_result = context.write_asset_updates(result.asset_updates, assets_dir: assets_dir)
+
+      assert_equal([new_disk_path], update_write_result.written_paths)
+      assert_equal([old_disk_path], update_write_result.removed_paths)
+      assert_equal(new_asset.bytes, File.binread(new_disk_path))
+      refute(File.exist?(old_disk_path))
     end
   end
 
