@@ -281,6 +281,22 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal("{ title: title.upcase }", fragment.source)
   end
 
+  def test_ruby_builder_builds_constant_paths_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+
+    assert_kind_of(SyntaxTree::ConstRef, builder.constant_path("Page", declaration: true))
+    assert_kind_of(SyntaxTree::VarRef, builder.constant_path("Object"))
+    assert_kind_of(SyntaxTree::ConstPathRef, builder.constant_path("Framework::Component::Base"))
+  end
+
+  def test_ruby_builder_builds_class_skeletons_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment = builder.class_skeleton_fragment("Page", "Framework::Component::Base")
+
+    assert_kind_of(SyntaxTree::ClassDeclaration, fragment.node)
+    assert_equal("class Page < Framework::Component::Base\nend", fragment.source)
+  end
+
   def test_ruby_builder_component_program_formats_from_syntax_tree_program
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     program =

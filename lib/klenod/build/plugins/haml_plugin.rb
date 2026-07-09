@@ -304,11 +304,31 @@ module Klenod
             end
 
             def class_skeleton_fragment(component_class_name, component_base_class)
-              class_source = "class #{to_source(component_class_name)} < #{to_source(component_base_class)}\nend\n"
-              node = parse_statements(class_source)&.body&.fetch(0)
-              raise ArgumentError, "Could not parse component class: #{class_source.inspect}" unless node.is_a?(SyntaxTree::ClassDeclaration)
+              fragment(
+                ClassDeclaration(
+                  constant_path(component_class_name, declaration: true),
+                  constant_path(component_base_class),
+                  BodyStmt(
+                    Statements([]),
+                    nil,
+                    nil,
+                    nil,
+                    nil
+                  )
+                )
+              )
+            end
 
-              fragment(node)
+            def constant_path(value, declaration: false)
+              parts = to_source(value).split("::")
+              raise ArgumentError, "Expected constant path: #{to_source(value).inspect}" if parts.empty? || parts.any?(&:empty?)
+
+              return ConstRef(Const(parts.fetch(0))) if declaration && parts.length == 1
+              return VarRef(Const(parts.fetch(0))) if parts.length == 1
+
+              parts.drop(1).reduce(VarRef(Const(parts.fetch(0)))) do |parent, part|
+                ConstPathRef(parent, Const(part))
+              end
             end
 
             def method_skeleton(signature)
