@@ -84,6 +84,14 @@ context.page_routes
 
 Only `page.rb` and `page.haml` files are route entrypoints for now. For example, `pages/page.haml` maps to `/`, and `pages/blog/page.rb` maps to `/blog`. Layouts and path params are planned separately.
 
+Routes also expose parsed segments for future router layers. The discovery layer preserves NextJS-style structure without deciding rendering policy:
+
+- `[id]` becomes a dynamic segment with path part `:id`.
+- `[...slug]` becomes a catch-all segment with path part `*slug`.
+- `[[...slug]]` is preserved as an optional catch-all segment.
+- `(marketing)` is preserved as a route group and does not add a URL path part.
+- `@modal` is preserved as a parallel route slot and does not add a URL path part.
+
 ## Plugins
 
 The default build context includes plugins for Ruby, intl TOML files, Haml adapter output, CSS, and images. Plugins can:

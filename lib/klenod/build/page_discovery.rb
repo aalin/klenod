@@ -7,7 +7,26 @@ require_relative "module_id"
 
 module Klenod
   module Build
-    PageRoute = Data.define(:path, :module_id)
+    RouteSegment = Data.define(:name, :kind, :param_name, :path_part) do
+      def self.parse(name)
+        case name
+        when /\A\[\[\.\.\.(?<param_name>[A-Za-z_]\w*)\]\]\z/
+          new(name, :optional_catch_all, $~[:param_name], nil)
+        when /\A\[\.\.\.(?<param_name>[A-Za-z_]\w*)\]\z/
+          new(name, :catch_all, $~[:param_name], "*#{$~[:param_name]}")
+        when /\A\[(?<param_name>[A-Za-z_]\w*)\]\z/
+          new(name, :dynamic, $~[:param_name], ":#{$~[:param_name]}")
+        when /\A\((?<group_name>.+)\)\z/
+          new(name, :group, nil, nil)
+        when /\A@(?<slot_name>.+)\z/
+          new(name, :parallel, $~[:slot_name], nil)
+        else
+          new(name, :static, nil, name)
+        end
+      end
+    end
+
+    PageRoute = Data.define(:path, :module_id, :segments)
 
     class PageDiscovery
       PAGE_EXTENSIONS = [".rb", ".haml"].freeze
@@ -19,7 +38,7 @@ module Klenod
 
       def call
         route_files
-          .group_by { |path| route_path_for(path) }
+          .group_by { |path| route_path_for(route_segments_for(path)) }
           .map { |route_path, paths| route_for(route_path, paths) }
           .sort_by(&:path)
       end
@@ -41,18 +60,22 @@ module Klenod
           raise ResolveError, "Ambiguous page route #{route_path}; matched #{matches}. Use only one page file per route."
         end
 
-        PageRoute.new(route_path, ModuleId.new(relative_path_for(paths.fetch(0)), nil))
+        path = paths.fetch(0)
+        PageRoute.new(route_path, ModuleId.new(relative_path_for(path), nil), route_segments_for(path))
       end
 
-      def route_path_for(path)
-        relative_dir =
-          path
-            .dirname
-            .relative_path_from(source_dir.join(pages_dir))
-            .to_s
-        return "/" if relative_dir == "."
+      def route_segments_for(path)
+        relative_dir = path.dirname.relative_path_from(source_dir.join(pages_dir)).to_s
+        return [] if relative_dir == "."
 
-        "/#{relative_dir}"
+        relative_dir.split("/").map { |name| RouteSegment.parse(name) }
+      end
+
+      def route_path_for(segments)
+        path_parts = segments.filter_map(&:path_part)
+        return "/" if path_parts.empty?
+
+        "/#{path_parts.join("/")}"
       end
 
       def relative_path_for(path)
