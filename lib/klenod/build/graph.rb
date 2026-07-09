@@ -2,6 +2,7 @@
 
 require "digest"
 require "tsort"
+require "async"
 
 require_relative "../runtime/mod"
 require_relative "../runtime/bundle"
@@ -155,9 +156,7 @@ module Klenod
         transform = transform(module_id, source)
         resolved_dependencies = transform.dependencies.map { |dependency| resolve_dependency(dependency) }
 
-        dependency_records = resolved_dependencies.to_h do |resolved_dependency|
-          [resolved_dependency.dependency.id, load_module(resolved_dependency.module_id)]
-        end
+        dependency_records = load_dependency_records(resolved_dependencies)
         transform = finalize(module_id, transform, resolved_dependencies, dependency_records)
         transformed_hash = Digest::SHA256.hexdigest(transform.code)
 
@@ -260,6 +259,52 @@ module Klenod
         @records.filter_map do |candidate_id, record|
           candidate_id if record.resolved_dependencies.any? { |dependency| dependency.module_id == module_id }
         end
+      end
+
+      def load_dependency_records(resolved_dependencies)
+        return {} if resolved_dependencies.empty?
+
+        if resolved_dependencies.length == 1
+          resolved_dependency = resolved_dependencies.fetch(0)
+          return {
+            resolved_dependency.dependency.id => load_module(resolved_dependency.module_id)
+          }
+        end
+
+        with_async_task do |task|
+          resolved_dependencies
+            .map do |resolved_dependency|
+              [
+                resolved_dependency.dependency.id,
+                task.async { load_module(resolved_dependency.module_id) }
+              ]
+            end
+            .to_h { |dependency_id, child_task| [dependency_id, child_task.wait] }
+        end
+      end
+
+      def with_async_task(&block)
+        task = current_async_task
+
+        return block.call(task) if task
+
+        with_experimental_warnings_suppressed do
+          Async(&block).wait
+        end
+      end
+
+      def current_async_task
+        Async::Task.current
+      rescue RuntimeError
+        nil
+      end
+
+      def with_experimental_warnings_suppressed
+        enabled = Warning[:experimental]
+        Warning[:experimental] = false
+        yield
+      ensure
+        Warning[:experimental] = enabled
       end
 
       def runtime_module_specs

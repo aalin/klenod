@@ -16,6 +16,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 - [x] Implement Ruby plugin support for literal `import("...")`.
 - [x] Implement runtime bundle loading with `Klenod::Runtime.load_bundle`.
 - [x] Implement graph invalidation and dev watcher update events.
+- [x] Add initial async loading for sibling dependency modules.
 - [x] Implement CSS plugin with class-map import values and content-hashed asset emission.
 - [x] Add example app for graph loading, bundle loading, and watch mode.
 
