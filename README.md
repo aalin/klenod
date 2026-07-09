@@ -149,6 +149,18 @@ The router plugin preserves NextJS-style structure:
 - `[[...slug]]` is preserved as an optional catch-all segment.
 - `(marketing)` is preserved as a route group and does not add a URL path part.
 - `@modal` is preserved as a parallel route slot and does not add a URL path part.
+- `(.)photo`, `(..)profile`, and `(...)login` are preserved as intercepted route segments with visible path parts.
+
+The generated router also exposes a structural route tree:
+
+```ruby
+tree = router.tree
+tree.children
+tree.route
+tree.slots.fetch(:modal)
+```
+
+Tree nodes expose `segment`, `path`, `route`, `children`, `slots`, `root?`, and `leaf?`. Parallel route slots are available through `node.slots`, while still remaining in `node.children` for structural traversal.
 
 In development mode, the generated router uses `lazy_import` for pages and layouts so matching a route can load only the selected page. In build mode, it uses eager `import` so bundles include the full route graph.
 
