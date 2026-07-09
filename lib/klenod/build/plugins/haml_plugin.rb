@@ -144,7 +144,7 @@ module Klenod
             end
 
             def literal(value)
-              expression(value.inspect)
+              fragment(literal_node(value))
             end
 
             def frozen_literal(value)
@@ -160,6 +160,10 @@ module Klenod
                   ArgParen(Args([literal_node(dependency_id)]))
                 )
               )
+            end
+
+            def nil_expression
+              fragment(nil_node)
             end
 
             def symbol(value)
@@ -209,12 +213,6 @@ module Klenod
               ast_ruby_filters(nodes) || statements(nodes.map { |node| "begin\n#{indent(node, 2)}\nend" }.join("\n"))
             end
 
-            def format(source)
-              SyntaxTree.format(source)
-            rescue SyntaxTree::Parser::ParseError
-              source
-            end
-
             def format_node(node)
               SyntaxTree::Formatter.format(+"", node, 0)
             end
@@ -228,9 +226,7 @@ module Klenod
             def ast_expressions(expressions)
               case expressions.length
               when 0
-                node = VarRef(Kw("nil"))
-
-                Fragment.new(format_node(node), node)
+                nil_expression
               when 1
                 expression = expressions.fetch(0)
 
@@ -260,7 +256,7 @@ module Klenod
               statements = parse_statements(source)
               return nil unless statements
 
-              node = ast_begin([*statements.body, VarRef(Kw("nil"))])
+              node = ast_begin([*statements.body, nil_node])
 
               Fragment.new(format_node(node), node)
             end
@@ -342,7 +338,7 @@ module Klenod
 
             def branch_skeleton(branches)
               first_source, first_body = branches.fetch(0)
-              if first_source.match?(/\Acase\b/) && to_source(first_body) == "nil"
+              if first_source.match?(/\Acase\b/) && nil_fragment?(first_body)
                 [
                   "#{first_source}\n#{branches.drop(1).map { |source, _body| "#{source}\n  nil" }.join("\n")}\nend",
                   branches.drop(1)
@@ -383,11 +379,34 @@ module Klenod
             end
 
             def literal_node(value)
-              expression_node(value.inspect)
+              case value
+              when String
+                if value.match?(/\\|#[@${]/)
+                  expression_node(value.inspect)
+                else
+                  StringLiteral([TStringContent(value)], "\"")
+                end
+              when Integer
+                Int(value.to_s)
+              when Float
+                FloatLiteral(value.to_s)
+              when true
+                VarRef(Kw("true"))
+              when false
+                VarRef(Kw("false"))
+              when nil
+                nil_node
+              else
+                expression_node(value.inspect)
+              end
             end
 
             def freeze_node(node)
               CallNode(node, Period("."), Ident("freeze"), nil)
+            end
+
+            def nil_node
+              VarRef(Kw("nil"))
             end
 
             def keyword_props(props, mark:)
@@ -398,6 +417,10 @@ module Klenod
 
             def marked?(values)
               values.any? { |value| value.respond_to?(:marked?) && value.marked? }
+            end
+
+            def nil_fragment?(value)
+              value.is_a?(Fragment) && value.node.is_a?(SyntaxTree::VarRef) && to_source(value) == "nil"
             end
 
             def expression_node(source)

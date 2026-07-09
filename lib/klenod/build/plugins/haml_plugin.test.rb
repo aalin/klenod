@@ -111,10 +111,19 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   def test_ruby_builder_literals_and_symbols_keep_parsed_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     literal = builder.literal("Hello")
+    escaped_literal = builder.literal("\#{title}")
+    integer = builder.literal(123)
+    truthy = builder.literal(true)
     symbol = builder.symbol("article-card")
 
     assert_kind_of(SyntaxTree::StringLiteral, literal.node)
     assert_equal('"Hello"', literal.source)
+    assert_kind_of(SyntaxTree::StringLiteral, escaped_literal.node)
+    assert_equal('"\\#{title}"', escaped_literal.source)
+    assert_kind_of(SyntaxTree::Int, integer.node)
+    assert_equal("123", integer.source)
+    assert_kind_of(SyntaxTree::VarRef, truthy.node)
+    assert_equal("true", truthy.source)
     assert_kind_of(SyntaxTree::DynaSymbol, symbol.node)
     assert_equal(':"article-card"', symbol.source)
   end
@@ -193,6 +202,14 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   def test_ruby_builder_builds_empty_expression_lists_from_nil_node
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     fragment = builder.expressions([])
+
+    assert_kind_of(SyntaxTree::VarRef, fragment.node)
+    assert_equal("nil", fragment.source)
+  end
+
+  def test_ruby_builder_builds_nil_expression_from_syntax_tree_node
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment = builder.nil_expression
 
     assert_kind_of(SyntaxTree::VarRef, fragment.node)
     assert_equal("nil", fragment.source)
