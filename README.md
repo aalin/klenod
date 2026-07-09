@@ -129,6 +129,17 @@ Assets can be static or generated. Generated assets expose metadata immediately 
 
 Generated asset work runs through a build-owned queue. Configure it with `asset_generation_concurrency:` when creating a build context.
 
+```ruby
+asset = context.asset(request.path)
+asset.wait
+
+[
+  200,
+  {"content-type" => asset.content_type},
+  [asset.bytes]
+]
+```
+
 ## Development
 
 Run the test suite with:

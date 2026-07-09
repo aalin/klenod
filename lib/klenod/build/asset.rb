@@ -59,6 +59,14 @@ module Klenod
         @state == :failed
       end
 
+      def static?
+        @generator.nil?
+      end
+
+      def generated?
+        !static?
+      end
+
       private
 
       def start_generation
