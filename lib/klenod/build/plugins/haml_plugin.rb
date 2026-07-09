@@ -59,6 +59,24 @@ module Klenod
               render_source:,
               styles_source:
             )
+              component_program(
+                component_class_name: component_class_name,
+                component_base_class: component_base_class,
+                translations_source: translations_source,
+                ruby_source: ruby_source,
+                render_source: render_source,
+                styles_source: styles_source
+              ).source
+            end
+
+            def component_program(
+              component_class_name:,
+              component_base_class:,
+              translations_source:,
+              ruby_source:,
+              render_source:,
+              styles_source:
+            )
               source =
                 <<~RUBY
                   # frozen_string_literal: true
@@ -94,7 +112,7 @@ module Klenod
                   Translations = Default::Translations
                 RUBY
 
-              program(source).source
+              program(source)
             end
 
             def expressions(expressions)
@@ -422,13 +440,22 @@ module Klenod
             end
 
             def source_marked_fragment(mark, source, node)
-              Fragment.new("#{mark}\n#{source}", node)
+              marked_source = "#{mark}\n#{source}"
+              return Fragment.new(marked_source, nil) unless node
+
+              node = Statements([comment_node(mark), node])
+
+              Fragment.new(format_node(node), node)
             end
 
             def source_factory_call(factory:, tag:, children:, props:, mark:)
               arguments = [tag, *children.map { |child| to_source(child) }, keyword_props(props, mark: mark)].compact.join(",\n")
 
               expression("#{factory}[\n#{indent(arguments, 2)}\n]")
+            end
+
+            def comment_node(value)
+              Comment(value, false)
             end
 
             def marked?(values)

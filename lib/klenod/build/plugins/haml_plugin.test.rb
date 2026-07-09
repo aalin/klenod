@@ -177,6 +177,15 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
   def test_ruby_builder_component_source_formats_from_syntax_tree_program
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    program =
+      builder.component_program(
+        component_class_name: "Page",
+        component_base_class: "Object",
+        translations_source: "{}.freeze",
+        ruby_source: "",
+        render_source: builder.expression('"Hello"'),
+        styles_source: "{}.freeze"
+      )
     source =
       builder.component_source(
         component_class_name: "Page",
@@ -187,6 +196,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         styles_source: "{}.freeze"
       )
 
+    assert_kind_of(SyntaxTree::Program, program.node)
     assert_kind_of(SyntaxTree::Program, builder.program(source).node)
     assert_includes(source, "class Page < Object")
     assert_includes(source, "public def render")
@@ -197,7 +207,9 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     child = builder.expression('"Hello"')
     marked = builder.marked_expression(builder.source_mark(1, "Hello"), child)
 
-    assert_same(child.node, marked.node)
+    assert_kind_of(SyntaxTree::Statements, marked.node)
+    assert_equal(child.node, marked.node.body.last)
+    assert_kind_of(SyntaxTree::Comment, marked.node.body.first)
     assert_includes(marked.source, "# SourceMapMark:1:")
     assert_includes(marked.source, '"Hello"')
   end
