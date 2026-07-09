@@ -41,6 +41,12 @@ module Klenod
           end
 
           class RubyBuilder
+            Fragment = Data.define(:source, :node) do
+              def to_s
+                source
+              end
+            end
+
             def component_source(
               component_class_name:,
               component_base_class:,
@@ -74,7 +80,7 @@ module Klenod
                   #{indent(ruby_source, 2)}
 
                     public def render
-                  #{indent(render_source, 4)}
+                  #{indent(to_source(render_source), 4)}
                     end
                   end
 
@@ -88,11 +94,27 @@ module Klenod
             end
 
             def expressions(expressions)
-              case expressions.length
-              when 0 then "nil"
-              when 1 then expressions.fetch(0)
-              else "[\n#{indent(expressions.join(",\n"), 2)}\n]"
-              end
+              sources = expressions.map { |expression| to_source(expression) }
+              source =
+                case sources.length
+                when 0 then "nil"
+                when 1 then sources.fetch(0)
+                else "[\n#{indent(sources.join(",\n"), 2)}\n]"
+                end
+
+              expression(source)
+            end
+
+            def expression(source)
+              Fragment.new(source, parse_expression(source))
+            end
+
+            def statements(source)
+              Fragment.new(source, parse_statements(source))
+            end
+
+            def to_source(value)
+              value.is_a?(Fragment) ? value.source : value.to_s
             end
 
             def source_mark(line_no, source)
@@ -100,31 +122,31 @@ module Klenod
             end
 
             def marked_expression(mark, expression)
-              "#{mark}\n#{expression}"
+              expression("#{mark}\n#{to_source(expression)}")
             end
 
             def factory_call(factory:, tag:, children:, props:, mark:)
-              arguments = [tag, *children, keyword_props(props, mark: mark)].compact.join(",\n")
+              arguments = [tag, *children.map { |child| to_source(child) }, keyword_props(props, mark: mark)].compact.join(",\n")
 
-              "#{factory}[\n#{indent(arguments, 2)}\n]"
+              expression("#{factory}[\n#{indent(arguments, 2)}\n]")
             end
 
             def script_block(source, body)
-              "#{source}\n#{indent(body, 2)}\nend"
+              expression("#{source}\n#{indent(to_source(body), 2)}\nend")
             end
 
             def silent_script(source)
-              "begin\n#{indent(source, 2)}\n  nil\nend"
+              expression("begin\n#{indent(source, 2)}\n  nil\nend")
             end
 
             def branches(branches)
-              branches.map { |source, body| "#{source}\n#{indent(body, 2)}" }.join("\n") + "\nend"
+              expression(branches.map { |source, body| "#{source}\n#{indent(to_source(body), 2)}" }.join("\n") + "\nend")
             end
 
             def ruby_filters(nodes)
               return "" if nodes.empty?
 
-              nodes.map { |node| "begin\n#{indent(node, 2)}\nend" }.join("\n")
+              statements(nodes.map { |node| "begin\n#{indent(node, 2)}\nend" }.join("\n"))
             end
 
             def format(source)
@@ -138,7 +160,7 @@ module Klenod
             end
 
             def indent(value, spaces)
-              value.lines.map { |line| "#{" " * spaces}#{line}" }.join
+              to_source(value).lines.map { |line| "#{" " * spaces}#{line}" }.join
             end
 
             private
@@ -147,6 +169,18 @@ module Klenod
               return nil if props.empty?
 
               "#{mark},\n**{#{props.map { |name, value| "#{name.inspect} => #{value}" }.join(", ")}}"
+            end
+
+            def parse_expression(source)
+              SyntaxTree.parse(source)&.statements&.body&.first
+            rescue SyntaxTree::Parser::ParseError
+              nil
+            end
+
+            def parse_statements(source)
+              SyntaxTree.parse(source)&.statements
+            rescue SyntaxTree::Parser::ParseError
+              nil
             end
           end
 
@@ -256,7 +290,7 @@ module Klenod
 
           def compile_script(node, factory:, builder:)
             source = script_source(node)
-            return "(#{source})" if node.children.empty?
+            return builder.expression("(#{source})") if node.children.empty?
 
             builder.script_block(source, compile_nodes(node.children, factory: factory, builder: builder))
           end

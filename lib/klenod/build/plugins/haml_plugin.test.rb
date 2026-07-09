@@ -55,6 +55,22 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_ruby_builder_fragments_keep_parsed_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment =
+      builder.factory_call(
+        factory: "#{self.class.name}::FakeFramework::H",
+        tag: ":p",
+        children: ["\"Hello\""],
+        props: {class: "\"intro\""},
+        mark: builder.source_mark(1, "p")
+      )
+
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(SyntaxTree::ARef, fragment.node)
+    assert_includes(fragment.source, "**{:class => \"intro\"}")
+  end
+
   def test_haml_records_companion_watched_patterns
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
