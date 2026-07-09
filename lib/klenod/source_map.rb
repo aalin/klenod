@@ -33,6 +33,8 @@ module Klenod
       end
 
       def find_original_line_no(output_line_no)
+        # Marks apply until the next mark, so generated code only needs a mark
+        # before the expression it came from.
         marks_by_output_line
           .select { |line_no, _mark| line_no <= output_line_no }
           .max_by { |line_no, _mark| line_no }

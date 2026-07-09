@@ -27,4 +27,27 @@ class Klenod::SourceMap::Test < Minitest::Test
 
     assert_equal(2, source_map.find_original_line_no(4))
   end
+
+  def test_later_marks_do_not_affect_earlier_generated_lines
+    source_map =
+      Klenod::SourceMap::SourceMap.parse(
+        "one\ntwo\nthree\n",
+        <<~RUBY
+          class Example
+            # #{Klenod::SourceMap::Mark.new(1, "one")}
+            def first
+              :ok
+            end
+
+            # #{Klenod::SourceMap::Mark.new(3, "three")}
+            def second
+              :ok
+            end
+          end
+        RUBY
+      )
+
+    assert_equal(1, source_map.find_original_line_no(4))
+    assert_equal(3, source_map.find_original_line_no(9))
+  end
 end
