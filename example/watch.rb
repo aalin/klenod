@@ -22,14 +22,12 @@ context.on_update do |event|
   puts "  assets changed: #{event.asset_changes.changed.join(", ")}"
   puts "  assets removed: #{event.asset_changes.removed.join(", ")}"
 
-  if update.errors.any?
-    update.errors.each do |module_id, error|
-      warn "  error in #{module_id}: #{error.class}: #{error.message}"
-    end
+  if update.failed?
+    update.error_messages.each { |message| warn "  error in #{message}" }
   else
-    if update.asset_write_result && !update.asset_write_result.empty?
-      puts "  asset files written: #{update.asset_write_result.written_paths.join(", ")}"
-      puts "  asset files removed: #{update.asset_write_result.removed_paths.join(", ")}"
+    if update.asset_files_changed?
+      puts "  asset files written: #{update.written_asset_paths.join(", ")}"
+      puts "  asset files removed: #{update.removed_asset_paths.join(", ")}"
     end
     status, _headers, body = update.entry.call(nil, context)
     puts "  status: #{status}"

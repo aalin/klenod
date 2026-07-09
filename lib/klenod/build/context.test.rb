@@ -717,12 +717,18 @@ class Klenod::Build::Context::Test < Minitest::Test
       applied = context.apply_update(event, entry: entry, assets_dir: assets_dir)
 
       assert(applied.success?)
+      refute(applied.failed?)
       assert_same(entry, applied.entry)
       assert_equal(entry.id, applied.entry_record.id)
       assert_equal([:heading], applied.exports::CLASSES)
       assert_equal([], applied.errors)
+      assert_equal([], applied.each_error.to_a)
+      assert_equal([], applied.error_messages)
+      assert(applied.asset_files_changed?)
       assert_equal(result.added_assets.sort, applied.asset_write_result.written_paths.map { |path| "/#{Pathname.new(path).relative_path_from(Pathname.new(assets_dir))}" }.sort)
       assert_equal(result.removed_assets.sort, applied.asset_write_result.removed_paths.map { |path| "/#{Pathname.new(path).relative_path_from(Pathname.new(assets_dir))}" }.sort)
+      assert_equal(applied.asset_write_result.written_paths, applied.written_asset_paths)
+      assert_equal(applied.asset_write_result.removed_paths, applied.removed_asset_paths)
     end
   end
 
@@ -740,11 +746,17 @@ class Klenod::Build::Context::Test < Minitest::Test
       applied = context.apply_update(event, entry: entry, assets_dir: "#{dir}/public")
 
       refute(applied.success?)
+      assert(applied.failed?)
       assert_nil(applied.entry)
       assert_nil(applied.entry_record)
       assert_nil(applied.exports)
       assert_nil(applied.asset_write_result)
       assert_equal(result.errors, applied.errors)
+      assert_equal(result.errors.to_a, applied.each_error.to_a)
+      assert_equal(["entry.rb: Klenod::Build::ResolveError: Could not resolve dep"], applied.error_messages)
+      refute(applied.asset_files_changed?)
+      assert_equal([], applied.written_asset_paths)
+      assert_equal([], applied.removed_asset_paths)
     end
   end
 

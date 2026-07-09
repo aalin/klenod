@@ -20,11 +20,9 @@ context.write_assets(assets_dir) if assets_dir
 context.on_update do |event|
   update = context.apply_update(event, entry: entry, assets_dir: assets_dir)
 
-  if update.errors.any?
+  if update.failed?
     warn "Update ##{event.graph_version} failed"
-    update.errors.each do |module_id, error|
-      warn "  #{module_id}: #{error.class}: #{error.message}"
-    end
+    update.error_messages.each { |message| warn "  #{message}" }
   else
     puts "Update ##{event.graph_version}: dependency tree updated"
     unless event.asset_changes.empty?
@@ -32,9 +30,9 @@ context.on_update do |event|
       puts "  assets changed: #{event.asset_changes.changed.join(", ")}" unless event.asset_changes.changed.empty?
       puts "  assets removed: #{event.asset_changes.removed.join(", ")}" unless event.asset_changes.removed.empty?
     end
-    if update.asset_write_result && !update.asset_write_result.empty?
-      puts "  asset files written: #{update.asset_write_result.written_paths.join(", ")}" unless update.asset_write_result.written_paths.empty?
-      puts "  asset files removed: #{update.asset_write_result.removed_paths.join(", ")}" unless update.asset_write_result.removed_paths.empty?
+    if update.asset_files_changed?
+      puts "  asset files written: #{update.written_asset_paths.join(", ")}" unless update.written_asset_paths.empty?
+      puts "  asset files removed: #{update.removed_asset_paths.join(", ")}" unless update.removed_asset_paths.empty?
     end
   end
 end

@@ -25,8 +25,34 @@ module Klenod
         errors.empty?
       end
 
+      def failed?
+        !success?
+      end
+
       def entry_record
         entry&.record
+      end
+
+      def each_error(&block)
+        return errors.each unless block
+
+        errors.each(&block)
+      end
+
+      def error_messages
+        errors.map { |module_id, error| "#{module_id}: #{error.class}: #{error.message}" }
+      end
+
+      def asset_files_changed?
+        asset_write_result && !asset_write_result.empty?
+      end
+
+      def written_asset_paths
+        asset_write_result&.written_paths || []
+      end
+
+      def removed_asset_paths
+        asset_write_result&.removed_paths || []
       end
     end
 

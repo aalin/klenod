@@ -49,14 +49,12 @@ context.on_update do |event|
     status, headers, body = update.entry.call(nil, context)
     css_assets = update.entry.assets(type: :css)
   else
-    update.errors.each_value do |error|
-      warn "#{error.class}: #{error.message}"
-    end
+    update.error_messages.each { |message| warn message }
   end
 end
 ```
 
-`apply_update` refreshes the entry, mirrors changed assets when `assets_dir:` is provided, and returns an applied update object with `entry`, `exports`, `asset_write_result`, and `errors`.
+`apply_update` refreshes the entry, mirrors changed assets when `assets_dir:` is provided, and returns an applied update object with `entry`, `exports`, `asset_write_result`, and `errors`. Use `update.success?`, `update.failed?`, `update.error_messages`, and `update.asset_files_changed?` for common watch-mode branches.
 
 Use `lazy_import("...")` to record a dependency without loading it while the importing module is evaluated. It returns a `Klenod::Runtime::LazyImport`; call `#call` or `#value` to load and cache the imported value.
 
