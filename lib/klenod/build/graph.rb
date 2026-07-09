@@ -18,6 +18,21 @@ module Klenod
     class Graph
       include TSort
 
+      InFlightLoad = Struct.new(:task, :condition) do
+        def self.create
+          new(nil, Async::Condition.new)
+        end
+
+        def wait
+          (task || condition.wait).wait
+        end
+
+        def start(task)
+          self.task = task
+          condition.signal(task)
+        end
+      end
+
       attr_reader :records, :mods
       attr_reader :plugins
 
@@ -28,6 +43,7 @@ module Klenod
         @mods = {}
         @virtual_sources = {}
         @virtual_owners = {}
+        @loading_tasks = {}
       end
 
       def load(specifier)
@@ -147,6 +163,27 @@ module Klenod
       end
 
       def load_module(module_id, force: false, reevaluate: false)
+        unless force || reevaluate
+          return @loading_tasks.fetch(module_id).wait if @loading_tasks.key?(module_id)
+        end
+
+        task = current_async_task
+        if task && !force && !reevaluate
+          in_flight_load = InFlightLoad.create
+          @loading_tasks[module_id] = in_flight_load
+          loading_task = task.async { load_module_now(module_id, force: force, reevaluate: reevaluate) }
+          in_flight_load.start(loading_task)
+          begin
+            return loading_task.wait
+          ensure
+            @loading_tasks.delete(module_id) if @loading_tasks[module_id].equal?(in_flight_load)
+          end
+        end
+
+        load_module_now(module_id, force: force, reevaluate: reevaluate)
+      end
+
+      def load_module_now(module_id, force: false, reevaluate: false)
         absolute_path = @resolver.absolute_path(module_id)
         source = load_source(module_id, absolute_path)
         source_hash = Digest::SHA256.hexdigest(source)

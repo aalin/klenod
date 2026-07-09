@@ -40,6 +40,22 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  class CountingLoadPlugin < Klenod::Build::Plugin
+    def initialize(events)
+      @events = events
+    end
+
+    def load(module_id, context)
+      return nil unless module_id.extname == ".rb"
+
+      @events << [:start, module_id.path]
+      sleep(0.01) if module_id.path == "shared.rb"
+      source = context.absolute_path(module_id).binread
+      @events << [:finish, module_id.path]
+      source
+    end
+  end
+
   def test_loads_entrypoint_and_dependencies_lazily
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -84,6 +100,40 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(["deps/a.rb", "deps/b.rb"], values)
       assert_equal([[:start, "deps/a.rb"], [:start, "deps/b.rb"]], events.first(2))
       assert_equal([[:finish, "deps/a.rb"], [:finish, "deps/b.rb"]], events.last(2))
+    end
+  end
+
+  def test_concurrent_diamond_dependencies_share_in_flight_module_load
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/deps")
+      File.write("#{dir}/shared.rb", "VALUE = 41\n")
+      File.write("#{dir}/deps/a.rb", "Shared = import(\"../shared\")\nVALUE = Shared::VALUE\n")
+      File.write("#{dir}/deps/b.rb", "Shared = import(\"../shared\")\nVALUE = Shared::VALUE + 1\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          A = import("deps/a")
+          B = import("deps/b")
+          VALUES = [A::VALUE, B::VALUE]
+        RUBY
+      )
+      events = []
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            Klenod::Build::Plugins::RubyPlugin.new,
+            CountingLoadPlugin.new(events)
+          ]
+        )
+
+      record = context.load("entry")
+      values = context.graph.mods.fetch(record.id).const_get(:Exports)::VALUES
+
+      assert_equal([41, 42], values)
+      assert_equal(1, events.count { |event, path| event == :start && path == "shared.rb" })
+      assert_equal(1, events.count { |event, path| event == :finish && path == "shared.rb" })
+      assert_equal(4, context.graph.records.length)
     end
   end
 
