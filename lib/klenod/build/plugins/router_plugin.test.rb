@@ -236,11 +236,32 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal("/dashboard", dashboard.path)
       assert_equal("@modal", slot.segment.name)
       assert_equal(:parallel, slot.segment.kind)
+      assert_equal("modal", slot.segment.param_name)
       assert_equal("/dashboard", slot.path)
+      assert_same(slot, dashboard.slots.fetch(:modal))
       assert_equal("settings", settings.segment.name)
       assert_equal("/dashboard/settings", settings.path)
       assert_equal("pages/(marketing)/dashboard/@modal/settings/page.rb", settings.route.module_id)
       assert_equal(["pages/layout.rb", "pages/(marketing)/layout.rb"], settings.route.layout_module_ids)
+    end
+  end
+
+  def test_virtual_router_tree_exposes_multiple_parallel_slots
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/dashboard/@modal/settings")
+      FileUtils.mkdir_p("#{dir}/pages/dashboard/@sidebar/nav")
+      File.write("#{dir}/pages/dashboard/page.rb", "NAME = :dashboard\n")
+      File.write("#{dir}/pages/dashboard/@modal/settings/page.rb", "NAME = :settings\n")
+      File.write("#{dir}/pages/dashboard/@sidebar/nav/page.rb", "NAME = :nav\n")
+
+      tree = router_for(dir, mode: :development).tree
+      dashboard = tree.children.fetch(0)
+
+      assert_equal([:modal, :sidebar], dashboard.slots.keys.sort)
+      assert_equal("@modal", dashboard.slots.fetch(:modal).segment.name)
+      assert_equal("@sidebar", dashboard.slots.fetch(:sidebar).segment.name)
+      assert_equal("pages/dashboard/@modal/settings/page.rb", dashboard.slots.fetch(:modal).children.fetch(0).route.module_id)
+      assert_equal("pages/dashboard/@sidebar/nav/page.rb", dashboard.slots.fetch(:sidebar).children.fetch(0).route.module_id)
     end
   end
 

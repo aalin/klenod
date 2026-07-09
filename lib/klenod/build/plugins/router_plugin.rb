@@ -224,7 +224,7 @@ module Klenod
               end
 
               class RouteNode
-                attr_reader :segment, :path, :children
+                attr_reader :segment, :path, :children, :slots
                 attr_accessor :route
 
                 def initialize(segment:, path:, route: nil)
@@ -232,6 +232,7 @@ module Klenod
                   @path = path
                   @route = route
                   @children = []
+                  @slots = {}
                 end
 
                 def root?
@@ -248,6 +249,10 @@ module Klenod
 
                 def add_child(segment, path)
                   child_for(segment) || children.tap { _1 << RouteNode.new(segment: segment, path: path) }.last
+                end
+
+                def add_slot(segment, path)
+                  slots[segment.param_name.to_sym] ||= add_child(segment, path)
                 end
               end
 
@@ -300,7 +305,8 @@ module Klenod
 
                   route.segments.each do |segment|
                     path_parts << segment.path_part if segment.path_part
-                    cursor = cursor.add_child(segment, path_parts.empty? ? "/" : "/\#{path_parts.join("/")}")
+                    path = path_parts.empty? ? "/" : "/\#{path_parts.join("/")}"
+                    cursor = segment.kind == :parallel ? cursor.add_slot(segment, path) : cursor.add_child(segment, path)
                   end
 
                   cursor.route = route
