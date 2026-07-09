@@ -111,8 +111,8 @@ module Klenod
 
         def routes(source_dir:)
           route_files(source_dir)
-            .group_by { |path| route_path_for(route_segments_for(source_dir, path)) }
-            .map { |route_path, paths| route_for(source_dir, route_path, paths) }
+            .group_by { |path| route_key_for(route_segments_for(source_dir, path)) }
+            .map { |_route_key, paths| route_for(source_dir, paths) }
             .sort_by(&:path)
         end
 
@@ -132,7 +132,8 @@ module Klenod
           end
         end
 
-        def route_for(source_dir, route_path, paths)
+        def route_for(source_dir, paths)
+          route_path = route_path_for(route_segments_for(source_dir, paths.fetch(0)))
           if paths.length > 1
             matches = paths.map { |path| relative_path_for(source_dir, path) }.sort.join(", ")
             raise ResolveError, "Ambiguous page route #{route_path}; matched #{matches}. Use only one page file per route."
@@ -159,6 +160,10 @@ module Klenod
           return "/" if path_parts.empty?
 
           "/#{path_parts.join("/")}"
+        end
+
+        def route_key_for(segments)
+          segments.map { |segment| [segment.kind, segment.path_part, segment.param_name] }
         end
 
         def layout_module_ids_for(source_dir, path)
@@ -229,7 +234,7 @@ module Klenod
               end
 
               ROUTES = [
-            #{route_entries(manifest, imports: imports).join(",\n")}
+            #{route_entries(matching_routes(manifest), imports: imports).join(",\n")}
               ].freeze
 
               def self.routes
@@ -302,8 +307,8 @@ module Klenod
           RUBY
         end
 
-        def route_entries(manifest, imports:)
-          manifest.routes.map do |route|
+        def route_entries(routes, imports:)
+          routes.map do |route|
             layouts = route.layout_module_ids.map { |module_id| imports.fetch(module_id.to_s) }
             [
               "    Route.new(",
@@ -315,6 +320,41 @@ module Klenod
               "      #{layouts_source(layouts)}",
               "    )"
             ].join("\n")
+          end
+        end
+
+        def matching_routes(manifest)
+          manifest.routes.sort_by { |route| route_priority(route) }
+        end
+
+        def route_priority(route)
+          [
+            route_score(route),
+            -visible_segments(route).length,
+            route.path
+          ]
+        end
+
+        def route_score(route)
+          visible_segments(route).sum { |segment| segment_score(segment) }
+        end
+
+        def visible_segments(route)
+          route.segments.reject { |segment| [:group, :parallel].include?(segment.kind) }
+        end
+
+        def segment_score(segment)
+          case segment.kind
+          when :static
+            0
+          when :dynamic
+            10
+          when :catch_all
+            100
+          when :optional_catch_all
+            1_000
+          else
+            0
           end
         end
 

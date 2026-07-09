@@ -145,6 +145,52 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
+  def test_virtual_router_prefers_static_route_over_dynamic_route
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/blog")
+      FileUtils.mkdir_p("#{dir}/pages/[slug]")
+      File.write("#{dir}/pages/blog/page.rb", "NAME = :blog\n")
+      File.write("#{dir}/pages/[slug]/page.rb", "NAME = :dynamic\n")
+
+      router = router_for(dir, mode: :development)
+
+      assert_equal(:blog, router.match("/blog").page::NAME)
+      assert_equal(:dynamic, router.match("/about").page::NAME)
+      assert_equal({slug: "about"}, router.match("/about").params)
+    end
+  end
+
+  def test_virtual_router_prefers_dynamic_route_over_catch_all_route
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/blog/[id]")
+      FileUtils.mkdir_p("#{dir}/pages/blog/[...slug]")
+      File.write("#{dir}/pages/blog/[id]/page.rb", "NAME = :dynamic\n")
+      File.write("#{dir}/pages/blog/[...slug]/page.rb", "NAME = :catch_all\n")
+
+      router = router_for(dir, mode: :development)
+
+      assert_equal(:dynamic, router.match("/blog/123").page::NAME)
+      assert_equal({id: "123"}, router.match("/blog/123").params)
+      assert_equal(:catch_all, router.match("/blog/2026/07/09").page::NAME)
+      assert_equal({slug: ["2026", "07", "09"]}, router.match("/blog/2026/07/09").params)
+    end
+  end
+
+  def test_virtual_router_prefers_concrete_route_over_optional_catch_all_route
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/docs")
+      FileUtils.mkdir_p("#{dir}/pages/docs/[[...slug]]")
+      File.write("#{dir}/pages/docs/page.rb", "NAME = :docs\n")
+      File.write("#{dir}/pages/docs/[[...slug]]/page.rb", "NAME = :optional\n")
+
+      router = router_for(dir, mode: :development)
+
+      assert_equal(:docs, router.match("/docs").page::NAME)
+      assert_equal(:optional, router.match("/docs/a/b").page::NAME)
+      assert_equal({slug: ["a", "b"]}, router.match("/docs/a/b").params)
+    end
+  end
+
   def test_virtual_router_exposes_layouts_from_outermost_to_nearest
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/blog/post")
