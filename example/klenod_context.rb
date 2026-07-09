@@ -15,7 +15,8 @@ module Example
           factory: "Example::H"
         ),
         Klenod::Build::Plugins::CssPlugin.new,
-        Klenod::Build::Plugins::ImagePlugin.new
+        Klenod::Build::Plugins::ImagePlugin.new,
+        Klenod::Build::Plugins::RouterPlugin.new
       ]
     )
   end

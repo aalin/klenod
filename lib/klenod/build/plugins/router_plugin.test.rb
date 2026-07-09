@@ -194,6 +194,70 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
+  def test_virtual_router_records_page_and_layout_watched_patterns
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.rb", "NAME = :root\n")
+
+      context = router_context(dir, mode: :development)
+      record = context.load("virtual:router")
+
+      expected =
+        [
+          ["pages/**/layout.rb", :router_layout],
+          ["pages/**/layout.haml", :router_layout],
+          ["pages/**/page.rb", :router_page],
+          ["pages/**/page.haml", :router_page]
+        ].sort_by { |glob, kind| [glob, kind.to_s] }
+
+      assert_equal(
+        expected,
+        record.watched_patterns.map { |pattern| [pattern.glob, pattern.kind] }.sort_by { |glob, kind| [glob, kind.to_s] }
+      )
+    end
+  end
+
+  def test_virtual_router_updates_when_page_file_is_added
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/about")
+      File.write("#{dir}/pages/page.rb", "NAME = :root\n")
+
+      context = router_context(dir, mode: :development)
+      router = context.entry("virtual:router").exports::Default
+
+      assert_nil(router.match("/about"))
+
+      about_path = "#{dir}/pages/about/page.rb"
+      File.write(about_path, "NAME = :about\n")
+      result = context.invalidate_paths([about_path])
+      router = context.exports("virtual:router.rb")::Default
+
+      assert_includes(result.reloaded_module_ids.map(&:to_s), "virtual:router.rb")
+      assert_equal(:about, router.match("/about").page::NAME)
+    end
+  end
+
+  def test_virtual_router_updates_when_page_file_is_removed
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/about")
+      File.write("#{dir}/pages/page.rb", "NAME = :root\n")
+      about_path = "#{dir}/pages/about/page.rb"
+      File.write(about_path, "NAME = :about\n")
+
+      context = router_context(dir, mode: :development)
+      router = context.entry("virtual:router").exports::Default
+
+      assert_equal(:about, router.match("/about").page::NAME)
+
+      File.delete(about_path)
+      result = context.invalidate_paths([], removed_paths: [about_path])
+      router = context.exports("virtual:router.rb")::Default
+
+      assert_includes(result.reloaded_module_ids.map(&:to_s), "virtual:router.rb")
+      assert_nil(router.match("/about"))
+    end
+  end
+
   def test_bundle_loads_router_and_all_pages
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/about")

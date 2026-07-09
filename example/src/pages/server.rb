@@ -1,10 +1,14 @@
 # frozen_string_literal: true
 
 Shared = import("../shared")
-Page = import("./page.haml")
+Router = import("virtual:router")
 SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 
-def self.call(_request, context)
+def self.call(request, context)
+  match = Router::Default.match(request&.path || "/")
+  return [404, {"content-type" => "text/plain"}, ["Not found\n"]] unless match
+
+  page = match.page
   css_assets = context.assets_for_module(__FILE__, type: :css)
   srcset =
     SmokedFish
@@ -12,7 +16,7 @@ def self.call(_request, context)
       .map { |variant| "#{variant.src} #{variant.descriptor}" }
       .join(", ")
   body =
-    Page
+    page
       .new(
         name: Shared::NAME,
         tagline: Shared::TAGLINE,

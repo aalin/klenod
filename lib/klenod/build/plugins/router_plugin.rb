@@ -6,6 +6,8 @@ require_relative "../dependency"
 require_relative "../errors"
 require_relative "../module_id"
 require_relative "../plugin"
+require_relative "../transform_result"
+require_relative "../watched_pattern"
 
 module Klenod
   module Build
@@ -88,6 +90,19 @@ module Klenod
           generate_router_source(discover(source_dir: context.source_dir), mode: context.mode)
         end
 
+        def transform(module_id, code, _context)
+          return TransformResult.identity(code) unless module_id == @module_id
+
+          TransformResult.new(
+            code,
+            [],
+            nil,
+            [],
+            watched_patterns(module_id),
+            {}
+          )
+        end
+
         def discover(source_dir:)
           RouteManifest.new(routes(source_dir: Pathname.new(source_dir).expand_path))
         end
@@ -106,6 +121,15 @@ module Klenod
           return [] unless root.directory?
 
           extensions.flat_map { |extension| root.glob("**/page#{extension}") }.select(&:file?)
+        end
+
+        def watched_patterns(module_id)
+          extensions.flat_map do |extension|
+            [
+              WatchedPattern.new(module_id, "#{pages_dir}/**/page#{extension}", :router_page, {}),
+              WatchedPattern.new(module_id, "#{pages_dir}/**/layout#{extension}", :router_layout, {})
+            ]
+          end
         end
 
         def route_for(source_dir, route_path, paths)
