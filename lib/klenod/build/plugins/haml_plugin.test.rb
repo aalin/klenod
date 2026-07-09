@@ -207,6 +207,22 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal(builder.component_program(**kwargs).source, builder.component_source(**kwargs))
   end
 
+  def test_haml_transform_result_can_be_built_from_ast
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    ast = builder.program("class Page\nend\n")
+    result =
+      Klenod::Build::Plugins::HamlPlugin::HamlTransformResult.from_ast(
+        ast,
+        source: "%h1 Hello\n",
+        metadata: {custom: true}
+      )
+
+    assert_equal(ast.source, result.code)
+    assert_same(ast, result.ast)
+    assert_kind_of(Klenod::SourceMap::SourceMap, result.source_map)
+    assert_equal({custom: true}, result.metadata)
+  end
+
   def test_ruby_builder_marked_expressions_preserve_wrapped_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     child = builder.expression('"Hello"')
@@ -409,6 +425,30 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, result.ast)
     assert_kind_of(SyntaxTree::Program, result.ast.node)
     assert_equal(result.code, result.ast.source)
+  end
+
+  def test_default_haml_transformer_compiles_template_to_fragments
+    transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    template =
+      transformer.send(
+        :compile_template,
+        <<~HAML,
+          :ruby
+            def title
+              "Hello"
+            end
+
+          %h1= title
+        HAML
+        factory: "#{self.class.name}::FakeFramework::H",
+        builder: builder
+      )
+
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, template.ruby)
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, template.render)
+    assert_kind_of(SyntaxTree::Statements, template.ruby.node)
+    assert_kind_of(SyntaxTree::Node, template.render.node)
   end
 
   def test_default_haml_transformer_renders_with_configured_factory

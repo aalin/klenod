@@ -17,7 +17,16 @@ module Klenod
   module Build
     module Plugins
       class HamlPlugin < Plugin
-        HamlTransformResult = Data.define(:code, :source_map, :metadata, :ast)
+        HamlTransformResult = Data.define(:code, :source_map, :metadata, :ast) do
+          def self.from_ast(ast, source:, metadata:)
+            new(
+              ast.source,
+              SourceMap::SourceMap.parse(source, ast.source),
+              metadata,
+              ast
+            )
+          end
+        end
 
         DEFAULT_COMPONENT_BASE_CLASS = "Object"
         DEFAULT_FACTORY = "Object"
@@ -513,33 +522,30 @@ module Klenod
                 component_class_name: component_class_name,
                 component_base_class: component_base_class,
                 translations_source: translations_source,
-                ruby_source: template.ruby_source,
-                render_source: template.render_source,
+                ruby_source: template.ruby,
+                render_source: template.render,
                 styles_source: styles_source
               )
-            code = ast.source
-
-            HamlTransformResult.new(
-              code,
-              SourceMap::SourceMap.parse(source, code),
-              {source: source, module_id: module_id},
-              ast
+            HamlTransformResult.from_ast(
+              ast,
+              source: source,
+              metadata: {source: source, module_id: module_id}
             )
           end
 
           private
 
-          Template = Data.define(:ruby_source, :render_source)
+          Template = Data.define(:ruby, :render)
           RubyLine = Data.define(:line_no, :source)
 
           def compile_template(source, factory:, builder:)
             parsed = SyntaxTree::Haml.parse(source)
             render_nodes = parsed.children.reject { |node| ruby_filter?(node) }
             ruby_nodes = parsed.children.select { |node| ruby_filter?(node) }
-            ruby_source = compile_ruby_filters(ruby_nodes, builder: builder)
-            render_source = compile_nodes(render_nodes, factory: factory, builder: builder)
+            ruby = compile_ruby_filters(ruby_nodes, builder: builder)
+            render = compile_nodes(render_nodes, factory: factory, builder: builder)
 
-            Template.new(ruby_source, render_source)
+            Template.new(ruby, render)
           end
 
           def compile_nodes(nodes, factory:, builder:)
