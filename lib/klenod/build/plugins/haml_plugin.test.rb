@@ -108,6 +108,17 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal("class Page\nend\n", program.source)
   end
 
+  def test_ruby_builder_literals_and_symbols_keep_parsed_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    literal = builder.literal("Hello")
+    symbol = builder.symbol("article-card")
+
+    assert_kind_of(SyntaxTree::StringLiteral, literal.node)
+    assert_equal('"Hello"', literal.source)
+    assert_kind_of(SyntaxTree::DynaSymbol, symbol.node)
+    assert_equal(':"article-card"', symbol.source)
+  end
+
   def test_ruby_builder_component_source_formats_from_syntax_tree_program
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     source =

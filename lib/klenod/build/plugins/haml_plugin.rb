@@ -139,6 +139,14 @@ module Klenod
               value.is_a?(Fragment) ? value.source : value.to_s
             end
 
+            def literal(value)
+              expression(value.inspect)
+            end
+
+            def symbol(value)
+              expression(value.to_sym.inspect)
+            end
+
             def source_mark(line_no, source)
               "# #{SourceMap::Mark.new(line_no, source)}"
             end
@@ -333,7 +341,7 @@ module Klenod
             def keyword_props(props, mark:)
               return nil if props.empty?
 
-              "#{mark},\n**{#{props.map { |name, value| "#{name.inspect} => #{value}" }.join(", ")}}"
+              "#{mark},\n**{#{props.map { |name, value| "#{name.inspect} => #{to_source(value)}" }.join(", ")}}"
             end
 
             def marked?(values)
@@ -451,7 +459,7 @@ module Klenod
               when :tag
                 compile_tag(node, factory: factory, builder: builder)
               when :plain
-                node.value.fetch(:text).inspect
+                builder.literal(node.value.fetch(:text))
               when :script
                 compile_script(node, factory: factory, builder: builder)
               when :silent_script
@@ -529,7 +537,7 @@ module Klenod
             children = []
             value = node.value.fetch(:value)
             if value && !value.empty?
-              children << (node.value.fetch(:parse) ? "(#{value})" : value.inspect)
+              children << (node.value.fetch(:parse) ? builder.expression("(#{value})") : builder.literal(value))
             end
             children.concat(compile_node_expressions(node.children, factory: factory, builder: builder))
 
@@ -539,20 +547,20 @@ module Klenod
           def compile_factory_call(node, children, factory:, builder:)
             builder.factory_call(
               factory: factory,
-              tag: compile_tag_name(node),
+              tag: compile_tag_name(node, builder: builder),
               children: children,
               props: attributes(node, builder: builder),
               mark: source_mark(node, builder: builder)
             )
           end
 
-          def compile_tag_name(node)
+          def compile_tag_name(node, builder:)
             tag_name = node.value.fetch(:name)
-            tag_name.match?(/\A[A-Z]/) ? tag_name : ":#{tag_name}"
+            tag_name.match?(/\A[A-Z]/) ? builder.expression(tag_name) : builder.symbol(tag_name)
           end
 
           def attributes(node, builder:)
-            static_attributes(node).merge(dynamic_attributes(node, builder: builder))
+            static_attributes(node, builder: builder).merge(dynamic_attributes(node, builder: builder))
           end
 
           def compile_ruby_filters(nodes, builder:)
@@ -579,11 +587,11 @@ module Klenod
             node.type == :filter && node.value.fetch(:name) == "ruby"
           end
 
-          def static_attributes(node)
+          def static_attributes(node, builder:)
             node
               .value
               .fetch(:attributes)
-              .to_h { |key, value| [key.to_sym, value.inspect] }
+              .to_h { |key, value| [key.to_sym, builder.literal(value)] }
           end
 
           def dynamic_attributes(node, builder:)
