@@ -212,6 +212,13 @@ module Klenod
               fragment(Paren(LParen("("), Statements([node])))
             end
 
+            def hash_expression(source)
+              node = parse_expression(source)
+              return nil unless node.is_a?(SyntaxTree::HashLiteral)
+
+              fragment(node)
+            end
+
             def source_mark(line_no, source)
               "# #{SourceMap::Mark.new(line_no, source)}"
             end
@@ -769,11 +776,10 @@ module Klenod
             source = node.value.fetch(:dynamic_attributes).old
             return {} unless source
 
-            ast = SyntaxTree.parse(source)
-            hash = ast&.statements&.body&.first
-            return {} unless hash.is_a?(SyntaxTree::HashLiteral)
+            hash = builder.hash_expression(source)
+            return {} unless hash
 
-            hash.assocs.to_h do |assoc|
+            hash.node.assocs.to_h do |assoc|
               [attribute_key(assoc.key, builder: builder), builder.fragment(assoc.value)]
             end
           end
@@ -783,7 +789,7 @@ module Klenod
             when SyntaxTree::Label
               node.value.delete_suffix(":").to_sym
             else
-              builder.format_node(node).to_sym
+              builder.fragment(node).source.to_sym
             end
           end
 

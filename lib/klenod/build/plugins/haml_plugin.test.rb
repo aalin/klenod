@@ -186,6 +186,14 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal("(title.upcase)", fragment.source)
   end
 
+  def test_ruby_builder_builds_hash_expressions_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment = builder.hash_expression("{ title: title.upcase }")
+
+    assert_kind_of(SyntaxTree::HashLiteral, fragment.node)
+    assert_equal("{ title: title.upcase }", fragment.source)
+  end
+
   def test_ruby_builder_component_program_formats_from_syntax_tree_program
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     program =
