@@ -7,7 +7,7 @@ module Klenod
     class Asset
       attr_reader :logical_name, :content_hash, :output_path, :source_path, :content_type, :metadata, :error
 
-      def initialize(logical_name, content_hash, output_path, source_path, bytes, content_type, metadata, generator: nil)
+      def initialize(logical_name, content_hash, output_path, source_path, bytes, content_type, metadata, generator: nil, queue: nil)
         @logical_name = logical_name
         @content_hash = content_hash
         @output_path = output_path
@@ -16,14 +16,15 @@ module Klenod
         @content_type = content_type
         @metadata = metadata
         @generator = generator
+        @queue = queue
         @task = nil
         @mutex = Mutex.new
         @state = bytes.nil? ? :pending : :ready
         @error = nil
       end
 
-      def self.generated(logical_name, content_hash, output_path, source_path, content_type, metadata, &generator)
-        new(logical_name, content_hash, output_path, source_path, nil, content_type, metadata, generator: generator)
+      def self.generated(logical_name, content_hash, output_path, source_path, content_type, metadata, queue: nil, &generator)
+        new(logical_name, content_hash, output_path, source_path, nil, content_type, metadata, generator: generator, queue: queue)
       end
 
       def bytes
@@ -36,7 +37,7 @@ module Klenod
         raise error if failed?
 
         task = start_generation
-        task ? wait_for_task(task) : generate_now
+        task ? wait_for_task(task) : generate_now_or_queued
         raise error if failed?
 
         self
@@ -69,7 +70,7 @@ module Klenod
           return nil unless task
 
           @state = :running
-          @task = task.async { generate_now }
+          @task = queued_generation_task(task)
         end
       end
 
@@ -111,6 +112,18 @@ module Klenod
         Async::Task.current
       rescue RuntimeError
         nil
+      end
+
+      def queued_generation_task(task)
+        return @queue.run { generate_now } if @queue
+
+        task.async { generate_now }
+      end
+
+      def generate_now_or_queued
+        return @queue.run { generate_now } if @queue
+
+        generate_now
       end
     end
   end

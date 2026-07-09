@@ -6,6 +6,7 @@ require "async"
 
 require_relative "../runtime/mod"
 require_relative "../runtime/bundle"
+require_relative "asset_generation_queue"
 require_relative "errors"
 require_relative "invalidation_result"
 require_relative "module_id"
@@ -34,12 +35,13 @@ module Klenod
         end
       end
 
-      attr_reader :records, :mods
+      attr_reader :records, :mods, :asset_generation_queue
       attr_reader :plugins
 
-      def initialize(source_dir:, plugins:)
+      def initialize(source_dir:, plugins:, asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY)
         @resolver = Resolver.new(source_dir: source_dir, extensions: resolver_extensions(plugins))
         @plugins = plugins
+        @asset_generation_queue = AssetGenerationQueue.new(concurrency: asset_generation_concurrency)
         @records = {}
         @mods = {}
         @virtual_sources = {}

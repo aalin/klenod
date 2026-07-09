@@ -25,7 +25,7 @@ module Klenod
           @variant_cache = {}
         end
 
-        def transform(module_id, code, _context)
+        def transform(module_id, code, context)
           return super unless EXTENSIONS.include?(module_id.extname)
 
           dimensions = image_dimensions(code)
@@ -47,7 +47,7 @@ module Klenod
                 format: dimensions.format
               }
             )
-          variant_assets = generate_variant_assets(module_id, code, dimensions)
+          variant_assets = generate_variant_assets(module_id, code, dimensions, context.asset_generation_queue)
 
           TransformResult.new("", [], nil, [asset, *variant_assets], [], {asset_bytes: code})
         end
@@ -90,7 +90,7 @@ module Klenod
           Dimensions.new(nil, nil, nil)
         end
 
-        def generate_variant_assets(module_id, bytes, dimensions)
+        def generate_variant_assets(module_id, bytes, dimensions, queue)
           return [] if dimensions.width.nil? || dimensions.height.nil?
 
           variant_options = variant_options_for(module_id)
@@ -103,7 +103,7 @@ module Klenod
               next if width <= 0
 
               key = ImageVariantKey.new(module_id.path, source_hash, width, format.downcase)
-              @variant_cache[key] ||= variant_asset(module_id, bytes, dimensions, source_hash, width, format)
+              @variant_cache[key] ||= variant_asset(module_id, bytes, dimensions, source_hash, width, format, queue)
             end
           end
         end
@@ -128,7 +128,7 @@ module Klenod
           VariantOptions.new(widths.uniq, formats.map(&:downcase).uniq)
         end
 
-        def variant_asset(module_id, bytes, dimensions, source_hash, width, format)
+        def variant_asset(module_id, bytes, dimensions, source_hash, width, format, queue)
           format = format.downcase
           extname = ".#{format}"
           descriptor = "#{width}w"
@@ -149,7 +149,8 @@ module Klenod
             output_path,
             nil,
             content_type(extname),
-            metadata
+            metadata,
+            queue: queue
           ) do
             generate_variant_bytes(bytes, width, format)
           end

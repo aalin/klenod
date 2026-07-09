@@ -127,6 +127,8 @@ Sibling dependency modules may be loaded concurrently. Plugin hooks should avoid
 
 Assets can be static or generated. Generated assets expose metadata immediately and generate bytes on demand; call `asset.wait` before serving or writing an asset when the bytes may not be ready yet. Failed generation marks the asset as failed and exposes `asset.error`. Build mode drains generated assets before writing the bundle.
 
+Generated asset work runs through a build-owned queue. Configure it with `asset_generation_concurrency:` when creating a build context.
+
 ## Development
 
 Run the test suite with:

@@ -28,12 +28,22 @@ module Klenod
         Plugins::ImagePlugin.new
       ].freeze
 
-      def initialize(source_dir:, plugins: DEFAULT_PLUGINS, mode: :development)
+      def initialize(
+        source_dir:,
+        plugins: DEFAULT_PLUGINS,
+        mode: :development,
+        asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY
+      )
         @source_dir = source_dir
         @plugins = plugins
         @mode = mode
         @update_handlers = []
-        @graph = Graph.new(source_dir: source_dir, plugins: plugins)
+        @graph =
+          Graph.new(
+            source_dir: source_dir,
+            plugins: plugins,
+            asset_generation_concurrency: asset_generation_concurrency
+          )
       end
 
       attr_reader :graph, :mode
@@ -77,6 +87,10 @@ module Klenod
 
       def wait_for_assets
         @graph.wait_for_assets
+      end
+
+      def asset_generation_queue
+        @graph.asset_generation_queue
       end
 
       def page_routes(pages_dir: "pages")
