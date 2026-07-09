@@ -102,17 +102,26 @@ class Klenod::Build::Context::Test < Minitest::Test
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/components")
       FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/entry.css", ".shell { display: block; }\n")
       File.write("#{dir}/styles/card.css", ".title { color: red; }\n")
       File.write("#{dir}/components/card.rb", "Styles = import(\"../styles/card.css\")\n")
-      File.write("#{dir}/entry.rb", "Card = import(\"components/card\")\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Styles = import("styles/entry.css")
+          Card = import("components/card")
+        RUBY
+      )
 
       context = Klenod::Build::Context.new(source_dir: dir)
       record = context.load("entry")
       assets = context.assets_for_module(record, type: :css)
 
-      assert_equal(["styles/card.css"], assets.map(&:logical_name))
+      assert_equal(["styles/entry.css", "styles/card.css"], assets.map(&:logical_name))
       assert_equal([], context.assets_for_module(record, type: :image))
       assert_equal(assets, context.assets_for_module(record.id, content_type: "text/css"))
+      assert_equal([], context.assets_for_module(record, type: :css, recursive: false))
+      assert_equal(["styles/entry.css"], context.assets_for_module("styles/entry.css", type: :css, recursive: false).map(&:logical_name))
     end
   end
 

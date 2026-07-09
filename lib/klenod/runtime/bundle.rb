@@ -56,8 +56,8 @@ module Klenod
         @assets.values.select { |asset| asset.logical_name == logical_name.to_s }
       end
 
-      def assets_for_module(module_ref, type: nil, content_type: nil)
-        reachable_module_ids(module_ref)
+      def assets_for_module(module_ref, type: nil, content_type: nil, recursive: true)
+        module_ids_for_assets(module_ref, recursive: recursive)
           .flat_map { |module_id| assets_for(module_id) }
           .select { |asset| asset_matches?(asset, type: type, content_type: content_type) }
       end
@@ -107,6 +107,12 @@ module Klenod
         end
 
         seen
+      end
+
+      def module_ids_for_assets(module_ref, recursive:)
+        return reachable_module_ids(module_ref) if recursive
+
+        [module_id_for_ref(module_ref)]
       end
 
       def asset_matches?(asset, type:, content_type:)

@@ -131,6 +131,14 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
   end
 
   def test_bundle_assets_for_module_returns_reachable_filtered_assets
+    entry_css_asset =
+      Klenod::Runtime::AssetSpec.new(
+        "entry.rb",
+        "entry123",
+        "/assets/entry.entry123.css",
+        "text/css",
+        {type: :css}
+      )
     css_asset =
       Klenod::Runtime::AssetSpec.new(
         "styles/card.css",
@@ -180,13 +188,15 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
             )
         },
         {
+          entry_css_asset.output_path => entry_css_asset,
           css_asset.output_path => css_asset,
           image_asset.output_path => image_asset
         }
       )
 
-    assert_equal([css_asset], bundle.assets_for_module("entry.rb", type: :css))
-    assert_equal([css_asset], bundle.assets_for_module("entry.rb", content_type: "text/css"))
+    assert_equal([entry_css_asset, css_asset], bundle.assets_for_module("entry.rb", type: :css))
+    assert_equal([entry_css_asset, css_asset], bundle.assets_for_module("entry.rb", content_type: "text/css"))
+    assert_equal([entry_css_asset], bundle.assets_for_module("entry.rb", type: :css, recursive: false))
     assert_equal([], bundle.assets_for_module("entry.rb", type: :image))
   end
 end

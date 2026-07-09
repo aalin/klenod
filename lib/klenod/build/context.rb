@@ -91,8 +91,8 @@ module Klenod
         @graph.assets_for(logical_name)
       end
 
-      def assets_for_module(record_or_module_id, type: nil, content_type: nil)
-        @graph.assets_for_module(record_or_module_id, type: type, content_type: content_type)
+      def assets_for_module(record_or_module_id, type: nil, content_type: nil, recursive: true)
+        @graph.assets_for_module(record_or_module_id, type: type, content_type: content_type, recursive: recursive)
       end
 
       def each_asset(&block)

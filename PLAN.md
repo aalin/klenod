@@ -91,6 +91,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 - [x] Add runtime API for reading bundle assets.
 - [x] Add runtime-only boundary tests to ensure runtime does not require build or plugin dependencies.
 - [x] Add public exports helpers and reachable module asset lookup.
+- [x] Add direct-vs-recursive module asset lookup.
 - [x] Add update application helper for refreshing exports and mirroring assets.
 - [ ] Add CLI commands after the Ruby API stabilizes:
   - [ ] `klenod dev`

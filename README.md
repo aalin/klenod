@@ -72,6 +72,8 @@ bundle.assets_for("styles/home.css")
 bundle.assets_for_module("pages/server.rb", type: :css)
 ```
 
+`assets_for_module` is recursive by default. Pass `recursive: false` to return only assets directly emitted by that module.
+
 Build assets keep bytes so they can be served in development or written to disk. Runtime asset specs keep only metadata, content hashes, content types, logical names, and output paths.
 
 When `Context#build` receives `assets_dir:`, emitted assets are written under that directory using their public path without the leading slash. For example, `/assets/home.abc123.css` becomes `public/assets/home.abc123.css`.
