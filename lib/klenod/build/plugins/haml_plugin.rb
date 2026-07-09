@@ -55,6 +55,14 @@ module Klenod
                 source.include?(SourceMap::MARK_PREFIX)
               end
 
+              def node?
+                !node.nil?
+              end
+
+              def statement_body
+                node.is_a?(SyntaxTree::Statements) ? node.body : [node].compact
+              end
+
               def to_s
                 source
               end
@@ -211,7 +219,7 @@ module Klenod
             def marked_expression(mark, expression)
               source = to_source(expression)
 
-              source_marked_fragment(mark, source, expression.is_a?(Fragment) ? expression.node : parse_expression(source))
+              source_marked_fragment(mark, source, node_for(expression))
             end
 
             def factory_call(factory:, tag:, children:, props:, mark: nil)
@@ -281,7 +289,7 @@ module Klenod
               statements = parse_statements(source)
               return nil unless statements
 
-              node = ast_begin([*statements.body, nil_node])
+              node = ast_begin([*statement_body_for(statements), nil_node])
 
               Fragment.new(format_node(node), node)
             end
@@ -292,7 +300,9 @@ module Klenod
               skeleton = script_block_skeleton(source)
               return nil unless skeleton
 
-              body_node = expression_node(to_source(body))
+              body_node = node_for(body)
+              return nil unless body_node
+
               node =
                 skeleton.node.copy(
                   block: skeleton.node.block.copy(
@@ -315,7 +325,9 @@ module Klenod
               skeleton, body_branches = branch_skeleton(branches)
               return nil unless skeleton
 
-              bodies = body_branches.map { |_source, body| expression_node(to_source(body)) }
+              bodies = body_branches.map { |_source, body| node_for(body) }
+              return nil if bodies.any?(&:nil?)
+
               node = replace_branch_bodies(skeleton.node, bodies)
               return nil unless bodies.empty?
 
@@ -327,13 +339,13 @@ module Klenod
                 nodes.map do |node|
                   statements =
                     if node.is_a?(Fragment)
-                      node.node
+                      node
                     else
                       parse_statements(node)
                     end
                   return nil unless statements
 
-                  ast_begin(statements.body)
+                  ast_begin(statement_body_for(statements))
                 end
 
               fragment(Statements(begins))
@@ -491,6 +503,18 @@ module Klenod
 
             def nil_fragment?(value)
               value.is_a?(Fragment) && value.node.is_a?(SyntaxTree::VarRef) && to_source(value) == "nil"
+            end
+
+            def node_for(value)
+              return value.node if value.is_a?(Fragment)
+
+              parse_expression(to_source(value))
+            end
+
+            def statement_body_for(value)
+              return value.statement_body if value.is_a?(Fragment)
+
+              value.is_a?(SyntaxTree::Statements) ? value.body : [value].compact
             end
 
             def expression_node(source)

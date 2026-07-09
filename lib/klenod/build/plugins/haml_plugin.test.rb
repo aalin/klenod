@@ -165,7 +165,17 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     fragment = builder.fragment(node)
 
     assert_same(node, fragment.node)
+    assert(fragment.node?)
+    assert_equal([node], fragment.statement_body)
     assert_equal("title.upcase", fragment.source)
+  end
+
+  def test_ruby_builder_statement_fragments_expose_statement_body
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment = builder.statements("first\nsecond\n")
+
+    assert_kind_of(SyntaxTree::Statements, fragment.node)
+    assert_equal(2, fragment.statement_body.length)
   end
 
   def test_ruby_builder_builds_parenthesized_expressions_from_syntax_tree_nodes
