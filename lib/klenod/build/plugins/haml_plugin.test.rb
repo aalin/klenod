@@ -119,6 +119,15 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal(':"article-card"', symbol.source)
   end
 
+  def test_ruby_builder_wraps_existing_syntax_tree_nodes_as_fragments
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    node = SyntaxTree.parse("title.upcase").statements.body.first
+    fragment = builder.fragment(node)
+
+    assert_same(node, fragment.node)
+    assert_equal("title.upcase", fragment.source)
+  end
+
   def test_ruby_builder_component_source_formats_from_syntax_tree_program
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     source =
@@ -334,6 +343,33 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
       assert_equal([:main, [:h1, "Hello"], [:p, "From Ruby"], {class: "SHELL"}], exports::Default.new.render)
       assert_kind_of(Klenod::SourceMap::SourceMap, record.source_map)
+    end
+  end
+
+  def test_default_haml_transformer_supports_dynamic_attribute_fragments
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          :ruby
+            def title
+              "hello"
+            end
+
+          %p{ title: title.upcase } Hello
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/page.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([:p, "Hello", {title: "HELLO"}], exports::Default.new.render)
+      assert_includes(record.transformed_source, "title: title.upcase")
     end
   end
 

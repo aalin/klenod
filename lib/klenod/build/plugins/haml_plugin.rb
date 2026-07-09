@@ -135,6 +135,10 @@ module Klenod
               Fragment.new(node ? format_node(node) : source, node)
             end
 
+            def fragment(node)
+              Fragment.new(format_node(node), node)
+            end
+
             def to_source(value)
               value.is_a?(Fragment) ? value.source : value.to_s
             end
@@ -465,7 +469,7 @@ module Klenod
               when :silent_script
                 compile_silent_script(node, factory: factory, builder: builder)
               when :filter
-                compile_filter_node(node)
+                compile_filter_node(node, builder: builder)
               end
 
             builder.marked_expression(mark, expression)
@@ -577,10 +581,10 @@ module Klenod
               .join("\n")
           end
 
-          def compile_filter_node(node)
+          def compile_filter_node(node, builder:)
             raise ArgumentError, "Only :ruby Haml filters are supported" unless ruby_filter?(node)
 
-            node.value.fetch(:text).inspect
+            builder.literal(node.value.fetch(:text))
           end
 
           def ruby_filter?(node)
@@ -603,7 +607,7 @@ module Klenod
             return {} unless hash.is_a?(SyntaxTree::HashLiteral)
 
             hash.assocs.to_h do |assoc|
-              [attribute_key(assoc.key, builder: builder), builder.format_node(assoc.value)]
+              [attribute_key(assoc.key, builder: builder), builder.fragment(assoc.value)]
             end
           end
 
