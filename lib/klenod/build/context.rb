@@ -4,6 +4,7 @@ require "fileutils"
 require "pathname"
 
 require_relative "graph"
+require_relative "page_discovery"
 require_relative "plugins/ruby_plugin"
 require_relative "plugins/intl_plugin"
 require_relative "plugins/haml_plugin"
@@ -67,6 +68,10 @@ module Klenod
 
       def each_asset(&block)
         @graph.each_asset(&block)
+      end
+
+      def page_routes(pages_dir: "pages")
+        PageDiscovery.new(source_dir: @source_dir, pages_dir: pages_dir).call
       end
 
       def write_assets(assets_dir)

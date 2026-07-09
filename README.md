@@ -73,6 +73,17 @@ ResponsiveHero = import("images/hero.png?width=320,640&format=png")
 
 In development, frameworks using Klenod are expected to serve `context.asset(path).bytes` for requested asset paths and listen to update events from `Klenod::Dev::Watcher`.
 
+## Page Discovery
+
+Frameworks can discover app-style pages under `pages/`:
+
+```ruby
+context.page_routes
+# => [#<data Klenod::Build::PageRoute path="/" module_id=pages/page.haml>]
+```
+
+Only `page.rb` and `page.haml` files are route entrypoints for now. For example, `pages/page.haml` maps to `/`, and `pages/blog/page.rb` maps to `/blog`. Layouts and path params are planned separately.
+
 ## Plugins
 
 The default build context includes plugins for Ruby, intl TOML files, Haml adapter output, CSS, and images. Plugins can:
