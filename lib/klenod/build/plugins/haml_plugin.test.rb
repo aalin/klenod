@@ -100,6 +100,31 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal('H[:p, **{ class: "intro" }]', unmarked.source)
   end
 
+  def test_ruby_builder_program_fragments_keep_parsed_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    program = builder.program("class Page\nend\n")
+
+    assert_kind_of(SyntaxTree::Program, program.node)
+    assert_equal("class Page\nend\n", program.source)
+  end
+
+  def test_ruby_builder_component_source_formats_from_syntax_tree_program
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    source =
+      builder.component_source(
+        component_class_name: "Page",
+        component_base_class: "Object",
+        translations_source: "{}.freeze",
+        ruby_source: "",
+        render_source: builder.expression('"Hello"'),
+        styles_source: "{}.freeze"
+      )
+
+    assert_kind_of(SyntaxTree::Program, builder.program(source).node)
+    assert_includes(source, "class Page < Object")
+    assert_includes(source, "public def render")
+  end
+
   def test_ruby_builder_marked_expressions_preserve_wrapped_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     child = builder.expression('"Hello"')

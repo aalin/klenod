@@ -94,7 +94,7 @@ module Klenod
                   Translations = Default::Translations
                 RUBY
 
-              format(source)
+              program(source).source
             end
 
             def expressions(expressions)
@@ -127,6 +127,12 @@ module Klenod
               node = parse_statements(source)
 
               Fragment.new(node ? format(source) : source, node)
+            end
+
+            def program(source)
+              node = parse_program(source)
+
+              Fragment.new(node ? format_node(node) : source, node)
             end
 
             def to_source(value)
@@ -352,6 +358,12 @@ module Klenod
 
             def parse_statements(source)
               SyntaxTree.parse(source)&.statements
+            rescue SyntaxTree::Parser::ParseError
+              nil
+            end
+
+            def parse_program(source)
+              SyntaxTree.parse(source)
             rescue SyntaxTree::Parser::ParseError
               nil
             end
