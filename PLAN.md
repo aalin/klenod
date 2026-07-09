@@ -120,7 +120,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
   - [x] Load only the matched page module on demand.
   - [x] In build mode, eager-import discovered pages and layouts into the bundle graph.
   - [x] Prefer static routes over dynamic, catch-all, and optional catch-all routes.
-- [ ] Add a structural route tree API for layout composition.
+- [x] Add a structural route tree API for layout composition.
 - [ ] Represent real parallel route slots in the route tree.
 - [ ] Parse intercepted route segments such as `(.)`, `(..)`, and `(...)`.
 - [x] Add structural `layout.haml` discovery.

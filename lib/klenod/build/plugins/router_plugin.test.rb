@@ -191,6 +191,59 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
+  def test_virtual_router_exposes_structural_route_tree
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/blog/[slug]")
+      File.write("#{dir}/pages/page.rb", "NAME = :root\n")
+      File.write("#{dir}/pages/blog/[slug]/page.rb", "NAME = :blog\n")
+
+      tree = router_for(dir, mode: :development).tree
+      blog = tree.children.find { |child| child.segment.name == "blog" }
+      slug = blog.children.fetch(0)
+
+      assert(tree.root?)
+      assert(tree.leaf?)
+      assert_equal("/", tree.path)
+      assert_equal("pages/page.rb", tree.route.module_id)
+      assert_equal("blog", blog.segment.name)
+      assert_equal(:static, blog.segment.kind)
+      assert_equal("/blog", blog.path)
+      refute(blog.leaf?)
+      assert_equal("[slug]", slug.segment.name)
+      assert_equal(:dynamic, slug.segment.kind)
+      assert_equal("/blog/:slug", slug.path)
+      assert_equal("pages/blog/[slug]/page.rb", slug.route.module_id)
+    end
+  end
+
+  def test_virtual_router_tree_preserves_groups_parallel_slots_and_layout_metadata
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/(marketing)/dashboard/@modal/settings")
+      File.write("#{dir}/pages/layout.rb", "NAME = :root_layout\n")
+      File.write("#{dir}/pages/(marketing)/layout.rb", "NAME = :marketing_layout\n")
+      File.write("#{dir}/pages/(marketing)/dashboard/@modal/settings/page.rb", "NAME = :settings\n")
+
+      tree = router_for(dir, mode: :development).tree
+      group = tree.children.fetch(0)
+      dashboard = group.children.fetch(0)
+      slot = dashboard.children.fetch(0)
+      settings = slot.children.fetch(0)
+
+      assert_equal("(marketing)", group.segment.name)
+      assert_equal(:group, group.segment.kind)
+      assert_equal("/", group.path)
+      assert_equal("dashboard", dashboard.segment.name)
+      assert_equal("/dashboard", dashboard.path)
+      assert_equal("@modal", slot.segment.name)
+      assert_equal(:parallel, slot.segment.kind)
+      assert_equal("/dashboard", slot.path)
+      assert_equal("settings", settings.segment.name)
+      assert_equal("/dashboard/settings", settings.path)
+      assert_equal("pages/(marketing)/dashboard/@modal/settings/page.rb", settings.route.module_id)
+      assert_equal(["pages/layout.rb", "pages/(marketing)/layout.rb"], settings.route.layout_module_ids)
+    end
+  end
+
   def test_virtual_router_exposes_layouts_from_outermost_to_nearest
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/blog/post")

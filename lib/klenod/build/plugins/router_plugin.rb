@@ -223,6 +223,34 @@ module Klenod
                 end
               end
 
+              class RouteNode
+                attr_reader :segment, :path, :children
+                attr_accessor :route
+
+                def initialize(segment:, path:, route: nil)
+                  @segment = segment
+                  @path = path
+                  @route = route
+                  @children = []
+                end
+
+                def root?
+                  segment.nil?
+                end
+
+                def leaf?
+                  !route.nil?
+                end
+
+                def child_for(segment)
+                  children.find { |child| Default.same_segment?(child.segment, segment) }
+                end
+
+                def add_child(segment, path)
+                  child_for(segment) || children.tap { _1 << RouteNode.new(segment: segment, path: path) }.last
+                end
+              end
+
               Match = Data.define(:route, :params) do
                 def page
                   route.page
@@ -241,6 +269,10 @@ module Klenod
                 ROUTES
               end
 
+              def self.tree
+                TREE
+              end
+
               def self.match(path)
                 parts = normalize_path(path)
                 route = ROUTES.find { |candidate| route_matches?(candidate, parts) }
@@ -257,6 +289,31 @@ module Klenod
                 normalized = path.to_s.split("?", 2).first
                 normalized = "/\#{normalized}" unless normalized.start_with?("/")
                 normalized.split("/").reject(&:empty?)
+              end
+
+              def self.build_tree(routes)
+                root = RouteNode.new(segment: nil, path: "/")
+
+                routes.each do |route|
+                  cursor = root
+                  path_parts = []
+
+                  route.segments.each do |segment|
+                    path_parts << segment.path_part if segment.path_part
+                    cursor = cursor.add_child(segment, path_parts.empty? ? "/" : "/\#{path_parts.join("/")}")
+                  end
+
+                  cursor.route = route
+                end
+
+                root
+              end
+
+              def self.same_segment?(left, right)
+                left&.name == right&.name &&
+                  left&.kind == right&.kind &&
+                  left&.param_name == right&.param_name &&
+                  left&.path_part == right&.path_part
               end
 
               def self.route_matches?(route, parts)
@@ -303,6 +360,8 @@ module Klenod
                 end
                 params
               end
+
+              TREE = build_tree(ROUTES)
             end
           RUBY
         end
