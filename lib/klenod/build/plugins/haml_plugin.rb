@@ -150,7 +150,7 @@ module Klenod
             end
 
             def script_block(source, body)
-              expression("#{source}\n#{indent(to_source(body), 2)}\nend")
+              ast_script_block(source, body) || expression("#{source}\n#{indent(to_source(body), 2)}\nend")
             end
 
             def silent_script(source)
@@ -219,6 +219,29 @@ module Klenod
               return nil unless statements
 
               node = ast_begin([*statements.body, VarRef(Kw("nil"))])
+
+              Fragment.new(format_node(node), node)
+            end
+
+            def ast_script_block(source, body)
+              return nil if body.respond_to?(:marked?) && body.marked?
+
+              skeleton = parse_expression("#{source}\n  nil\nend")
+              return nil unless skeleton.is_a?(SyntaxTree::MethodAddBlock)
+
+              body_node = expression_node(to_source(body))
+              node =
+                skeleton.copy(
+                  block: skeleton.block.copy(
+                    bodystmt: BodyStmt(
+                      Statements([body_node]),
+                      nil,
+                      nil,
+                      nil,
+                      nil
+                    )
+                  )
+                )
 
               Fragment.new(format_node(node), node)
             end

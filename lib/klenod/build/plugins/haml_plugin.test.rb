@@ -173,6 +173,25 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_includes(fragment.source, "def title")
   end
 
+  def test_ruby_builder_builds_script_blocks_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    body = builder.expression("H[:li, item]")
+    fragment = builder.script_block("items.map do |item|", body)
+
+    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
+    assert_equal("items.map { |item| H[:li, item] }", fragment.source)
+  end
+
+  def test_ruby_builder_preserves_source_map_marks_when_composing_script_blocks
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    body = builder.marked_expression(builder.source_mark(2, "item"), builder.expression("item"))
+    fragment = builder.script_block("items.map do |item|", body)
+
+    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
+    assert_includes(fragment.source, "# SourceMapMark:2:")
+    assert_includes(fragment.source, "items.map do |item|")
+  end
+
   def test_haml_records_companion_watched_patterns
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
