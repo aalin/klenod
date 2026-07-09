@@ -769,7 +769,8 @@ module Klenod
 
                 expressions << compile_script_group(group, factory: factory, builder: builder)
               else
-                expressions << compile_node(node, factory: factory, builder: builder)
+                expression = compile_node(node, factory: factory, builder: builder)
+                expression.is_a?(Array) ? expressions.concat(expression) : expressions << expression
                 index += 1
               end
             end
@@ -782,7 +783,8 @@ module Klenod
             expression =
               case node.type
               when :tag
-                compile_tag(node, factory: factory, builder: builder)
+                tag = builder.marked_expression(mark, compile_tag(node, factory: factory, builder: builder))
+                spaced_tag_expressions(node, tag, builder: builder)
               when :plain
                 builder.literal(node.value.fetch(:text))
               when :script
@@ -792,6 +794,8 @@ module Klenod
               when :filter
                 compile_filter_node(node, builder: builder)
               end
+
+            return expression if node.type == :tag
 
             builder.marked_expression(mark, expression)
           end
@@ -867,6 +871,14 @@ module Klenod
             children.concat(compile_node_expressions(node.children, factory: factory, builder: builder))
 
             compile_factory_call(node, children, factory: factory, builder: builder)
+          end
+
+          def spaced_tag_expressions(node, tag, builder:)
+            expressions = []
+            expressions << builder.literal(" ") if node.value.fetch(:nuke_inner_whitespace)
+            expressions << tag
+            expressions << builder.literal(" ") if node.value.fetch(:nuke_outer_whitespace)
+            expressions
           end
 
           def compile_factory_call(node, children, factory:, builder:)
