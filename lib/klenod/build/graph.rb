@@ -35,12 +35,13 @@ module Klenod
         end
       end
 
-      attr_reader :records, :mods, :asset_generation_queue
+      attr_reader :records, :mods, :asset_generation_queue, :mode
       attr_reader :plugins
 
-      def initialize(source_dir:, plugins:, asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY)
+      def initialize(source_dir:, plugins:, mode: :development, asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY)
         @resolver = Resolver.new(source_dir: source_dir, extensions: resolver_extensions(plugins))
         @plugins = plugins
+        @mode = mode
         @asset_generation_queue = AssetGenerationQueue.new(concurrency: asset_generation_concurrency)
         @records = {}
         @mods = {}
@@ -115,6 +116,10 @@ module Klenod
 
       def absolute_path(module_id)
         @resolver.absolute_path(module_id)
+      end
+
+      def source_dir
+        @resolver.source_dir
       end
 
       def register_virtual_module(module_id, source, owner_id: nil)

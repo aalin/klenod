@@ -5,12 +5,12 @@ require "pathname"
 
 require_relative "graph"
 require_relative "loaded_module"
-require_relative "page_discovery"
 require_relative "plugins/ruby_plugin"
 require_relative "plugins/intl_plugin"
 require_relative "plugins/haml_plugin"
 require_relative "plugins/css_plugin"
 require_relative "plugins/image_plugin"
+require_relative "plugins/router_plugin"
 
 module Klenod
   module Build
@@ -79,6 +79,7 @@ module Klenod
           Graph.new(
             source_dir: source_dir,
             plugins: plugins,
+            mode: mode,
             asset_generation_concurrency: asset_generation_concurrency
           )
       end
@@ -153,14 +154,6 @@ module Klenod
 
       def asset_generation_queue
         @graph.asset_generation_queue
-      end
-
-      def page_routes(pages_dir: "pages")
-        route_manifest(pages_dir: pages_dir).routes
-      end
-
-      def route_manifest(pages_dir: "pages")
-        PageDiscovery.new(source_dir: @source_dir, pages_dir: pages_dir).call
       end
 
       def write_assets(assets_dir)

@@ -117,22 +117,32 @@ ResponsiveHero = import("images/hero.png?width=320,640&format=png")
 
 In development, frameworks using Klenod are expected to serve `context.asset(path).bytes` for requested asset paths and listen to update events from `Klenod::Dev::Watcher`.
 
-## Page Discovery
+## Router Plugin
 
-Frameworks can discover app-style pages under `pages/`:
+Routing is provided by the optional `RouterPlugin`, not by the core build context. Add it to a context and import its virtual module:
 
 ```ruby
-context.page_routes
-# => [#<data Klenod::Build::PageRoute path="/" module_id=pages/page.haml>]
+router_plugin = Klenod::Build::Plugins::RouterPlugin.new
 
-manifest = context.route_manifest
-manifest.entrypoints
-# => ["pages/page.haml"]
+context = Klenod::Build::Context.new(
+  source_dir: "src",
+  plugins: [
+    Klenod::Build::Plugins::RubyPlugin.new,
+    router_plugin
+  ]
+)
+
+router = context.entry("virtual:router").exports::Default
+match = router.match("/blog/hello")
+match.params
+# => {slug: "hello"}
+match.page
+# => exports for pages/blog/[slug]/page.rb or page.haml
 ```
 
-Only `page.rb` and `page.haml` files are route entrypoints for now. For example, `pages/page.haml` maps to `/`, and `pages/blog/page.rb` maps to `/blog`. Layouts and path params are represented structurally, but request matching and layout composition are left to a router/framework layer.
+Only `page.rb` and `page.haml` files are route entrypoints for now. For example, `pages/page.haml` maps to `/`, and `pages/blog/page.rb` maps to `/blog`. Layouts and path params are represented structurally; layout composition and rendering stay in the framework layer.
 
-Routes also expose parsed segments for future router layers. The discovery layer preserves NextJS-style structure without deciding rendering policy:
+The router plugin preserves NextJS-style structure:
 
 - `[id]` becomes a dynamic segment with path part `:id`.
 - `[...slug]` becomes a catch-all segment with path part `*slug`.
@@ -140,9 +150,7 @@ Routes also expose parsed segments for future router layers. The discovery layer
 - `(marketing)` is preserved as a route group and does not add a URL path part.
 - `@modal` is preserved as a parallel route slot and does not add a URL path part.
 
-`PageRoute#params` returns structural parameter metadata for dynamic, catch-all, and optional catch-all segments. Request matching and parameter extraction are left to the router/framework layer.
-
-`PageRoute#layout_module_ids` lists discovered `layout.haml` files from outermost to nearest layout. This is structural only; Klenod does not load or compose layouts during discovery.
+In development mode, the generated router uses `lazy_import` for pages and layouts so matching a route can load only the selected page. In build mode, it uses eager `import` so bundles include the full route graph.
 
 ## Plugins
 
