@@ -46,11 +46,17 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/pages/shop/[[...filters]]")
       FileUtils.mkdir_p("#{dir}/pages/(marketing)/about")
       FileUtils.mkdir_p("#{dir}/pages/dashboard/@modal/settings")
+      FileUtils.mkdir_p("#{dir}/pages/feed/(.)photo")
+      FileUtils.mkdir_p("#{dir}/pages/feed/(..)profile")
+      FileUtils.mkdir_p("#{dir}/pages/feed/(...)login")
       File.write("#{dir}/pages/blog/[slug]/page.haml", "")
       File.write("#{dir}/pages/docs/[...parts]/page.haml", "")
       File.write("#{dir}/pages/shop/[[...filters]]/page.haml", "")
       File.write("#{dir}/pages/(marketing)/about/page.haml", "")
       File.write("#{dir}/pages/dashboard/@modal/settings/page.haml", "")
+      File.write("#{dir}/pages/feed/(.)photo/page.haml", "")
+      File.write("#{dir}/pages/feed/(..)profile/page.haml", "")
+      File.write("#{dir}/pages/feed/(...)login/page.haml", "")
 
       routes_by_path = RouterPlugin.new.discover(source_dir: dir).routes.to_h { |route| [route.path, route] }
 
@@ -70,6 +76,12 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal(:parallel, routes_by_path.fetch("/dashboard/settings").segments.fetch(1).kind)
       assert_equal("modal", routes_by_path.fetch("/dashboard/settings").segments.fetch(1).param_name)
       assert_equal([], routes_by_path.fetch("/dashboard/settings").params)
+      assert_equal(:intercept_current, routes_by_path.fetch("/feed/photo").segments.fetch(1).kind)
+      assert_equal("photo", routes_by_path.fetch("/feed/photo").segments.fetch(1).path_part)
+      assert_equal(:intercept_parent, routes_by_path.fetch("/feed/profile").segments.fetch(1).kind)
+      assert_equal("profile", routes_by_path.fetch("/feed/profile").segments.fetch(1).path_part)
+      assert_equal(:intercept_root, routes_by_path.fetch("/feed/login").segments.fetch(1).kind)
+      assert_equal("login", routes_by_path.fetch("/feed/login").segments.fetch(1).path_part)
     end
   end
 
@@ -262,6 +274,33 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal("@sidebar", dashboard.slots.fetch(:sidebar).segment.name)
       assert_equal("pages/dashboard/@modal/settings/page.rb", dashboard.slots.fetch(:modal).children.fetch(0).route.module_id)
       assert_equal("pages/dashboard/@sidebar/nav/page.rb", dashboard.slots.fetch(:sidebar).children.fetch(0).route.module_id)
+    end
+  end
+
+  def test_virtual_router_matches_and_preserves_intercepted_route_segments
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/feed/(.)photo")
+      FileUtils.mkdir_p("#{dir}/pages/feed/(..)profile")
+      FileUtils.mkdir_p("#{dir}/pages/feed/(...)login")
+      File.write("#{dir}/pages/feed/(.)photo/page.rb", "NAME = :photo\n")
+      File.write("#{dir}/pages/feed/(..)profile/page.rb", "NAME = :profile\n")
+      File.write("#{dir}/pages/feed/(...)login/page.rb", "NAME = :login\n")
+
+      router = router_for(dir, mode: :development)
+      feed = router.tree.children.fetch(0)
+      photo = feed.children.find { |child| child.segment.name == "(.)photo" }
+      profile = feed.children.find { |child| child.segment.name == "(..)profile" }
+      login = feed.children.find { |child| child.segment.name == "(...)login" }
+
+      assert_equal(:photo, router.match("/feed/photo").page::NAME)
+      assert_equal(:profile, router.match("/feed/profile").page::NAME)
+      assert_equal(:login, router.match("/feed/login").page::NAME)
+      assert_equal(:intercept_current, photo.segment.kind)
+      assert_equal("/feed/photo", photo.path)
+      assert_equal(:intercept_parent, profile.segment.kind)
+      assert_equal("/feed/profile", profile.path)
+      assert_equal(:intercept_root, login.segment.kind)
+      assert_equal("/feed/login", login.path)
     end
   end
 

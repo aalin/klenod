@@ -22,6 +22,12 @@ module Klenod
               new(name, :catch_all, $~[:param_name], "*#{$~[:param_name]}")
             when /\A\[(?<param_name>[A-Za-z_]\w*)\]\z/
               new(name, :dynamic, $~[:param_name], ":#{$~[:param_name]}")
+            when /\A\(\.\)(?<path_part>.+)\z/
+              new(name, :intercept_current, nil, $~[:path_part])
+            when /\A\(\.\.\)(?<path_part>.+)\z/
+              new(name, :intercept_parent, nil, $~[:path_part])
+            when /\A\(\.\.\.\)(?<path_part>.+)\z/
+              new(name, :intercept_root, nil, $~[:path_part])
             when /\A\((?<group_name>.+)\)\z/
               new(name, :group, nil, nil)
             when /\A@(?<slot_name>.+)\z/
@@ -328,7 +334,7 @@ module Klenod
                   case segment.kind
                   when :group, :parallel
                     next
-                  when :static
+                  when :static, :intercept_current, :intercept_parent, :intercept_root
                     return false unless parts[cursor] == segment.path_part
                     cursor += 1
                   when :dynamic
@@ -351,7 +357,7 @@ module Klenod
                   case segment.kind
                   when :group, :parallel
                     next
-                  when :static
+                  when :static, :intercept_current, :intercept_parent, :intercept_root
                     cursor += 1
                   when :dynamic
                     params[segment.param_name.to_sym] = parts[cursor]
@@ -410,7 +416,7 @@ module Klenod
 
         def segment_score(segment)
           case segment.kind
-          when :static
+          when :static, :intercept_current, :intercept_parent, :intercept_root
             0
           when :dynamic
             10
