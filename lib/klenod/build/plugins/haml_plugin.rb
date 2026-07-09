@@ -897,7 +897,9 @@ module Klenod
           end
 
           def attributes(node, builder:)
-            static_attributes(node, builder: builder).merge(dynamic_attributes(node, builder: builder))
+            static_attributes(node, builder: builder)
+              .merge(dynamic_attributes(node, builder: builder))
+              .merge(object_ref_attributes(node, builder: builder))
           end
 
           def compile_ruby_filters(nodes, builder:)
@@ -948,6 +950,21 @@ module Klenod
             hash.node.assocs.to_h do |assoc|
               [attribute_key(assoc.key, builder: builder), builder.fragment(assoc.value)]
             end
+          end
+
+          def object_ref_attributes(node, builder:)
+            source = node.value.fetch(:object_ref)
+            return {} unless source.is_a?(String)
+
+            expression = builder.expression(source)
+            key =
+              if expression.node.is_a?(SyntaxTree::ArrayLiteral) && expression.node.contents&.parts&.length == 1
+                builder.fragment(expression.node.contents.parts.fetch(0))
+              else
+                expression
+              end
+
+            {key: key}
           end
 
           def attribute_key(node, builder:)

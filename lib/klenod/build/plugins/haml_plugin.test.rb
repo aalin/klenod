@@ -717,6 +717,81 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_default_haml_transformer_maps_object_reference_to_key_prop
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          :ruby
+            User = Data.define(:id)
+
+            def initialize
+              @user = User.new(15)
+            end
+
+          %div[@user, :greeting] Hello
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/page.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([:div, "Hello", {key: [exports::Default::User.new(15), :greeting]}], exports::Default.new.render)
+      assert_includes(record.transformed_source, "key:")
+      assert_includes(record.transformed_source, "[@user, :greeting]")
+    end
+  end
+
+  def test_default_haml_transformer_maps_component_object_reference_to_key_prop
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/components")
+      File.write(
+        "#{dir}/components/card.haml",
+        <<~HAML
+          :ruby
+            def initialize(key:, children: nil)
+              @key = key
+              @children = children
+            end
+
+          %article
+            = @key
+            = @children
+        HAML
+      )
+      File.write(
+        "#{dir}/page.haml",
+        <<~HAML
+          :ruby
+            Card = import("components/card.haml")
+            User = Data.define(:id)
+
+            def initialize
+              @user = User.new(15)
+            end
+
+          %Card[@user]
+            Hello
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin])
+      record = context.load("page.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+      user = exports::Default::User.new(15)
+
+      assert_equal([:article, user, ["Hello"]], exports::Default.new.render)
+    end
+  end
+
   def test_default_haml_transformer_supports_parsed_inline_tag_values
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
