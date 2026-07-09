@@ -158,7 +158,7 @@ module Klenod
             end
 
             def branches(branches)
-              expression(branches.map { |source, body| "#{source}\n#{indent(to_source(body), 2)}" }.join("\n") + "\nend")
+              ast_branches(branches) || expression(branches.map { |source, body| "#{source}\n#{indent(to_source(body), 2)}" }.join("\n") + "\nend")
             end
 
             def ruby_filters(nodes)
@@ -246,6 +246,20 @@ module Klenod
               Fragment.new(format_node(node), node)
             end
 
+            def ast_branches(branches)
+              return nil if branches.any? { |_source, body| body.respond_to?(:marked?) && body.marked? }
+
+              skeleton_source, body_branches = branch_skeleton(branches)
+              skeleton = parse_expression(skeleton_source)
+              return nil unless skeleton.is_a?(SyntaxTree::IfNode) || skeleton.is_a?(SyntaxTree::Case)
+
+              bodies = body_branches.map { |_source, body| expression_node(to_source(body)) }
+              node = replace_branch_bodies(skeleton, bodies)
+              return nil unless bodies.empty?
+
+              Fragment.new(format_node(node), node)
+            end
+
             def ast_ruby_filters(nodes)
               begins =
                 nodes.map do |node|
@@ -268,6 +282,35 @@ module Klenod
                   nil
                 )
               )
+            end
+
+            def replace_branch_bodies(node, bodies)
+              case node
+              when SyntaxTree::IfNode, SyntaxTree::Elsif, SyntaxTree::When
+                node.copy(
+                  statements: Statements([bodies.shift]),
+                  consequent: node.consequent ? replace_branch_bodies(node.consequent, bodies) : nil
+                )
+              when SyntaxTree::Else
+                node.copy(statements: Statements([bodies.shift]))
+              when SyntaxTree::Case
+                node.copy(consequent: replace_branch_bodies(node.consequent, bodies))
+              end
+            end
+
+            def branch_skeleton(branches)
+              first_source, first_body = branches.fetch(0)
+              if first_source.match?(/\Acase\b/) && to_source(first_body) == "nil"
+                [
+                  "#{first_source}\n#{branches.drop(1).map { |source, _body| "#{source}\n  nil" }.join("\n")}\nend",
+                  branches.drop(1)
+                ]
+              else
+                [
+                  "#{branches.map { |source, _body| "#{source}\n  nil" }.join("\n")}\nend",
+                  branches
+                ]
+              end
             end
 
             def ast_keyword_props(props)

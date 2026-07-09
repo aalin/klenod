@@ -192,6 +192,52 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_includes(fragment.source, "items.map do |item|")
   end
 
+  def test_ruby_builder_builds_if_branches_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment =
+      builder.branches([
+        ["if show", builder.expression("H[:p]")],
+        ["else", builder.expression("H[:span]")]
+      ])
+
+    assert_kind_of(SyntaxTree::IfNode, fragment.node)
+    assert_includes(fragment.source, "if show")
+    assert_includes(fragment.source, "H[:p]")
+    assert_includes(fragment.source, "else")
+    assert_includes(fragment.source, "H[:span]")
+  end
+
+  def test_ruby_builder_builds_case_branches_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment =
+      builder.branches([
+        ["case value", builder.expression("nil")],
+        ["when 1", builder.expression("H[:p]")],
+        ["else", builder.expression("H[:span]")]
+      ])
+
+    assert_kind_of(SyntaxTree::Case, fragment.node)
+    assert_includes(fragment.source, "case value")
+    assert_includes(fragment.source, "when 1")
+    assert_includes(fragment.source, "H[:p]")
+    assert_includes(fragment.source, "else")
+    assert_includes(fragment.source, "H[:span]")
+  end
+
+  def test_ruby_builder_preserves_source_map_marks_when_composing_branches
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    body = builder.marked_expression(builder.source_mark(2, "Visible"), builder.expression("H[:p]"))
+    fragment =
+      builder.branches([
+        ["if show", body],
+        ["else", builder.expression("H[:span]")]
+      ])
+
+    assert_kind_of(SyntaxTree::IfNode, fragment.node)
+    assert_includes(fragment.source, "# SourceMapMark:2:")
+    assert_includes(fragment.source, "if show")
+  end
+
   def test_haml_records_companion_watched_patterns
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
