@@ -123,6 +123,8 @@ The default build context includes plugins for Ruby, intl TOML files, Haml adapt
 
 CSS imports currently return class-name maps for Ruby or Haml importers. Image imports return an image object with `src`, dimensions, and generated `variants`.
 
+Sibling dependency modules may be loaded concurrently. Plugin hooks should avoid unguarded shared mutable state, because `load` and `transform` calls for independent modules can overlap. `finalize` still runs after eager dependencies for that module have loaded.
+
 ## Development
 
 Run the test suite with:

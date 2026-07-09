@@ -188,60 +188,19 @@ module Klenod
 
       def load_module_now(module_id, force: false, reevaluate: false)
         with_loading_stack(module_id) do
-          absolute_path = @resolver.absolute_path(module_id)
-          source = load_source(module_id, absolute_path)
+          source = read_module_source(module_id)
           source_hash = Digest::SHA256.hexdigest(source)
           cached = @records[module_id]
 
           return cached if cached&.source_hash == source_hash && !force && !reevaluate
 
-          transform = transform(module_id, source)
-          resolved_dependencies = transform.dependencies.map { |dependency| resolve_dependency(dependency) }
-
-          dependency_records = load_dependency_records(eager_dependencies(resolved_dependencies))
-          transform = finalize(module_id, transform, resolved_dependencies, dependency_records)
+          transform = transform_module_source(module_id, source)
+          resolved_dependencies = resolve_transform_dependencies(transform)
+          dependency_records = load_eager_dependency_records(resolved_dependencies)
+          transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
           transformed_hash = Digest::SHA256.hexdigest(transform.code)
-
-          imports =
-            resolved_dependencies.to_h do |resolved_dependency|
-              value =
-                if resolved_dependency.dependency.eager
-                  record = dependency_records.fetch(resolved_dependency.dependency.id)
-                  import_value(resolved_dependency, record)
-                else
-                  Runtime::LazyImport.new do
-                    record = load_module(resolved_dependency.module_id)
-                    import_value(resolved_dependency, record)
-                  end
-                end
-
-              [resolved_dependency.dependency.id, value]
-            end
-
-          mod =
-            Runtime::Mod.new(
-              module_id.to_s,
-              transform.code,
-              imports: imports,
-              source_map: transform.source_map,
-              version: cached ? cached.version + 1 : 0
-            )
-
-          record =
-            ModuleRecord.new(
-              module_id,
-              source_hash,
-              transformed_hash,
-              transform.dependencies,
-              resolved_dependencies,
-              source,
-              transform.code,
-              transform.source_map,
-              transform.assets,
-              transform.watched_patterns,
-              mod.version,
-              :loaded
-            )
+          mod = instantiate_module(module_id, transform, resolved_dependencies, dependency_records, cached)
+          record = build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, mod)
 
           @records[module_id] = record
           @mods[module_id] = mod
@@ -278,6 +237,70 @@ module Klenod
         yield
       ensure
         Fiber[:klenod_loading_stack] = previous_stack
+      end
+
+      def read_module_source(module_id)
+        load_source(module_id, @resolver.absolute_path(module_id))
+      end
+
+      def transform_module_source(module_id, source)
+        transform(module_id, source)
+      end
+
+      def resolve_transform_dependencies(transform)
+        transform.dependencies.map { |dependency| resolve_dependency(dependency) }
+      end
+
+      def load_eager_dependency_records(resolved_dependencies)
+        load_dependency_records(eager_dependencies(resolved_dependencies))
+      end
+
+      def finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
+        finalize(module_id, transform, resolved_dependencies, dependency_records)
+      end
+
+      def instantiate_module(module_id, transform, resolved_dependencies, dependency_records, cached)
+        Runtime::Mod.new(
+          module_id.to_s,
+          transform.code,
+          imports: imports_for(resolved_dependencies, dependency_records),
+          source_map: transform.source_map,
+          version: cached ? cached.version + 1 : 0
+        )
+      end
+
+      def imports_for(resolved_dependencies, dependency_records)
+        resolved_dependencies.to_h do |resolved_dependency|
+          value =
+            if resolved_dependency.dependency.eager
+              record = dependency_records.fetch(resolved_dependency.dependency.id)
+              import_value(resolved_dependency, record)
+            else
+              Runtime::LazyImport.new do
+                record = load_module(resolved_dependency.module_id)
+                import_value(resolved_dependency, record)
+              end
+            end
+
+          [resolved_dependency.dependency.id, value]
+        end
+      end
+
+      def build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, mod)
+        ModuleRecord.new(
+          module_id,
+          source_hash,
+          transformed_hash,
+          transform.dependencies,
+          resolved_dependencies,
+          source,
+          transform.code,
+          transform.source_map,
+          transform.assets,
+          transform.watched_patterns,
+          mod.version,
+          :loaded
+        )
       end
 
       def module_ids_for_paths(paths)

@@ -56,6 +56,21 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  class DelayedTransformPlugin < Klenod::Build::Plugin
+    def initialize(events)
+      @events = events
+    end
+
+    def transform(module_id, code, _context)
+      return Klenod::Build::TransformResult.identity(code) unless module_id.path.start_with?("deps/")
+
+      @events << [:start, module_id.path]
+      sleep(0.01)
+      @events << [:finish, module_id.path]
+      Klenod::Build::TransformResult.identity("VALUE = #{module_id.path.inspect}\n")
+    end
+  end
+
   def test_loads_entrypoint_and_dependencies_lazily
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -134,6 +149,38 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(1, events.count { |event, path| event == :start && path == "shared.rb" })
       assert_equal(1, events.count { |event, path| event == :finish && path == "shared.rb" })
       assert_equal(4, context.graph.records.length)
+    end
+  end
+
+  def test_sibling_dependency_transforms_overlap
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/deps")
+      File.write("#{dir}/deps/a.rb", "")
+      File.write("#{dir}/deps/b.rb", "")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          A = import("deps/a")
+          B = import("deps/b")
+          VALUES = [A::VALUE, B::VALUE]
+        RUBY
+      )
+      events = []
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            Klenod::Build::Plugins::RubyPlugin.new,
+            DelayedTransformPlugin.new(events)
+          ]
+        )
+
+      record = context.load("entry")
+      values = context.graph.mods.fetch(record.id).const_get(:Exports)::VALUES
+
+      assert_equal(["deps/a.rb", "deps/b.rb"], values)
+      assert_equal([[:start, "deps/a.rb"], [:start, "deps/b.rb"]], events.first(2))
+      assert_equal([[:finish, "deps/a.rb"], [:finish, "deps/b.rb"]], events.last(2))
     end
   end
 
