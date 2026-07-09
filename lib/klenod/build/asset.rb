@@ -5,7 +5,7 @@ require "async"
 module Klenod
   module Build
     class Asset
-      attr_reader :logical_name, :content_hash, :output_path, :source_path, :content_type, :metadata
+      attr_reader :logical_name, :content_hash, :output_path, :source_path, :content_type, :metadata, :error
 
       def initialize(logical_name, content_hash, output_path, source_path, bytes, content_type, metadata, generator: nil)
         @logical_name = logical_name
@@ -33,11 +33,11 @@ module Klenod
 
       def wait
         return self if ready?
-        raise @error if failed?
+        raise error if failed?
 
         task = start_generation
         task ? wait_for_task(task) : generate_now
-        raise @error if failed?
+        raise error if failed?
 
         self
       end
@@ -76,8 +76,7 @@ module Klenod
       def wait_for_task(task)
         task.wait
       rescue => e
-        @error = e
-        @state = :failed
+        fail_with(e)
         raise
       end
 
@@ -96,12 +95,16 @@ module Klenod
         end
         self
       rescue => e
+        fail_with(e)
+        raise
+      end
+
+      def fail_with(error)
         @mutex.synchronize do
-          @error = e
+          @error ||= error
           @state = :failed
           @task = nil
         end
-        raise
       end
 
       def current_async_task

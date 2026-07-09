@@ -63,6 +63,10 @@ module Klenod
         @graph.asset(output_path)
       end
 
+      def asset_bytes(output_path)
+        asset(output_path).bytes
+      end
+
       def assets_for(logical_name)
         @graph.assets_for(logical_name)
       end

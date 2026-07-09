@@ -56,12 +56,12 @@ begin
       Async::HTTP::Server.for(endpoint) do |request|
         if request.path.start_with?("/assets/")
           asset = context.asset(request.path)
-          asset.wait
           bytes =
             if assets_dir
+              asset.wait
               File.binread(File.join(assets_dir, asset.output_path.delete_prefix("/")))
             else
-              asset.bytes
+              context.asset_bytes(request.path)
             end
           Protocol::HTTP::Response[
             200,
@@ -72,6 +72,12 @@ begin
           status, headers, body = page.call(request, context)
           Protocol::HTTP::Response[status, headers, body]
         end
+      rescue KeyError
+        Protocol::HTTP::Response[
+          404,
+          {"content-type" => "text/plain"},
+          ["Asset not found\n"]
+        ]
       rescue => e
         warn "#{e.class}: #{e.message}"
         Protocol::HTTP::Response[

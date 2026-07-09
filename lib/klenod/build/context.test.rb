@@ -522,6 +522,35 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_asset_bytes_waits_for_generated_assets
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/hero.png", generated_png_bytes(width: 4, height: 2))
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Hero = import("images/hero.png")
+          VARIANTS = Hero.variants
+        RUBY
+      )
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::ImagePlugin.new(widths: [2], formats: ["png"])
+          ]
+        )
+
+      context.load("entry")
+      variant_asset = context.assets_for("images/hero.png").find { |asset| asset.metadata[:type] == :image_variant }
+
+      refute(variant_asset.ready?)
+      assert_match(/\A.PNG/, context.asset_bytes(variant_asset.output_path))
+      assert(variant_asset.ready?)
+    end
+  end
+
   def test_invalidate_paths_reports_asset_changes
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
@@ -658,5 +687,12 @@ class Klenod::Build::Context::Test < Minitest::Test
     iend = [0].pack("N") + "IEND" + [0].pack("N")
 
     signature + ihdr + iend
+  end
+
+  def generated_png_bytes(width:, height:)
+    image = Magick::Image.new(width, height) { |info| info.background_color = "red" }
+    image.to_blob { |info| info.format = "PNG" }
+  ensure
+    image&.destroy!
   end
 end

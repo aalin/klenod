@@ -53,6 +53,68 @@ class Klenod::Build::Asset::Test < Minitest::Test
     assert_equal(1, calls)
   end
 
+  def test_generated_asset_records_failure
+    failure = RuntimeError.new("could not generate")
+    asset =
+      Klenod::Build::Asset.generated(
+        "images/hero.png",
+        "abc",
+        "/assets/hero.320w.png",
+        nil,
+        "image/png",
+        {}
+      ) do
+        raise failure
+      end
+
+    error = assert_raises(RuntimeError) { asset.wait }
+
+    assert_same(failure, error)
+    assert(asset.failed?)
+    assert_same(failure, asset.error)
+    assert_same(failure, assert_raises(RuntimeError) { asset.wait })
+  end
+
+  def test_generated_asset_failure_is_shared_by_concurrent_waiters
+    calls = 0
+    failure = RuntimeError.new("could not generate")
+    asset =
+      Klenod::Build::Asset.generated(
+        "images/hero.png",
+        "abc",
+        "/assets/hero.320w.png",
+        nil,
+        "image/png",
+        {}
+      ) do
+        calls += 1
+        sleep(0.01)
+        raise failure
+      end
+
+    with_async_task do |task|
+      first =
+        task.async do
+          asset.wait
+        rescue => e
+          e
+        end
+      second =
+        task.async do
+          asset.wait
+        rescue => e
+          e
+        end
+
+      assert_same(failure, first.wait)
+      assert_same(failure, second.wait)
+    end
+
+    assert(asset.failed?)
+    assert_same(failure, asset.error)
+    assert_equal(1, calls)
+  end
+
   private
 
   def with_async_task(&block)
