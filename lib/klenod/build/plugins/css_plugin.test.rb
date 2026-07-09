@@ -5,6 +5,7 @@ require "minitest/autorun"
 require "tmpdir"
 
 require_relative "../context"
+require_relative "../../runtime"
 require_relative "image_plugin"
 
 class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test

@@ -4,12 +4,29 @@ require "minitest/autorun"
 require "rbconfig"
 require "open3"
 
+require_relative "runtime"
+
 module Klenod
   class RuntimeBoundaryTest < Minitest::Test
   end
 end
 
 class Klenod::RuntimeBoundaryTest
+  def test_class_names_joins_clsx_style_values
+    assert_equal(
+      "base nested active 1",
+      Klenod::Runtime.class_names(
+        "base",
+        nil,
+        false,
+        ["nested", nil],
+        {active: true, hidden: false},
+        1
+      )
+    )
+    assert_nil(Klenod::Runtime.class_names(nil, false, []))
+  end
+
   def test_runtime_require_does_not_load_build_dev_or_plugin_dependencies
     script = <<~RUBY
       require "klenod/runtime"

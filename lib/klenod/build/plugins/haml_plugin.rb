@@ -710,12 +710,13 @@ module Klenod
             component_base_class:,
             factory:,
             styles_source:,
-            translations_source:
+            translations_source:,
+            styleable: false
           )
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
             builder = RubyBuilder.new
-            template = compile_template(source, factory: factory, builder: builder)
+            template = compile_template(source, factory: factory, styleable: styleable, builder: builder)
             ast =
               builder.component_program(
                 component_class_name: component_class_name,
@@ -737,21 +738,21 @@ module Klenod
           Template = Data.define(:ruby, :render)
           RubyLine = Data.define(:line_no, :source)
 
-          def compile_template(source, factory:, builder:)
+          def compile_template(source, factory:, builder:, styleable: false)
             parsed = SyntaxTree::Haml.parse(source)
             render_nodes = parsed.children.reject { |node| ruby_filter?(node) || css_filter?(node) }
             ruby_nodes = parsed.children.select { |node| ruby_filter?(node) }
             ruby = compile_ruby_filters(ruby_nodes, builder: builder)
-            render = compile_nodes(render_nodes, factory: factory, builder: builder)
+            render = compile_nodes(render_nodes, factory: factory, styleable: styleable, builder: builder)
 
             Template.new(ruby, render)
           end
 
-          def compile_nodes(nodes, factory:, builder:)
-            builder.expressions(compile_node_expressions(nodes, factory: factory, builder: builder))
+          def compile_nodes(nodes, factory:, builder:, styleable: false)
+            builder.expressions(compile_node_expressions(nodes, factory: factory, styleable: styleable, builder: builder))
           end
 
-          def compile_node_expressions(nodes, factory:, builder:)
+          def compile_node_expressions(nodes, factory:, builder:, styleable: false)
             expressions = []
             index = 0
 
@@ -767,9 +768,9 @@ module Klenod
                   index += 1
                 end
 
-                expressions << compile_script_group(group, factory: factory, builder: builder)
+                expressions << compile_script_group(group, factory: factory, styleable: styleable, builder: builder)
               else
-                expression = compile_node(node, factory: factory, builder: builder)
+                expression = compile_node(node, factory: factory, styleable: styleable, builder: builder)
                 expression.is_a?(Array) ? expressions.concat(expression) : expressions << expression
                 index += 1
               end
@@ -778,19 +779,19 @@ module Klenod
             expressions
           end
 
-          def compile_node(node, factory:, builder:)
+          def compile_node(node, factory:, builder:, styleable: false)
             mark = source_mark(node, builder: builder)
             expression =
               case node.type
               when :tag
-                tag = builder.marked_expression(mark, compile_tag(node, factory: factory, builder: builder))
+                tag = builder.marked_expression(mark, compile_tag(node, factory: factory, styleable: styleable, builder: builder))
                 spaced_tag_expressions(node, tag, builder: builder)
               when :plain
                 builder.literal(node.value.fetch(:text))
               when :script
-                compile_script(node, factory: factory, builder: builder)
+                compile_script(node, factory: factory, styleable: styleable, builder: builder)
               when :silent_script
-                compile_silent_script(node, factory: factory, builder: builder)
+                compile_silent_script(node, factory: factory, styleable: styleable, builder: builder)
               when :filter
                 compile_filter_node(node, builder: builder)
               end
@@ -800,34 +801,35 @@ module Klenod
             builder.marked_expression(mark, expression)
           end
 
-          def compile_script_group(nodes, factory:, builder:)
-            return compile_node(nodes.fetch(0), factory: factory, builder: builder) if nodes.length == 1
+          def compile_script_group(nodes, factory:, builder:, styleable: false)
+            return compile_node(nodes.fetch(0), factory: factory, styleable: styleable, builder: builder) if nodes.length == 1
 
             compile_branches(
               nodes.map { |node| [script_source(node), node.children] },
               factory: factory,
+              styleable: styleable,
               builder: builder
             )
           end
 
-          def compile_script(node, factory:, builder:)
+          def compile_script(node, factory:, builder:, styleable: false)
             source = script_source(node)
             return builder.parenthesized_expression(source) if node.children.empty?
 
-            builder.script_block(source, compile_nodes(node.children, factory: factory, builder: builder))
+            builder.script_block(source, compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder))
           end
 
-          def compile_silent_script(node, factory:, builder:)
+          def compile_silent_script(node, factory:, builder:, styleable: false)
             source = script_source(node)
             return builder.silent_script(source) if node.children.empty?
 
-            compile_branches(split_silent_script_branches(node), factory: factory, builder: builder)
+            compile_branches(split_silent_script_branches(node), factory: factory, styleable: styleable, builder: builder)
           end
 
-          def compile_branches(branches, factory:, builder:)
+          def compile_branches(branches, factory:, builder:, styleable: false)
             builder.branches(
               branches.map do |source, children|
-                [source, compile_nodes(children, factory: factory, builder: builder)]
+                [source, compile_nodes(children, factory: factory, styleable: styleable, builder: builder)]
               end
             )
           end
@@ -862,15 +864,15 @@ module Klenod
             script_node?(node) && %w[elsif else when in rescue ensure].include?(node.value.fetch(:keyword))
           end
 
-          def compile_tag(node, factory:, builder:)
+          def compile_tag(node, factory:, builder:, styleable: false)
             children = []
             value = node.value.fetch(:value)
             if value && !value.empty?
               children << (node.value.fetch(:parse) ? builder.parenthesized_expression(value) : builder.literal(value))
             end
-            children.concat(compile_node_expressions(node.children, factory: factory, builder: builder))
+            children.concat(compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder))
 
-            compile_factory_call(node, children, factory: factory, builder: builder)
+            compile_factory_call(node, children, factory: factory, styleable: styleable, builder: builder)
           end
 
           def spaced_tag_expressions(node, tag, builder:)
@@ -881,12 +883,12 @@ module Klenod
             expressions
           end
 
-          def compile_factory_call(node, children, factory:, builder:)
+          def compile_factory_call(node, children, factory:, builder:, styleable: false)
             builder.factory_call(
               factory: factory,
               tag: compile_tag_name(node, builder: builder),
               children: children,
-              props: attributes(node, builder: builder),
+              props: attributes(node, styleable: styleable, builder: builder),
               mark: source_mark(node, builder: builder)
             )
           end
@@ -896,10 +898,13 @@ module Klenod
             tag_name.match?(/\A[A-Z]/) ? builder.expression(tag_name) : builder.symbol(tag_name)
           end
 
-          def attributes(node, builder:)
+          def attributes(node, builder:, styleable: false)
+            dynamic = dynamic_attributes(node, builder: builder)
+
             static_attributes(node, builder: builder)
-              .merge(dynamic_attributes(node, builder: builder))
+              .merge(dynamic)
               .merge(object_ref_attributes(node, builder: builder))
+              .merge(class_attributes(node, dynamic_attributes: dynamic, styleable: styleable, builder: builder))
           end
 
           def compile_ruby_filters(nodes, builder:)
@@ -937,6 +942,7 @@ module Klenod
             node
               .value
               .fetch(:attributes)
+              .except("class")
               .to_h { |key, value| [key.to_sym, builder.literal(value)] }
           end
 
@@ -950,6 +956,37 @@ module Klenod
             hash.node.assocs.to_h do |assoc|
               [attribute_key(assoc.key, builder: builder), builder.fragment(assoc.value)]
             end
+          end
+
+          def class_attributes(node, dynamic_attributes:, builder:, styleable: false)
+            static_classes = static_class_lookups(node, builder: builder)
+            dynamic_class = dynamic_attributes[:class]
+            return dynamic_class ? {class: dynamic_class} : {} unless styleable || !static_classes.empty?
+
+            values = [
+              (tag_class_lookup(node, builder: builder) if styleable),
+              *static_classes,
+              dynamic_class
+            ].compact
+            return {} if values.empty?
+
+            {class: builder.expression("Klenod::Runtime.class_names(#{values.map(&:source).join(", ")})")}
+          end
+
+          def tag_class_lookup(node, builder:)
+            tag_name = node.value.fetch(:name)
+            return nil if tag_name.match?(/\A[A-Z]/)
+
+            builder.expression("Styles[#{builder.symbol("__#{tag_name}").source}]")
+          end
+
+          def static_class_lookups(node, builder:)
+            node
+              .value
+              .fetch(:attributes)
+              .fetch("class", "")
+              .split
+              .map { |class_name| builder.expression("Styles[#{builder.symbol(class_name).source}] || #{class_name.inspect}") }
           end
 
           def object_ref_attributes(node, builder:)
@@ -1061,7 +1098,8 @@ module Klenod
               component_base_class: @component_base_class,
               factory: @factory,
               styles_source: styles_source,
-              translations_source: translations_source
+              translations_source: translations_source,
+              styleable: !style_dependencies.empty?
             )
           import_rewrite = RubyImportRewriter.new(module_id: module_id, kind: :haml_import).rewrite(haml_result.code)
 

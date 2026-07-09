@@ -5,6 +5,7 @@ require "minitest/autorun"
 require "tmpdir"
 
 require_relative "../../backtrace_rewriter"
+require_relative "../../runtime"
 require_relative "../context"
 
 class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
@@ -17,6 +18,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
     module H
       def self.[](tag, *children, **props)
+        props = props.compact
+
         return tag.new(**props, children: children).render if tag.is_a?(Class)
 
         props.empty? ? [tag, *children] : [tag, *children, props]
@@ -543,7 +546,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/pages")
       File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       record = context.load("pages/page.haml")
 
       assert_equal(
@@ -647,6 +654,12 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       .code
   end
 
+  def default_plugins_with(plugin)
+    Klenod::Build::Context::DEFAULT_PLUGINS.map do |default_plugin|
+      default_plugin.is_a?(Klenod::Build::Plugins::HamlPlugin) ? plugin : default_plugin
+    end
+  end
+
   def test_default_haml_transformer_compiles_ruby_filter_to_statement_fragment
     transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
@@ -680,7 +693,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       record = context.load("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -707,7 +720,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       record = context.load("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -737,7 +750,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       record = context.load("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -810,7 +823,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       record = context.load("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -828,7 +841,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       record = context.load("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -845,7 +858,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       record = context.load("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -862,7 +875,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       record = context.load("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -887,7 +900,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       record = context.load("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -914,7 +927,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
           factory: "#{self.class.name}::FakeFramework::H"
         )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       record = context.load("pages/handlers.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -1233,7 +1246,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       css_path = "#{dir}/pages/page.css"
       File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       haml_record = context.load("pages/page.haml")
 
       assert_equal({}, context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles)
@@ -1272,6 +1289,45 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       assert_equal(1, css_record.assets.length)
       assert_match(%r{\A/assets/pages_page_haml_inline_0_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
       assert_includes(css_record.assets.first.bytes, "color: red")
+    end
+  end
+
+  def test_haml_applies_css_tag_selector_to_matching_tag
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.css", "figure { margin: 0; }\n")
+      File.write("#{dir}/pages/page.haml", "%figure Hello\n")
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      haml_record = context.load("pages/page.haml")
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
+
+      assert_match(/figure/, styles.fetch(:__figure))
+      assert_equal([:figure, "Hello", {class: styles.fetch(:__figure)}], rendered)
+    end
+  end
+
+  def test_haml_applies_css_class_selector_to_class_shorthand
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.css", ".image { display: block; }\nimg { width: 100%; }\n")
+      File.write("#{dir}/pages/page.haml", "%img.image\n")
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      haml_record = context.load("pages/page.haml")
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
+
+      assert_equal([styles.fetch(:__img), styles.fetch(:image)].join(" "), rendered.fetch(1).fetch(:class))
     end
   end
 

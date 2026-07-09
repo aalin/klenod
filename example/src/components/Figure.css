@@ -5,11 +5,11 @@
   border-radius: 8px;
 }
 
-.figure {
+figure {
   margin: 2rem 0;
 }
 
-.caption {
+figcaption {
   margin-top: 0.5rem;
   color: #555;
   font-size: 0.9rem;
