@@ -8,10 +8,28 @@ require_relative "errors"
 module Klenod
   module Build
     class RubyImportRewriter
-      ImportCall = Data.define(:specifier, :location, :dynamic)
+      ImportCall =
+        Data.define(:specifier, :location, :dynamic, :method_name) do
+          def eager
+            RubyImportRewriter::IMPORT_METHODS.fetch(method_name).fetch(:eager)
+          end
+
+          def replacement
+            RubyImportRewriter::IMPORT_METHODS.fetch(method_name).fetch(:replacement)
+          end
+        end
       Result = Data.define(:code, :dependencies)
 
-      IMPORT_RE = /\Aimport\s*\(/
+      IMPORT_METHODS = {
+        "import" => {
+          replacement: "__klenod_import__",
+          eager: true
+        },
+        "lazy_import" => {
+          replacement: "__klenod_lazy_import__",
+          eager: false
+        }
+      }.freeze
 
       def initialize(module_id:, kind:)
         @module_id = module_id
@@ -34,6 +52,7 @@ module Klenod
                 kind: @kind,
                 loc: call.location
               )
+              .with(eager: call.eager)
               .with(id: "#{@module_id}:dependency:#{index}")
           end
 
@@ -47,11 +66,11 @@ module Klenod
         walk(node) do |child|
           if child.instance_of?(::SyntaxTree::CallNode)
             next unless child.instance_variable_get(:@receiver).nil?
-            next unless child.instance_variable_get(:@message)&.value == "import"
+            next unless IMPORT_METHODS.key?(child.instance_variable_get(:@message)&.value)
 
             calls << build_import_call(child)
           elsif child.instance_of?(::SyntaxTree::Command)
-            next unless child.instance_variable_get(:@message)&.value == "import"
+            next unless IMPORT_METHODS.key?(child.instance_variable_get(:@message)&.value)
 
             calls << build_import_command(child)
           end
@@ -83,7 +102,8 @@ module Klenod
         ImportCall.new(
           literal ? string_parts.first.value : nil,
           node.instance_variable_get(:@location),
-          !literal
+          !literal,
+          node.instance_variable_get(:@message).value
         )
       end
 
@@ -104,12 +124,12 @@ module Klenod
 
             location = call.location
             original = code[location.start_char...location.end_char]
-            unless original.match?(IMPORT_RE)
+            unless original.match?(/\A#{Regexp.escape(call.method_name)}\s*\(/)
               raise DynamicImportError, "Could not safely rewrite import at #{location.start_line}:#{location.start_column}"
             end
 
             rewritten[location.start_char...location.end_char] =
-              "__klenod_import__(#{dependency.id.inspect})"
+              "#{call.replacement}(#{dependency.id.inspect})"
           end
       end
 

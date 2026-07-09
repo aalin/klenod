@@ -26,6 +26,16 @@ Styles = import("styles/home.css")
 Hero = import("./hero.png?width=320,640&format=png")
 ```
 
+Use `lazy_import("...")` to record a dependency without loading it while the importing module is evaluated. It returns a `Klenod::Runtime::LazyImport`; call `#call` or `#value` to load and cache the imported value.
+
+```ruby
+Details = lazy_import("./details")
+
+def self.render_details
+  Details.call::Default.new.render
+end
+```
+
 Build output can be serialized for runtime loading:
 
 ```ruby

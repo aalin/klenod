@@ -41,6 +41,7 @@ module Klenod
           entrypoints.to_h do |entrypoint|
             [entrypoint, load(entrypoint).id.to_s]
           end
+        load_all_runtime_dependencies
 
         Runtime::Bundle.new(loaded_entrypoints, runtime_module_specs, runtime_asset_specs)
       end
@@ -156,14 +157,24 @@ module Klenod
         transform = transform(module_id, source)
         resolved_dependencies = transform.dependencies.map { |dependency| resolve_dependency(dependency) }
 
-        dependency_records = load_dependency_records(resolved_dependencies)
+        dependency_records = load_dependency_records(eager_dependencies(resolved_dependencies))
         transform = finalize(module_id, transform, resolved_dependencies, dependency_records)
         transformed_hash = Digest::SHA256.hexdigest(transform.code)
 
         imports =
           resolved_dependencies.to_h do |resolved_dependency|
-            record = dependency_records.fetch(resolved_dependency.dependency.id)
-            [resolved_dependency.dependency.id, import_value(resolved_dependency, record)]
+            value =
+              if resolved_dependency.dependency.eager
+                record = dependency_records.fetch(resolved_dependency.dependency.id)
+                import_value(resolved_dependency, record)
+              else
+                Runtime::LazyImport.new do
+                  record = load_module(resolved_dependency.module_id)
+                  import_value(resolved_dependency, record)
+                end
+              end
+
+            [resolved_dependency.dependency.id, value]
           end
 
         mod =
@@ -283,6 +294,22 @@ module Klenod
         end
       end
 
+      def eager_dependencies(resolved_dependencies)
+        resolved_dependencies.select { |resolved_dependency| resolved_dependency.dependency.eager }
+      end
+
+      def load_all_runtime_dependencies
+        queue = @records.values.flat_map(&:resolved_dependencies)
+
+        until queue.empty?
+          resolved_dependency = queue.shift
+          next if @records.key?(resolved_dependency.module_id)
+
+          record = load_module(resolved_dependency.module_id)
+          queue.concat(record.resolved_dependencies)
+        end
+      end
+
       def with_async_task(&block)
         task = current_async_task
 
@@ -379,7 +406,7 @@ module Klenod
       def runtime_import_spec(resolved_dependency, record)
         value = plugin_import_value(resolved_dependency, record)
 
-        Runtime::ImportSpec.new(record.id.to_s, value)
+        Runtime::ImportSpec.new(record.id.to_s, value, resolved_dependency.dependency.eager)
       end
 
       def resolver_extensions(plugins)

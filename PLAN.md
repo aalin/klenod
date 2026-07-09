@@ -14,6 +14,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 - [x] Implement Parcel-style unresolved `Dependency` objects.
 - [x] Implement resolver support for relative imports and source-root absolute imports.
 - [x] Implement Ruby plugin support for literal `import("...")`.
+- [x] Implement `lazy_import("...")` with deferred dev loading and lazy bundle hydration.
 - [x] Implement runtime bundle loading with `Klenod::Runtime.load_bundle`.
 - [x] Implement graph invalidation and dev watcher update events.
 - [x] Add initial async loading for sibling dependency modules.

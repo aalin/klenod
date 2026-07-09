@@ -25,6 +25,34 @@ module Klenod
       classes.empty? ? nil : classes.join(" ")
     end
 
+    class LazyImport
+      def initialize(&loader)
+        @loader = loader
+        @loaded = false
+        @value = nil
+      end
+
+      def call
+        return @value if @loaded
+
+        @value = @loader.call
+        @loaded = true
+        @value
+      end
+
+      alias_method :value, :call
+
+      def loaded?
+        @loaded
+      end
+
+      def reset!
+        @loaded = false
+        @value = nil
+        self
+      end
+    end
+
     class Mod < Module
       class Exports < Module
         def initialize(mod, imports)
@@ -37,6 +65,10 @@ module Klenod
         end
 
         def __klenod_import__(dependency_id)
+          @imports.fetch(dependency_id)
+        end
+
+        def __klenod_lazy_import__(dependency_id)
           @imports.fetch(dependency_id)
         end
       end

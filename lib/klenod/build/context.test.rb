@@ -87,6 +87,55 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_lazy_import_defers_loading_until_called
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/dep.rb", "VALUE = 41\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Dep = lazy_import("dep")
+
+          def self.value
+            Dep.call::VALUE + 1
+          end
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("entry")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      refute(context.graph.records.key?(Klenod::Build::ModuleId.new("dep.rb", nil)))
+      refute(exports::Dep.loaded?)
+
+      assert_equal(42, exports.value)
+      assert(context.graph.records.key?(Klenod::Build::ModuleId.new("dep.rb", nil)))
+      assert(exports::Dep.loaded?)
+    end
+  end
+
+  def test_lazy_import_caches_loaded_value
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/dep.rb", "VALUE = 41\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Dep = lazy_import("dep")
+
+          def self.loaded_values
+            [Dep.call, Dep.call]
+          end
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("entry")
+      first, second = context.graph.mods.fetch(record.id).const_get(:Exports).loaded_values
+
+      assert_same(first, second)
+    end
+  end
+
   def test_build_writes_marshal_bundle
     Dir.mktmpdir do |dir|
       File.write("#{dir}/dep.rb", "VALUE = 41\n")
@@ -101,6 +150,34 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(bundle.entrypoints, loaded.entrypoints)
       assert_equal(2, loaded.modules.length)
       assert_equal(42, mod.const_get(:Exports)::VALUE)
+    end
+  end
+
+  def test_build_bundle_includes_lazy_imported_modules
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/dep.rb", "VALUE = 41\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Dep = lazy_import("dep")
+
+          def self.value
+            Dep.call::VALUE + 1
+          end
+        RUBY
+      )
+      output = "#{dir}/bundle.mpk"
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      bundle = context.build(entrypoints: ["entry"], output: output)
+      loaded = Klenod::Runtime.load_bundle(output)
+      exports = loaded.load("entry").const_get(:Exports)
+
+      assert_equal(2, bundle.modules.length)
+      assert_raises(KeyError) { loaded.mod("dep.rb") }
+      refute(exports::Dep.loaded?)
+      assert_equal(42, exports.value)
+      assert(exports::Dep.loaded?)
     end
   end
 

@@ -5,7 +5,7 @@ module Klenod
     ModuleSpec =
       Data.define(:id, :source, :imports, :source_map, :version, :constant_name)
 
-    ImportSpec = Data.define(:target_id, :value)
+    ImportSpec = Data.define(:target_id, :value, :eager)
 
     AssetSpec =
       Data.define(:logical_name, :content_hash, :output_path, :content_type, :metadata)
@@ -80,10 +80,15 @@ module Klenod
               if target_id.is_a?(ImportSpec)
                 target_id
               else
-                ImportSpec.new(target_id, nil)
+                ImportSpec.new(target_id, nil, true)
               end
 
-            value = import_spec.value || instantiate(import_spec.target_id).const_get(:Exports)
+            value =
+              if import_spec.eager
+                import_spec.value || instantiate(import_spec.target_id).const_get(:Exports)
+              else
+                LazyImport.new { import_spec.value || instantiate(import_spec.target_id).const_get(:Exports) }
+              end
             [dependency_id, value]
           end
 

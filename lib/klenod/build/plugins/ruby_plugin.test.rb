@@ -34,6 +34,20 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
     assert_equal("Dep = __klenod_import__(\"pages/page.rb:dependency:0\")\n", result.code)
   end
 
+  def test_creates_lazy_dependencies_and_rewrites_literal_lazy_imports
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        "Dep = lazy_import(\"../dep\")\n",
+        nil
+      )
+
+    assert_equal(1, result.dependencies.length)
+    assert_equal("../dep", result.dependencies.first.specifier)
+    refute(result.dependencies.first.eager)
+    assert_includes(result.code, "__klenod_lazy_import__(\"pages/page.rb:dependency:0\")")
+  end
+
   def test_rejects_dynamic_imports
     assert_raises(Klenod::Build::DynamicImportError) do
       RubyPlugin.new.transform(

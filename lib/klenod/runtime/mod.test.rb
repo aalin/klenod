@@ -19,6 +19,19 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_same(mod, Klenod::Runtime::Generated.const_get(mod.constant_name))
   end
 
+  def test_evaluates_exports_with_lazy_import_helper
+    lazy = Klenod::Runtime::LazyImport.new { 41 }
+    mod =
+      Klenod::Runtime::Mod.new(
+        "entry.rb",
+        "DEP = __klenod_lazy_import__(\"dep\")\nVALUE = DEP.call + 1",
+        imports: {"dep" => lazy}
+      )
+
+    assert_equal(42, mod.const_get(:Exports)::VALUE)
+    assert(lazy.loaded?)
+  end
+
   def test_marshal_round_trip_preserves_identity_fields
     mod = Klenod::Runtime::Mod.new("entry.rb", "VALUE = 1", version: 3)
     copy = Marshal.load(Marshal.dump(mod))
@@ -60,6 +73,43 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
 
     assert_equal(42, mod.const_get(:Exports)::VALUE)
     assert_equal(41, bundle.mod("dep.rb").const_get(:Exports)::VALUE)
+  end
+
+  def test_bundle_load_defers_lazy_imported_modules
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"entry" => "entry.rb"},
+        {
+          "dep.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "dep.rb",
+              "VALUE = 41",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("dep.rb")
+            ),
+          "entry.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "Dep = __klenod_lazy_import__(\"dep\")\ndef self.value = Dep.call::VALUE + 1",
+              {"dep" => Klenod::Runtime::ImportSpec.new("dep.rb", nil, false)},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("entry.rb")
+            )
+        },
+        []
+      )
+
+    mod = bundle.load("entry")
+    exports = mod.const_get(:Exports)
+
+    assert_raises(KeyError) { bundle.mod("dep.rb") }
+    refute(exports::Dep.loaded?)
+    assert_equal(42, exports.value)
+    assert_equal(41, bundle.mod("dep.rb").const_get(:Exports)::VALUE)
+    assert(exports::Dep.loaded?)
   end
 
   def test_bundle_asset_helpers
