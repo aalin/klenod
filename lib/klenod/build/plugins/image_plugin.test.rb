@@ -6,6 +6,7 @@ require "minitest/autorun"
 require "tmpdir"
 
 require_relative "../context"
+require_relative "../../runtime"
 require_relative "ruby_plugin"
 
 class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
@@ -193,6 +194,69 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal(1, variants.length)
       assert_equal(3, variants.first.width)
       assert_equal(2, variants.first.height)
+    end
+  end
+
+  def test_lazy_ruby_import_of_image_defers_asset_until_called
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/logo.png", png_bytes(width: 2, height: 3))
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Logo = lazy_import("images/logo.png")
+
+          def self.image_size
+            image = Logo.call
+            [image.width, image.height]
+          end
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("entry")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([], context.assets_for("images/logo.png"))
+      refute(exports::Logo.loaded?)
+
+      assert_equal([2, 3], exports.image_size)
+      assert_equal(1, context.assets_for("images/logo.png").length)
+      assert(exports::Logo.loaded?)
+    end
+  end
+
+  def test_lazy_image_import_value_updates_after_loaded_image_changes
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      image_path = "#{dir}/images/logo.png"
+      File.binwrite(image_path, png_bytes(width: 2, height: 3))
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Logo = lazy_import("images/logo.png")
+
+          def self.image_size
+            image = Logo.call
+            [image.width, image.height]
+          end
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("entry")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([2, 3], exports.image_size)
+
+      File.binwrite(image_path, png_bytes(width: 5, height: 7))
+      result = context.invalidate_paths([image_path])
+      updated_exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal(["images/logo.png"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      refute(updated_exports::Logo.loaded?)
+      assert_equal([5, 7], updated_exports.image_size)
     end
   end
 

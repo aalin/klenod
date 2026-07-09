@@ -180,4 +180,65 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       assert_equal([:heading], classes)
     end
   end
+
+  def test_lazy_ruby_import_of_css_defers_asset_until_called
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Styles = lazy_import("styles/home.css")
+
+          def self.title_class
+            Styles.call.fetch(:title)
+          end
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry_record = context.load("entry")
+      exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
+
+      assert_equal([], context.assets_for("styles/home.css"))
+      refute(exports::Styles.loaded?)
+
+      assert_match(/title/, exports.title_class)
+      assert_equal(1, context.assets_for("styles/home.css").length)
+      assert(exports::Styles.loaded?)
+    end
+  end
+
+  def test_lazy_css_import_value_updates_after_loaded_css_changes
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      css_path = "#{dir}/styles/home.css"
+      File.write(css_path, ".title { color: red; }\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Styles = lazy_import("styles/home.css")
+
+          def self.classes
+            Styles.call.keys
+          end
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry_record = context.load("entry")
+      exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
+
+      assert_equal([:title], exports.classes)
+
+      File.write(css_path, ".heading { color: red; }\n")
+      result = context.invalidate_paths([css_path])
+      updated_exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
+
+      assert_equal(["styles/home.css"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      refute(updated_exports::Styles.loaded?)
+      assert_equal([:heading], updated_exports.classes)
+    end
+  end
 end

@@ -136,6 +136,67 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_invalidate_loaded_lazy_dependency_reevaluates_importer
+    Dir.mktmpdir do |dir|
+      dep_path = "#{dir}/dep.rb"
+      File.write(dep_path, "VALUE = 41\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Dep = lazy_import("dep")
+
+          def self.value
+            Dep.call::VALUE + 1
+          end
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry_record = context.load("entry")
+      exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
+
+      assert_equal(42, exports.value)
+
+      File.write(dep_path, "VALUE = 99\n")
+      result = context.invalidate_paths([dep_path])
+      updated_exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
+
+      assert_equal(["dep.rb"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      refute(updated_exports::Dep.loaded?)
+      assert_equal(100, updated_exports.value)
+    end
+  end
+
+  def test_invalidate_unloaded_lazy_dependency_does_not_reevaluate_importer
+    Dir.mktmpdir do |dir|
+      dep_path = "#{dir}/dep.rb"
+      File.write(dep_path, "VALUE = 41\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Dep = lazy_import("dep")
+
+          def self.value
+            Dep.call::VALUE + 1
+          end
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry_record = context.load("entry")
+      exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
+
+      File.write(dep_path, "VALUE = 99\n")
+      result = context.invalidate_paths([dep_path])
+
+      assert_equal([], result.reloaded_module_ids)
+      assert_equal([], result.reevaluated_module_ids)
+      assert_same(exports, context.graph.mods.fetch(entry_record.id).const_get(:Exports))
+      assert_equal(100, exports.value)
+    end
+  end
+
   def test_build_writes_marshal_bundle
     Dir.mktmpdir do |dir|
       File.write("#{dir}/dep.rb", "VALUE = 41\n")
