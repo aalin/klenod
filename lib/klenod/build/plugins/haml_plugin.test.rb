@@ -90,7 +90,9 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_kind_of(SyntaxTree::ARef, fragment.node)
     assert_includes(fragment.source, "# SourceMapMark:1:")
     assert_includes(fragment.source, "# SourceMapMark:2:")
-    assert_includes(fragment.source, '**{:class => "intro"}')
+    assert_includes(fragment.source, "**{")
+    assert_includes(fragment.source, "class:")
+    assert_includes(fragment.source, '"intro"')
   end
 
   def test_ruby_builder_fragments_keep_parsed_syntax_tree_nodes
@@ -199,7 +201,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
   def test_ruby_builder_builds_method_definitions_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
-    fragment = builder.method_definition("def title", body: builder.literal("Hello"))
+    fragment = builder.method_definition("title", body: builder.literal("Hello"))
 
     assert_kind_of(SyntaxTree::DefNode, fragment.node)
     assert_equal(<<~RUBY.chomp, fragment.source)
@@ -212,9 +214,9 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   def test_ruby_builder_builds_public_method_definitions_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     body = builder.marked_expression(builder.source_mark(3, "title"), builder.expression("title"))
-    fragment = builder.public_method_definition("def render", body: body)
+    fragment = builder.public_method_definition("render", body: body)
 
-    assert_kind_of(SyntaxTree::Statements, fragment.node)
+    assert_kind_of(SyntaxTree::Command, fragment.node)
     assert_includes(fragment.source, "public def render")
     assert_includes(fragment.source, "# SourceMapMark:3:")
     assert_includes(fragment.source, "title")
@@ -456,13 +458,13 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal("items.map { |item| H[:li, item] }", fragment.source)
   end
 
-  def test_ruby_builder_builds_script_block_skeleton_fragments
+  def test_ruby_builder_builds_script_block_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
-    fragment = builder.send(:script_block_skeleton, "items.map do |item|")
+    node = builder.send(:block_script_node, "items.map do |item|", builder.expression("item").node)
 
-    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
-    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
-    assert_includes(fragment.source, "items.map")
+    assert_kind_of(SyntaxTree::MethodAddBlock, node)
+    assert_kind_of(SyntaxTree::BlockNode, node.block)
+    assert_equal("do", node.block.opening.value)
   end
 
   def test_ruby_builder_preserves_source_map_marks_when_composing_script_blocks
@@ -484,19 +486,24 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       ])
 
     assert_kind_of(SyntaxTree::IfNode, fragment.node)
-    assert_includes(fragment.source, "if show")
+    assert_includes(fragment.source, "show")
     assert_includes(fragment.source, "H[:p]")
-    assert_includes(fragment.source, "else")
     assert_includes(fragment.source, "H[:span]")
   end
 
-  def test_ruby_builder_builds_branch_skeleton_fragments
+  def test_ruby_builder_builds_branch_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
-    fragment = builder.send(:branch_skeleton_fragment, "if show\n  nil\nelse\n  nil\nend")
+    node =
+      builder.send(
+        :branch_node,
+        [
+          ["if show", builder.expression("H[:p]")],
+          ["else", builder.expression("H[:span]")]
+        ]
+      )
 
-    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
-    assert_kind_of(SyntaxTree::IfNode, fragment.node)
-    assert_includes(fragment.source, "show")
+    assert_kind_of(SyntaxTree::IfNode, node)
+    assert_kind_of(SyntaxTree::Else, node.consequent)
   end
 
   def test_ruby_builder_builds_case_branches_from_syntax_tree_nodes
@@ -675,7 +682,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([:p, "Hello", {title: "HELLO"}], exports::Default.new.render)
-      assert_includes(record.transformed_source, "title: title.upcase")
+      assert_includes(record.transformed_source, "title:")
+      assert_includes(record.transformed_source, "title.upcase")
     end
   end
 

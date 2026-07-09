@@ -51,10 +51,6 @@ module Klenod
             include SyntaxTree::DSL
 
             Fragment = Data.define(:source, :node) do
-              def marked?
-                source.include?(SourceMap::MARK_PREFIX)
-              end
-
               def node?
                 !node.nil?
               end
@@ -136,19 +132,22 @@ module Klenod
               skeleton = class_skeleton_fragment(component_class_name, component_base_class)
               body =
                 [
-                  method_definition("def self.module_path", body: expression("__FILE__")),
+                  method_definition("module_path", target: "self", body: file_expression),
                   constant_assignment("Self", "self"),
                   constant_assignment("Translations", translations_source),
                   method_definition(
-                    "def self.__klenod_import__(dependency_id)",
+                    "__klenod_import__",
+                    target: "self",
+                    parameters: ["dependency_id"],
                     body: call(receiver: "KlenodImport", name: "call", arguments: ["dependency_id"])
                   ),
                   method_definition(
-                    "def __klenod_import__(dependency_id)",
+                    "__klenod_import__",
+                    parameters: ["dependency_id"],
                     body: call(receiver: "self.class", name: "__klenod_import__", arguments: ["dependency_id"])
                   ),
                   ruby_source,
-                  public_method_definition("def render", body: render_source)
+                  public_method_definition("render", body: render_source)
                 ].flat_map { |fragment| statement_body_for(fragment) }
 
               fragment(
@@ -165,17 +164,7 @@ module Klenod
             end
 
             def expressions(expressions)
-              return ast_expressions(expressions) unless marked?(expressions)
-
-              sources = expressions.map { |expression| to_source(expression) }
-              source =
-                case sources.length
-                when 0 then "nil"
-                when 1 then sources.fetch(0)
-                else "[\n#{indent(sources.join(",\n"), 2)}\n]"
-                end
-
-              expression(source)
+              ast_expressions(expressions)
             end
 
             def expression(source)
@@ -260,29 +249,34 @@ module Klenod
               )
             end
 
-            def method_definition(signature, body:)
-              skeleton = method_skeleton(signature)
-
-              fragment(replace_method_body(skeleton, body))
+            def method_definition(name, body:, target: nil, parameters: [])
+              fragment(
+                DefNode(
+                  target && node_for(expression_fragment(target)),
+                  target ? Period(".") : nil,
+                  Ident(name.to_s),
+                  Params(parameters.map { |parameter| Ident(parameter.to_s) }, [], nil, [], [], nil, nil),
+                  body_statement(body)
+                )
+              )
             end
 
-            def public_method_definition(signature, body:)
-              return statements("public #{signature}\n#{indent(body, 2)}\nend\n") if body.respond_to?(:marked?) && body.marked?
-
-              skeleton = public_method_skeleton(signature)
-              method_node = skeleton.arguments.parts.fetch(0)
-
+            def public_method_definition(name, body:, parameters: [])
               fragment(
-                skeleton.copy(
-                  arguments: skeleton.arguments.copy(
-                    parts: [replace_method_body(method_node, body)]
-                  )
+                Command(
+                  Ident("public"),
+                  Args([method_definition(name, parameters: parameters, body: body).node]),
+                  nil
                 )
               )
             end
 
             def nil_expression
               fragment(nil_node)
+            end
+
+            def file_expression
+              fragment(VarRef(Kw("__FILE__")))
             end
 
             def symbol(value)
@@ -331,25 +325,6 @@ module Klenod
               end
             end
 
-            def method_skeleton(signature)
-              source = "#{signature}\n  nil\nend\n"
-              node = parse_statements(source)&.body&.fetch(0)
-              raise ArgumentError, "Could not parse method definition: #{source.inspect}" unless node.is_a?(SyntaxTree::DefNode)
-
-              node
-            end
-
-            def public_method_skeleton(signature)
-              source = "public #{signature}\n  nil\nend\n"
-              node = parse_statements(source)&.body&.fetch(0)
-              method_node = node&.arguments&.parts&.fetch(0, nil)
-              unless node.is_a?(SyntaxTree::Command) && node.message.value == "public" && method_node.is_a?(SyntaxTree::DefNode)
-                raise ArgumentError, "Could not parse public method definition: #{source.inspect}"
-              end
-
-              node
-            end
-
             def source_mark(line_no, source)
               "# #{SourceMap::Mark.new(line_no, source)}"
             end
@@ -361,21 +336,19 @@ module Klenod
             end
 
             def factory_call(factory:, tag:, children:, props:, mark: nil)
-              return ast_factory_call(factory: factory, tag: tag, children: children, props: props) unless marked?(children)
-
-              source_factory_call(factory: factory, tag: tag, children: children, props: props, mark: mark)
+              ast_factory_call(factory: factory, tag: tag, children: children, props: props, mark: mark)
             end
 
             def script_block(source, body)
-              ast_script_block(source, body) || expression("#{source}\n#{indent(to_source(body), 2)}\nend")
+              ast_script_block(source, body) || raise(ArgumentError, "Could not build Ruby block from Haml script: #{source.inspect}")
             end
 
             def silent_script(source)
-              ast_silent_script(source) || expression("begin\n#{indent(source, 2)}\n  nil\nend")
+              ast_silent_script(source) || raise(ArgumentError, "Could not build Ruby begin block from Haml script: #{source.inspect}")
             end
 
             def branches(branches)
-              ast_branches(branches) || expression(branches.map { |source, body| "#{source}\n#{indent(to_source(body), 2)}" }.join("\n") + "\nend")
+              ast_branches(branches) || raise(ArgumentError, "Could not build Ruby branch from Haml scripts: #{branches.map(&:first).inspect}")
             end
 
             def ruby_filters(nodes)
@@ -403,20 +376,21 @@ module Klenod
 
                 expression.is_a?(Fragment) ? expression : self.expression(to_source(expression))
               else
-                node = ArrayLiteral(LBracket("["), Args(expressions.map { |item| expression_node(to_source(item)) }))
+                node = ArrayLiteral(LBracket("["), Args(expressions.map { |item| argument_node(item) }))
 
                 Fragment.new(format_node(node), node)
               end
             end
 
-            def ast_factory_call(factory:, tag:, children:, props:)
-              parts = [
-                expression_node(factory),
+            def ast_factory_call(factory:, tag:, children:, props:, mark:)
+              factory_node = expression_node(factory)
+              arguments = [
                 expression_node(tag),
-                *children.map { |child| expression_node(to_source(child)) },
-                ast_keyword_props(props)
-              ].compact
-              factory_node = parts.shift
+                *children.map { |child| argument_node(child) }
+              ]
+              return nil if arguments.any?(&:nil?)
+
+              parts = [*arguments, ast_keyword_props(props, mark: mark)].compact
 
               node = ARef(factory_node, Args(parts))
 
@@ -433,41 +407,15 @@ module Klenod
             end
 
             def ast_script_block(source, body)
-              return nil if body.respond_to?(:marked?) && body.marked?
-
-              skeleton = script_block_skeleton(source)
-              return nil unless skeleton
-
-              body_node = node_for(body)
-              return nil unless body_node
-
-              node =
-                skeleton.node.copy(
-                  block: skeleton.node.block.copy(
-                    bodystmt: BodyStmt(
-                      Statements([body_node]),
-                      nil,
-                      nil,
-                      nil,
-                      nil
-                    )
-                  )
-                )
+              node = block_script_node(source, body)
+              return nil unless node
 
               Fragment.new(format_node(node), node)
             end
 
             def ast_branches(branches)
-              return nil if branches.any? { |_source, body| body.respond_to?(:marked?) && body.marked? }
-
-              skeleton, body_branches = branch_skeleton(branches)
-              return nil unless skeleton
-
-              bodies = body_branches.map { |_source, body| node_for(body) }
-              return nil if bodies.any?(&:nil?)
-
-              node = replace_branch_bodies(skeleton.node, bodies)
-              return nil unless bodies.empty?
+              node = branch_node(branches)
+              return nil unless node
 
               Fragment.new(format_node(node), node)
             end
@@ -501,68 +449,124 @@ module Klenod
               )
             end
 
-            def replace_method_body(method_node, body)
-              method_node.copy(
-                bodystmt: BodyStmt(
-                  Statements(Array(body).flat_map { |statement| statement_body_for(statement) }),
-                  nil,
-                  nil,
-                  nil,
-                  nil
+            def body_statement(body)
+              BodyStmt(
+                Statements(Array(body).flat_map { |statement| statement_body_for(statement) }),
+                nil,
+                nil,
+                nil,
+                nil
+              )
+            end
+
+            def branch_node(branches)
+              first_source, first_body = branches.fetch(0)
+              if first_source.match?(/\Acase\b/) && nil_fragment?(first_body)
+                case_node(first_source, branches.drop(1))
+              else
+                if_node(branches)
+              end
+            end
+
+            def if_node(branches)
+              source, body = branches.fetch(0)
+              return else_node(source, body) if source == "else"
+
+              predicate_source =
+                case source
+                when /\Aif\s+(.+)\z/ then $1
+                when /\Aelsif\s+(.+)\z/ then $1
+                else return nil
+                end
+              predicate = parse_expression(predicate_source)
+              return nil unless predicate
+
+              consequent =
+                if branches.length > 1
+                  if_node(branches.drop(1))
+                end
+
+              if source.start_with?("elsif")
+                Elsif(predicate, Statements(statement_body_for(body)), consequent)
+              else
+                IfNode(predicate, Statements(statement_body_for(body)), consequent)
+              end
+            end
+
+            def else_node(source, body)
+              return nil unless source == "else"
+
+              Else(Kw("else"), Statements(statement_body_for(body)))
+            end
+
+            def case_node(source, branches)
+              value_source = source[/\Acase\s*(.*)\z/, 1]
+              return nil unless value_source
+
+              value = value_source.empty? ? nil : parse_expression(value_source)
+              consequent = when_node(branches)
+              return nil unless consequent
+
+              Case(Kw("case"), value, consequent)
+            end
+
+            def when_node(branches)
+              source, body = branches.fetch(0)
+              return else_node(source, body) if source == "else"
+              return nil unless source.start_with?("when ")
+
+              arguments =
+                source
+                  .delete_prefix("when ")
+                  .split(",")
+                  .map { |argument| parse_expression(argument.strip) }
+              return nil if arguments.any?(&:nil?)
+
+              consequent =
+                if branches.length > 1
+                  when_node(branches.drop(1))
+                end
+
+              When(Args(arguments), Statements(statement_body_for(body)), consequent)
+            end
+
+            def block_script_node(source, body)
+              match = source.match(/\A(?<call>.+?)\s+do(?:\s*\|(?<parameters>[^|]*)\|)?\s*\z/)
+              return nil unless match
+
+              call_node = parse_expression(match[:call])
+              return nil unless call_node
+
+              MethodAddBlock(
+                call_node,
+                BlockNode(
+                  Kw("do"),
+                  block_parameters(match[:parameters]),
+                  body_statement(body)
                 )
               )
             end
 
-            def replace_branch_bodies(node, bodies)
-              case node
-              when SyntaxTree::IfNode, SyntaxTree::Elsif, SyntaxTree::When
-                node.copy(
-                  statements: Statements([bodies.shift]),
-                  consequent: node.consequent ? replace_branch_bodies(node.consequent, bodies) : nil
-                )
-              when SyntaxTree::Else
-                node.copy(statements: Statements([bodies.shift]))
-              when SyntaxTree::Case
-                node.copy(consequent: replace_branch_bodies(node.consequent, bodies))
-              end
+            def block_parameters(source)
+              return nil if source.nil?
+
+              parameters =
+                source
+                  .split(",")
+                  .map(&:strip)
+                  .reject(&:empty?)
+                  .map { |parameter| Ident(parameter) }
+
+              BlockVar(Params(parameters, [], nil, [], [], nil, nil), [])
             end
 
-            def branch_skeleton(branches)
-              first_source, first_body = branches.fetch(0)
-              if first_source.match?(/\Acase\b/) && nil_fragment?(first_body)
-                [
-                  branch_skeleton_fragment("#{first_source}\n#{branches.drop(1).map { |source, _body| "#{source}\n  nil" }.join("\n")}\nend"),
-                  branches.drop(1)
-                ]
-              else
-                [
-                  branch_skeleton_fragment("#{branches.map { |source, _body| "#{source}\n  nil" }.join("\n")}\nend"),
-                  branches
-                ]
-              end
-            end
-
-            def script_block_skeleton(source)
-              node = parse_expression("#{source}\n  nil\nend")
-              return nil unless node.is_a?(SyntaxTree::MethodAddBlock)
-
-              fragment(node)
-            end
-
-            def branch_skeleton_fragment(source)
-              node = parse_expression(source)
-              return nil unless node.is_a?(SyntaxTree::IfNode) || node.is_a?(SyntaxTree::Case)
-
-              fragment(node)
-            end
-
-            def ast_keyword_props(props)
+            def ast_keyword_props(props, mark:)
               return nil if props.empty?
 
               AssocSplat(
                 HashLiteral(
                   LBrace("{"),
-                  props.map { |name, value| Assoc(Label("#{name}:"), expression_node(value)) }
+                  props.map { |name, value| Assoc(Label("#{name}:"), argument_node(value, mark: mark)) }
                 )
               )
             end
@@ -622,12 +626,6 @@ module Klenod
               end
             end
 
-            def keyword_props(props, mark:)
-              return nil if props.empty?
-
-              "#{mark},\n**{#{props.map { |name, value| "#{name.inspect} => #{to_source(value)}" }.join(", ")}}"
-            end
-
             def source_marked_fragment(mark, source, node)
               marked_source = "#{mark}\n#{source}"
               return Fragment.new(marked_source, nil) unless node
@@ -637,18 +635,8 @@ module Klenod
               Fragment.new(format_node(node), node)
             end
 
-            def source_factory_call(factory:, tag:, children:, props:, mark:)
-              arguments = [tag, *children.map { |child| to_source(child) }, keyword_props(props, mark: mark)].compact.join(",\n")
-
-              expression("#{factory}[\n#{indent(arguments, 2)}\n]")
-            end
-
             def comment_node(value)
               Comment(value, false)
-            end
-
-            def marked?(values)
-              values.any? { |value| value.respond_to?(:marked?) && value.marked? }
             end
 
             def nil_fragment?(value)
@@ -659,6 +647,25 @@ module Klenod
               return value.node if value.is_a?(Fragment)
 
               parse_expression(to_source(value))
+            end
+
+            def argument_node(value, mark: nil)
+              fragment = expression_fragment(value)
+              statements = []
+              statements << comment_node(mark) if mark
+
+              if fragment.node.is_a?(SyntaxTree::Statements)
+                statements.concat(fragment.node.body)
+              elsif mark
+                node = node_for(fragment)
+                return nil unless node
+
+                statements << node
+              else
+                return node_for(fragment)
+              end
+
+              ast_begin(statements)
             end
 
             def statement_body_for(value)
