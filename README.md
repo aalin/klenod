@@ -125,6 +125,8 @@ CSS imports currently return class-name maps for Ruby or Haml importers. Image i
 
 Sibling dependency modules may be loaded concurrently. Plugin hooks should avoid unguarded shared mutable state, because `load` and `transform` calls for independent modules can overlap. `finalize` still runs after eager dependencies for that module have loaded.
 
+Assets can be static or generated. Generated assets expose metadata immediately and generate bytes on demand; call `asset.wait` before serving or writing an asset when the bytes may not be ready yet. Build mode drains generated assets before writing the bundle.
+
 ## Development
 
 Run the test suite with:

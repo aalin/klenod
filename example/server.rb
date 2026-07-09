@@ -56,6 +56,7 @@ begin
       Async::HTTP::Server.for(endpoint) do |request|
         if request.path.start_with?("/assets/")
           asset = context.asset(request.path)
+          asset.wait
           bytes =
             if assets_dir
               File.binread(File.join(assets_dir, asset.output_path.delete_prefix("/")))

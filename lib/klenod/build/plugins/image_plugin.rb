@@ -96,7 +96,6 @@ module Klenod
           variant_options = variant_options_for(module_id)
           return [] if variant_options.widths.empty?
 
-          image = Magick::Image.from_blob(bytes).first
           source_hash = Digest::SHA256.hexdigest(bytes)
 
           variant_options.formats.flat_map do |format|
@@ -104,13 +103,9 @@ module Klenod
               next if width <= 0
 
               key = ImageVariantKey.new(module_id.path, source_hash, width, format.downcase)
-              @variant_cache[key] ||= generate_variant_asset(module_id, image, width, format)
+              @variant_cache[key] ||= variant_asset(module_id, bytes, dimensions, source_hash, width, format)
             end
           end
-        rescue Magick::ImageMagickError
-          []
-        ensure
-          image&.destroy!
         end
 
         VariantOptions = Data.define(:widths, :formats)
@@ -133,32 +128,47 @@ module Klenod
           VariantOptions.new(widths.uniq, formats.map(&:downcase).uniq)
         end
 
-        def generate_variant_asset(module_id, image, width, format)
-          variant_image = image.resize_to_fit(width)
-          variant_bytes = variant_image.to_blob { |info| info.format = format.upcase }
-          variant_dimensions = image_dimensions(variant_bytes)
-          hash = Digest::SHA256.hexdigest(variant_bytes)[0, 16]
-          extname = ".#{format.downcase}"
+        def variant_asset(module_id, bytes, dimensions, source_hash, width, format)
+          format = format.downcase
+          extname = ".#{format}"
+          descriptor = "#{width}w"
+          hash = Digest::SHA256.hexdigest("#{source_hash}:#{width}:#{format}")[0, 16]
           output_path = "/assets/#{asset_name(module_id)}.#{width}w.#{hash}#{extname}"
+          metadata = {
+            type: :image_variant,
+            width: width,
+            height: scaled_height(dimensions, width),
+            format: format.to_sym,
+            descriptor: descriptor,
+            source_width: width
+          }
 
-          Asset.new(
+          Asset.generated(
             module_id.path,
             hash,
             output_path,
             nil,
-            variant_bytes,
             content_type(extname),
-            {
-              type: :image_variant,
-              width: variant_dimensions.width,
-              height: variant_dimensions.height,
-              format: variant_dimensions.format || format.downcase.to_sym,
-              descriptor: "#{width}w",
-              source_width: width
-            }
-          )
+            metadata
+          ) do
+            generate_variant_bytes(bytes, width, format)
+          end
+        end
+
+        def generate_variant_bytes(bytes, width, format)
+          image = Magick::Image.from_blob(bytes).first
+          variant_image = image.resize_to_fit(width)
+          variant_bytes = variant_image.to_blob { |info| info.format = format.upcase }
+          variant_bytes
         ensure
           variant_image&.destroy!
+          image&.destroy!
+        end
+
+        def scaled_height(dimensions, width)
+          return nil if dimensions.width.nil? || dimensions.height.nil? || dimensions.width.zero?
+
+          (dimensions.height.to_f * width / dimensions.width).round
         end
 
         def asset_name(module_id)

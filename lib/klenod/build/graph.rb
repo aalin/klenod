@@ -81,6 +81,12 @@ module Klenod
         assets.each_value(&block)
       end
 
+      def wait_for_assets
+        with_async_task do |task|
+          each_asset.map { |asset| task.async { asset.wait } }.each(&:wait)
+        end
+      end
+
       def resolve_dependency(dependency)
         if (virtual_module_id = dependency.metadata[:virtual_module_id])
           return ResolvedDependency.new(dependency, virtual_module_id, {virtual: true})

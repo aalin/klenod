@@ -95,6 +95,9 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal("2w", variant.descriptor)
       assert_equal(variant.src, variant_asset.output_path)
       assert_equal("image/png", variant_asset.content_type)
+      refute(variant_asset.ready?)
+      assert_match(/\A.PNG/, variant_asset.bytes)
+      assert(variant_asset.ready?)
     end
   end
 
@@ -122,12 +125,14 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       variants = context.graph.mods.fetch(record.id).const_get(:Exports)::VARIANTS
       variant = variants.fetch(0)
       assets = context.assets_for("images/hero.png")
+      variant_asset = assets.find { |asset| asset.metadata[:type] == :image_variant }
 
       assert_equal(2, assets.length)
       assert_match(%r{\A/assets/hero\.2w\.[a-f0-9]{16}\.png\z}, variant.src)
       assert_equal(2, variant.width)
       assert_equal(1, variant.height)
       assert_equal("2w", variant.descriptor)
+      refute(variant_asset.ready?)
     end
   end
 
@@ -189,11 +194,13 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       bundle = context.build(entrypoints: ["entry"], output: output)
       loaded = Klenod::Runtime.load_bundle(output)
       variants = loaded.load("entry").const_get(:Exports)::VARIANTS
+      variant_asset = context.assets_for("images/hero.png").find { |asset| asset.metadata[:type] == :image_variant }
 
       assert_equal(2, bundle.assets_for("images/hero.png").length)
       assert_equal(1, variants.length)
       assert_equal(3, variants.first.width)
       assert_equal(2, variants.first.height)
+      assert(variant_asset.ready?)
     end
   end
 

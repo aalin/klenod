@@ -44,6 +44,7 @@ module Klenod
 
       def build(entrypoints:, output:, assets_dir: nil)
         bundle = @graph.bundle(entrypoints: entrypoints)
+        wait_for_assets
         write_assets(assets_dir) if assets_dir
         FileUtils.mkdir_p(File.dirname(output))
         File.binwrite(output, Marshal.dump(bundle))
@@ -68,6 +69,10 @@ module Klenod
 
       def each_asset(&block)
         @graph.each_asset(&block)
+      end
+
+      def wait_for_assets
+        @graph.wait_for_assets
       end
 
       def page_routes(pages_dir: "pages")
