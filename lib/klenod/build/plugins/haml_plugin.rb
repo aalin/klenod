@@ -101,42 +101,61 @@ module Klenod
               render_source = expression_fragment(render_source)
               styles_source = expression_fragment(styles_source)
 
-              source =
-                <<~RUBY
-                  # frozen_string_literal: true
+              header = [
+                fragment(comment_node("# frozen_string_literal: true")),
+                constant_assignment(
+                  "KlenodImport",
+                  call(receiver: nil, name: "method", arguments: [symbol("__klenod_import__")])
+                )
+              ]
+              component_class =
+                component_class_fragment(
+                  component_class_name: component_class_name,
+                  component_base_class: component_base_class,
+                  translations_source: translations_source,
+                  ruby_source: ruby_source,
+                  render_source: render_source
+                )
+              footer = [
+                constant_assignment("Default", component_class_name),
+                constant_assignment("Styles", styles_source),
+                call(receiver: "Default", name: "const_set", arguments: [symbol("Styles"), "Styles"]),
+                constant_assignment("Translations", "Default::Translations")
+              ]
 
-                  KlenodImport = method(:__klenod_import__)
+              program_from_fragments(header, component_class, footer)
+            end
 
-                  class #{to_source(component_class_name)} < #{to_source(component_base_class)}
-                    def self.module_path
-                      __FILE__
-                    end
+            def component_class_fragment(
+              component_class_name:,
+              component_base_class:,
+              translations_source:,
+              ruby_source:,
+              render_source:
+            )
+              skeleton = class_skeleton_fragment(component_class_name, component_base_class)
+              body =
+                [
+                  statements("def self.module_path\n  __FILE__\nend\n"),
+                  constant_assignment("Self", "self"),
+                  constant_assignment("Translations", translations_source),
+                  statements("def self.__klenod_import__(dependency_id)\n  KlenodImport.call(dependency_id)\nend\n"),
+                  statements("def __klenod_import__(dependency_id)\n  self.class.__klenod_import__(dependency_id)\nend\n"),
+                  ruby_source,
+                  statements("public def render\n#{indent(render_source, 2)}\nend\n")
+                ].flat_map { |fragment| statement_body_for(fragment) }
 
-                    Self = self
-                    Translations = #{to_source(translations_source)}
-
-                    def self.__klenod_import__(dependency_id)
-                      KlenodImport.call(dependency_id)
-                    end
-
-                    def __klenod_import__(dependency_id)
-                      self.class.__klenod_import__(dependency_id)
-                    end
-
-                  #{indent(ruby_source, 2)}
-
-                    public def render
-                  #{indent(render_source, 4)}
-                    end
-                  end
-
-                  Default = #{to_source(component_class_name)}
-                  Styles = #{to_source(styles_source)}
-                  Default.const_set(:Styles, Styles)
-                  Translations = Default::Translations
-                RUBY
-
-              program(source)
+              fragment(
+                skeleton.node.copy(
+                  bodystmt: BodyStmt(
+                    Statements(body),
+                    nil,
+                    nil,
+                    nil,
+                    nil
+                  )
+                )
+              )
             end
 
             def expressions(expressions)
@@ -177,6 +196,12 @@ module Klenod
               Fragment.new(node ? format_node(node) : source, node)
             end
 
+            def program_from_fragments(*fragments)
+              body = fragments.flatten.flat_map { |fragment| statement_body_for(fragment) }
+
+              fragment(Program(Statements(body)))
+            end
+
             def fragment(node)
               Fragment.new(format_node(node), node)
             end
@@ -212,6 +237,23 @@ module Klenod
               )
             end
 
+            def constant_assignment(name, value)
+              fragment(Assign(VarField(Const(name.to_s)), node_for(expression_fragment(value))))
+            end
+
+            def call(receiver:, name:, arguments:)
+              receiver_node = receiver.nil? ? nil : node_for(expression_fragment(receiver))
+
+              fragment(
+                CallNode(
+                  receiver_node,
+                  receiver_node ? Period(".") : nil,
+                  Ident(name.to_s),
+                  ArgParen(Args(arguments.map { |argument| node_for(expression_fragment(argument)) }))
+                )
+              )
+            end
+
             def nil_expression
               fragment(nil_node)
             end
@@ -230,6 +272,14 @@ module Klenod
             def hash_expression(source)
               node = parse_expression(source)
               return nil unless node.is_a?(SyntaxTree::HashLiteral)
+
+              fragment(node)
+            end
+
+            def class_skeleton_fragment(component_class_name, component_base_class)
+              class_source = "class #{to_source(component_class_name)} < #{to_source(component_base_class)}\nend\n"
+              node = parse_statements(class_source)&.body&.fetch(0)
+              raise ArgumentError, "Could not parse component class: #{class_source.inspect}" unless node.is_a?(SyntaxTree::ClassDeclaration)
 
               fragment(node)
             end

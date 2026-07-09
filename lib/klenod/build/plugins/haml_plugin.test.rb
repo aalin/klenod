@@ -109,6 +109,25 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal("class Page\nend\n", program.source)
   end
 
+  def test_ruby_builder_composes_programs_from_statement_fragments
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    program =
+      builder.program_from_fragments(
+        builder.statements("# frozen_string_literal: true\n\nKlenodImport = nil\n"),
+        builder.statements("class Page\nend\n"),
+        builder.statements("Default = Page\n")
+      )
+
+    assert_kind_of(SyntaxTree::Program, program.node)
+    assert_equal(
+      [SyntaxTree::Comment, SyntaxTree::Assign, SyntaxTree::ClassDeclaration, SyntaxTree::Assign],
+      program.node.statements.body.map(&:class)
+    )
+    assert_includes(program.source, "# frozen_string_literal: true")
+    assert_includes(program.source, "class Page")
+    assert_includes(program.source, "Default = Page")
+  end
+
   def test_ruby_builder_literals_and_symbols_keep_parsed_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     literal = builder.literal("Hello")
@@ -157,6 +176,25 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
     assert_kind_of(SyntaxTree::CallNode, fragment.node)
     assert_equal('__klenod_import__("pages/page.haml:companion_style")', fragment.source)
+  end
+
+  def test_ruby_builder_builds_constant_assignments_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment = builder.constant_assignment("Default", "Page")
+
+    assert_kind_of(SyntaxTree::Assign, fragment.node)
+    assert_equal("Default = Page", fragment.source)
+  end
+
+  def test_ruby_builder_builds_method_calls_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    bare_call = builder.call(receiver: nil, name: "method", arguments: [builder.symbol("__klenod_import__")])
+    receiver_call = builder.call(receiver: "Default", name: "const_set", arguments: [builder.symbol("Styles"), "Styles"])
+
+    assert_kind_of(SyntaxTree::CallNode, bare_call.node)
+    assert_equal("method(:__klenod_import__)", bare_call.source)
+    assert_kind_of(SyntaxTree::CallNode, receiver_call.node)
+    assert_equal("Default.const_set(:Styles, Styles)", receiver_call.source)
   end
 
   def test_ruby_builder_wraps_existing_syntax_tree_nodes_as_fragments
@@ -233,8 +271,28 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       )
 
     assert_kind_of(SyntaxTree::Program, program.node)
+    assert_includes(program.node.statements.body.map(&:class), SyntaxTree::ClassDeclaration)
     assert_includes(program.source, "class Page < Object")
     assert_includes(program.source, "public def render")
+  end
+
+  def test_ruby_builder_builds_component_class_fragments
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment =
+      builder.component_class_fragment(
+        component_class_name: builder.expression_fragment("Page"),
+        component_base_class: builder.expression_fragment("Object"),
+        translations_source: builder.expression_fragment("{}.freeze"),
+        ruby_source: builder.statements_fragment("def title\n  \"Hello\"\nend\n"),
+        render_source: builder.expression_fragment("title")
+      )
+
+    assert_kind_of(SyntaxTree::ClassDeclaration, fragment.node)
+    assert_kind_of(SyntaxTree::Assign, fragment.node.bodystmt.statements.body.fetch(1))
+    assert_includes(fragment.source, "class Page < Object")
+    assert_includes(fragment.source, "Translations = {}.freeze")
+    assert_includes(fragment.source, "def title")
+    assert_includes(fragment.source, "public def render")
   end
 
   def test_ruby_builder_component_source_returns_component_program_source
