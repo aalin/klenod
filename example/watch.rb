@@ -3,9 +3,11 @@
 require_relative "klenod_context"
 
 source_dir = File.expand_path("src", __dir__)
+assets_dir = ENV["ASSETS_DIR"] && File.expand_path(ENV.fetch("ASSETS_DIR"))
 context = Example.build_context(source_dir: source_dir)
 record = context.load("pages/server")
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
+write_result = assets_dir && context.write_assets(assets_dir)
 
 context.on_update do |event|
   result = event.result
@@ -24,6 +26,11 @@ context.on_update do |event|
       warn "  error in #{module_id}: #{error.class}: #{error.message}"
     end
   else
+    asset_write_result = assets_dir && context.write_asset_updates(event.asset_updates, assets_dir: assets_dir)
+    if asset_write_result && !asset_write_result.empty?
+      puts "  asset files written: #{asset_write_result.written_paths.join(", ")}"
+      puts "  asset files removed: #{asset_write_result.removed_paths.join(", ")}"
+    end
     exports = context.graph.mods.fetch(record.id).const_get(:Exports)
     status, _headers, body = exports.call(nil, context)
     puts "  status: #{status}"
@@ -34,6 +41,8 @@ end
 exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 status, _headers, body = exports.call(nil, context)
 puts "Watching #{source_dir}"
+puts "Mirroring assets to #{assets_dir}" if assets_dir
+puts "Initial asset files written: #{write_result.written_paths.length}" if write_result
 puts "Initial status: #{status}"
 puts "Initial body includes Haml page: #{body.join.include?("<main")}"
 puts "Edit example/src/pages/page.haml, example/src/pages/page.css, or example/src/shared.rb to see an update."

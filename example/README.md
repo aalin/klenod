@@ -19,6 +19,15 @@ bundle exec ruby example/server.rb
 
 `server.rb` starts a small `async-http` server on `http://localhost:9292`. It watches the source tree, swaps to the latest loaded page after the dependency tree updates, and serves emitted CSS/image assets from the build context.
 
+`watch.rb` and `server.rb` can also mirror emitted assets to disk:
+
+```sh
+ASSETS_DIR=example/tmp/public bundle exec ruby example/watch.rb
+ASSETS_DIR=example/tmp/public bundle exec ruby example/server.rb
+```
+
+When `ASSETS_DIR` is set, the examples write the current asset manifest once and then apply `event.asset_updates` after each successful graph update.
+
 The server entry imports a Haml component and an image with query-driven variants:
 
 ```ruby
