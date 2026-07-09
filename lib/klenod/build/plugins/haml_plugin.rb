@@ -155,12 +155,21 @@ module Klenod
               expression(value.to_sym.inspect)
             end
 
+            def parenthesized_expression(source)
+              node = parse_expression(source)
+              return expression("(#{source})") unless node
+
+              fragment(Paren(LParen("("), Statements([node])))
+            end
+
             def source_mark(line_no, source)
               "# #{SourceMap::Mark.new(line_no, source)}"
             end
 
             def marked_expression(mark, expression)
-              Fragment.new("#{mark}\n#{to_source(expression)}", expression.is_a?(Fragment) ? expression.node : parse_expression(expression.to_s))
+              source = to_source(expression)
+
+              Fragment.new("#{mark}\n#{source}", expression.is_a?(Fragment) ? expression.node : parse_expression(source))
             end
 
             def factory_call(factory:, tag:, children:, props:, mark: nil)
@@ -515,7 +524,7 @@ module Klenod
 
           def compile_script(node, factory:, builder:)
             source = script_source(node)
-            return builder.expression("(#{source})") if node.children.empty?
+            return builder.parenthesized_expression(source) if node.children.empty?
 
             builder.script_block(source, compile_nodes(node.children, factory: factory, builder: builder))
           end
@@ -569,7 +578,7 @@ module Klenod
             children = []
             value = node.value.fetch(:value)
             if value && !value.empty?
-              children << (node.value.fetch(:parse) ? builder.expression("(#{value})") : builder.literal(value))
+              children << (node.value.fetch(:parse) ? builder.parenthesized_expression(value) : builder.literal(value))
             end
             children.concat(compile_node_expressions(node.children, factory: factory, builder: builder))
 
