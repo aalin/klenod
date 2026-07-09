@@ -27,6 +27,33 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_ruby_import_of_css_returns_element_selector_map
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "img { width: 100%; }\n.title { color: red; }\n")
+      File.write(
+        "#{dir}/pages/home.rb",
+        <<~RUBY
+          Styles = import("../styles/home.css")
+          IMAGE = Styles.fetch("img")
+          TITLE = Styles.fetch("title")
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("pages/home")
+      mod = context.graph.mods.fetch(record.id)
+      css_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/home.css", nil))
+      asset = css_record.assets.fetch(0)
+
+      assert_match(/img/, mod.const_get(:Exports)::IMAGE)
+      assert_match(/title/, mod.const_get(:Exports)::TITLE)
+      assert_match(/img/, asset.metadata.fetch(:classes).fetch("img"))
+      assert_includes(asset.bytes, "width: 100%")
+    end
+  end
+
   def test_css_dependencies_replace_import_and_url_placeholders
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")

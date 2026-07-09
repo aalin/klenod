@@ -36,14 +36,14 @@ module Klenod
             end
 
           TransformResult.new(
-            ruby_module_source(result.classes, nil),
+            ruby_module_source(css_selectors(result), nil),
             dependencies,
             nil,
             [],
             [],
             {
               css_result: result,
-              css_classes: result.classes.transform_keys(&:to_s)
+              css_classes: css_selectors(result)
             }
           )
         end
@@ -99,6 +99,10 @@ module Klenod
             CSS_CLASSES = #{classes.inspect}.freeze
             CSS_ASSET_PATH = #{asset_path.inspect}
           RUBY
+        end
+
+        def css_selectors(result)
+          result.classes.merge(result.elements).transform_keys(&:to_s)
         end
 
         def asset_name(module_id)
