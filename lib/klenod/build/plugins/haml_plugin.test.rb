@@ -135,6 +135,19 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     RUBY
   end
 
+  def test_ruby_builder_builds_ruby_filters_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment =
+      builder.ruby_filters([
+        "#{builder.source_mark(2, "def title")}\ndef title\n  \"Hello\"\nend"
+      ])
+
+    assert_kind_of(SyntaxTree::Statements, fragment.node)
+    assert_includes(fragment.source, "# SourceMapMark:2:")
+    assert_includes(fragment.source, "begin\n")
+    assert_includes(fragment.source, "def title")
+  end
+
   def test_haml_records_companion_watched_patterns
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

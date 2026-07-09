@@ -164,7 +164,7 @@ module Klenod
             def ruby_filters(nodes)
               return "" if nodes.empty?
 
-              statements(nodes.map { |node| "begin\n#{indent(node, 2)}\nend" }.join("\n"))
+              ast_ruby_filters(nodes) || statements(nodes.map { |node| "begin\n#{indent(node, 2)}\nend" }.join("\n"))
             end
 
             def format(source)
@@ -214,18 +214,33 @@ module Klenod
               statements = parse_statements(source)
               return nil unless statements
 
-              node =
-                Begin(
-                  BodyStmt(
-                    Statements([*statements.body, VarRef(Kw("nil"))]),
-                    nil,
-                    nil,
-                    nil,
-                    nil
-                  )
-                )
+              node = ast_begin([*statements.body, VarRef(Kw("nil"))])
 
               Fragment.new(format_node(node), node)
+            end
+
+            def ast_ruby_filters(nodes)
+              begins =
+                nodes.map do |node|
+                  statements = parse_statements(node)
+                  return nil unless statements
+
+                  ast_begin(statements.body)
+                end
+
+              statements(format_node(Statements(begins)))
+            end
+
+            def ast_begin(statement_nodes)
+              Begin(
+                BodyStmt(
+                  Statements(statement_nodes),
+                  nil,
+                  nil,
+                  nil,
+                  nil
+                )
+              )
             end
 
             def ast_keyword_props(props)
