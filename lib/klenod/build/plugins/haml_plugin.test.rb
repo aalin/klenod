@@ -68,7 +68,13 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
     assert_kind_of(SyntaxTree::ARef, fragment.node)
-    assert_includes(fragment.source, "**{:class => \"intro\"}")
+    assert_includes(fragment.source, "# SourceMapMark:1:")
+    assert_includes(fragment.source, '**{:class => "intro"}')
+
+    unmarked = builder.expression('H[:p, **{:class => "intro"}]')
+
+    assert_kind_of(SyntaxTree::ARef, unmarked.node)
+    assert_equal('H[:p, **{ class: "intro" }]', unmarked.source)
   end
 
   def test_haml_records_companion_watched_patterns

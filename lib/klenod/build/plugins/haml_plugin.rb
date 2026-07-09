@@ -106,11 +106,21 @@ module Klenod
             end
 
             def expression(source)
-              Fragment.new(source, parse_expression(source))
+              node = parse_expression(source)
+              formatted_source =
+                if node && !source.include?(SourceMap::MARK_PREFIX)
+                  format_node(node)
+                else
+                  source
+                end
+
+              Fragment.new(formatted_source, node)
             end
 
             def statements(source)
-              Fragment.new(source, parse_statements(source))
+              node = parse_statements(source)
+
+              Fragment.new(node ? format(source) : source, node)
             end
 
             def to_source(value)
@@ -172,7 +182,11 @@ module Klenod
             end
 
             def parse_expression(source)
-              SyntaxTree.parse(source)&.statements&.body&.first
+              SyntaxTree
+                .parse(source)
+                &.statements
+                &.body
+                &.find { |node| !node.instance_of?(SyntaxTree::Comment) }
             rescue SyntaxTree::Parser::ParseError
               nil
             end
