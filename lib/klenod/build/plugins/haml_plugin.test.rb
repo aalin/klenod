@@ -870,6 +870,71 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_default_haml_transformer_rewrites_ruby_filter_errors_to_haml_lines
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          :ruby
+            def explode
+              raise "filter boom"
+            end
+
+          %main
+            = explode
+        HAML
+      )
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/page.haml")
+      mod = context.graph.mods.fetch(record.id)
+      exports = mod.const_get(:Exports)
+
+      error = assert_raises(RuntimeError) { exports::Default.new.render }
+      Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
+
+      assert_match(/\Apages\/page\.haml:3:in /, error.backtrace.fetch(0))
+    end
+  end
+
+  def test_default_haml_transformer_rewrites_nested_script_errors_to_haml_lines
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          :ruby
+            def initialize
+              @items = [1, 2]
+            end
+
+          %ul
+            = @items.map do |item|
+              %li= raise "nested boom" if item == 2
+        HAML
+      )
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/page.haml")
+      mod = context.graph.mods.fetch(record.id)
+      exports = mod.const_get(:Exports)
+
+      error = assert_raises(RuntimeError) { exports::Default.new.render }
+      Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
+
+      assert_match(/\Apages\/page\.haml:8:in /, error.backtrace.fetch(0))
+    end
+  end
+
   def test_haml_uses_custom_transformer_contract
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
