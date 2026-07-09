@@ -147,6 +147,10 @@ module Klenod
               expression(value.inspect)
             end
 
+            def frozen_literal(value)
+              fragment(frozen_literal_node(value))
+            end
+
             def symbol(value)
               expression(value.to_sym.inspect)
             end
@@ -340,6 +344,30 @@ module Klenod
                   props.map { |name, value| Assoc(Label("#{name}:"), expression_node(value)) }
                 )
               )
+            end
+
+            def frozen_literal_node(value)
+              case value
+              when Hash
+                freeze_node(
+                  HashLiteral(
+                    LBrace("{"),
+                    value.map { |key, child| Assoc(literal_node(key), frozen_literal_node(child)) }
+                  )
+                )
+              when Array
+                freeze_node(ArrayLiteral(LBracket("["), Args(value.map { |child| frozen_literal_node(child) })))
+              else
+                literal_node(value)
+              end
+            end
+
+            def literal_node(value)
+              expression_node(value.inspect)
+            end
+
+            def freeze_node(node)
+              CallNode(node, Period("."), Ident("freeze"), nil)
             end
 
             def keyword_props(props, mark:)
@@ -662,7 +690,8 @@ module Klenod
 
           companion_css = companion_path(module_id, ".css")
           dependencies = []
-          styles_source = "{}.freeze"
+          builder = DefaultTransformer::RubyBuilder.new
+          styles_source = builder.frozen_literal({}).source
 
           if context.absolute_path(companion_css).file?
             dependency =
@@ -675,9 +704,9 @@ module Klenod
                 )
                 .with(id: "#{module_id}:companion_style")
             dependencies << dependency
-            styles_source = "__klenod_import__(#{dependency.id.inspect})"
+            styles_source = builder.expression("__klenod_import__(#{dependency.id.inspect})").source
           end
-          translations_source = deep_freeze_source(translations_for(context, module_id))
+          translations_source = builder.frozen_literal(translations_for(context, module_id)).source
           component_class_name = component_class_name(module_id)
           haml_result =
             @transformer.call(
@@ -712,17 +741,6 @@ module Klenod
         def translations_for(context, module_id)
           intl_plugin = context.plugins.find { |plugin| plugin.respond_to?(:translations_for) }
           intl_plugin ? intl_plugin.translations_for(context, module_id) : {}
-        end
-
-        def deep_freeze_source(value)
-          case value
-          when Hash
-            "{#{value.map { |key, child| "#{key.inspect} => #{deep_freeze_source(child)}" }.join(", ")}}.freeze"
-          when Array
-            "[#{value.map { |child| deep_freeze_source(child) }.join(", ")}].freeze"
-          else
-            value.inspect
-          end
         end
 
         def component_class_name(module_id)

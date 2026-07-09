@@ -119,6 +119,25 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal(':"article-card"', symbol.source)
   end
 
+  def test_ruby_builder_builds_frozen_literals_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    literal =
+      builder.frozen_literal(
+        {
+          "en-US" => {
+            "title" => "Hello",
+            "items" => [1, 2]
+          }
+        }
+      )
+
+    assert_kind_of(SyntaxTree::CallNode, literal.node)
+    assert_includes(literal.source, '"en-US"')
+    assert_includes(literal.source, '"title" => "Hello"')
+    assert_includes(literal.source, "[1, 2].freeze")
+    assert_includes(literal.source, ".freeze")
+  end
+
   def test_ruby_builder_wraps_existing_syntax_tree_nodes_as_fragments
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     node = SyntaxTree.parse("title.upcase").statements.body.first
