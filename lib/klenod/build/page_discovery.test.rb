@@ -65,15 +65,20 @@ class Klenod::Build::PageDiscovery::Test < Minitest::Test
 
       assert_equal([:static, :dynamic], routes_by_path.fetch("/blog/:slug").segments.map(&:kind))
       assert_equal("slug", routes_by_path.fetch("/blog/:slug").segments.fetch(1).param_name)
+      assert_equal([Klenod::Build::RouteParam.new("slug", :dynamic)], routes_by_path.fetch("/blog/:slug").params)
       assert_equal("/docs/*parts", routes_by_path.fetch("/docs/*parts").path)
       assert_equal(:catch_all, routes_by_path.fetch("/docs/*parts").segments.fetch(1).kind)
+      assert_equal([Klenod::Build::RouteParam.new("parts", :catch_all)], routes_by_path.fetch("/docs/*parts").params)
       assert_equal("/shop", routes_by_path.fetch("/shop").path)
       assert_equal(:optional_catch_all, routes_by_path.fetch("/shop").segments.fetch(1).kind)
+      assert_equal([Klenod::Build::RouteParam.new("filters", :optional_catch_all)], routes_by_path.fetch("/shop").params)
       assert_equal("/about", routes_by_path.fetch("/about").path)
       assert_equal(:group, routes_by_path.fetch("/about").segments.fetch(0).kind)
+      assert_equal([], routes_by_path.fetch("/about").params)
       assert_equal("/dashboard/settings", routes_by_path.fetch("/dashboard/settings").path)
       assert_equal(:parallel, routes_by_path.fetch("/dashboard/settings").segments.fetch(1).kind)
       assert_equal("modal", routes_by_path.fetch("/dashboard/settings").segments.fetch(1).param_name)
+      assert_equal([], routes_by_path.fetch("/dashboard/settings").params)
     end
   end
 

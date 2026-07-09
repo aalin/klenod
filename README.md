@@ -92,6 +92,8 @@ Routes also expose parsed segments for future router layers. The discovery layer
 - `(marketing)` is preserved as a route group and does not add a URL path part.
 - `@modal` is preserved as a parallel route slot and does not add a URL path part.
 
+`PageRoute#params` returns structural parameter metadata for dynamic, catch-all, and optional catch-all segments. Request matching and parameter extraction are left to the router/framework layer.
+
 `PageRoute#layout_module_ids` lists discovered `layout.haml` files from outermost to nearest layout. This is structural only; Klenod does not load or compose layouts during discovery.
 
 ## Plugins

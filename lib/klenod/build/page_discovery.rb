@@ -26,7 +26,16 @@ module Klenod
       end
     end
 
-    PageRoute = Data.define(:path, :module_id, :segments, :layout_module_ids)
+    RouteParam = Data.define(:name, :kind)
+    PARAM_SEGMENT_KINDS = [:dynamic, :catch_all, :optional_catch_all].freeze
+
+    PageRoute = Data.define(:path, :module_id, :segments, :layout_module_ids) do
+      def params
+        segments
+          .select { |segment| segment.param_name && PARAM_SEGMENT_KINDS.include?(segment.kind) }
+          .map { |segment| RouteParam.new(segment.param_name, segment.kind) }
+      end
+    end
 
     class PageDiscovery
       PAGE_EXTENSIONS = [".rb", ".haml"].freeze
