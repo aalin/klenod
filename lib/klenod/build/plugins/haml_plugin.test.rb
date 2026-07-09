@@ -315,6 +315,15 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal("items.map { |item| H[:li, item] }", fragment.source)
   end
 
+  def test_ruby_builder_builds_script_block_skeleton_fragments
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment = builder.send(:script_block_skeleton, "items.map do |item|")
+
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
+    assert_includes(fragment.source, "items.map")
+  end
+
   def test_ruby_builder_preserves_source_map_marks_when_composing_script_blocks
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     body = builder.marked_expression(builder.source_mark(2, "item"), builder.expression("item"))
@@ -338,6 +347,15 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_includes(fragment.source, "H[:p]")
     assert_includes(fragment.source, "else")
     assert_includes(fragment.source, "H[:span]")
+  end
+
+  def test_ruby_builder_builds_branch_skeleton_fragments
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment = builder.send(:branch_skeleton_fragment, "if show\n  nil\nelse\n  nil\nend")
+
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(SyntaxTree::IfNode, fragment.node)
+    assert_includes(fragment.source, "show")
   end
 
   def test_ruby_builder_builds_case_branches_from_syntax_tree_nodes

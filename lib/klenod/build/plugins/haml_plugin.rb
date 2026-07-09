@@ -289,13 +289,13 @@ module Klenod
             def ast_script_block(source, body)
               return nil if body.respond_to?(:marked?) && body.marked?
 
-              skeleton = parse_expression("#{source}\n  nil\nend")
-              return nil unless skeleton.is_a?(SyntaxTree::MethodAddBlock)
+              skeleton = script_block_skeleton(source)
+              return nil unless skeleton
 
               body_node = expression_node(to_source(body))
               node =
-                skeleton.copy(
-                  block: skeleton.block.copy(
+                skeleton.node.copy(
+                  block: skeleton.node.block.copy(
                     bodystmt: BodyStmt(
                       Statements([body_node]),
                       nil,
@@ -312,12 +312,11 @@ module Klenod
             def ast_branches(branches)
               return nil if branches.any? { |_source, body| body.respond_to?(:marked?) && body.marked? }
 
-              skeleton_source, body_branches = branch_skeleton(branches)
-              skeleton = parse_expression(skeleton_source)
-              return nil unless skeleton.is_a?(SyntaxTree::IfNode) || skeleton.is_a?(SyntaxTree::Case)
+              skeleton, body_branches = branch_skeleton(branches)
+              return nil unless skeleton
 
               bodies = body_branches.map { |_source, body| expression_node(to_source(body)) }
-              node = replace_branch_bodies(skeleton, bodies)
+              node = replace_branch_bodies(skeleton.node, bodies)
               return nil unless bodies.empty?
 
               Fragment.new(format_node(node), node)
@@ -370,15 +369,29 @@ module Klenod
               first_source, first_body = branches.fetch(0)
               if first_source.match?(/\Acase\b/) && nil_fragment?(first_body)
                 [
-                  "#{first_source}\n#{branches.drop(1).map { |source, _body| "#{source}\n  nil" }.join("\n")}\nend",
+                  branch_skeleton_fragment("#{first_source}\n#{branches.drop(1).map { |source, _body| "#{source}\n  nil" }.join("\n")}\nend"),
                   branches.drop(1)
                 ]
               else
                 [
-                  "#{branches.map { |source, _body| "#{source}\n  nil" }.join("\n")}\nend",
+                  branch_skeleton_fragment("#{branches.map { |source, _body| "#{source}\n  nil" }.join("\n")}\nend"),
                   branches
                 ]
               end
+            end
+
+            def script_block_skeleton(source)
+              node = parse_expression("#{source}\n  nil\nend")
+              return nil unless node.is_a?(SyntaxTree::MethodAddBlock)
+
+              fragment(node)
+            end
+
+            def branch_skeleton_fragment(source)
+              node = parse_expression(source)
+              return nil unless node.is_a?(SyntaxTree::IfNode) || node.is_a?(SyntaxTree::Case)
+
+              fragment(node)
             end
 
             def ast_keyword_props(props)
