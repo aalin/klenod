@@ -154,7 +154,7 @@ module Klenod
             end
 
             def silent_script(source)
-              expression("begin\n#{indent(source, 2)}\n  nil\nend")
+              ast_silent_script(source) || expression("begin\n#{indent(source, 2)}\n  nil\nend")
             end
 
             def branches(branches)
@@ -206,6 +206,24 @@ module Klenod
               factory_node = parts.shift
 
               node = ARef(factory_node, Args(parts))
+
+              Fragment.new(format_node(node), node)
+            end
+
+            def ast_silent_script(source)
+              statements = parse_statements(source)
+              return nil unless statements
+
+              node =
+                Begin(
+                  BodyStmt(
+                    Statements([*statements.body, VarRef(Kw("nil"))]),
+                    nil,
+                    nil,
+                    nil,
+                    nil
+                  )
+                )
 
               Fragment.new(format_node(node), node)
             end

@@ -122,6 +122,19 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_includes(fragment.source, '"World"')
   end
 
+  def test_ruby_builder_builds_silent_scripts_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment = builder.silent_script("@visible = true")
+
+    assert_kind_of(SyntaxTree::Begin, fragment.node)
+    assert_equal(<<~RUBY.chomp, fragment.source)
+      begin
+        @visible = true
+        nil
+      end
+    RUBY
+  end
+
   def test_haml_records_companion_watched_patterns
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
