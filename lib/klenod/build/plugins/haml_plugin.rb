@@ -17,7 +17,7 @@ module Klenod
   module Build
     module Plugins
       class HamlPlugin < Plugin
-        HamlTransformResult = Data.define(:code, :source_map, :metadata)
+        HamlTransformResult = Data.define(:code, :source_map, :metadata, :ast)
 
         DEFAULT_COMPONENT_BASE_CLASS = "Object"
         DEFAULT_FACTORY = "Object"
@@ -508,8 +508,8 @@ module Klenod
             factory = ConstPath.parse(factory, name: "factory")
             builder = RubyBuilder.new
             template = compile_template(source, factory: factory, builder: builder)
-            code =
-              builder.component_source(
+            ast =
+              builder.component_program(
                 component_class_name: component_class_name,
                 component_base_class: component_base_class,
                 translations_source: translations_source,
@@ -517,11 +517,13 @@ module Klenod
                 render_source: template.render_source,
                 styles_source: styles_source
               )
+            code = ast.source
 
             HamlTransformResult.new(
               code,
               SourceMap::SourceMap.parse(source, code),
-              {source: source, module_id: module_id}
+              {source: source, module_id: module_id},
+              ast
             )
           end
 

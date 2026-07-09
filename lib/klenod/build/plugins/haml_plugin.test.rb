@@ -50,7 +50,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           Translations = Default::Translations
         RUBY
         :source_map,
-        {custom: true}
+        {custom: true},
+        nil
       )
     end
   end
@@ -175,7 +176,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal("(title.upcase)", fragment.source)
   end
 
-  def test_ruby_builder_component_source_formats_from_syntax_tree_program
+  def test_ruby_builder_component_program_formats_from_syntax_tree_program
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     program =
       builder.component_program(
@@ -186,20 +187,24 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         render_source: builder.expression('"Hello"'),
         styles_source: "{}.freeze"
       )
-    source =
-      builder.component_source(
-        component_class_name: "Page",
-        component_base_class: "Object",
-        translations_source: "{}.freeze",
-        ruby_source: "",
-        render_source: builder.expression('"Hello"'),
-        styles_source: "{}.freeze"
-      )
 
     assert_kind_of(SyntaxTree::Program, program.node)
-    assert_kind_of(SyntaxTree::Program, builder.program(source).node)
-    assert_includes(source, "class Page < Object")
-    assert_includes(source, "public def render")
+    assert_includes(program.source, "class Page < Object")
+    assert_includes(program.source, "public def render")
+  end
+
+  def test_ruby_builder_component_source_returns_component_program_source
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    kwargs = {
+      component_class_name: "Page",
+      component_base_class: "Object",
+      translations_source: "{}.freeze",
+      ruby_source: "",
+      render_source: builder.expression('"Hello"'),
+      styles_source: "{}.freeze"
+    }
+
+    assert_equal(builder.component_program(**kwargs).source, builder.component_source(**kwargs))
   end
 
   def test_ruby_builder_marked_expressions_preserve_wrapped_nodes
@@ -386,6 +391,24 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       assert_equal(exports::Default::Styles, exports::Styles)
       assert_equal(exports::Default::Translations, exports::Translations)
     end
+  end
+
+  def test_default_haml_transformer_result_exposes_component_program_ast
+    transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
+    result =
+      transformer.call(
+        source: "%h1 Hello\n",
+        module_id: ModuleId.new("pages/page.haml", nil),
+        component_class_name: "Page",
+        component_base_class: "Object",
+        factory: "#{self.class.name}::FakeFramework::H",
+        styles_source: "{}.freeze",
+        translations_source: "{}.freeze"
+      )
+
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, result.ast)
+    assert_kind_of(SyntaxTree::Program, result.ast.node)
+    assert_equal(result.code, result.ast.source)
   end
 
   def test_default_haml_transformer_renders_with_configured_factory
