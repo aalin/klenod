@@ -7,7 +7,7 @@ ENV["RUBOCOP_CACHE_ROOT"] ||= File.expand_path("tmp/rubocop_cache", __dir__)
 
 Minitest::TestTask.create do |test|
   test.libs << "lib"
-  test.test_globs = ["lib/**/*.test.rb"]
+  test.test_globs = ["lib/**/*.test.rb", "example/**/*.test.rb"]
 end
 
 require "standard/rake"
