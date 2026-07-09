@@ -26,7 +26,7 @@ module Klenod
       end
     end
 
-    PageRoute = Data.define(:path, :module_id, :segments)
+    PageRoute = Data.define(:path, :module_id, :segments, :layout_module_ids)
 
     class PageDiscovery
       PAGE_EXTENSIONS = [".rb", ".haml"].freeze
@@ -61,7 +61,12 @@ module Klenod
         end
 
         path = paths.fetch(0)
-        PageRoute.new(route_path, ModuleId.new(relative_path_for(path), nil), route_segments_for(path))
+        PageRoute.new(
+          route_path,
+          ModuleId.new(relative_path_for(path), nil),
+          route_segments_for(path),
+          layout_module_ids_for(path)
+        )
       end
 
       def route_segments_for(path)
@@ -76,6 +81,23 @@ module Klenod
         return "/" if path_parts.empty?
 
         "/#{path_parts.join("/")}"
+      end
+
+      def layout_module_ids_for(path)
+        page_root = source_dir.join(pages_dir)
+        relative_dir = path.dirname.relative_path_from(page_root).to_s
+        dirs =
+          if relative_dir == "."
+            [page_root]
+          else
+            parts = relative_dir.split("/")
+            [page_root] + parts.each_index.map { |index| page_root.join(*parts[0..index]) }
+          end
+
+        dirs.filter_map do |dir|
+          layout_path = dir.join("layout.haml")
+          ModuleId.new(relative_path_for(layout_path), nil) if layout_path.file?
+        end
       end
 
       def relative_path_for(path)

@@ -29,6 +29,8 @@ class Klenod::Build::PageDiscovery::Test < Minitest::Test
       )
       assert_equal([], routes.fetch(0).segments)
       assert_equal([[:blog, :static, nil, "blog"]], segment_values(routes.fetch(1)))
+      assert_equal([Klenod::Build::ModuleId.new("pages/layout.haml", nil)], routes.fetch(0).layout_module_ids)
+      assert_equal([Klenod::Build::ModuleId.new("pages/layout.haml", nil)], routes.fetch(1).layout_module_ids)
     end
   end
 
@@ -72,6 +74,43 @@ class Klenod::Build::PageDiscovery::Test < Minitest::Test
       assert_equal("/dashboard/settings", routes_by_path.fetch("/dashboard/settings").path)
       assert_equal(:parallel, routes_by_path.fetch("/dashboard/settings").segments.fetch(1).kind)
       assert_equal("modal", routes_by_path.fetch("/dashboard/settings").segments.fetch(1).param_name)
+    end
+  end
+
+  def test_discovers_layout_ancestry_without_loading_layout_modules
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/blog/post")
+      FileUtils.mkdir_p("#{dir}/pages/docs")
+      File.write("#{dir}/pages/layout.haml", "")
+      File.write("#{dir}/pages/blog/layout.haml", "")
+      File.write("#{dir}/pages/blog/post/page.haml", "")
+      File.write("#{dir}/pages/docs/page.haml", "")
+
+      routes = Klenod::Build::PageDiscovery.new(source_dir: dir).call
+      routes_by_path = routes.to_h { |route| [route.path, route] }
+
+      assert_equal(
+        [
+          Klenod::Build::ModuleId.new("pages/layout.haml", nil),
+          Klenod::Build::ModuleId.new("pages/blog/layout.haml", nil)
+        ],
+        routes_by_path.fetch("/blog/post").layout_module_ids
+      )
+      assert_equal(
+        [Klenod::Build::ModuleId.new("pages/layout.haml", nil)],
+        routes_by_path.fetch("/docs").layout_module_ids
+      )
+    end
+  end
+
+  def test_route_without_layout_has_empty_layout_module_ids
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/about")
+      File.write("#{dir}/pages/about/page.haml", "")
+
+      route = Klenod::Build::PageDiscovery.new(source_dir: dir).call.fetch(0)
+
+      assert_equal([], route.layout_module_ids)
     end
   end
 

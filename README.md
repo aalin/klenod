@@ -92,6 +92,8 @@ Routes also expose parsed segments for future router layers. The discovery layer
 - `(marketing)` is preserved as a route group and does not add a URL path part.
 - `@modal` is preserved as a parallel route slot and does not add a URL path part.
 
+`PageRoute#layout_module_ids` lists discovered `layout.haml` files from outermost to nearest layout. This is structural only; Klenod does not load or compose layouts during discovery.
+
 ## Plugins
 
 The default build context includes plugins for Ruby, intl TOML files, Haml adapter output, CSS, and images. Plugins can:
