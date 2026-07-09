@@ -1,0 +1,10 @@
+:ruby
+  Card = import("../components/Card.haml")
+
+  def initialize(image:)
+    @image = image
+  end
+
+%main.shell
+  %h1= Translations.fetch("en-US").fetch("title")
+  %Card{ image: @image }

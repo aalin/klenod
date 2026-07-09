@@ -1,0 +1,9 @@
+:ruby
+  def initialize(image:, children: nil)
+    @image = image
+    @children = children
+  end
+
+%figure.card
+  %img.logo{ src: @image.src, alt: "Fixture logo" }
+  %figcaption= Translations.fetch("en-US").fetch("caption")

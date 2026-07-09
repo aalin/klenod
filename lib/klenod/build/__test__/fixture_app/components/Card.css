@@ -1,0 +1,11 @@
+figure {
+  margin: 0;
+}
+
+.card {
+  border: 1px solid currentColor;
+}
+
+.logo {
+  display: block;
+}

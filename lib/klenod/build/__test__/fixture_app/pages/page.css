@@ -1,0 +1,10 @@
+@import "../styles/base.css";
+
+main {
+  color: red;
+}
+
+.shell {
+  background-image: url("../images/logo.png");
+  padding: 1rem;
+}

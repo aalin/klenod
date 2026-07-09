@@ -8,6 +8,8 @@ require_relative "../runtime"
 require_relative "context"
 
 class Klenod::Build::Context::Test < Minitest::Test
+  FIXTURE_APP_DIR = File.expand_path("__test__/fixture_app", __dir__)
+
   module TestFramework
     class Component
     end
@@ -15,6 +17,8 @@ class Klenod::Build::Context::Test < Minitest::Test
     module H
       def self.[](tag, *children, **props)
         props = props.compact
+        return tag.new(**props, children: children).render if tag.respond_to?(:new)
+
         props.empty? ? [tag, *children] : [tag, *children, props]
       end
     end
@@ -110,6 +114,48 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_match(/hero/, image_props.fetch(:class))
       assert_equal(css_asset_paths, loaded.assets_for("pages/page.css").map(&:output_path))
       assert_equal(image_src, loaded.assets_for("images/logo.png").fetch(0).output_path)
+      loaded.each_asset do |asset|
+        disk_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))
+
+        assert(File.exist?(disk_path), "Expected #{disk_path} to exist")
+      end
+    end
+  end
+
+  def test_fixture_app_covers_css_haml_assets_and_intl_files
+    Dir.mktmpdir do |dir|
+      output = "#{dir}/klenod.bundle"
+      assets_dir = "#{dir}/public"
+      plugins = default_plugins_with(
+        Klenod::Build::Plugins::HamlPlugin.new(
+          component_base_class: "#{self.class.name}::TestFramework::Component",
+          factory: "#{self.class.name}::TestFramework::H"
+        )
+      )
+
+      context = Klenod::Build::Context.new(source_dir: FIXTURE_APP_DIR, plugins: plugins)
+      bundle = context.build(entrypoints: ["entry"], output: output, assets_dir: assets_dir)
+      loaded = Klenod::Runtime.load_bundle(output)
+      rendered, page_css_paths, card_css_paths, image_paths = loaded.load("entry").const_get(:Exports).render(loaded)
+      heading = rendered.fetch(1)
+      card = rendered.fetch(2)
+      page_props = rendered.fetch(3)
+      image = card.fetch(1)
+      caption = card.fetch(2)
+      card_props = card.fetch(3)
+
+      assert_equal([:h1, "Fixture page"], heading)
+      assert_equal([:figcaption, "Fixture caption"], caption)
+      assert_match(/shell/, page_props.fetch(:class))
+      assert_match(/main/, page_props.fetch(:class))
+      assert_match(/card/, card_props.fetch(:class))
+      assert_match(/figure/, card_props.fetch(:class))
+      assert_match(/logo/, image.fetch(1).fetch(:class))
+      assert_equal(bundle.assets.keys.sort, loaded.assets.keys.sort)
+      assert_equal(page_css_paths, loaded.assets_for("pages/page.css").map(&:output_path))
+      assert_equal(card_css_paths, loaded.assets_for("components/Card.css").map(&:output_path))
+      assert_equal(image_paths, loaded.assets_for("images/logo.png").map(&:output_path))
+      assert_equal(1, loaded.assets_for("styles/base.css").length)
       loaded.each_asset do |asset|
         disk_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))
 

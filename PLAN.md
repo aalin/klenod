@@ -98,7 +98,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 
 - [x] Use co-located `*.test.rb` files.
 - [x] Use `__test__/` directories next to test files for fixtures when needed.
-- [ ] Add fixture-heavy examples for CSS, Haml, assets, and intl files.
+- [x] Add fixture-heavy examples for CSS, Haml, assets, and intl files.
 - [x] Add integration tests for build bundle round trips.
 - [x] Add watch-mode tests for added and removed files.
 - [x] Keep `example/` runnable as a smoke test for major features.
