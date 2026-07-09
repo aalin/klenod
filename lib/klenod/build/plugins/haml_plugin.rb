@@ -167,7 +167,7 @@ module Klenod
             end
 
             def symbol(value)
-              expression(value.to_sym.inspect)
+              fragment(symbol_node(value.to_s))
             end
 
             def parenthesized_expression(source)
@@ -184,15 +184,13 @@ module Klenod
             def marked_expression(mark, expression)
               source = to_source(expression)
 
-              Fragment.new("#{mark}\n#{source}", expression.is_a?(Fragment) ? expression.node : parse_expression(source))
+              source_marked_fragment(mark, source, expression.is_a?(Fragment) ? expression.node : parse_expression(source))
             end
 
             def factory_call(factory:, tag:, children:, props:, mark: nil)
               return ast_factory_call(factory: factory, tag: tag, children: children, props: props) unless marked?(children)
 
-              arguments = [tag, *children.map { |child| to_source(child) }, keyword_props(props, mark: mark)].compact.join(",\n")
-
-              expression("#{factory}[\n#{indent(arguments, 2)}\n]")
+              source_factory_call(factory: factory, tag: tag, children: children, props: props, mark: mark)
             end
 
             def script_block(source, body)
@@ -409,10 +407,28 @@ module Klenod
               VarRef(Kw("nil"))
             end
 
+            def symbol_node(value)
+              if value.match?(/\A[a-zA-Z_]\w*[!?=]?\z/)
+                SymbolLiteral(Ident(value))
+              else
+                DynaSymbol([TStringContent(value)], ":\"")
+              end
+            end
+
             def keyword_props(props, mark:)
               return nil if props.empty?
 
               "#{mark},\n**{#{props.map { |name, value| "#{name.inspect} => #{to_source(value)}" }.join(", ")}}"
+            end
+
+            def source_marked_fragment(mark, source, node)
+              Fragment.new("#{mark}\n#{source}", node)
+            end
+
+            def source_factory_call(factory:, tag:, children:, props:, mark:)
+              arguments = [tag, *children.map { |child| to_source(child) }, keyword_props(props, mark: mark)].compact.join(",\n")
+
+              expression("#{factory}[\n#{indent(arguments, 2)}\n]")
             end
 
             def marked?(values)

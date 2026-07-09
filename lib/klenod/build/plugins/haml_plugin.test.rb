@@ -114,7 +114,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     escaped_literal = builder.literal("\#{title}")
     integer = builder.literal(123)
     truthy = builder.literal(true)
-    symbol = builder.symbol("article-card")
+    symbol = builder.symbol("p")
+    dashed_symbol = builder.symbol("article-card")
 
     assert_kind_of(SyntaxTree::StringLiteral, literal.node)
     assert_equal('"Hello"', literal.source)
@@ -124,8 +125,10 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal("123", integer.source)
     assert_kind_of(SyntaxTree::VarRef, truthy.node)
     assert_equal("true", truthy.source)
-    assert_kind_of(SyntaxTree::DynaSymbol, symbol.node)
-    assert_equal(':"article-card"', symbol.source)
+    assert_kind_of(SyntaxTree::SymbolLiteral, symbol.node)
+    assert_equal(":p", symbol.source)
+    assert_kind_of(SyntaxTree::DynaSymbol, dashed_symbol.node)
+    assert_equal(':"article-card"', dashed_symbol.source)
   end
 
   def test_ruby_builder_builds_frozen_literals_from_syntax_tree_nodes
