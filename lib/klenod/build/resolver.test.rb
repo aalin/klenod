@@ -30,9 +30,14 @@ class Klenod::Build::Resolver::Test < Minitest::Test
         resolver.resolve(
           Dependency.create(specifier: "shared", importer_id: importer, kind: :ruby_import)
         )
+      explicit_root =
+        resolver.resolve(
+          Dependency.create(specifier: "/shared", importer_id: importer, kind: :ruby_import)
+        )
 
       assert_equal("shared.rb", relative.module_id.path)
       assert_equal("shared.rb", absolute.module_id.path)
+      assert_equal("shared.rb", explicit_root.module_id.path)
     end
   end
 
@@ -76,6 +81,12 @@ class Klenod::Build::Resolver::Test < Minitest::Test
       assert_raises(Klenod::Build::ResolveError) do
         resolver.resolve(
           Dependency.create(specifier: "../outside", importer_id: ModuleId.new("page.rb", nil), kind: :ruby_import)
+        )
+      end
+
+      assert_raises(Klenod::Build::ResolveError) do
+        resolver.resolve(
+          Dependency.create(specifier: "/../outside", importer_id: ModuleId.new("page.rb", nil), kind: :ruby_import)
         )
       end
     end

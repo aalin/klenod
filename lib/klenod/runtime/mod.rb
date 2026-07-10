@@ -73,7 +73,7 @@ module Klenod
         end
       end
 
-      attr_reader :path, :source, :source_map, :version, :constant_name
+      attr_reader :path, :source, :source_map, :version, :constant_name, :eval_path
 
       def self.constant_name_for(path)
         "Mod_#{Digest::SHA256.hexdigest(path)[0, 24]}"
@@ -83,23 +83,25 @@ module Klenod
         "Mod(#{path.inspect})"
       end
 
-      def initialize(path, source, imports: {}, source_map: nil, version: 0, constant_name: nil)
+      def initialize(path, source, imports: {}, source_map: nil, version: 0, constant_name: nil, eval_path: nil)
         @path = path
         @source = source
         @imports = imports
         @source_map = source_map
         @version = version
         @constant_name = constant_name || self.class.constant_name_for(path)
+        @eval_path = eval_path || path
         register_constant
         create_exports
       end
 
       def marshal_dump
-        [@path, @source, @source_map, @version, @constant_name]
+        [@path, @source, @source_map, @version, @constant_name, @eval_path]
       end
 
       def marshal_load(data)
-        @path, @source, @source_map, @version, @constant_name = data
+        @path, @source, @source_map, @version, @constant_name, @eval_path = data
+        @eval_path ||= @path
         @imports = {}
         register_constant
         create_exports
@@ -120,7 +122,7 @@ module Klenod
         remove_const(:Exports) if const_defined?(:Exports, false)
 
         exports = Exports.new(self, @imports)
-        exports.module_eval(@source, @path, 1)
+        exports.module_eval(@source, @eval_path, 1)
         const_set(:Exports, exports)
       end
     end

@@ -37,9 +37,50 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     copy = Marshal.load(Marshal.dump(mod))
 
     assert_equal("entry.rb", copy.path)
+    assert_equal("entry.rb", copy.eval_path)
     assert_equal(3, copy.version)
     assert_equal(mod.constant_name, copy.constant_name)
     assert_equal(1, copy.const_get(:Exports)::VALUE)
+  end
+
+  def test_mod_uses_eval_path_for_file_constant
+    mod =
+      Klenod::Runtime::Mod.new(
+        "entry.rb",
+        "FILE_PATH = __FILE__",
+        eval_path: "/app/src/entry.rb"
+      )
+
+    assert_equal("/app/src/entry.rb", mod.eval_path)
+    assert_equal("/app/src/entry.rb", mod.const_get(:Exports)::FILE_PATH)
+  end
+
+  def test_bundle_rebases_eval_paths_after_marshal_load
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"entry" => "pages/page.rb"},
+        {
+          "pages/page.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "pages/page.rb",
+              "pages/page.rb",
+              "FILE_PATH = __FILE__",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("pages/page.rb")
+            )
+        },
+        {},
+        source_root: "/build/src"
+      )
+
+    copy = Marshal.load(Marshal.dump(bundle))
+    assert_equal("/build/src/pages/page.rb", copy.load("entry").const_get(:Exports)::FILE_PATH)
+
+    copy.source_root = "/app/src"
+
+    assert_equal("/app/src/pages/page.rb", copy.load("entry").const_get(:Exports)::FILE_PATH)
   end
 
   def test_bundle_load_instantiates_imported_modules
@@ -50,6 +91,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
           "dep.rb" =>
             Klenod::Runtime::ModuleSpec.new(
               "dep.rb",
+              "dep.rb",
               "VALUE = 41",
               {},
               nil,
@@ -58,6 +100,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
             ),
           "entry.rb" =>
             Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
               "entry.rb",
               "Dep = __klenod_import__(\"dep\")\nVALUE = Dep::VALUE + 1",
               {"dep" => "dep.rb"},
@@ -84,6 +127,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
           "dep.rb" =>
             Klenod::Runtime::ModuleSpec.new(
               "dep.rb",
+              "dep.rb",
               "VALUE = 41",
               {},
               nil,
@@ -92,6 +136,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
             ),
           "entry.rb" =>
             Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
               "entry.rb",
               "Dep = __klenod_lazy_import__(\"dep\")\ndef self.value = Dep.call::VALUE + 1",
               {"dep" => Klenod::Runtime::ImportSpec.new("dep.rb", nil, false)},
@@ -162,6 +207,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
           "entry.rb" =>
             Klenod::Runtime::ModuleSpec.new(
               "entry.rb",
+              "entry.rb",
               "",
               {"component" => Klenod::Runtime::ImportSpec.new("components/card.rb", nil, true)},
               nil,
@@ -171,6 +217,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
           "components/card.rb" =>
             Klenod::Runtime::ModuleSpec.new(
               "components/card.rb",
+              "components/card.rb",
               "",
               {"styles" => Klenod::Runtime::ImportSpec.new("styles/card.css", {title: "title_hash"}, true)},
               nil,
@@ -179,6 +226,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
             ),
           "styles/card.css" =>
             Klenod::Runtime::ModuleSpec.new(
+              "styles/card.css",
               "styles/card.css",
               "",
               {},

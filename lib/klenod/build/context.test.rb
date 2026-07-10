@@ -92,6 +92,23 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_build_bundle_can_rebase_file_paths_when_loaded
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.rb", "FILE_PATH = __FILE__\n")
+
+      output = "#{dir}/dist/klenod.bundle"
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.build(entrypoints: ["pages/page"], output: output)
+
+      build_bundle = Klenod::Runtime.load_bundle(output)
+      relocated_bundle = Klenod::Runtime.load_bundle(output, source_root: "/app/src")
+
+      assert_equal("#{dir}/pages/page.rb", build_bundle.exports("pages/page")::FILE_PATH)
+      assert_equal("/app/src/pages/page.rb", relocated_bundle.exports("pages/page")::FILE_PATH)
+    end
+  end
+
   def test_unsupported_non_ruby_file_reports_missing_transform_plugin
     Dir.mktmpdir do |dir|
       File.write("#{dir}/entry.rb", "Config = import(\"config.yaml\")\n")

@@ -36,8 +36,8 @@ module Klenod
       end
 
     def initialize(mods)
-      @source_map_cache =
-        Hash.new { |h, path| h[path] = mods[path]&.source_map }
+      @source_maps = source_maps_for(mods)
+      @source_map_cache = Hash.new { |h, path| h[path] = @source_maps[path] }
     end
 
     def format_exception(e, source_path: nil)
@@ -84,6 +84,19 @@ module Klenod
     end
 
     private
+
+    def source_maps_for(mods)
+      mods.each_with_object({}) do |(key, mod), index|
+        next unless mod.respond_to?(:source_map)
+
+        source_map = mod.source_map
+        next unless source_map
+
+        index[key.to_s] = source_map
+        index[mod.path.to_s] = source_map if mod.respond_to?(:path)
+        index[mod.eval_path.to_s] = source_map if mod.respond_to?(:eval_path)
+      end
+    end
 
     def rewrite_backtrace_entry(entry)
       if (original_line_no = find_original_line_no(entry.file, entry.line))

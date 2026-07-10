@@ -3,7 +3,7 @@
 module Klenod
   module Runtime
     ModuleSpec =
-      Data.define(:id, :source, :imports, :source_map, :version, :constant_name)
+      Data.define(:id, :source_path, :source, :imports, :source_map, :version, :constant_name)
 
     ImportSpec = Data.define(:target_id, :value, :eager)
     DefaultImport = Data.define(:name)
@@ -12,16 +12,19 @@ module Klenod
       Data.define(:logical_name, :content_hash, :output_path, :content_type, :metadata)
 
     class Bundle
-      attr_reader :entrypoints, :modules, :assets
+      attr_reader :entrypoints, :modules, :assets, :source_root
 
-      def self.load_file(path)
-        Marshal.load(File.binread(path))
+      def self.load_file(path, source_root: nil)
+        bundle = Marshal.load(File.binread(path))
+        bundle.source_root = source_root if source_root
+        bundle
       end
 
-      def initialize(entrypoints, modules, assets)
+      def initialize(entrypoints, modules, assets, source_root: nil)
         @entrypoints = entrypoints
         @modules = modules
         @assets = assets
+        @source_root = source_root
         @mods = {}
       end
 
@@ -69,12 +72,17 @@ module Klenod
         @assets.each_value(&block)
       end
 
+      def source_root=(source_root)
+        @source_root = source_root&.to_s
+        @mods = {}
+      end
+
       def marshal_dump
-        [@entrypoints, @modules, @assets]
+        [@entrypoints, @modules, @assets, @source_root]
       end
 
       def marshal_load(data)
-        @entrypoints, @modules, @assets = data
+        @entrypoints, @modules, @assets, @source_root = data
         @mods = {}
       end
 
@@ -84,7 +92,22 @@ module Klenod
         id = module_ref.respond_to?(:path) ? module_ref.path : module_ref.to_s
         return id if @modules.key?(id)
 
+        if (relative_id = module_id_for_absolute_ref(id))
+          return relative_id
+        end
+
         raise KeyError, "No module in bundle for #{module_ref.inspect}"
+      end
+
+      def module_id_for_absolute_ref(id)
+        return nil unless source_root
+
+        root = File.expand_path(source_root)
+        path = File.expand_path(id)
+        return nil unless path.start_with?("#{root}/")
+
+        relative = path.delete_prefix("#{root}/")
+        relative if @modules.key?(relative)
       end
 
       def reachable_module_ids(module_ref)
@@ -153,8 +176,15 @@ module Klenod
             imports: imports,
             source_map: spec.source_map,
             version: spec.version,
-            constant_name: spec.constant_name
+            constant_name: spec.constant_name,
+            eval_path: eval_path_for(spec)
           )
+      end
+
+      def eval_path_for(spec)
+        return spec.source_path unless source_root
+
+        File.join(source_root, spec.source_path)
       end
 
       def resolve_import_value(import_spec)

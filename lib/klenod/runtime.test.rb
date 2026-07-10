@@ -56,6 +56,7 @@ class Klenod::RuntimeBoundaryTest
           {
             "entry.rb" => Klenod::Runtime::ModuleSpec.new(
               "entry.rb",
+              "entry.rb",
               "VALUE = 1",
               {},
               nil,

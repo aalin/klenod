@@ -63,7 +63,12 @@ module Klenod
           end
         load_all_runtime_dependencies
 
-        Runtime::Bundle.new(loaded_entrypoints, runtime_module_specs, runtime_asset_specs)
+        Runtime::Bundle.new(
+          loaded_entrypoints,
+          runtime_module_specs,
+          runtime_asset_specs,
+          source_root: source_dir.to_s
+        )
       end
 
       def assets
@@ -251,9 +256,20 @@ module Klenod
         when ModuleId
           record_or_module_id
         else
-          @records.each_key.find { |module_id| module_id.to_s == record_or_module_id.to_s } ||
+          ref = record_or_module_id.to_s
+          @records.each_key.find { |module_id| module_id.to_s == ref } ||
+            module_id_for_absolute_ref(ref) ||
             raise(KeyError, "No module loaded for #{record_or_module_id.inspect}")
         end
+      end
+
+      def module_id_for_absolute_ref(ref)
+        absolute_path = Pathname.new(ref).expand_path
+        relative = absolute_path.relative_path_from(source_dir).to_s
+
+        @records.each_key.find { |module_id| module_id.path == relative }
+      rescue ArgumentError
+        nil
       end
 
       def reachable_module_ids(record_or_module_id)
@@ -343,7 +359,8 @@ module Klenod
           transform.code,
           imports: imports_for(resolved_dependencies, dependency_records),
           source_map: transform.source_map,
-          version: cached ? cached.version + 1 : 0
+          version: cached ? cached.version + 1 : 0,
+          eval_path: source_dir.join(module_id.path).to_s
         )
       end
 
@@ -511,6 +528,7 @@ module Klenod
             module_id.to_s,
             Runtime::ModuleSpec.new(
               module_id.to_s,
+              module_id.path,
               record.transformed_source,
               imports,
               record.source_map,

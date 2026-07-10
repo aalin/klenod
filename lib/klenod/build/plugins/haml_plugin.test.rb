@@ -1217,7 +1217,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       error = assert_raises(RuntimeError) { exports::Default.new.render }
       Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
 
-      assert_match(/\Apages\/page\.haml:3:in /, error.backtrace.fetch(0))
+      assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:3:in /, error.backtrace.fetch(0))
     end
   end
 
@@ -1249,7 +1249,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       error = assert_raises(RuntimeError) { exports::Default.new.render }
       Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
 
-      assert_match(/\Apages\/page\.haml:3:in /, error.backtrace.fetch(0))
+      assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:3:in /, error.backtrace.fetch(0))
     end
   end
 
@@ -1282,7 +1282,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       error = assert_raises(RuntimeError) { exports::Default.new.render }
       Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
 
-      assert_match(/\Apages\/page\.haml:8:in /, error.backtrace.fetch(0))
+      assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:8:in /, error.backtrace.fetch(0))
     end
   end
 
@@ -1309,7 +1309,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       error = assert_raises(RuntimeError) { exports::Default.new.render }
       Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
 
-      assert_match(/\Apages\/page\.haml:1:in /, error.backtrace.fetch(0))
+      assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:1:in /, error.backtrace.fetch(0))
     end
   end
 
@@ -1341,7 +1341,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       error = assert_raises(RuntimeError) { exports::Default.new.render }
       Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
 
-      assert_match(/\Apages\/page\.haml:3:in /, error.backtrace.fetch(0))
+      assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:3:in /, error.backtrace.fetch(0))
     end
   end
 
@@ -1391,7 +1391,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         )
         .rewrite_exception(error)
 
-      assert_match(/\Acomponents\/details\.haml:7:in /, error.backtrace.fetch(0))
+      assert_match(/\A#{Regexp.escape("#{dir}/components/details.haml")}:7:in /, error.backtrace.fetch(0))
     end
   end
 

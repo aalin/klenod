@@ -19,7 +19,9 @@ module Klenod
       def resolve(dependency)
         specifier, query = dependency.specifier.split("?", 2)
         base_path =
-          if specifier.start_with?(".")
+          if specifier.start_with?("/")
+            @source_dir.join(specifier.delete_prefix("/")).cleanpath
+          elsif specifier.start_with?(".")
             importer_dir = dependency.importer_id&.dirname || "."
             @source_dir.join(importer_dir, specifier).cleanpath
           else
