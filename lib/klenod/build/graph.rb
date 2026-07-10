@@ -555,7 +555,7 @@ module Klenod
       end
 
       def runtime_import_spec(resolved_dependency, record)
-        value = plugin_import_value(resolved_dependency, record)
+        value = plugin_runtime_import_value(resolved_dependency, record)
 
         Runtime::ImportSpec.new(record.id.to_s, value, resolved_dependency.dependency.eager)
       end
@@ -609,6 +609,15 @@ module Klenod
       def plugin_import_value(resolved_dependency, record)
         @plugins.each do |plugin|
           value = plugin.import_value(resolved_dependency, record, self)
+          return value unless value.nil?
+        end
+
+        nil
+      end
+
+      def plugin_runtime_import_value(resolved_dependency, record)
+        @plugins.each do |plugin|
+          value = plugin.runtime_import_value(resolved_dependency, record, self)
           return value unless value.nil?
         end
 

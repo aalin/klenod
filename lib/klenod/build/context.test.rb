@@ -594,6 +594,85 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_runtime_only_process_loads_bundle_with_haml_component_imports
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/components")
+      File.write(
+        "#{dir}/components/card.haml",
+        <<~HAML
+          :ruby
+            def initialize(title:, children: nil)
+              @title = title
+              @children = children
+            end
+
+          %article
+            %h2= @title
+            = @children
+        HAML
+      )
+      File.write(
+        "#{dir}/page.haml",
+        <<~HAML
+          :ruby
+            Card = import("components/card.haml")
+
+          %Card{ title: "Runtime card" }
+            %p Loaded without build plugins
+        HAML
+      )
+      output = "#{dir}/bundle.mpk"
+      plugins = default_plugins_with(
+        Klenod::Build::Plugins::HamlPlugin.new(
+          component_base_class: "Object",
+          factory: "RuntimeTestH"
+        )
+      )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: plugins)
+      bundle = context.build(entrypoints: ["page.haml"], output: output)
+      page_imports = bundle.modules.fetch("page.haml").imports
+
+      assert_equal(Klenod::Runtime::DefaultImport.new(:Default), page_imports.fetch("page.haml:dependency:0").value)
+
+      script = <<~RUBY
+        require "klenod/runtime"
+
+        forbidden = {
+          "Klenod::Build" => defined?(Klenod::Build),
+          "SyntaxTree" => defined?(SyntaxTree),
+          "Mayu::CSS" => defined?(Mayu::CSS)
+        }.compact
+        abort "loaded build-only constants: \#{forbidden.inspect}" unless forbidden.empty?
+
+        module RuntimeTestH
+          def self.[](tag, *children, **props)
+            props = props.compact
+            return tag.new(**props, children: children).render if tag.respond_to?(:new)
+
+            props.empty? ? [tag, *children] : [tag, *children, props]
+          end
+        end
+
+        bundle = Klenod::Runtime.load_bundle(#{output.inspect})
+        rendered = bundle.exports("page.haml")::Default.new.render
+
+        abort "bad card tag" unless rendered.fetch(0) == :article
+        abort "bad title" unless rendered.fetch(1) == [:h2, "Runtime card"]
+        abort "bad child" unless rendered.fetch(2) == [[:p, "Loaded without build plugins"]]
+      RUBY
+
+      stdout, stderr, status =
+        Open3.capture3(
+          RbConfig.ruby,
+          "-I#{File.expand_path("../..", __dir__)}",
+          "-e",
+          script
+        )
+
+      assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
+    end
+  end
+
   def test_fixture_app_covers_css_haml_assets_and_intl_files
     Dir.mktmpdir do |dir|
       output = "#{dir}/klenod.bundle"

@@ -1149,6 +1149,12 @@ module Klenod
           context.mods.fetch(record.id).const_get(:Exports)::Default
         end
 
+        def runtime_import_value(_resolved_dependency, record, _context)
+          return Runtime::DefaultImport.new(:Default) if record.id.extname == ".haml"
+
+          super
+        end
+
         private
 
         def translations_for(context, module_id)

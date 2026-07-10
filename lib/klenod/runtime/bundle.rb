@@ -6,6 +6,7 @@ module Klenod
       Data.define(:id, :source, :imports, :source_map, :version, :constant_name)
 
     ImportSpec = Data.define(:target_id, :value, :eager)
+    DefaultImport = Data.define(:name)
 
     AssetSpec =
       Data.define(:logical_name, :content_hash, :output_path, :content_type, :metadata)
@@ -138,9 +139,9 @@ module Klenod
 
             value =
               if import_spec.eager
-                import_spec.value || instantiate(import_spec.target_id).const_get(:Exports)
+                resolve_import_value(import_spec)
               else
-                LazyImport.new { import_spec.value || instantiate(import_spec.target_id).const_get(:Exports) }
+                LazyImport.new { resolve_import_value(import_spec) }
               end
             [dependency_id, value]
           end
@@ -154,6 +155,17 @@ module Klenod
             version: spec.version,
             constant_name: spec.constant_name
           )
+      end
+
+      def resolve_import_value(import_spec)
+        exports = instantiate(import_spec.target_id).const_get(:Exports)
+
+        case import_spec.value
+        when DefaultImport
+          exports.const_get(import_spec.value.name)
+        else
+          import_spec.value || exports
+        end
       end
     end
   end

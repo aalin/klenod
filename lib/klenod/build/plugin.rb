@@ -23,6 +23,10 @@ module Klenod
         nil
       end
 
+      def runtime_import_value(resolved_dependency, record, context)
+        import_value(resolved_dependency, record, context)
+      end
+
       def emit_assets(_record, _context)
         []
       end
