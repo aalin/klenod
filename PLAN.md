@@ -86,10 +86,10 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 
 ## Dev Server And Runtime
 
-- [ ] Add optional Rack integration for serving emitted assets:
-  - [ ] Provide a small Rack endpoint/middleware that serves `context.asset(path).bytes`.
-  - [ ] Support runtime bundles by serving files already written under an assets directory.
-  - [ ] Keep framework-specific HTTP/server behavior outside core build/runtime.
+- [x] Add optional Rack integration for serving emitted assets:
+  - [x] Provide a small Rack endpoint/middleware that serves `context.asset(path).bytes`.
+  - [x] Support runtime bundles by serving files already written under an assets directory.
+  - [x] Keep framework-specific HTTP/server behavior outside core build/runtime.
 - [x] Add a stable event payload for hot reload consumers.
 - [x] Add runtime API for reading bundle assets.
 - [x] Add runtime-only boundary tests to ensure runtime does not require build or plugin dependencies.

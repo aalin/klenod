@@ -17,6 +17,7 @@ context = config.context
 entry = context.entry(entrypoint)
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
 context.write_assets(assets_dir) if assets_dir
+asset_app = Klenod::HTTP::AssetApp.new(context, assets_dir: assets_dir)
 
 context.on_update do |event|
   update = context.apply_update(event, entry: entry, assets_dir: assets_dir)
@@ -63,23 +64,12 @@ begin
   Async do
     server =
       Async::HTTP::Server.for(endpoint) do |request|
-        if request.path.start_with?("/assets/")
-          asset = context.asset(request.path)
-          Protocol::HTTP::Response[
-            200,
-            {"content-type" => asset.content_type},
-            [context.asset_bytes(request.path, assets_dir: assets_dir)]
-          ]
+        if (asset_response = asset_app.response_for(request.path))
+          asset_response.protocol_response
         else
           status, headers, body = entry.call(request, context)
           Protocol::HTTP::Response[status, headers, body]
         end
-      rescue KeyError
-        Protocol::HTTP::Response[
-          404,
-          {"content-type" => "text/plain"},
-          ["Asset not found\n"]
-        ]
       rescue => e
         formatted = format_exception(e, context)
         warn formatted
