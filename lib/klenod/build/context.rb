@@ -96,7 +96,7 @@ module Klenod
       end
 
       def entry(specifier)
-        loaded(load(specifier))
+        loaded(@graph.collect(specifier))
       end
 
       def loaded(record_or_module_id)

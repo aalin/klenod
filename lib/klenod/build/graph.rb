@@ -56,6 +56,12 @@ module Klenod
         load_module(resolved.module_id)
       end
 
+      def collect(specifier)
+        dependency = Dependency.create(specifier: specifier, importer_id: nil, kind: :entrypoint)
+        resolved = resolve_dependency(dependency)
+        collect_module(resolved.module_id)
+      end
+
       def bundle(entrypoints:)
         loaded_entrypoints =
           entrypoints.to_h do |entrypoint|
@@ -83,7 +89,7 @@ module Klenod
 
       def exports(record_or_module_id)
         module_id = module_id_for(record_or_module_id)
-        @mods.fetch(module_id).const_get(:Exports)
+        evaluate_module(module_id).const_get(:Exports)
       end
 
       def assets_for(logical_name)
@@ -223,7 +229,10 @@ module Klenod
           source_hash = Digest::SHA256.hexdigest(source)
           cached = @records[module_id]
 
-          return cached if cached&.source_hash == source_hash && !force && !reevaluate
+          if cached&.source_hash == source_hash && !force && !reevaluate
+            evaluate_module(module_id) unless @mods.key?(module_id)
+            return cached
+          end
 
           transform = transform_module_source(module_id, source)
           resolved_dependencies = resolve_transform_dependencies(transform)
@@ -281,6 +290,24 @@ module Klenod
           @mods.delete(module_id)
           record
         end
+      end
+
+      def evaluate_module(module_id)
+        return @mods.fetch(module_id) if @mods.key?(module_id)
+
+        record = @records.fetch(module_id) { collect_module(module_id) }
+        evaluate_eager_dependencies(record.resolved_dependencies)
+        mod =
+          Runtime::Mod.new(
+            module_id.to_s,
+            record.transformed_source,
+            imports: imports_for(record.resolved_dependencies, dependency_records_for(record.resolved_dependencies)),
+            source_map: record.source_map,
+            version: record.version,
+            eval_path: eval_path_for(module_id)
+          )
+
+        @mods[module_id] = mod
       end
 
       def tsort_each_node(&block)
@@ -423,12 +450,28 @@ module Klenod
               import_value(resolved_dependency, record)
             else
               Runtime::LazyImport.new do
-                record = load_module(resolved_dependency.module_id)
+                evaluate_module(resolved_dependency.module_id)
+                record = @records.fetch(resolved_dependency.module_id)
                 import_value(resolved_dependency, record)
               end
             end
 
           [resolved_dependency.dependency.id, value]
+        end
+      end
+
+      def evaluate_eager_dependencies(resolved_dependencies)
+        eager_dependencies(resolved_dependencies).each do |resolved_dependency|
+          evaluate_module(resolved_dependency.module_id)
+        end
+      end
+
+      def dependency_records_for(resolved_dependencies)
+        resolved_dependencies.to_h do |resolved_dependency|
+          [
+            resolved_dependency.dependency.id,
+            @records.fetch(resolved_dependency.module_id) { collect_module(resolved_dependency.module_id) }
+          ]
         end
       end
 

@@ -11,11 +11,13 @@ class Klenod::StandaloneExampleTest < Minitest::Test
   def test_standalone_example_generates_report
     Dir.mktmpdir do |dir|
       output = "#{dir}/report.txt"
-      with_env("REPORT_OUTPUT" => output, "KLENOD_STANDALONE_RUN" => "1") do
+      with_env("REPORT_OUTPUT" => output) do
         context = example_config.context
         entry = context.entry(example_config.entrypoints.fetch(0))
 
         assert_equal("main.rb", entry.id.to_s)
+        refute(File.exist?(output), "Expected entry handle creation to avoid running the report")
+        entry.exports::Default.call
       end
 
       report = File.binread(output)

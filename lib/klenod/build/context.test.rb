@@ -229,6 +229,41 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_entry_collects_without_evaluating_until_exports_are_requested
+    Dir.mktmpdir do |dir|
+      side_effect_path = "#{dir}/side-effect.txt"
+      File.write("#{dir}/entry.rb", "File.binwrite(#{side_effect_path.inspect}, \"ran\")\nVALUE = 42\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry = context.entry("entry")
+
+      assert_equal(Klenod::Build::ModuleId.new("entry.rb", nil), entry.id)
+      assert(context.graph.records.key?(entry.id))
+      assert_equal({}, context.graph.mods)
+      refute(File.exist?(side_effect_path), "Expected entry handle creation to avoid evaluating top-level code")
+
+      assert_equal(42, entry.exports::VALUE)
+      assert_equal("ran", File.binread(side_effect_path))
+      assert(context.graph.mods.key?(entry.id))
+    end
+  end
+
+  def test_entry_collects_assets_without_evaluating_module
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      side_effect_path = "#{dir}/side-effect.txt"
+      File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\nFile.binwrite(#{side_effect_path.inspect}, \"ran\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry = context.entry("entry")
+
+      assert_equal(["styles/home.css"], entry.assets(type: :css).map(&:logical_name))
+      refute(File.exist?(side_effect_path), "Expected asset lookup to avoid evaluating entrypoint code")
+      assert_equal({}, context.graph.mods)
+    end
+  end
+
   def test_assets_for_module_returns_reachable_filtered_assets
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/components")
