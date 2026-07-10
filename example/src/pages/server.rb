@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-Shared = import("../shared")
+Shared = import("/shared")
 Router = import("virtual:router")
 SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 
@@ -45,6 +45,10 @@ def self.call(request, context)
       HTML
     ]
   ]
+end
+
+def self.module_path
+  __FILE__
 end
 
 def self.slots_for(match)

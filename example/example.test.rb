@@ -104,12 +104,13 @@ class Klenod::ExampleTest < Minitest::Test
       assets_dir = "#{dir}/public"
       context = Example.build_context(source_dir: source_dir)
       bundle = context.build(entrypoints: ["pages/server"], output: output, assets_dir: assets_dir)
-      loaded = Klenod::Runtime.load_bundle(output)
+      loaded = Klenod::Runtime.load_bundle(output, source_root: "/app/src")
       page = loaded.exports("pages/server")
       status, _headers, body = page.call(nil, loaded)
 
       assert_equal(200, status)
       assert_includes(body.join, "<main")
+      assert_equal("/app/src/pages/server.rb", page.module_path)
       assert_equal(bundle.assets.keys.sort, loaded.assets.keys.sort)
       loaded.each_asset do |asset|
         disk_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))

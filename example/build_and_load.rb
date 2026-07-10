@@ -13,11 +13,13 @@ FileUtils.mkdir_p(File.dirname(output))
 context = Example.build_context(source_dir: source_dir)
 context.build(entrypoints: ["pages/server"], output: output, assets_dir: assets_dir)
 
-bundle = Klenod::Runtime.load_bundle(output)
+bundle = Klenod::Runtime.load_bundle(output, source_root: source_dir)
 exports = bundle.exports("pages/server")
 status, headers, body = exports.call(nil, bundle)
 
 puts "Loaded bundle #{output}"
+puts "Source root: #{bundle.source_root}"
+puts "Entry module path: #{exports.module_path}"
 puts "Status: #{status}"
 puts "Content-Type: #{headers.fetch("content-type")}"
 puts "Body includes Haml page: #{body.join.include?("<main")}"

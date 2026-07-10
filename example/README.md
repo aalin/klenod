@@ -13,7 +13,11 @@ bundle exec ruby example/server.rb
 
 `run.rb` loads `src/pages/server.rb`, which imports `virtual:router`, matches `/`, renders `src/pages/page.haml`, and wraps it in `src/pages/layout.haml`.
 
-`build_and_load.rb` writes `example/dist/klenod.bundle`, reloads it through the runtime API, and evaluates the entrypoint without using the build graph.
+`build_and_load.rb` writes `example/dist/klenod.bundle`, reloads it through the runtime API, and evaluates the entrypoint without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
+
+```ruby
+bundle = Klenod::Runtime.load_bundle("example/dist/klenod.bundle", source_root: "/app/src")
+```
 
 `watch.rb` keeps the process running and prints invalidation events when loaded files under `example/src` change.
 
@@ -31,6 +35,7 @@ When `ASSETS_DIR` is set, the examples write the current asset manifest once and
 The server entry imports the virtual router and an image with query-driven variants:
 
 ```ruby
+Shared = import("/shared")
 Router = import("virtual:router")
 SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 ```
