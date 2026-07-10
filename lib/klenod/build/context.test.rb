@@ -2,6 +2,8 @@
 
 require "fileutils"
 require "minitest/autorun"
+require "open3"
+require "rbconfig"
 require "tmpdir"
 
 require_relative "../runtime"
@@ -523,6 +525,72 @@ class Klenod::Build::Context::Test < Minitest::Test
 
         assert(File.exist?(disk_path), "Expected #{disk_path} to exist")
       end
+    end
+  end
+
+  def test_runtime_only_process_loads_bundle_with_css_and_image_imports
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.binwrite("#{dir}/images/hero.png", generated_png_bytes(width: 4, height: 2))
+      File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Hero = import("images/hero.png?width=2&format=png")
+          Styles = import("styles/home.css")
+
+          def self.call(context)
+            [
+              Hero.src,
+              Hero.srcset,
+              Hero.sizes,
+              Hero.variants.fetch(0).width,
+              Styles.fetch(:title),
+              context.assets_for("styles/home.css").fetch(0).output_path
+            ]
+          end
+        RUBY
+      )
+      output = "#{dir}/bundle.mpk"
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      context.build(entrypoints: ["entry"], output: output)
+
+      script = <<~RUBY
+        require "klenod/runtime"
+
+        forbidden = {
+          "Klenod::Build" => defined?(Klenod::Build),
+          "Klenod::Dev" => defined?(Klenod::Dev),
+          "Magick" => defined?(Magick),
+          "ImageSize" => defined?(ImageSize),
+          "SyntaxTree" => defined?(SyntaxTree),
+          "Mayu::CSS" => defined?(Mayu::CSS),
+          "TomlRB" => defined?(TomlRB)
+        }.compact
+        abort "loaded build-only constants: \#{forbidden.inspect}" unless forbidden.empty?
+
+        bundle = Klenod::Runtime.load_bundle(#{output.inspect})
+        result = bundle.exports("entry").call(bundle)
+
+        abort "bad image src" unless result.fetch(0).include?("/assets/hero.")
+        abort "bad srcset" unless result.fetch(1).include?(" 2w")
+        abort "bad sizes" unless result.fetch(2) == "(max-width: 2px) 100vw, 2px"
+        abort "bad variant width" unless result.fetch(3) == 2
+        abort "bad css classes" unless result.fetch(4).include?("title")
+        abort "bad css asset" unless result.fetch(5).include?("/assets/styles_home_css")
+      RUBY
+
+      stdout, stderr, status =
+        Open3.capture3(
+          RbConfig.ruby,
+          "-I#{File.expand_path("../..", __dir__)}",
+          "-e",
+          script
+        )
+
+      assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
     end
   end
 
