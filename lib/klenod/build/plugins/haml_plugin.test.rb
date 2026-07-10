@@ -1035,6 +1035,36 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_default_haml_transformer_supports_output_control_flow_without_else
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/conditional.haml",
+        <<~HAML
+          :ruby
+            def initialize(show:)
+              @show = show
+            end
+
+          %section
+            = if @show
+              %p Visible
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/conditional.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([:section, [:p, "Visible"]], exports::Default.new(show: true).render)
+      assert_equal([:section, nil], exports::Default.new(show: false).render)
+      assert_match(/SourceMapMark:8:/, record.transformed_source)
+    end
+  end
+
   def test_haml_imports_haml_component_classes_for_capitalized_tags
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/components")

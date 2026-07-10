@@ -29,7 +29,7 @@ def self.call(request, context)
       .layouts
       .reverse_each
       .reduce(body) do |inner, layout|
-        layout.new(children: [inner], slots: {}).render
+        layout.new(children: [inner], slots: slots_for(match)).render
       end
   css_assets = context.assets_for_module(__FILE__, type: :css)
 
@@ -51,4 +51,13 @@ def self.call(request, context)
       HTML
     ]
   ]
+end
+
+def self.slots_for(match)
+  return {} unless match.route.path == "/dashboard"
+
+  modal = Router::Default.match("/dashboard/settings")
+  return {} unless modal
+
+  {modal: [modal.page.new(name: Shared::NAME, tagline: Shared::TAGLINE, image: nil, srcset: "", params: modal.params).render]}
 end

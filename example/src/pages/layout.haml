@@ -22,6 +22,6 @@
       %a{ href: "/routes" } Route gallery
   %section.content
     = @children
-  - if @slots[:modal]
+  = if @slots[:modal]
     %aside.modal
       = @slots[:modal]

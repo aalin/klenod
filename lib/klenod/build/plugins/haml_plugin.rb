@@ -802,6 +802,7 @@ module Klenod
           end
 
           def compile_script_group(nodes, factory:, builder:, styleable: false)
+            return compile_script_branch(nodes.fetch(0), factory: factory, styleable: styleable, builder: builder) if nodes.length == 1 && branch_start?(nodes.fetch(0))
             return compile_node(nodes.fetch(0), factory: factory, styleable: styleable, builder: builder) if nodes.length == 1
 
             compile_branches(
@@ -817,6 +818,10 @@ module Klenod
             return builder.parenthesized_expression(source) if node.children.empty?
 
             builder.script_block(source, compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder))
+          end
+
+          def compile_script_branch(node, factory:, builder:, styleable: false)
+            compile_branches([[script_source(node), node.children]], factory: factory, styleable: styleable, builder: builder)
           end
 
           def compile_silent_script(node, factory:, builder:, styleable: false)
@@ -862,6 +867,10 @@ module Klenod
 
           def continuation?(node)
             script_node?(node) && %w[elsif else when in rescue ensure].include?(node.value.fetch(:keyword))
+          end
+
+          def branch_start?(node)
+            node.type == :script && %w[if unless case begin].include?(node.value.fetch(:keyword))
           end
 
           def compile_tag(node, factory:, builder:, styleable: false)

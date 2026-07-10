@@ -54,6 +54,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/shop/sale/red", "Filters: sale, red")
     assert_route_includes(entry, context, "/about", "inside a route group")
     assert_route_includes(entry, context, "/dashboard", "Dashboard")
+    assert_route_includes(entry, context, "/dashboard", "Dashboard settings modal")
     assert_route_includes(entry, context, "/dashboard/settings", "Dashboard settings modal")
     assert_route_includes(entry, context, "/feed/photo", "Photo intercept")
     assert_route_includes(entry, context, "/profile", "Profile intercept")
