@@ -2,6 +2,8 @@
 
 require "minitest/autorun"
 require "fileutils"
+require "open3"
+require "rbconfig"
 require "stringio"
 require "tmpdir"
 
@@ -70,6 +72,48 @@ class Klenod::CLI::Application::Test < Minitest::Test
 
       assert_equal(42, loaded.exports("entry")::VALUE)
       assert_includes(stdout.string, "Built ")
+    end
+  end
+
+  def test_build_command_writes_executable_bundle
+    Dir.mktmpdir do |dir|
+      source_dir = "#{dir}/src"
+      output = "#{dir}/dist/app"
+      result_path = "#{dir}/result.txt"
+      FileUtils.mkdir_p(source_dir)
+      File.write("#{source_dir}/entry.rb", "File.binwrite(#{result_path.inspect}, \"ran\")\n")
+      File.write(
+        "#{dir}/klenod.config.rb",
+        <<~RUBY
+          source_dir "src"
+          entrypoint "entry"
+          output "dist/app"
+          plugins [
+            Klenod::Build::Plugins::RubyPlugin.new
+          ]
+        RUBY
+      )
+
+      stdout = StringIO.new
+      bundle = nil
+      Dir.chdir(dir) do
+        command = Klenod::CLI::Application.new(["build", "--executable"], output: stdout)
+        bundle = command.call
+      end
+      loaded = Klenod::Runtime.load_executable_bundle(output)
+      ruby_stdout, ruby_stderr, status =
+        Open3.capture3(
+          RbConfig.ruby,
+          "-I#{File.expand_path("..", __dir__)}",
+          output
+        )
+
+      assert_equal(["entry"], bundle.entrypoints.keys)
+      assert_equal(bundle.modules.keys.sort, loaded.modules.keys.sort)
+      assert(status.success?, "stdout:\n#{ruby_stdout}\nstderr:\n#{ruby_stderr}")
+      assert_equal("ran", File.binread(result_path))
+      assert_includes(stdout.string, "Built executable bundle ")
+      assert(File.executable?(output), "Expected #{output} to be executable")
     end
   end
 

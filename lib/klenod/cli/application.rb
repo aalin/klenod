@@ -16,6 +16,10 @@ module Klenod
     class Build < Samovar::Command
       self.description = "Build a Klenod runtime bundle."
 
+      options do
+        option "--executable", "Write a Ruby executable bundle that loads all entrypoints."
+      end
+
       def call
         config_path = Klenod::Build::ConfigLoader.find
         raise Samovar::InvalidInputError.new(self, ["Could not find klenod.config.rb"]) unless config_path
@@ -33,16 +37,27 @@ module Klenod
         bundle = nil
         Dir.chdir(config.base_dir) do
           context = config.context
-          bundle = context.build(entrypoints: entrypoints, output: output, assets_dir: assets_dir)
+          bundle =
+            if @options[:executable]
+              context.build_executable(entrypoints: entrypoints, output: output, assets_dir: assets_dir)
+            else
+              context.build(entrypoints: entrypoints, output: output, assets_dir: assets_dir)
+            end
         end
 
-        self.output.puts "Built #{output}"
+        self.output.puts "Built #{build_kind} #{output}"
         self.output.puts "Source root: #{bundle.source_root}"
         self.output.puts "Entrypoints: #{bundle.entrypoints.keys.join(", ")}"
         self.output.puts "Assets: #{bundle.assets.length}"
         self.output.puts "Assets directory: #{assets_dir}" if assets_dir
 
         bundle
+      end
+
+      private
+
+      def build_kind
+        @options[:executable] ? "executable bundle" : "runtime bundle"
       end
     end
 
