@@ -114,6 +114,16 @@ module Klenod
         bundle
       end
 
+      def build_executable(entrypoints:, output:, assets_dir: nil)
+        bundle = @graph.bundle(entrypoints: entrypoints)
+        wait_for_assets
+        write_assets(assets_dir) if assets_dir
+        FileUtils.mkdir_p(File.dirname(output))
+        File.binwrite(output, executable_bundle_source + Marshal.dump(bundle))
+        FileUtils.chmod("+x", output)
+        bundle
+      end
+
       def invalidate_paths(changed_paths, removed_paths: [])
         @graph.invalidate_paths(changed_paths, removed_paths: removed_paths)
       end
@@ -213,6 +223,20 @@ module Klenod
       end
 
       private
+
+      def executable_bundle_source
+        <<~RUBY.b
+          #!/usr/bin/env ruby
+          # encoding: ASCII-8BIT
+          # frozen_string_literal: true
+
+          require "klenod/runtime"
+
+          Klenod::Runtime.load_executable_bundle(__FILE__).load_entrypoints
+
+          __END__
+        RUBY
+      end
 
       def write_asset(asset, assets_root)
         output_path = asset_disk_path(asset.output_path, assets_root)

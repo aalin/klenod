@@ -837,6 +837,36 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_build_executable_writes_ruby_stub_and_runs_entrypoints
+    Dir.mktmpdir do |dir|
+      output = "#{dir}/dist/app"
+      result_path = "#{dir}/result.txt"
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          File.binwrite(#{result_path.inspect}, "ran")
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      bundle = context.build_executable(entrypoints: ["entry"], output: output)
+      loaded = Klenod::Runtime.load_executable_bundle(output)
+      stdout, stderr, status =
+        Open3.capture3(
+          RbConfig.ruby,
+          "-I#{File.expand_path("..", __dir__)}",
+          output
+        )
+
+      assert(File.executable?(output), "Expected #{output} to be executable")
+      assert_equal(["entry"], bundle.entrypoints.keys)
+      assert_equal(bundle.modules.keys.sort, loaded.modules.keys.sort)
+      assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
+      assert_equal("ran", File.binread(result_path))
+      assert(File.binread(output).start_with?("#!/usr/bin/env ruby\n# encoding: ASCII-8BIT\n"))
+    end
+  end
+
   def test_asset_bytes_waits_for_generated_assets
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")

@@ -14,10 +14,19 @@ module Klenod
     class Bundle
       attr_reader :entrypoints, :modules, :assets, :source_root
 
-      def self.load_file(path, source_root: nil)
-        bundle = Marshal.load(File.binread(path))
+      def self.load(source, source_root: nil)
+        bundle =
+          if source.respond_to?(:read)
+            Marshal.load(source)
+          else
+            Marshal.load(File.binread(source))
+          end
         bundle.source_root = source_root if source_root
         bundle
+      end
+
+      def self.load_file(path, source_root: nil)
+        load(path, source_root: source_root)
       end
 
       def initialize(entrypoints, modules, assets, source_root: nil)
@@ -42,6 +51,11 @@ module Klenod
         id = entrypoints.fetch(id, id) if entrypoints.respond_to?(:fetch)
 
         instantiate(id)
+      end
+
+      def load_entrypoints
+        entrypoint_ids = entrypoints.respond_to?(:values) ? entrypoints.values : entrypoints
+        entrypoint_ids.map { |entrypoint| load(entrypoint) }
       end
 
       def exports(entrypoint = nil)

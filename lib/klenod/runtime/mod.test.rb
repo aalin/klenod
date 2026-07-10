@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "stringio"
+require "tempfile"
+require "tmpdir"
 
 require_relative "mod"
 require_relative "bundle"
+require_relative "../runtime"
 
 class Klenod::Runtime::Mod::Test < Minitest::Test
   def test_evaluates_exports_with_import_helper
@@ -157,6 +161,99 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_equal(42, exports.value)
     assert_equal(41, bundle.mod("dep.rb").const_get(:Exports)::VALUE)
     assert(exports::Dep.loaded?)
+  end
+
+  def test_runtime_load_bundle_accepts_io
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"entry" => "entry.rb"},
+        {
+          "entry.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              "VALUE = 1",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("entry.rb")
+            )
+        },
+        {}
+      )
+
+    loaded = Klenod::Runtime.load_bundle(StringIO.new(Marshal.dump(bundle)))
+
+    assert_equal(1, loaded.exports("entry")::VALUE)
+  end
+
+  def test_bundle_load_entrypoints_evaluates_each_entrypoint_once
+    Dir.mktmpdir do |dir|
+      result_path = "#{dir}/entries.txt"
+      bundle =
+        Klenod::Runtime::Bundle.new(
+          {"one" => "one.rb", "two" => "two.rb"},
+          {
+            "one.rb" =>
+              Klenod::Runtime::ModuleSpec.new(
+                "one.rb",
+                "one.rb",
+                "File.open(#{result_path.inspect}, \"a\") { |file| file.write(\"one\\n\") }",
+                {},
+                nil,
+                0,
+                Klenod::Runtime::Mod.constant_name_for("one.rb")
+              ),
+            "two.rb" =>
+              Klenod::Runtime::ModuleSpec.new(
+                "two.rb",
+                "two.rb",
+                "File.open(#{result_path.inspect}, \"a\") { |file| file.write(\"two\\n\") }",
+                {},
+                nil,
+                0,
+                Klenod::Runtime::Mod.constant_name_for("two.rb")
+              )
+          },
+          {}
+        )
+
+      bundle.load_entrypoints
+      bundle.load_entrypoints
+
+      assert_equal("one\ntwo\n", File.binread(result_path))
+    end
+  end
+
+  def test_runtime_load_executable_bundle_reads_payload_after_end_marker
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"entry" => "entry.rb"},
+        {
+          "entry.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              "VALUE = 1",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("entry.rb")
+            )
+        },
+        {}
+      )
+
+    Tempfile.create("klenod-executable") do |file|
+      file.binmode
+      file.write("# encoding: ASCII-8BIT\n__END__\n")
+      file.write(Marshal.dump(bundle))
+      file.close
+
+      loaded = Klenod::Runtime.load_executable_bundle(file.path)
+
+      assert_equal(1, loaded.exports("entry")::VALUE)
+    end
   end
 
   def test_bundle_asset_helpers
