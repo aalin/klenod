@@ -17,7 +17,7 @@ class Klenod::StandaloneExampleTest < Minitest::Test
 
         assert_equal("main.rb", entry.id.to_s)
         refute(File.exist?(output), "Expected entry handle creation to avoid running the report")
-        entry.exports::Default.call
+        entry.exports
       end
 
       report = File.binread(output)
