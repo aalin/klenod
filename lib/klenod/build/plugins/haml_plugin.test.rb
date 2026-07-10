@@ -12,6 +12,24 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   ModuleId = Klenod::Build::ModuleId
   HAML_FIXTURE_DIR = File.expand_path("__test__/haml", __dir__)
 
+  Dir.glob("#{HAML_FIXTURE_DIR}/*.haml").sort.each do |path|
+    fixture_path = path
+    basename = File.basename(fixture_path, ".haml")
+    test_name = "test_haml_fixture_#{basename.gsub(/[^A-Za-z0-9_]/, "_")}"
+
+    define_method(test_name) do
+      expected_path = fixture_path.delete_suffix(".haml") + ".rb"
+      actual = transform_haml_fixture(fixture_path)
+
+      unless File.exist?(expected_path)
+        warn("Generated #{expected_path}")
+        File.write(expected_path, actual)
+      end
+
+      assert_equal(File.read(expected_path), actual, "Expected #{expected_path} to match #{fixture_path}")
+    end
+  end
+
   module FakeFramework
     class ComponentBase
     end
@@ -601,17 +619,6 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal(result.code, result.ast.source)
   end
 
-  def test_default_haml_transformer_matches_golden_files
-    Dir.glob("#{HAML_FIXTURE_DIR}/*.haml").sort.each do |path|
-      expected_path = path.delete_suffix(".haml") + ".rb"
-      actual = transform_haml_fixture(path)
-
-      File.write(expected_path, actual) unless File.exist?(expected_path)
-
-      assert_equal(File.read(expected_path), actual, "Expected #{expected_path} to match #{path}")
-    end
-  end
-
   def test_default_haml_transformer_compiles_template_to_fragments
     transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
@@ -1036,33 +1043,17 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_default_haml_transformer_supports_output_control_flow_without_else
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/conditional.haml",
-        <<~HAML
-          :ruby
-            def initialize(show:)
-              @show = show
-            end
-
-          %section
-            = if @show
-              %p Visible
-        HAML
+    plugin =
+      Klenod::Build::Plugins::HamlPlugin.new(
+        factory: "#{self.class.name}::FakeFramework::H"
       )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.load("pages/conditional.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+    context = Klenod::Build::Context.new(source_dir: File.expand_path("__test__", __dir__), plugins: [plugin])
+    record = context.load("haml/output_conditional_without_else.haml")
+    exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
-      assert_equal([:section, [:p, "Visible"]], exports::Default.new(show: true).render)
-      assert_equal([:section, nil], exports::Default.new(show: false).render)
-      assert_match(/SourceMapMark:8:/, record.transformed_source)
-    end
+    assert_equal([:section, [:p, "Visible"]], exports::Default.new(show: true).render)
+    assert_equal([:section, nil], exports::Default.new(show: false).render)
+    assert_match(/SourceMapMark:8:/, record.transformed_source)
   end
 
   def test_haml_imports_haml_component_classes_for_capitalized_tags
