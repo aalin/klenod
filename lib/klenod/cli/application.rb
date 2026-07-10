@@ -16,16 +16,14 @@ module Klenod
     class Build < Samovar::Command
       self.description = "Build a Klenod runtime bundle."
 
-      options do
-        option "--config <path>", "Ruby config file.", default: "klenod.rb"
-        option "--source <path>", "Source directory."
-        option "--entry <specifier>", "Entrypoint specifier."
-        option "--output <path>", "Bundle output path.", key: :bundle_output
-        option "--assets-dir <path>", "Directory for emitted asset files."
-      end
-
       def call
-        config = build_config
+        config_path = Klenod::Build::ConfigLoader.find
+        raise Samovar::InvalidInputError.new(self, ["Could not find klenod.config.rb"]) unless config_path
+
+        config = nil
+        Dir.chdir(File.dirname(config_path)) do
+          config = Klenod::Build::ConfigLoader.load(config_path)
+        end
         entrypoints = config.entrypoints
         raise Samovar::MissingValueError.new(self, :entry) if entrypoints.empty?
 
@@ -33,8 +31,11 @@ module Klenod
         output = expand_config_path(config.output, config)
         assets_dir = config.assets_dir && expand_config_path(config.assets_dir, config)
 
-        context = Klenod::Build::Context.new(source_dir: source_dir, plugins: config.plugins, mode: config.mode)
-        bundle = context.build(entrypoints: entrypoints, output: output, assets_dir: assets_dir)
+        bundle = nil
+        Dir.chdir(config.base_dir) do
+          context = Klenod::Build::Context.new(source_dir: source_dir, plugins: config.plugins, mode: config.mode)
+          bundle = context.build(entrypoints: entrypoints, output: output, assets_dir: assets_dir)
+        end
 
         self.output.puts "Built #{output}"
         self.output.puts "Source root: #{bundle.source_root}"
@@ -47,25 +48,9 @@ module Klenod
 
       private
 
-      def build_config
-        config = load_config
-        config = config.with(source_dir: @options[:source]) if @options.key?(:source)
-        config = config.with(entrypoints: [@options[:entry]]) if @options[:entry]
-        config = config.with(output: @options[:bundle_output]) if @options[:bundle_output]
-        config = config.with(assets_dir: @options[:assets_dir]) if @options[:assets_dir]
-        config
-      end
-
-      def load_config
-        path = @options.fetch(:config)
-        return Klenod::Build::Config.new unless File.exist?(path)
-
-        Klenod::Build::ConfigLoader.load(path)
-      end
-
       def expand_config_path(path, config)
         path = path.to_s
-        return File.expand_path(path) if Pathname.new(path).absolute?
+        return File.expand_path(path) if path.start_with?("/")
 
         File.expand_path(path, config.base_dir)
       end

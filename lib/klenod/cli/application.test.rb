@@ -15,40 +15,12 @@ class Klenod::CLI::Application::Test < Minitest::Test
       output = "#{dir}/dist/klenod.bundle"
       FileUtils.mkdir_p(source_dir)
       File.write("#{source_dir}/entry.rb", "VALUE = 42\n")
-
-      stdout = StringIO.new
-      command =
-        Klenod::CLI::Application.new(
-          [
-            "build",
-            "--source", source_dir,
-            "--entry", "entry",
-            "--output", output
-          ],
-          output: stdout
-        )
-      bundle = command.call
-      loaded = Klenod::Runtime.load_bundle(output)
-
-      assert_equal(42, loaded.exports("entry")::VALUE)
-      assert_equal(["entry"], bundle.entrypoints.keys)
-      assert_includes(stdout.string, "Built #{output}")
-      assert_includes(stdout.string, "Source root: #{source_dir}")
-    end
-  end
-
-  def test_build_command_uses_ruby_config_file
-    Dir.mktmpdir do |dir|
-      source_dir = "#{dir}/app"
-      output = "#{dir}/dist/config.bundle"
-      FileUtils.mkdir_p(source_dir)
-      File.write("#{source_dir}/entry.rb", "VALUE = 42\n")
       File.write(
-        "#{dir}/klenod.rb",
+        "#{dir}/klenod.config.rb",
         <<~RUBY
-          source_dir #{source_dir.inspect}
+          source_dir "src"
           entrypoint "entry"
-          output #{output.inspect}
+          output "dist/klenod.bundle"
           plugins [
             Klenod::Build::Plugins::RubyPlugin.new
           ]
@@ -56,19 +28,48 @@ class Klenod::CLI::Application::Test < Minitest::Test
       )
 
       stdout = StringIO.new
-      command =
-        Klenod::CLI::Application.new(
-          [
-            "build",
-            "--config", "#{dir}/klenod.rb"
-          ],
-          output: stdout
-        )
-      command.call
+      bundle = nil
+      Dir.chdir(dir) do
+        command = Klenod::CLI::Application.new(["build"], output: stdout)
+        bundle = command.call
+      end
       loaded = Klenod::Runtime.load_bundle(output)
 
       assert_equal(42, loaded.exports("entry")::VALUE)
-      assert_includes(stdout.string, "Built #{output}")
+      assert_equal(["entry"], bundle.entrypoints.keys)
+      assert_includes(stdout.string, "Built ")
+      assert_includes(stdout.string, "Source root: ")
+    end
+  end
+
+  def test_build_command_finds_config_in_parent_directory
+    Dir.mktmpdir do |dir|
+      source_dir = "#{dir}/app"
+      output = "#{dir}/dist/config.bundle"
+      nested = "#{source_dir}/pages"
+      FileUtils.mkdir_p(nested)
+      File.write("#{source_dir}/entry.rb", "VALUE = 42\n")
+      File.write(
+        "#{dir}/klenod.config.rb",
+        <<~RUBY
+          source_dir "app"
+          entrypoint "entry"
+          output "dist/config.bundle"
+          plugins [
+            Klenod::Build::Plugins::RubyPlugin.new
+          ]
+        RUBY
+      )
+
+      stdout = StringIO.new
+      Dir.chdir(nested) do
+        command = Klenod::CLI::Application.new(["build"], output: stdout)
+        command.call
+      end
+      loaded = Klenod::Runtime.load_bundle(output)
+
+      assert_equal(42, loaded.exports("entry")::VALUE)
+      assert_includes(stdout.string, "Built ")
     end
   end
 

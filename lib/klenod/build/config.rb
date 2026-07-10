@@ -84,7 +84,23 @@ module Klenod
     end
 
     module ConfigLoader
+      CONFIG_FILE = "klenod.config.rb"
+
       module_function
+
+      def find(start_dir = Dir.pwd)
+        dir = File.expand_path(start_dir)
+
+        loop do
+          path = File.join(dir, CONFIG_FILE)
+          return path if File.file?(path)
+
+          parent = File.dirname(dir)
+          return nil if parent == dir
+
+          dir = parent
+        end
+      end
 
       def load(path)
         builder = ConfigBuilder.new(base_dir: File.dirname(File.expand_path(path)))

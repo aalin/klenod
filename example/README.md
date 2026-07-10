@@ -22,7 +22,8 @@ bundle = Klenod::Runtime.load_bundle("example/dist/klenod.bundle", source_root: 
 The same build can be run through the CLI using the example Ruby config:
 
 ```sh
-bundle exec exe/klenod build --config example/klenod.rb
+cd example
+bundle exec ../exe/klenod build
 ```
 
 `watch.rb` keeps the process running and prints invalidation events when loaded files under `example/src` change.

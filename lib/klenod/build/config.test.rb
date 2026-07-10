@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "fileutils"
 require "tmpdir"
 
 require_relative "context"
@@ -32,6 +33,16 @@ class Klenod::Build::Config::Test < Minitest::Test
       assert_equal(:build, config.mode)
       assert_equal([Klenod::Build::Plugins::RubyPlugin], config.plugins.map(&:class))
       assert_equal(dir, config.base_dir)
+    end
+  end
+
+  def test_finds_nearest_config_file
+    Dir.mktmpdir do |dir|
+      nested = "#{dir}/app/pages"
+      FileUtils.mkdir_p(nested)
+      File.write("#{dir}/klenod.config.rb", "")
+
+      assert_equal("#{dir}/klenod.config.rb", Klenod::Build::ConfigLoader.find(nested))
     end
   end
 end
