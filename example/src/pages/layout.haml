@@ -4,10 +4,10 @@
     @slots = slots
   end
 
-%body
-  %header
-    %a{ href: "/" } Klenod example
-    %nav
+%div.shell
+  %header.header
+    %a.brand{ href: "/" } Klenod example
+    %nav.nav
       %a{ href: "/" } Home
       %a{ href: "/blog/hello" } Blog
       %a{ href: "/docs/guides/routing" } Docs
@@ -18,7 +18,8 @@
       %a{ href: "/dashboard/settings" } Modal route
       %a{ href: "/feed/photo" } Photo
       %a{ href: "/routes" } Route gallery
-  = @children
+  %section.content
+    = @children
   - if @slots[:modal]
-    %aside
+    %aside.modal
       = @slots[:modal]

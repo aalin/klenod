@@ -9,7 +9,6 @@ def self.call(request, context)
   return [404, {"content-type" => "text/plain"}, ["Not found\n"]] unless match
 
   page = match.page
-  css_assets = context.assets_for_module(__FILE__, type: :css)
   srcset =
     SmokedFish
       .variants
@@ -32,6 +31,7 @@ def self.call(request, context)
       .reduce(body) do |inner, layout|
         layout.new(children: [inner], slots: {}).render
       end
+  css_assets = context.assets_for_module(__FILE__, type: :css)
 
   [
     200,

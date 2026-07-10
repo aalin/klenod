@@ -23,6 +23,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "<figure")
     assert_includes(html, "Smoked fish")
     assert_includes(html, "srcset=")
+    assert_includes(html, "/assets/pages_layout_css")
     assert_includes(html, "/assets/pages_page_css")
     assert_includes(html, "/assets/components_Figure_css")
     assert(context.assets_for("pages/smoked-fish.png").any? { |asset| asset.metadata[:type] == :image_variant })
