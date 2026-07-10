@@ -91,9 +91,11 @@ module Klenod
 
       attr_reader :graph, :mode
 
-      def load(specifier)
+      def evaluate(specifier)
         @graph.load(specifier)
       end
+
+      alias_method :load, :evaluate
 
       def collect(specifier)
         loaded(@graph.collect(specifier))

@@ -108,6 +108,21 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_evaluate_is_the_explicit_eager_loading_api
+    Dir.mktmpdir do |dir|
+      side_effect_path = "#{dir}/side-effect.txt"
+      File.write("#{dir}/entry.rb", "File.binwrite(#{side_effect_path.inspect}, \"ran\")\nVALUE = 42\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.evaluate("entry")
+
+      assert_equal(Klenod::Build::ModuleId.new("entry.rb", nil), record.id)
+      assert_equal("ran", File.binread(side_effect_path))
+      assert(context.evaluated?(record))
+      assert_equal(42, context.exports(record)::VALUE)
+    end
+  end
+
   def test_virtual_modules_keep_logical_eval_paths
     Dir.mktmpdir do |dir|
       context =
