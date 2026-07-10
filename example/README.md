@@ -37,6 +37,15 @@ SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 
 `Router::Default.match(path).page` returns the matched component class. The server entry wraps the rendered page through `match.layouts`, passing the current HTML as `children: [inner]` and an empty `slots: {}` hash. The nested route `src/pages/blog/[slug]/page.haml` demonstrates dynamic params at `/blog/hello`.
 
+The example includes a small route gallery:
+
+- `/docs/guides/routing` demonstrates catch-all params.
+- `/shop` and `/shop/sale/red` demonstrate optional catch-all params.
+- `/about` demonstrates a route group.
+- `/dashboard/settings` demonstrates a page in the `@modal` parallel slot.
+- `/feed/photo`, `/feed/profile`, and `/feed/login` demonstrate intercepted route segment metadata.
+- `/routes` reads `Router::Default.tree` and displays structural route metadata.
+
 `framework.rb` defines the example `Example::H` factory used by the Haml plugin. `src/pages/page.haml` renders through that factory, imports `src/components/Figure.haml`, and automatically imports its companion `src/pages/page.css` as `Styles`.
 
 The example uses explicit extensions for page imports. If both `page.rb` and `page.haml` exist, an extensionless import like `import("./page")` is ambiguous and Klenod asks for `import("./page.haml")` or `import("./page.rb")`.

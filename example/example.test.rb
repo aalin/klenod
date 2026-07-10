@@ -43,6 +43,37 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Ruby modules loaded through a dependency graph")
   end
 
+  def test_example_app_renders_route_gallery_pages
+    source_dir = File.expand_path("src", __dir__)
+    context = Example.build_context(source_dir: source_dir)
+    entry = context.entry("pages/server")
+
+    assert_route_includes(entry, context, "/docs/guides/routing", "Path parts: guides / routing")
+    assert_route_includes(entry, context, "/shop", "No filters selected")
+    assert_route_includes(entry, context, "/shop/sale/red", "Filters: sale, red")
+    assert_route_includes(entry, context, "/about", "inside a route group")
+    assert_route_includes(entry, context, "/dashboard", "Dashboard")
+    assert_route_includes(entry, context, "/dashboard/settings", "Dashboard settings modal")
+    assert_route_includes(entry, context, "/feed/photo", "Photo intercept")
+    assert_route_includes(entry, context, "/feed/profile", "Profile intercept")
+    assert_route_includes(entry, context, "/feed/login", "Login intercept")
+  end
+
+  def test_example_app_renders_router_tree_metadata
+    source_dir = File.expand_path("src", __dir__)
+    context = Example.build_context(source_dir: source_dir)
+    entry = context.entry("pages/server")
+    status, _headers, body = entry.call(Request.new("/routes"), context)
+    html = body.join
+
+    assert_equal(200, status)
+    assert_includes(html, "Router gallery")
+    assert_includes(html, "Parallel slots: modal")
+    assert_includes(html, "(.)photo:intercept_current")
+    assert_includes(html, "(..)profile:intercept_parent")
+    assert_includes(html, "(...)login:intercept_root")
+  end
+
   def test_example_app_builds_and_loads_runtime_bundle
     source_dir = File.expand_path("src", __dir__)
 
@@ -64,5 +95,15 @@ class Klenod::ExampleTest < Minitest::Test
         assert(File.exist?(disk_path), "Expected #{disk_path} to exist")
       end
     end
+  end
+
+  private
+
+  def assert_route_includes(entry, context, path, text)
+    status, headers, body = entry.call(Request.new(path), context)
+
+    assert_equal(200, status)
+    assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert_includes(body.join, text)
   end
 end

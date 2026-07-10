@@ -1,0 +1,8 @@
+:ruby
+  def initialize(name:, tagline:, image:, srcset:, params: {})
+    @name = name
+  end
+
+%article
+  %h1 About Klenod
+  %p= "This route is inside a route group for #{@name}."

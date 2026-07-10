@@ -1,0 +1,8 @@
+:ruby
+  def initialize(name:, tagline:, image:, srcset:, params: {})
+    @parts = params.fetch(:parts)
+  end
+
+%article
+  %h1 Docs catch-all
+  %p= "Path parts: #{@parts.join(" / ")}"

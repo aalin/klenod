@@ -1,0 +1,19 @@
+:ruby
+  Router = import("virtual:router")
+
+  def initialize(name:, tagline:, image:, srcset:, params: {})
+    tree = Router::Default.tree
+    dashboard = tree.children.find { |node| node.segment&.name == "dashboard" }
+    feed = tree.children.find { |node| node.segment&.name == "feed" }
+    @slots = dashboard&.slots&.keys || []
+    @intercepts =
+      feed
+        &.children
+        &.select { |node| node.segment.kind.to_s.start_with?("intercept_") }
+        &.map { |node| "#{node.segment.name}:#{node.segment.kind}" } || []
+  end
+
+%article
+  %h1 Router gallery
+  %p= "Parallel slots: #{@slots.sort.join(", ")}"
+  %p= "Intercepted routes: #{@intercepts.sort.join(", ")}"
