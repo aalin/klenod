@@ -162,10 +162,27 @@ module Klenod
         end
 
         def route_path_for(segments)
-          path_parts = segments.filter_map(&:path_part)
-          return "/" if path_parts.empty?
+          path_parts = route_path_parts_for(segments)
 
+          return "/" if path_parts.empty?
           "/#{path_parts.join("/")}"
+        end
+
+        def route_path_parts_for(segments)
+          segments.each_with_object([]) do |segment, path_parts|
+            case segment.kind
+            when :intercept_current
+              path_parts << segment.path_part
+            when :intercept_parent
+              path_parts.pop
+              path_parts << segment.path_part
+            when :intercept_root
+              path_parts.clear
+              path_parts << segment.path_part
+            else
+              path_parts << segment.path_part if segment.path_part
+            end
+          end
         end
 
         def route_key_for(segments)
@@ -213,7 +230,7 @@ module Klenod
             #{import_definitions(imports, mode: mode)}
 
             module Default
-              Route = Data.define(:path, :module_id, :segments, :layout_module_ids, :page_ref, :layout_refs) do
+              Route = Data.define(:path, :module_id, :segments, :match_parts, :layout_module_ids, :page_ref, :layout_refs) do
                 def params
                   segments
                     .select { |segment| segment.param_name && [:dynamic, :catch_all, :optional_catch_all].include?(segment.kind) }
@@ -310,7 +327,7 @@ module Klenod
                   path_parts = []
 
                   route.segments.each do |segment|
-                    path_parts << segment.path_part if segment.path_part
+                    update_path_parts(path_parts, segment)
                     path = path_parts.empty? ? "/" : "/\#{path_parts.join("/")}"
                     cursor = segment.kind == :parallel ? cursor.add_slot(segment, path) : cursor.add_child(segment, path)
                   end
@@ -319,6 +336,21 @@ module Klenod
                 end
 
                 root
+              end
+
+              def self.update_path_parts(path_parts, segment)
+                case segment.kind
+                when :intercept_current
+                  path_parts << segment.path_part
+                when :intercept_parent
+                  path_parts.pop
+                  path_parts << segment.path_part
+                when :intercept_root
+                  path_parts.clear
+                  path_parts << segment.path_part
+                else
+                  path_parts << segment.path_part if segment.path_part
+                end
               end
 
               def self.same_segment?(left, right)
@@ -330,12 +362,10 @@ module Klenod
 
               def self.route_matches?(route, parts)
                 cursor = 0
-                route.segments.each do |segment|
-                  case segment.kind
-                  when :group, :parallel
-                    next
-                  when :static, :intercept_current, :intercept_parent, :intercept_root
-                    return false unless parts[cursor] == segment.path_part
+                route.match_parts.each do |match_part|
+                  case match_part[0]
+                  when :static
+                    return false unless parts[cursor] == match_part[1]
                     cursor += 1
                   when :dynamic
                     return false unless parts[cursor]
@@ -353,20 +383,18 @@ module Klenod
               def self.params_for(route, parts)
                 cursor = 0
                 params = {}
-                route.segments.each do |segment|
-                  case segment.kind
-                  when :group, :parallel
-                    next
-                  when :static, :intercept_current, :intercept_parent, :intercept_root
+                route.match_parts.each do |match_part|
+                  case match_part[0]
+                  when :static
                     cursor += 1
                   when :dynamic
-                    params[segment.param_name.to_sym] = parts[cursor]
+                    params[match_part[2].to_sym] = parts[cursor]
                     cursor += 1
                   when :catch_all
-                    params[segment.param_name.to_sym] = parts[cursor..]
+                    params[match_part[2].to_sym] = parts[cursor..]
                     cursor = parts.length
                   when :optional_catch_all
-                    params[segment.param_name.to_sym] = parts[cursor..]
+                    params[match_part[2].to_sym] = parts[cursor..]
                     cursor = parts.length
                   end
                 end
@@ -386,6 +414,7 @@ module Klenod
               "      #{route.path.inspect},",
               "      #{route.module_id.to_s.inspect},",
               "      #{segments_source(route.segments)},",
+              "      #{match_parts_source(route.segments)},",
               "      #{route.layout_module_ids.map(&:to_s).inspect},",
               "      #{imports.fetch(route.module_id.to_s)},",
               "      #{layouts_source(layouts)}",
@@ -450,8 +479,42 @@ module Klenod
           "[#{segments.map { |segment| segment_source(segment) }.join(", ")}]"
         end
 
+        def match_parts_source(segments)
+          route_match_parts_for(segments).inspect
+        end
+
         def segment_source(segment)
           "Segment.new(#{segment.name.inspect}, #{segment.kind.inspect}, #{segment.param_name.inspect}, #{segment.path_part.inspect})"
+        end
+
+        def route_match_parts_for(segments)
+          route_segments_for_matching(segments).filter_map do |segment|
+            case segment.kind
+            when :static, :intercept_current, :intercept_parent, :intercept_root
+              [:static, segment.path_part, nil]
+            when :dynamic, :catch_all, :optional_catch_all
+              [segment.kind, segment.path_part, segment.param_name]
+            end
+          end
+        end
+
+        def route_segments_for_matching(segments)
+          segments.each_with_object([]) do |segment, match_segments|
+            case segment.kind
+            when :group, :parallel
+              next
+            when :intercept_current
+              match_segments << segment
+            when :intercept_parent
+              match_segments.pop
+              match_segments << segment
+            when :intercept_root
+              match_segments.clear
+              match_segments << segment
+            else
+              match_segments << segment if segment.path_part || [:dynamic, :catch_all, :optional_catch_all].include?(segment.kind)
+            end
+          end
         end
 
         def layouts_source(layouts)

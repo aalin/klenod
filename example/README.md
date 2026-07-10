@@ -43,7 +43,7 @@ The example includes a small route gallery:
 - `/shop` and `/shop/sale/red` demonstrate optional catch-all params.
 - `/about` demonstrates a route group.
 - `/dashboard/settings` demonstrates a page in the `@modal` parallel slot.
-- `/feed/photo`, `/feed/profile`, and `/feed/login` demonstrate intercepted route segment metadata.
+- `/feed/photo`, `/profile`, and `/login` demonstrate intercepted route segment metadata.
 - `/routes` reads `Router::Default.tree` and displays structural route metadata.
 
 `framework.rb` defines the example `Example::H` factory used by the Haml plugin. `src/pages/page.haml` renders through that factory, imports `src/components/Figure.haml`, and automatically imports its companion `src/pages/page.css` as `Styles`.

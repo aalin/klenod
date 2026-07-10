@@ -56,8 +56,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/dashboard", "Dashboard")
     assert_route_includes(entry, context, "/dashboard/settings", "Dashboard settings modal")
     assert_route_includes(entry, context, "/feed/photo", "Photo intercept")
-    assert_route_includes(entry, context, "/feed/profile", "Profile intercept")
-    assert_route_includes(entry, context, "/feed/login", "Login intercept")
+    assert_route_includes(entry, context, "/profile", "Profile intercept")
+    assert_route_includes(entry, context, "/login", "Login intercept")
   end
 
   def test_example_app_renders_router_tree_metadata

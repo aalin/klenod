@@ -78,10 +78,10 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal([], routes_by_path.fetch("/dashboard/settings").params)
       assert_equal(:intercept_current, routes_by_path.fetch("/feed/photo").segments.fetch(1).kind)
       assert_equal("photo", routes_by_path.fetch("/feed/photo").segments.fetch(1).path_part)
-      assert_equal(:intercept_parent, routes_by_path.fetch("/feed/profile").segments.fetch(1).kind)
-      assert_equal("profile", routes_by_path.fetch("/feed/profile").segments.fetch(1).path_part)
-      assert_equal(:intercept_root, routes_by_path.fetch("/feed/login").segments.fetch(1).kind)
-      assert_equal("login", routes_by_path.fetch("/feed/login").segments.fetch(1).path_part)
+      assert_equal(:intercept_parent, routes_by_path.fetch("/profile").segments.fetch(1).kind)
+      assert_equal("profile", routes_by_path.fetch("/profile").segments.fetch(1).path_part)
+      assert_equal(:intercept_root, routes_by_path.fetch("/login").segments.fetch(1).kind)
+      assert_equal("login", routes_by_path.fetch("/login").segments.fetch(1).path_part)
     end
   end
 
@@ -293,14 +293,14 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       login = feed.children.find { |child| child.segment.name == "(...)login" }
 
       assert_equal(:photo, router.match("/feed/photo").page::NAME)
-      assert_equal(:profile, router.match("/feed/profile").page::NAME)
-      assert_equal(:login, router.match("/feed/login").page::NAME)
+      assert_equal(:profile, router.match("/profile").page::NAME)
+      assert_equal(:login, router.match("/login").page::NAME)
       assert_equal(:intercept_current, photo.segment.kind)
       assert_equal("/feed/photo", photo.path)
       assert_equal(:intercept_parent, profile.segment.kind)
-      assert_equal("/feed/profile", profile.path)
+      assert_equal("/profile", profile.path)
       assert_equal(:intercept_root, login.segment.kind)
-      assert_equal("/feed/login", login.path)
+      assert_equal("/login", login.path)
     end
   end
 
