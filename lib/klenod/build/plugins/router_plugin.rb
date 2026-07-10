@@ -91,7 +91,7 @@ module Klenod
         def load(module_id, context)
           return nil unless module_id.scheme == :virtual && module_id == @module_id
 
-          generate_router_source(discover(source_dir: context.source_dir), mode: context.mode)
+          generate_router_source(discover(source_dir: context.source_dir))
         end
 
         def transform(module_id, code, _context)
@@ -220,12 +220,12 @@ module Klenod
           path.relative_path_from(source_dir).to_s
         end
 
-        def generate_router_source(manifest, mode:)
-          imports = import_refs(manifest, mode: mode)
+        def generate_router_source(manifest)
+          imports = import_refs(manifest)
           <<~RUBY
             Segment = Data.define(:name, :kind, :param_name, :path_part)
             Param = Data.define(:name, :kind)
-            #{import_definitions(imports, mode: mode)}
+            #{import_definitions(imports)}
 
             module Default
               Route = Data.define(:path, :module_id, :segments, :match_parts, :layout_module_ids, :page_ref, :layout_refs) do
@@ -456,7 +456,7 @@ module Klenod
           end
         end
 
-        def import_refs(manifest, mode:)
+        def import_refs(manifest)
           specifiers =
             manifest.routes.flat_map do |route|
               [route.module_id.to_s, *route.layout_module_ids.map(&:to_s)]
@@ -467,9 +467,9 @@ module Klenod
           end
         end
 
-        def import_definitions(imports, mode:)
+        def import_definitions(imports)
           imports
-            .map { |specifier, const_name| "#{const_name} = #{import_statement(specifier, mode: mode)}" }
+            .map { |specifier, const_name| "#{const_name} = lazy_import(#{specifier.inspect})" }
             .join("\n")
         end
 
@@ -517,14 +517,6 @@ module Klenod
 
         def layouts_source(layouts)
           "[#{layouts.join(", ")}]"
-        end
-
-        def import_statement(specifier, mode:)
-          if mode != :development
-            "import(#{specifier.inspect})"
-          else
-            "lazy_import(#{specifier.inspect})"
-          end
         end
       end
     end

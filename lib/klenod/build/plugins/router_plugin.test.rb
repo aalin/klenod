@@ -338,7 +338,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
-  def test_build_mode_router_uses_eager_imports
+  def test_build_mode_router_keeps_route_imports_lazy
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/about")
       File.write("#{dir}/pages/page.rb", "NAME = :root\n")
@@ -347,9 +347,9 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       context = router_context(dir, mode: :build)
       router_record = context.load("virtual:router")
 
-      assert_includes(router_record.transformed_source, "__klenod_import__")
-      assert_includes(context.graph.records.keys.map(&:to_s), "pages/page.rb")
-      assert_includes(context.graph.records.keys.map(&:to_s), "pages/about/page.rb")
+      assert_includes(router_record.transformed_source, "__klenod_lazy_import__")
+      refute_includes(router_record.transformed_source, "__klenod_import__(\"")
+      assert_equal(["virtual:router.rb"], context.graph.records.keys.map(&:to_s))
     end
   end
 
@@ -432,6 +432,32 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal(["virtual:router"], bundle.entrypoints.keys)
       assert_equal(:root, router.match("/").page::NAME)
       assert_equal(:about, router.match("/about").page::NAME)
+    end
+  end
+
+  def test_bundle_allows_pages_to_import_router
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/routes")
+      File.write("#{dir}/pages/page.rb", "NAME = :root\n")
+      File.write(
+        "#{dir}/pages/routes/page.rb",
+        <<~RUBY
+          Router = import("virtual:router")
+          NAME = :routes
+          ROUTE_COUNT = Router::Default.routes.length
+        RUBY
+      )
+      output = "#{dir}/bundle.dump"
+      context = router_context(dir, mode: :build)
+
+      bundle = context.build(entrypoints: ["virtual:router"], output: output)
+      loaded = Klenod::Runtime.load_bundle(output)
+      router = loaded.exports("virtual:router")::Default
+      routes_page = router.match("/routes").page
+
+      assert_includes(bundle.modules.keys, "pages/routes/page.rb")
+      assert_equal(:routes, routes_page::NAME)
+      assert_equal(2, routes_page::ROUTE_COUNT)
     end
   end
 
