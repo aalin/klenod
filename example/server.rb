@@ -37,6 +37,20 @@ context.on_update do |event|
   end
 end
 
+def format_exception(error, context)
+  mods =
+    context.graph.mods.each_with_object({}) do |(module_id, mod), index|
+      index[module_id.to_s] = mod
+      index[module_id.path] = mod
+    end
+
+  Klenod::BacktraceRewriter.new(mods).format_exception(error)
+end
+
+def strip_ansi(value)
+  value.gsub(/\e\[[0-9;]*m/, "")
+end
+
 puts "Serving http://localhost:#{port}"
 puts "Watching #{source_dir}"
 puts "Mirroring assets to #{assets_dir}" if assets_dir
@@ -66,11 +80,12 @@ begin
           ["Asset not found\n"]
         ]
       rescue => e
-        warn "#{e.class}: #{e.message}"
+        formatted = format_exception(e, context)
+        warn formatted
         Protocol::HTTP::Response[
           500,
           {"content-type" => "text/plain"},
-          ["#{e.class}: #{e.message}\n"]
+          [strip_ansi(formatted), "\n"]
         ]
       end
 
