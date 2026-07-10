@@ -1,5 +1,5 @@
 :ruby
-  def initialize(image:, srcset:, sizes:, alt:, caption:, children: nil)
+  def initialize(image:, alt:, caption:, srcset: image&.srcset, sizes: "(max-width: 780px) 92vw, 360px", children: nil)
     @image = image
     @srcset = srcset
     @sizes = sizes

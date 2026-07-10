@@ -52,6 +52,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/docs/guides/routing", "Path parts: guides / routing")
     assert_route_includes(entry, context, "/shop", "No filters selected")
     assert_route_includes(entry, context, "/shop/sale/red", "Filters: sale, red")
+    assert_route_includes(entry, context, "/gallery", "Image gallery")
+    assert_route_includes(entry, context, "/gallery", "Coffee imported from a routed Haml page.")
     assert_route_includes(entry, context, "/about", "inside a route group")
     assert_route_includes(entry, context, "/dashboard", "Dashboard")
     assert_route_includes(entry, context, "/dashboard", "Dashboard settings modal")
@@ -74,6 +76,20 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "(.)photo:intercept_current")
     assert_includes(html, "(..)profile:intercept_parent")
     assert_includes(html, "(...)login:intercept_root")
+  end
+
+  def test_example_app_emits_gallery_image_variants
+    source_dir = File.expand_path("src", __dir__)
+    context = Example.build_context(source_dir: source_dir)
+    entry = context.entry("pages/server")
+    status, _headers, body = entry.call(Request.new("/gallery"), context)
+    html = body.join
+
+    assert_equal(200, status)
+    assert_includes(html, "srcset=")
+    assert(context.assets_for("pages/gallery/coffee.jpg").any? { |asset| asset.metadata[:type] == :image_variant })
+    assert(context.assets_for("pages/gallery/sailing-boat.jpg").any? { |asset| asset.metadata[:type] == :image_variant })
+    assert(context.assets_for("pages/gallery/vegetables.jpg").any? { |asset| asset.metadata[:type] == :image_variant })
   end
 
   def test_example_app_builds_and_loads_runtime_bundle

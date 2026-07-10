@@ -15,7 +15,14 @@ module Klenod
       class ImagePlugin < Plugin
         EXTENSIONS = [".avif", ".gif", ".jpeg", ".jpg", ".png", ".webp"].freeze
 
-        Image = Data.define(:src, :width, :height, :variants)
+        Image =
+          Data.define(:src, :width, :height, :variants) do
+            def srcset
+              return nil if variants.empty?
+
+              variants.map { "#{it.src} #{it.descriptor}" }.join(", ")
+            end
+          end
         ImageVariant = Data.define(:src, :width, :height, :format, :descriptor, :metadata)
         ImageVariantKey = Data.define(:source_path, :source_hash, :width, :format)
 

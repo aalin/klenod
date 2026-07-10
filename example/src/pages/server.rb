@@ -9,18 +9,12 @@ def self.call(request, context)
   return [404, {"content-type" => "text/plain"}, ["Not found\n"]] unless match
 
   page = match.page
-  srcset =
-    SmokedFish
-      .variants
-      .map { |variant| "#{variant.src} #{variant.descriptor}" }
-      .join(", ")
   body =
     page
       .new(
         name: Shared::NAME,
         tagline: Shared::TAGLINE,
         image: SmokedFish,
-        srcset: srcset,
         params: match.params
       )
       .render
@@ -59,5 +53,5 @@ def self.slots_for(match)
   modal = Router::Default.match("/dashboard/settings")
   return {} unless modal
 
-  {modal: [modal.page.new(name: Shared::NAME, tagline: Shared::TAGLINE, image: nil, srcset: "", params: modal.params).render]}
+  {modal: [modal.page.new(name: Shared::NAME, tagline: Shared::TAGLINE, image: nil, params: modal.params).render]}
 end

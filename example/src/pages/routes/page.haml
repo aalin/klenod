@@ -1,7 +1,7 @@
 :ruby
   Router = import("virtual:router")
 
-  def initialize(name:, tagline:, image:, srcset:, params: {})
+  def initialize(name:, tagline:, image:, params: {})
     tree = Router::Default.tree
     dashboard = tree.children.find { |node| node.segment&.name == "dashboard" }
     feed = tree.children.find { |node| node.segment&.name == "feed" }

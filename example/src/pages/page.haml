@@ -1,11 +1,10 @@
 :ruby
   Figure = import("../components/Figure.haml")
 
-  def initialize(name:, tagline:, image:, srcset:, params: {})
+  def initialize(name:, tagline:, image:, params: {})
     @name = name
     @tagline = tagline
     @image = image
-    @srcset = srcset.empty? ? nil : srcset
     @sizes = "(max-width: 720px) 90vw, 640px"
     @image_alt = "Smoked fish"
   end
@@ -13,5 +12,5 @@
 %main{ class: Styles.fetch(:title) }
   %h1= "Hello from #{@name}"
   %p= @tagline
-  %Figure{ image: @image, srcset: @srcset, sizes: @sizes, alt: @image_alt, caption: "Image imported through Klenod with generated variants." }
+  %Figure{ image: @image, sizes: @sizes, alt: @image_alt, caption: "Image imported through Klenod with generated variants." }
   %p Served through async-http and reloaded through Klenod watch events.
