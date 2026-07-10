@@ -646,6 +646,12 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   def transform_haml_fixture(path)
     basename = File.basename(path, ".haml")
     module_id = ModuleId.new("__test__/haml/#{File.basename(path)}", nil)
+    styles_source =
+      if basename == "style_classes"
+        "{__figure: \"figure_hash\", __img: \"img_hash\", card: \"card_hash\", image: \"image_hash\"}.freeze"
+      else
+        "{}.freeze"
+      end
 
     Klenod::Build::Plugins::HamlPlugin::DefaultTransformer
       .new
@@ -655,8 +661,9 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         component_class_name: basename.split(/[^A-Za-z0-9]+/).map { _1[0].upcase + _1[1..] }.join,
         component_base_class: "TestFramework::ComponentBase",
         factory: "TestFramework::H",
-        styles_source: "{}.freeze",
-        translations_source: "{}.freeze"
+        styles_source: styles_source,
+        translations_source: "{}.freeze",
+        styleable: basename == "style_classes"
       )
       .code
   end
