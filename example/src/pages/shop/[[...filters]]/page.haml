@@ -5,7 +5,7 @@
 
 %article
   %h1 Shop optional catch-all
-  - if @filters.empty?
+  = if @filters.empty?
     %p No filters selected
-  - else
+  = else
     %p= "Filters: #{@filters.join(", ")}"

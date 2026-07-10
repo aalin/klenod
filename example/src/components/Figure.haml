@@ -9,8 +9,8 @@
   end
 
 %figure
-  - if @children&.any?
+  = if @children&.any?
     = @children
-  - else
+  = else
     %img.image{ src: @image.src, srcset: @srcset, sizes: @sizes, width: @image.width, height: @image.height, alt: @alt }
   %figcaption= @caption

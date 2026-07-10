@@ -351,6 +351,10 @@ module Klenod
               ast_branches(branches) || raise(ArgumentError, "Could not build Ruby branch from Haml scripts: #{branches.map(&:first).inspect}")
             end
 
+            def silent_branches(branches)
+              ast_silent_branches(branches) || raise(ArgumentError, "Could not build Ruby branch from Haml scripts: #{branches.map(&:first).inspect}")
+            end
+
             def ruby_filters(nodes)
               return "" if nodes.empty?
 
@@ -416,6 +420,15 @@ module Klenod
             def ast_branches(branches)
               node = branch_node(branches)
               return nil unless node
+
+              Fragment.new(format_node(node), node)
+            end
+
+            def ast_silent_branches(branches)
+              node = branch_node(branches)
+              return nil unless node
+
+              node = ast_begin([node, nil_node])
 
               Fragment.new(format_node(node), node)
             end
@@ -828,11 +841,19 @@ module Klenod
             source = script_source(node)
             return builder.silent_script(source) if node.children.empty?
 
-            compile_branches(split_silent_script_branches(node), factory: factory, styleable: styleable, builder: builder)
+            compile_silent_branches(split_silent_script_branches(node), factory: factory, styleable: styleable, builder: builder)
           end
 
           def compile_branches(branches, factory:, builder:, styleable: false)
             builder.branches(
+              branches.map do |source, children|
+                [source, compile_nodes(children, factory: factory, styleable: styleable, builder: builder)]
+              end
+            )
+          end
+
+          def compile_silent_branches(branches, factory:, builder:, styleable: false)
+            builder.silent_branches(
               branches.map do |source, children|
                 [source, compile_nodes(children, factory: factory, styleable: styleable, builder: builder)]
               end

@@ -23,12 +23,15 @@ class SilentConditional < TestFramework::ComponentBase
   end
   public def render
     # SourceMapMark:6:IGlmIEBzaG93
-    if @show
-      # SourceMapMark:7:VmlzaWJsZQ==
-      TestFramework::H[:p, "Visible"]
-    else
-      # SourceMapMark:9:RW1wdHk=
-      TestFramework::H[:p, "Empty"]
+    begin
+      if @show
+        # SourceMapMark:7:VmlzaWJsZQ==
+        TestFramework::H[:p, "Visible"]
+      else
+        # SourceMapMark:9:RW1wdHk=
+        TestFramework::H[:p, "Empty"]
+      end
+      nil
     end
   end
 end

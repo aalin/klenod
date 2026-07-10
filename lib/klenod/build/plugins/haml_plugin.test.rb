@@ -528,6 +528,35 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_kind_of(SyntaxTree::Else, node.consequent)
   end
 
+  def test_ruby_builder_builds_silent_branches_with_nil_result
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment =
+      builder.silent_branches([
+        ["if show", builder.expression("H[:p]")],
+        ["else", builder.expression("H[:span]")]
+      ])
+
+    assert_kind_of(SyntaxTree::Begin, fragment.node)
+    assert_equal(<<~RUBY.chomp, fragment.source)
+      begin
+        show ? H[:p] : H[:span]
+        nil
+      end
+    RUBY
+  end
+
+  def test_ruby_builder_preserves_returns_inside_silent_branches
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    fragment =
+      builder.silent_branches([
+        ["if show", builder.silent_script("return")]
+      ])
+
+    assert_kind_of(SyntaxTree::Begin, fragment.node)
+    assert_includes(fragment.source, "return")
+    assert_includes(fragment.source, "nil")
+  end
+
   def test_ruby_builder_builds_case_branches_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     fragment =
@@ -1009,8 +1038,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       record = context.load("pages/conditional.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
-      assert_equal([:p, "Visible"], exports::Default.new(show: true).render)
-      assert_equal([:p, "Empty"], exports::Default.new(show: false).render)
+      assert_nil(exports::Default.new(show: true).render)
+      assert_nil(exports::Default.new(show: false).render)
       assert_match(/SourceMapMark:7:/, record.transformed_source)
       assert_match(/SourceMapMark:9:/, record.transformed_source)
     end
