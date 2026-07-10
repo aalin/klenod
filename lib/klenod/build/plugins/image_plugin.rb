@@ -22,6 +22,13 @@ module Klenod
 
               variants.map { "#{it.src} #{it.descriptor}" }.join(", ")
             end
+
+            def sizes
+              display_width = variants.filter_map(&:width).max || width
+              return nil unless display_width
+
+              "(max-width: #{display_width}px) 100vw, #{display_width}px"
+            end
           end
         ImageVariant = Data.define(:src, :width, :height, :format, :descriptor, :metadata)
         ImageVariantKey = Data.define(:source_path, :source_hash, :width, :format)

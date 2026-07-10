@@ -75,6 +75,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
           Hero = import("images/hero.png")
           VARIANTS = Hero.variants
           SRCSET = Hero.srcset
+          SIZES = Hero.sizes
         RUBY
       )
       image_plugin = Klenod::Build::Plugins::ImagePlugin.new(widths: [2], formats: ["png"])
@@ -87,6 +88,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       record = context.load("entry")
       variants = context.graph.mods.fetch(record.id).const_get(:Exports)::VARIANTS
       srcset = context.graph.mods.fetch(record.id).const_get(:Exports)::SRCSET
+      sizes = context.graph.mods.fetch(record.id).const_get(:Exports)::SIZES
       variant = variants.fetch(0)
       variant_asset = context.assets_for("images/hero.png").find { |asset| asset.metadata[:type] == :image_variant }
 
@@ -96,6 +98,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal(:png, variant.format)
       assert_equal("2w", variant.descriptor)
       assert_equal("#{variant.src} 2w", srcset)
+      assert_equal("(max-width: 2px) 100vw, 2px", sizes)
       assert_equal(variant.src, variant_asset.output_path)
       assert_equal("image/png", variant_asset.content_type)
       refute(variant_asset.ready?)

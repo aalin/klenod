@@ -5,12 +5,11 @@
     @name = name
     @tagline = tagline
     @image = image
-    @sizes = "(max-width: 720px) 90vw, 640px"
     @image_alt = "Smoked fish"
   end
 
 %main{ class: Styles.fetch(:title) }
   %h1= "Hello from #{@name}"
   %p= @tagline
-  %Figure{ image: @image, sizes: @sizes, alt: @image_alt, caption: "Image imported through Klenod with generated variants." }
+  %Figure{ image: @image, alt: @image_alt, caption: "Image imported through Klenod with generated variants." }
   %p Served through async-http and reloaded through Klenod watch events.
