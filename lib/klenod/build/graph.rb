@@ -152,6 +152,7 @@ module Klenod
 
       def invalidate_paths(changed_paths, removed_paths: [])
         previous_assets = assets
+        evaluated_module_ids = @mods.keys
         changed_module_ids = module_ids_for_paths(changed_paths)
         removed_module_ids = module_ids_for_paths(removed_paths)
         pattern_owner_ids = module_ids_for_watched_paths(changed_paths + removed_paths)
@@ -166,7 +167,11 @@ module Klenod
 
         reloaded_module_ids =
           reload_module_ids.filter_map do |module_id|
-            load_module(module_id, force: true)
+            if evaluated_module_ids.include?(module_id)
+              load_module(module_id, force: true)
+            else
+              collect_module(module_id, force: true)
+            end
             module_id
           rescue => e
             errors << [module_id, e]
@@ -178,8 +183,13 @@ module Klenod
             next if removed_module_ids.include?(module_id)
             next if reload_module_ids.include?(module_id)
 
-            load_module(module_id, reevaluate: true)
-            module_id
+            if evaluated_module_ids.include?(module_id)
+              load_module(module_id, reevaluate: true)
+              module_id
+            else
+              collect_module(module_id, force: true)
+              nil
+            end
           rescue => e
             errors << [module_id, e]
             nil

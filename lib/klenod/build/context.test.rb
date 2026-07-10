@@ -264,6 +264,33 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_invalidate_paths_recollects_unevaluated_entry_dependents_without_evaluating_them
+    Dir.mktmpdir do |dir|
+      dep_path = "#{dir}/dep.rb"
+      side_effect_path = "#{dir}/side-effect.txt"
+      File.write(dep_path, "VALUE = 1\n")
+      File.write("#{dir}/entry.rb", "Dep = import(\"./dep\")\nFile.binwrite(#{side_effect_path.inspect}, Dep::VALUE.to_s)\nVALUE = Dep::VALUE\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry = context.entry("entry")
+
+      assert_equal(Klenod::Build::ModuleId.new("entry.rb", nil), entry.id)
+      assert_equal({}, context.graph.mods)
+      refute(File.exist?(side_effect_path))
+
+      File.write(dep_path, "VALUE = 2\n")
+      result = context.invalidate_paths([dep_path])
+
+      assert_equal(["dep.rb"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal([], result.reevaluated_module_ids)
+      assert_equal({}, context.graph.mods)
+      refute(File.exist?(side_effect_path), "Expected invalidation to avoid evaluating collected entry dependents")
+
+      assert_equal(2, entry.exports::VALUE)
+      assert_equal("2", File.binread(side_effect_path))
+    end
+  end
+
   def test_assets_for_module_returns_reachable_filtered_assets
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/components")
