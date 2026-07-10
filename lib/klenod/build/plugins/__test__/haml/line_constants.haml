@@ -1,0 +1,11 @@
+:ruby
+  def filter_line
+    __LINE__
+  end
+
+%main{ data_line: __LINE__ }
+  = __LINE__
+  = filter_line
+  = "__LINE__"
+  %span= __LINE__
+  %section[__LINE__]

@@ -1395,6 +1395,38 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_default_haml_transformer_rewrites_line_constants_to_haml_lines
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          :ruby
+            def filter_line
+              __LINE__
+            end
+
+          %main{ data_line: __LINE__ }
+            = __LINE__
+            = filter_line
+            = "__LINE__"
+            %span= __LINE__
+            %section[__LINE__]
+        HAML
+      )
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      record = context.load("pages/page.haml")
+      exports = context.exports(record)
+
+      assert_equal([:main, 7, 3, "__LINE__", [:span, 10], [:section, {key: 11}], {data_line: 6}], exports::Default.new.render)
+    end
+  end
+
   def test_haml_uses_custom_transformer_contract
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

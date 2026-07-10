@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "ripper"
 require "syntax_tree"
 require "syntax_tree/dsl"
 require "syntax_tree/haml"
@@ -167,7 +168,8 @@ module Klenod
               ast_expressions(expressions)
             end
 
-            def expression(source)
+            def expression(source, line_no: nil)
+              source = rewrite_line_constant(source, line_no)
               node = parse_expression(source)
               formatted_source =
                 if node && !source.include?(SourceMap::MARK_PREFIX)
@@ -179,7 +181,8 @@ module Klenod
               Fragment.new(formatted_source, node)
             end
 
-            def statements(source)
+            def statements(source, line_no: nil)
+              source = rewrite_line_constant(source, line_no)
               node = parse_statements(source)
 
               Fragment.new(node ? format_node(node) : source, node)
@@ -283,14 +286,16 @@ module Klenod
               fragment(symbol_node(value.to_s))
             end
 
-            def parenthesized_expression(source)
+            def parenthesized_expression(source, line_no: nil)
+              source = rewrite_line_constant(source, line_no)
               node = parse_expression(source)
               return expression("(#{source})") unless node
 
               fragment(Paren(LParen("("), Statements([node])))
             end
 
-            def hash_expression(source)
+            def hash_expression(source, line_no: nil)
+              source = rewrite_line_constant(source, line_no)
               node = parse_expression(source)
               return nil unless node.is_a?(SyntaxTree::HashLiteral)
 
@@ -340,14 +345,17 @@ module Klenod
             end
 
             def script_block(source, body)
+              source = rewrite_line_constant(source, nil)
               ast_script_block(source, body) || raise(ArgumentError, "Could not build Ruby block from Haml script: #{source.inspect}")
             end
 
             def silent_script_block(source, body)
+              source = rewrite_line_constant(source, nil)
               ast_silent_script_block(source, body) || raise(ArgumentError, "Could not build Ruby block from Haml script: #{source.inspect}")
             end
 
             def silent_script(source)
+              source = rewrite_line_constant(source, nil)
               ast_silent_script(source) || raise(ArgumentError, "Could not build Ruby begin block from Haml script: #{source.inspect}")
             end
 
@@ -373,7 +381,28 @@ module Klenod
               to_source(value).lines.map { |line| "#{" " * spaces}#{line}" }.join
             end
 
+            def line_rewritten_source(source, line_no)
+              rewrite_line_constant(source, line_no)
+            end
+
             private
+
+            def rewrite_line_constant(source, line_no)
+              return source.to_s unless line_no
+
+              source = source.to_s
+              line_offsets = [0]
+              source.each_line(chomp: false) { |line| line_offsets << line_offsets.last + line.length }
+
+              Ripper
+                .lex(source)
+                .select { |(_line, _column), type, token, _state| type == :on_kw && token == "__LINE__" }
+                .reverse_each
+                .each_with_object(source.dup) do |((line, column), _type, token, _state), rewritten|
+                  offset = line_offsets.fetch(line - 1) + column
+                  rewritten[offset, token.length] = line_no.to_s
+                end
+            end
 
             def ast_expressions(expressions)
               case expressions.length
@@ -832,7 +861,7 @@ module Klenod
             return compile_node(nodes.fetch(0), factory: factory, styleable: styleable, builder: builder) if nodes.length == 1
 
             compile_branches(
-              nodes.map { |node| [script_source(node), node.children] },
+              nodes.map { |node| [script_source(node, builder: builder), node.children] },
               factory: factory,
               styleable: styleable,
               builder: builder
@@ -840,18 +869,18 @@ module Klenod
           end
 
           def compile_script(node, factory:, builder:, styleable: false)
-            source = script_source(node)
+            source = script_source(node, builder: builder)
             return builder.parenthesized_expression(source) if node.children.empty?
 
             builder.script_block(source, compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder))
           end
 
           def compile_script_branch(node, factory:, builder:, styleable: false)
-            compile_branches([[script_source(node), node.children]], factory: factory, styleable: styleable, builder: builder)
+            compile_branches([[script_source(node, builder: builder), node.children]], factory: factory, styleable: styleable, builder: builder)
           end
 
           def compile_silent_script(node, factory:, builder:, styleable: false)
-            source = script_source(node)
+            source = script_source(node, builder: builder)
             return builder.silent_script(source) if node.children.empty?
             if block_script?(source)
               return builder.silent_script_block(
@@ -860,7 +889,7 @@ module Klenod
               )
             end
 
-            compile_silent_branches(split_silent_script_branches(node), factory: factory, styleable: styleable, builder: builder)
+            compile_silent_branches(split_silent_script_branches(node, builder: builder), factory: factory, styleable: styleable, builder: builder)
           end
 
           def compile_branches(branches, factory:, builder:, styleable: false)
@@ -879,15 +908,15 @@ module Klenod
             )
           end
 
-          def split_silent_script_branches(node)
+          def split_silent_script_branches(node, builder:)
             branches = []
-            current_source = script_source(node)
+            current_source = script_source(node, builder: builder)
             current_children = []
 
             node.children.each do |child|
               if continuation?(child)
                 branches << [current_source, current_children]
-                current_source = script_source(child)
+                current_source = script_source(child, builder: builder)
                 current_children = child.children.dup
               else
                 current_children << child
@@ -901,8 +930,8 @@ module Klenod
             node.type == :script || node.type == :silent_script
           end
 
-          def script_source(node)
-            node.value.fetch(:text).strip
+          def script_source(node, builder:)
+            builder.line_rewritten_source(node.value.fetch(:text).strip, node.line)
           end
 
           def continuation?(node)
@@ -921,7 +950,7 @@ module Klenod
             children = []
             value = node.value.fetch(:value)
             if value && !value.empty?
-              children << (node.value.fetch(:parse) ? builder.parenthesized_expression(value) : builder.literal(value))
+              children << (node.value.fetch(:parse) ? builder.parenthesized_expression(value, line_no: node.line) : builder.literal(value))
             end
             children.concat(compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder))
 
@@ -970,7 +999,8 @@ module Klenod
                 .lines
                 .map
                 .with_index(node.line + 1) do |line, line_no|
-                  "#{source_mark(RubyLine.new(line_no, line.strip), builder: builder)}\n#{line.chomp}"
+                  rewritten = builder.line_rewritten_source(line.chomp, line_no)
+                  "#{source_mark(RubyLine.new(line_no, line.strip), builder: builder)}\n#{rewritten.chomp}"
                 end
                 .join("\n")
 
@@ -1003,7 +1033,7 @@ module Klenod
             source = node.value.fetch(:dynamic_attributes).old
             return {} unless source
 
-            hash = builder.hash_expression(source)
+            hash = builder.hash_expression(source, line_no: node.line)
             return {} unless hash
 
             hash.node.assocs.to_h do |assoc|
@@ -1046,7 +1076,7 @@ module Klenod
             source = node.value.fetch(:object_ref)
             return {} unless source.is_a?(String)
 
-            expression = builder.expression(source)
+            expression = builder.expression(source, line_no: node.line)
             key =
               if expression.node.is_a?(SyntaxTree::ArrayLiteral) && expression.node.contents&.parts&.length == 1
                 builder.fragment(expression.node.contents.parts.fetch(0))
