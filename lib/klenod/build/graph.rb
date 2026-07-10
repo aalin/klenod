@@ -222,6 +222,7 @@ module Klenod
           resolved_dependencies = resolve_transform_dependencies(transform)
           dependency_records = load_eager_dependency_records(resolved_dependencies)
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
+          assert_supported_transform!(module_id, source, transform)
           transformed_hash = Digest::SHA256.hexdigest(transform.code)
           mod = instantiate_module(module_id, transform, resolved_dependencies, dependency_records, cached)
           record = build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, mod)
@@ -323,6 +324,17 @@ module Klenod
 
       def finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
         finalize(module_id, transform, resolved_dependencies, dependency_records)
+      end
+
+      def assert_supported_transform!(module_id, source, transform)
+        return if ruby_module_extension?(module_id.extname)
+        return unless transform.code == source && transform.dependencies.empty? && transform.assets.empty?
+
+        raise UnsupportedFileError, "No plugin transformed #{module_id.path.inspect}. Add a plugin for #{module_id.extname.inspect} files."
+      end
+
+      def ruby_module_extension?(extname)
+        extname.empty? || extname == ".rb"
       end
 
       def instantiate_module(module_id, transform, resolved_dependencies, dependency_records, cached)

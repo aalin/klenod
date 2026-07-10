@@ -73,6 +73,10 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  class ExtensionOnlyPlugin < Klenod::Build::Plugin
+    EXTENSIONS = [".yaml"].freeze
+  end
+
   def test_loads_entrypoint_and_dependencies_lazily
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -85,6 +89,26 @@ class Klenod::Build::Context::Test < Minitest::Test
 
       assert_equal(42, mod.const_get(:Exports)::VALUE)
       assert_equal(2, context.graph.records.length)
+    end
+  end
+
+  def test_unsupported_non_ruby_file_reports_missing_transform_plugin
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/entry.rb", "Config = import(\"config.yaml\")\n")
+      File.write("#{dir}/config.yaml", "groups:\n  - Main\n")
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            Klenod::Build::Plugins::RubyPlugin.new,
+            ExtensionOnlyPlugin.new
+          ]
+        )
+
+      error = assert_raises(Klenod::Build::UnsupportedFileError) { context.load("entry") }
+
+      assert_includes(error.message, "No plugin transformed \"config.yaml\"")
+      assert_includes(error.message, "Add a plugin for \".yaml\" files")
     end
   end
 
