@@ -142,6 +142,11 @@ module Klenod
         @graph.exports(record_or_module_id)
       end
 
+      def evaluated?(record_or_module_id)
+        record_or_module_id = record_or_module_id.id if record_or_module_id.is_a?(LoadedModule)
+        @graph.evaluated?(record_or_module_id)
+      end
+
       def module_id_for(record_or_module_id)
         return record_or_module_id.id if record_or_module_id.is_a?(LoadedModule)
 
@@ -208,7 +213,7 @@ module Klenod
         AppliedUpdate.new(
           event,
           entry,
-          entry.exports,
+          evaluated?(entry) ? entry.exports : nil,
           asset_write_result,
           [].freeze
         )

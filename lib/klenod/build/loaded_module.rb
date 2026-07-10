@@ -18,6 +18,10 @@ module Klenod
         context.exports(id)
       end
 
+      def evaluated?
+        context.evaluated?(id)
+      end
+
       def call(...)
         exports.call(...)
       end

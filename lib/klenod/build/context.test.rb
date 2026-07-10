@@ -1085,6 +1085,7 @@ class Klenod::Build::Context::Test < Minitest::Test
 
       context = Klenod::Build::Context.new(source_dir: dir)
       entry = context.entry("entry")
+      entry.exports
       context.write_assets(assets_dir)
 
       File.write(css_path, ".heading { color: blue; }\n")
@@ -1106,6 +1107,37 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(result.removed_assets.sort, applied.asset_write_result.removed_paths.map { |path| "/#{Pathname.new(path).relative_path_from(Pathname.new(assets_dir))}" }.sort)
       assert_equal(applied.asset_write_result.written_paths, applied.written_asset_paths)
       assert_equal(applied.asset_write_result.removed_paths, applied.removed_asset_paths)
+    end
+  end
+
+  def test_apply_update_preserves_unevaluated_entry_handles
+    Dir.mktmpdir do |dir|
+      dep_path = "#{dir}/dep.rb"
+      side_effect_path = "#{dir}/side-effect.txt"
+      File.write(dep_path, "VALUE = 1\n")
+      File.write("#{dir}/entry.rb", "Dep = import(\"./dep\")\nFile.binwrite(#{side_effect_path.inspect}, Dep::VALUE.to_s)\nVALUE = Dep::VALUE\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry = context.entry("entry")
+
+      refute(entry.evaluated?)
+      refute(context.evaluated?(entry))
+      refute(File.exist?(side_effect_path))
+
+      File.write(dep_path, "VALUE = 2\n")
+      result = context.invalidate_paths([dep_path])
+      event = Struct.new(:result, :asset_updates).new(result, result.asset_updates)
+      applied = context.apply_update(event, entry: entry)
+
+      assert(applied.success?)
+      assert_same(entry, applied.entry)
+      assert_nil(applied.exports)
+      refute(entry.evaluated?)
+      refute(File.exist?(side_effect_path), "Expected apply_update to avoid evaluating lazy entry")
+
+      assert_equal(2, entry.exports::VALUE)
+      assert(entry.evaluated?)
+      assert_equal("2", File.binread(side_effect_path))
     end
   end
 

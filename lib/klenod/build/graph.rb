@@ -92,6 +92,10 @@ module Klenod
         evaluate_module(module_id).const_get(:Exports)
       end
 
+      def evaluated?(record_or_module_id)
+        @mods.key?(module_id_for(record_or_module_id))
+      end
+
       def assets_for(logical_name)
         assets.values.select { |asset| asset.logical_name == logical_name.to_s }
       end
