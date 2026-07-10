@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../lib/klenod"
+require_relative "../../lib/klenod"
 
 config = Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
 source_dir = config.source_path
@@ -42,7 +42,7 @@ puts "Mirroring assets to #{assets_dir}" if assets_dir
 puts "Initial asset files written: #{write_result.written_paths.length}" if write_result
 puts "Initial status: #{status}"
 puts "Initial body includes Haml page: #{body.join.include?("<main")}"
-puts "Edit example/src/pages/page.haml, example/src/pages/page.css, or example/src/shared.rb to see an update."
+puts "Edit example/web/src/pages/page.haml, example/web/src/pages/page.css, or example/web/src/shared.rb to see an update."
 
 begin
   watcher.start

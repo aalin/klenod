@@ -4,7 +4,7 @@ require "async"
 require "async/http"
 require "protocol/http/response"
 
-require_relative "../lib/klenod"
+require_relative "../../lib/klenod"
 
 config = Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
 source_dir = config.source_path
@@ -56,7 +56,7 @@ end
 puts "Serving http://localhost:#{port}"
 puts "Watching #{source_dir}"
 puts "Mirroring assets to #{assets_dir}" if assets_dir
-puts "Edit example/src/pages/page.haml, example/src/pages/page.css, or example/src/shared.rb to see updates."
+puts "Edit example/web/src/pages/page.haml, example/web/src/pages/page.css, or example/web/src/shared.rb to see updates."
 
 begin
   watcher.start

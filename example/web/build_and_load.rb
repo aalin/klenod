@@ -2,7 +2,7 @@
 
 require "fileutils"
 
-require_relative "../lib/klenod"
+require_relative "../../lib/klenod"
 
 config = Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
 source_dir = config.source_path

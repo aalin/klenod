@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "tmpdir"
 
-require_relative "../lib/klenod"
+require_relative "../../lib/klenod"
 
 class Klenod::ExampleTest < Minitest::Test
   Request = Data.define(:path)
