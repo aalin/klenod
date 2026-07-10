@@ -86,7 +86,10 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 
 ## Dev Server And Runtime
 
-- [ ] Add a development server or Rack integration for serving emitted assets.
+- [ ] Add optional Rack integration for serving emitted assets:
+  - [ ] Provide a small Rack endpoint/middleware that serves `context.asset(path).bytes`.
+  - [ ] Support runtime bundles by serving files already written under an assets directory.
+  - [ ] Keep framework-specific HTTP/server behavior outside core build/runtime.
 - [x] Add a stable event payload for hot reload consumers.
 - [x] Add runtime API for reading bundle assets.
 - [x] Add runtime-only boundary tests to ensure runtime does not require build or plugin dependencies.
@@ -100,7 +103,8 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 - [ ] Add CLI commands after the Ruby API stabilizes:
   - [x] `klenod build`
   - [ ] `klenod dev`
-  - [ ] Keep CLI code separate from `klenod/runtime` so it can become a separate gem.
+  - [x] Keep CLI code separate from `klenod/runtime` so it can become a separate gem.
+  - [x] Load nearest `klenod.config.rb` and run from the config directory.
   - [ ] Add a ratatat-backed TUI after the command API settles.
 
 ## Module Identity And Import Schemes
@@ -145,6 +149,10 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 - [x] Add structural path param metadata.
 - [x] Decide whether routing belongs in a router plugin.
 - [x] Add structural route manifest generation.
+- [ ] Resolve router build-mode cycles:
+  - [ ] Keep generated route page/layout references lazy in the router module.
+  - [ ] Ensure build bundles still include every discovered page/layout module.
+  - [ ] Add a regression where a page imports `virtual:router` and the router bundle still builds.
 
 ## Testing And Examples
 
