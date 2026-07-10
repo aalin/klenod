@@ -7,6 +7,7 @@ require_relative "plugins/intl_plugin"
 require_relative "plugins/haml_plugin"
 require_relative "plugins/css_plugin"
 require_relative "plugins/image_plugin"
+require_relative "plugins/data_plugin"
 require_relative "plugins/router_plugin"
 
 module Klenod
@@ -59,7 +60,11 @@ module Klenod
         Plugins::IntlPlugin.new,
         Plugins::HamlPlugin.new,
         Plugins::CssPlugin.new,
-        Plugins::ImagePlugin.new
+        Plugins::ImagePlugin.new,
+        Plugins::JsonPlugin.new,
+        Plugins::YamlPlugin.new,
+        Plugins::TomlPlugin.new,
+        Plugins::TextPlugin.new
       ].freeze
 
       def initialize(
