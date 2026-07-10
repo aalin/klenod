@@ -19,6 +19,16 @@ module Klenod
       def extname
         File.extname(path)
       end
+
+      def scheme
+        path.include?(":") ? path.split(":", 2).fetch(0).to_sym : :app
+      end
+
+      def bare_path
+        return path unless path.include?(":")
+
+        path.split(":", 2).fetch(1)
+      end
     end
   end
 end
