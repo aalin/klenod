@@ -129,6 +129,12 @@ module Klenod
         @graph.exports(record_or_module_id)
       end
 
+      def module_id_for(record_or_module_id)
+        return record_or_module_id.id if record_or_module_id.is_a?(LoadedModule)
+
+        @graph.module_id_for(record_or_module_id)
+      end
+
       def asset_bytes(output_path, assets_dir: nil)
         asset = asset(output_path)
         return asset.bytes unless assets_dir

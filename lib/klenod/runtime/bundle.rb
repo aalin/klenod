@@ -86,9 +86,7 @@ module Klenod
         @mods = {}
       end
 
-      private
-
-      def module_id_for_ref(module_ref)
+      def module_id_for(module_ref)
         id = module_ref.respond_to?(:path) ? module_ref.path : module_ref.to_s
         return id if @modules.key?(id)
 
@@ -98,6 +96,8 @@ module Klenod
 
         raise KeyError, "No module in bundle for #{module_ref.inspect}"
       end
+
+      private
 
       def module_id_for_absolute_ref(id)
         return nil unless source_root
@@ -111,7 +111,7 @@ module Klenod
       end
 
       def reachable_module_ids(module_ref)
-        root_id = module_id_for_ref(module_ref)
+        root_id = module_id_for(module_ref)
         seen = []
         queue = [root_id]
 
@@ -136,7 +136,7 @@ module Klenod
       def module_ids_for_assets(module_ref, recursive:)
         return reachable_module_ids(module_ref) if recursive
 
-        [module_id_for_ref(module_ref)]
+        [module_id_for(module_ref)]
       end
 
       def asset_matches?(asset, type:, content_type:)

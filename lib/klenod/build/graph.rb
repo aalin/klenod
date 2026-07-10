@@ -80,7 +80,7 @@ module Klenod
       end
 
       def exports(record_or_module_id)
-        module_id = module_id_for_ref(record_or_module_id)
+        module_id = module_id_for(record_or_module_id)
         @mods.fetch(module_id).const_get(:Exports)
       end
 
@@ -247,9 +247,7 @@ module Klenod
         record.resolved_dependencies.map(&:module_id).each(&block)
       end
 
-      private
-
-      def module_id_for_ref(record_or_module_id)
+      def module_id_for(record_or_module_id)
         case record_or_module_id
         when ModuleRecord
           record_or_module_id.id
@@ -263,6 +261,8 @@ module Klenod
         end
       end
 
+      private
+
       def module_id_for_absolute_ref(ref)
         absolute_path = Pathname.new(ref).expand_path
         relative = absolute_path.relative_path_from(source_dir).to_s
@@ -273,7 +273,7 @@ module Klenod
       end
 
       def reachable_module_ids(record_or_module_id)
-        root_id = module_id_for_ref(record_or_module_id)
+        root_id = module_id_for(record_or_module_id)
         seen = Set.new
         queue = [root_id]
 
@@ -292,7 +292,7 @@ module Klenod
       def module_ids_for_assets(record_or_module_id, recursive:)
         return reachable_module_ids(record_or_module_id) if recursive
 
-        [module_id_for_ref(record_or_module_id)]
+        [module_id_for(record_or_module_id)]
       end
 
       def asset_matches?(asset, type:, content_type:)

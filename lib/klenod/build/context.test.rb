@@ -92,6 +92,34 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_loads_app_root_imports_with_leading_slash
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/shared.rb", "VALUE = 41\n")
+      File.write("#{dir}/pages/page.rb", "Shared = import(\"/shared\")\nVALUE = Shared::VALUE + 1\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.load("pages/page")
+
+      assert_equal(42, context.exports(record)::VALUE)
+      assert_equal("shared.rb", context.module_id_for("#{dir}/shared.rb").path)
+    end
+  end
+
+  def test_module_id_for_normalizes_loaded_modules_and_absolute_source_paths
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.rb", "VALUE = 42\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      entry = context.entry("pages/page")
+
+      assert_equal(entry.id, context.module_id_for(entry))
+      assert_equal(entry.id, context.module_id_for("#{dir}/pages/page.rb"))
+      assert_equal(entry.id, context.graph.module_id_for("#{dir}/pages/page.rb"))
+    end
+  end
+
   def test_build_bundle_can_rebase_file_paths_when_loaded
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

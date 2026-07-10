@@ -81,6 +81,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     copy.source_root = "/app/src"
 
     assert_equal("/app/src/pages/page.rb", copy.load("entry").const_get(:Exports)::FILE_PATH)
+    assert_equal("pages/page.rb", copy.module_id_for("/app/src/pages/page.rb"))
   end
 
   def test_bundle_load_instantiates_imported_modules
