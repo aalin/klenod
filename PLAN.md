@@ -110,7 +110,12 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
   - [ ] Future `gem` or `plugin` schemes for imports resolved outside the app source root.
 - [x] Add `ModuleId#scheme` and `ModuleId#bare_path` helpers.
 - [ ] Replace ad hoc virtual/app checks with scheme-aware helpers where useful.
-- [ ] Design external plugin/package imports after the current app-root `/foo` imports settle.
+- [ ] Design external plugin/package imports after the current app-root `/foo` imports settle:
+  - [ ] Reserve `plugin:` and `gem:` import specifiers for modules outside `source_dir`.
+  - [ ] Let resolver plugins handle non-app schemes before the filesystem resolver runs.
+  - [ ] Raise a clear `ResolveError` for unknown schemes that no plugin resolves.
+  - [ ] Add tests with a small fake resolver plugin for `plugin:demo`.
+  - [ ] Keep `import("/foo")` as the only app-root import syntax for now.
 
 ## Routing And App Structure
 
