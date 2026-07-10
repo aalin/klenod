@@ -16,6 +16,10 @@ module Example
         ),
         Klenod::Build::Plugins::CssPlugin.new,
         Klenod::Build::Plugins::ImagePlugin.new,
+        Klenod::Build::Plugins::JsonPlugin.new,
+        Klenod::Build::Plugins::YamlPlugin.new,
+        Klenod::Build::Plugins::TomlPlugin.new,
+        Klenod::Build::Plugins::TextPlugin.new,
         Klenod::Build::Plugins::RouterPlugin.new
       ]
     )

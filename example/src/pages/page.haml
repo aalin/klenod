@@ -1,5 +1,9 @@
 :ruby
   Figure = import("../components/Figure.haml")
+  Metrics = import("../data/metrics.json")
+  Navigation = import("../data/navigation.yaml")
+  Release = import("../data/release.toml")
+  Note = import("../data/note.txt")
 
   def initialize(name:, tagline:, image:, params: {})
     @name = name
@@ -13,3 +17,18 @@
   %p= @tagline
   %Figure{ image: @image, alt: @image_alt, caption: "Image imported through Klenod with generated variants." }
   %p Served through async-http and reloaded through Klenod watch events.
+  %section.data_panel
+    %h2 Data imports
+    %dl.data_grid
+      %div
+        %dt JSON
+        %dd= "#{Metrics.fetch("modules")} modules loaded"
+      %div
+        %dt YAML
+        %dd= Navigation.fetch("groups").join(" / ")
+      %div
+        %dt TOML
+        %dd= "v#{Release.fetch("version")} #{Release.fetch("channel")}"
+      %div
+        %dt Text
+        %dd= Note.strip
