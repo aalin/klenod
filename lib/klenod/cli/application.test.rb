@@ -37,6 +37,41 @@ class Klenod::CLI::Application::Test < Minitest::Test
     end
   end
 
+  def test_build_command_uses_ruby_config_file
+    Dir.mktmpdir do |dir|
+      source_dir = "#{dir}/app"
+      output = "#{dir}/dist/config.bundle"
+      FileUtils.mkdir_p(source_dir)
+      File.write("#{source_dir}/entry.rb", "VALUE = 42\n")
+      File.write(
+        "#{dir}/klenod.rb",
+        <<~RUBY
+          source_dir #{source_dir.inspect}
+          entrypoint "entry"
+          output #{output.inspect}
+          plugins [
+            Klenod::Build::Plugins::RubyPlugin.new
+          ]
+        RUBY
+      )
+
+      stdout = StringIO.new
+      command =
+        Klenod::CLI::Application.new(
+          [
+            "build",
+            "--config", "#{dir}/klenod.rb"
+          ],
+          output: stdout
+        )
+      command.call
+      loaded = Klenod::Runtime.load_bundle(output)
+
+      assert_equal(42, loaded.exports("entry")::VALUE)
+      assert_includes(stdout.string, "Built #{output}")
+    end
+  end
+
   def test_version_option_prints_version
     stdout = StringIO.new
     command = Klenod::CLI::Application.new(["--version"], output: stdout)

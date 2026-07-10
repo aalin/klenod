@@ -19,6 +19,12 @@ bundle exec ruby example/server.rb
 bundle = Klenod::Runtime.load_bundle("example/dist/klenod.bundle", source_root: "/app/src")
 ```
 
+The same build can be run through the CLI using the example Ruby config:
+
+```sh
+bundle exec exe/klenod build --config example/klenod.rb
+```
+
 `watch.rb` keeps the process running and prints invalidation events when loaded files under `example/src` change.
 
 `server.rb` starts a small `async-http` server on `http://localhost:9292`. It watches the source tree, matches each request through the router plugin, and serves emitted CSS/image assets from the build context.

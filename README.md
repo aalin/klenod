@@ -76,14 +76,30 @@ bundle = context.build(
 )
 ```
 
-The same build path is available through the CLI:
+The same build path is available through the CLI. By default it loads `klenod.rb` from the current directory:
 
 ```sh
-bundle exec exe/klenod build \
-  --source src \
-  --entry pages/server \
-  --output dist/klenod.bundle \
-  --assets-dir public
+bundle exec exe/klenod build
+```
+
+The config file is Ruby, so applications can configure plugins directly:
+
+```ruby
+source_dir "src"
+entrypoint "pages/server"
+output "dist/klenod.bundle"
+assets_dir "public"
+mode :development
+
+plugins [
+  Klenod::Build::Plugins::RubyPlugin.new
+]
+```
+
+Flags can still override the config for quick scripts:
+
+```sh
+bundle exec exe/klenod build --config example/klenod.rb --output tmp/app.bundle
 ```
 
 The runtime side can load the bundle without build plugins:

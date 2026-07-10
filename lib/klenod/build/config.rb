@@ -1,0 +1,96 @@
+# frozen_string_literal: true
+
+module Klenod
+  module Build
+    Config =
+      Data.define(:source_dir, :entrypoints, :output, :assets_dir, :plugins, :mode, :base_dir) do
+        def initialize(source_dir: "src", entrypoints: [], output: "dist/klenod.bundle", assets_dir: nil, plugins: Context::DEFAULT_PLUGINS, mode: :development, base_dir: Dir.pwd)
+          super(
+            source_dir: source_dir,
+            entrypoints: Array(entrypoints),
+            output: output,
+            assets_dir: assets_dir,
+            plugins: plugins,
+            mode: mode,
+            base_dir: base_dir
+          )
+        end
+
+        def with(**attributes)
+          self.class.new(**to_h.merge(attributes))
+        end
+      end
+
+    class ConfigBuilder
+      def initialize(base_dir: Dir.pwd)
+        @source_dir = "src"
+        @entrypoints = []
+        @output = "dist/klenod.bundle"
+        @assets_dir = nil
+        @plugins = Context::DEFAULT_PLUGINS
+        @mode = :development
+        @base_dir = base_dir
+      end
+
+      def source_dir(value = nil)
+        return @source_dir unless value
+
+        @source_dir = value
+      end
+
+      def entrypoint(value)
+        @entrypoints << value
+      end
+
+      def entrypoints(*values)
+        @entrypoints.concat(values.flatten)
+      end
+
+      def output(value = nil)
+        return @output unless value
+
+        @output = value
+      end
+
+      def assets_dir(value = nil)
+        return @assets_dir unless value
+
+        @assets_dir = value
+      end
+
+      def plugins(value = nil, &block)
+        return @plugins unless value || block
+
+        @plugins = block ? block.call : value
+      end
+
+      def mode(value = nil)
+        return @mode unless value
+
+        @mode = value
+      end
+
+      def config
+        Config.new(
+          source_dir: @source_dir,
+          entrypoints: @entrypoints,
+          output: @output,
+          assets_dir: @assets_dir,
+          plugins: @plugins,
+          mode: @mode,
+          base_dir: @base_dir
+        )
+      end
+    end
+
+    module ConfigLoader
+      module_function
+
+      def load(path)
+        builder = ConfigBuilder.new(base_dir: File.dirname(File.expand_path(path)))
+        builder.instance_eval(File.read(path), path, 1)
+        builder.config
+      end
+    end
+  end
+end

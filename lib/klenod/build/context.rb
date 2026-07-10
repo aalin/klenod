@@ -11,6 +11,7 @@ require_relative "plugins/css_plugin"
 require_relative "plugins/image_plugin"
 require_relative "plugins/data_plugin"
 require_relative "plugins/router_plugin"
+require_relative "config"
 
 module Klenod
   module Build
