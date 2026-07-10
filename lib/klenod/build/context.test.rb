@@ -77,6 +77,12 @@ class Klenod::Build::Context::Test < Minitest::Test
     EXTENSIONS = [".yaml"].freeze
   end
 
+  class RuntimeOnlyImportValuePlugin < Klenod::Build::Plugin
+    def import_value(_resolved_dependency, _record, _context)
+      raise "dev import_value should not be called while building a runtime bundle"
+    end
+  end
+
   class VirtualFilePlugin < Klenod::Build::Plugin
     MODULE_ID = Klenod::Build::ModuleId.new("virtual:file.rb", nil)
 
@@ -947,6 +953,29 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(["entry"], bundle.entrypoints.keys)
       assert_equal(["entry.rb"], bundle.modules.keys)
       assert_equal([], context.graph.mods.keys)
+    end
+  end
+
+  def test_build_serialization_does_not_call_dev_import_value_hooks
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/dep.rb", "VALUE = 41\n")
+      File.write("#{dir}/entry.rb", "Dep = import(\"./dep\")\nVALUE = Dep::VALUE + 1\n")
+      output = "#{dir}/dist/klenod.bundle"
+
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            RuntimeOnlyImportValuePlugin.new,
+            Klenod::Build::Plugins::RubyPlugin.new
+          ]
+        )
+
+      bundle = context.build(entrypoints: ["entry"], output: output)
+      loaded = Klenod::Runtime.load_bundle(output)
+
+      assert_equal(["entry"], bundle.entrypoints.keys)
+      assert_equal(42, loaded.exports("entry")::VALUE)
     end
   end
 

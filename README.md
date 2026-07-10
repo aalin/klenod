@@ -184,7 +184,7 @@ tree.slots.fetch(:modal)
 
 Tree nodes expose `segment`, `path`, `route`, `children`, `slots`, `root?`, and `leaf?`. Parallel route slots are available through `node.slots`, while still remaining in `node.children` for structural traversal.
 
-In development mode, the generated router uses `lazy_import` for pages and layouts so matching a route can load only the selected page. In build mode, it uses eager `import` so bundles include the full route graph.
+The generated router uses `lazy_import` for pages and layouts so matching a route can load only the selected page. Build mode still serializes discovered page and layout modules by walking runtime dependencies while collecting the bundle graph.
 
 ## Plugins
 
@@ -199,7 +199,13 @@ The default build context includes plugins for Ruby, intl TOML files, Haml adapt
 
 CSS imports currently return class-name maps for Ruby or Haml importers. Image imports return an image object with `src`, dimensions, and generated `variants`.
 
-Sibling dependency modules may be loaded concurrently. Plugin hooks should avoid unguarded shared mutable state, because `load` and `transform` calls for independent modules can overlap. `finalize` still runs after eager dependencies for that module have loaded.
+Plugin hooks run in separate phases:
+
+- `resolve`, `load`, `transform`, and `finalize` are graph collection hooks. Build mode may call these without evaluating app modules.
+- `import_value` is a development/evaluation hook. It runs when an evaluated module resolves an import value.
+- `runtime_import_value` is a serialization hook. It provides values stored in runtime bundles and must not rely on evaluated build-time exports.
+
+Sibling dependency modules may be loaded or collected concurrently. Plugin hooks should avoid unguarded shared mutable state, because `load` and `transform` calls for independent modules can overlap. `finalize` still runs after eager dependency records for that module have been collected.
 
 Assets can be static or generated. Generated assets expose metadata immediately and generate bytes on demand; call `asset.wait` before serving or writing an asset when the bytes may not be ready yet. Failed generation marks the asset as failed and exposes `asset.error`. Build mode drains generated assets before writing the bundle.
 

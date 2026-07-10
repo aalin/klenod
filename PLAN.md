@@ -109,9 +109,9 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
   - [x] Track module evaluation state explicitly, or consistently derive it from `graph.mods`.
   - [x] Make invalidation preserve collected-but-not-evaluated modules without evaluating them.
   - [x] Make `apply_update` avoid forcing entry evaluation unless the entry was already evaluated or the caller requests exports.
-  - [ ] Keep plugin build-time work explicit through plugin hooks instead of top-level app side effects.
-  - [ ] Add tests proving build serialization does not call dev-only `import_value` hooks.
-  - [ ] Document plugin hook phases: `transform`/`finalize`, dev `import_value`, and runtime `runtime_import_value`.
+  - [x] Keep plugin build-time work explicit through plugin hooks instead of top-level app side effects.
+  - [x] Add tests proving build serialization does not call dev-only `import_value` hooks.
+  - [x] Document plugin hook phases: `transform`/`finalize`, dev `import_value`, and runtime `runtime_import_value`.
 - [ ] Add CLI commands after the Ruby API stabilizes:
   - [x] `klenod build`
   - [ ] `klenod dev`

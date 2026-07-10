@@ -79,6 +79,8 @@ module Klenod
           record.assets.first.metadata.fetch(:classes)
         end
 
+        alias_method :runtime_import_value, :import_value
+
         private
 
         def replace_dependencies(css_result, resolved_dependencies, dependency_records)
