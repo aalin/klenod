@@ -89,13 +89,13 @@ module Klenod
         end
 
         def load(module_id, context)
-          return nil unless module_id == @module_id
+          return nil unless module_id.scheme == :virtual && module_id == @module_id
 
           generate_router_source(discover(source_dir: context.source_dir), mode: context.mode)
         end
 
         def transform(module_id, code, _context)
-          return TransformResult.identity(code) unless module_id == @module_id
+          return TransformResult.identity(code) unless module_id.scheme == :virtual && module_id == @module_id
 
           TransformResult.new(
             code,

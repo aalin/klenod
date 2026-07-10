@@ -77,6 +77,22 @@ class Klenod::Build::Context::Test < Minitest::Test
     EXTENSIONS = [".yaml"].freeze
   end
 
+  class VirtualFilePlugin < Klenod::Build::Plugin
+    MODULE_ID = Klenod::Build::ModuleId.new("virtual:file.rb", nil)
+
+    def resolve(dependency, _context)
+      return nil unless dependency.specifier == "virtual:file"
+
+      Klenod::Build::ResolvedDependency.new(dependency, MODULE_ID, {virtual: true})
+    end
+
+    def load(module_id, _context)
+      return nil unless module_id.scheme == :virtual && module_id == MODULE_ID
+
+      "FILE_PATH = __FILE__\n"
+    end
+  end
+
   def test_loads_entrypoint_and_dependencies_lazily
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -89,6 +105,20 @@ class Klenod::Build::Context::Test < Minitest::Test
 
       assert_equal(42, mod.const_get(:Exports)::VALUE)
       assert_equal(2, context.graph.records.length)
+    end
+  end
+
+  def test_virtual_modules_keep_logical_eval_paths
+    Dir.mktmpdir do |dir|
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [VirtualFilePlugin.new, Klenod::Build::Plugins::RubyPlugin.new]
+        )
+      record = context.load("virtual:file")
+
+      assert_equal(:virtual, record.id.scheme)
+      assert_equal("virtual:file.rb", context.exports(record)::FILE_PATH)
     end
   end
 

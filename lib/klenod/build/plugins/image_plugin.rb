@@ -32,7 +32,7 @@ module Klenod
         end
 
         def load(module_id, _context)
-          return nil unless module_id == IMAGE_RUNTIME_MODULE_ID
+          return nil unless module_id.scheme == :virtual && module_id == IMAGE_RUNTIME_MODULE_ID
 
           image_runtime_source
         end

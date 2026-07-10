@@ -360,8 +360,14 @@ module Klenod
           imports: imports_for(resolved_dependencies, dependency_records),
           source_map: transform.source_map,
           version: cached ? cached.version + 1 : 0,
-          eval_path: source_dir.join(module_id.path).to_s
+          eval_path: eval_path_for(module_id)
         )
+      end
+
+      def eval_path_for(module_id)
+        return module_id.to_s unless module_id.scheme == :app
+
+        source_dir.join(module_id.path).to_s
       end
 
       def imports_for(resolved_dependencies, dependency_records)
