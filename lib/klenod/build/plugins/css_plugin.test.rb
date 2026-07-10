@@ -75,7 +75,9 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
 
       assert_includes(css, "/assets/styles_base_css")
       assert_includes(css, "/assets/logo.")
-      assert_equal(3, context.graph.records.length)
+      assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/home.css", nil)))
+      assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/base.css", nil)))
+      assert(context.graph.records.key?(Klenod::Build::ModuleId.new("images/logo.png", nil)))
     end
   end
 

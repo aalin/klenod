@@ -14,29 +14,27 @@ module Klenod
     module Plugins
       class ImagePlugin < Plugin
         EXTENSIONS = [".avif", ".gif", ".jpeg", ".jpg", ".png", ".webp"].freeze
+        IMAGE_RUNTIME_SPECIFIER = "virtual:klenod/image"
+        IMAGE_RUNTIME_MODULE_ID = ModuleId.new("#{IMAGE_RUNTIME_SPECIFIER}.rb", nil)
 
-        Image =
-          Data.define(:src, :width, :height, :variants) do
-            def srcset
-              return nil if variants.empty?
-
-              variants.map { "#{it.src} #{it.descriptor}" }.join(", ")
-            end
-
-            def sizes
-              display_width = variants.filter_map(&:width).max || width
-              return nil unless display_width
-
-              "(max-width: #{display_width}px) 100vw, #{display_width}px"
-            end
-          end
-        ImageVariant = Data.define(:src, :width, :height, :format, :descriptor, :metadata)
         ImageVariantKey = Data.define(:source_path, :source_hash, :width, :format)
 
         def initialize(widths: [], formats: nil)
           @widths = widths
           @formats = formats
           @variant_cache = {}
+        end
+
+        def resolve(dependency, _context)
+          return nil unless dependency.specifier == IMAGE_RUNTIME_SPECIFIER
+
+          ResolvedDependency.new(dependency, IMAGE_RUNTIME_MODULE_ID, {virtual: true})
+        end
+
+        def load(module_id, _context)
+          return nil unless module_id == IMAGE_RUNTIME_MODULE_ID
+
+          image_runtime_source
         end
 
         def transform(module_id, code, context)
@@ -62,34 +60,23 @@ module Klenod
               }
             )
           variant_assets = generate_variant_assets(module_id, code, dimensions, context.asset_generation_queue)
+          assets = [asset, *variant_assets]
+          image_runtime_dependency =
+            Dependency
+              .create(
+                specifier: IMAGE_RUNTIME_SPECIFIER,
+                importer_id: module_id,
+                kind: :image_runtime
+              )
+              .with(id: "#{module_id}:image_runtime")
 
-          TransformResult.new("", [], nil, [asset, *variant_assets], [], {asset_bytes: code})
-        end
-
-        def import_value(_resolved_dependency, record, _context)
-          return nil unless EXTENSIONS.include?(record.id.extname)
-
-          asset = record.assets.first
-          variants =
-            record
-              .assets
-              .drop(1)
-              .map do |variant_asset|
-                ImageVariant.new(
-                  variant_asset.output_path,
-                  variant_asset.metadata[:width],
-                  variant_asset.metadata[:height],
-                  variant_asset.metadata[:format],
-                  variant_asset.metadata[:descriptor],
-                  variant_asset.metadata
-                )
-              end
-
-          Image.new(
-            asset.output_path,
-            asset.metadata[:width],
-            asset.metadata[:height],
-            variants
+          TransformResult.new(
+            image_module_source(module_id, assets, image_runtime_dependency),
+            [image_runtime_dependency],
+            nil,
+            assets,
+            [],
+            {asset_bytes: code}
           )
         end
 
@@ -123,6 +110,66 @@ module Klenod
         end
 
         VariantOptions = Data.define(:widths, :formats)
+
+        def image_runtime_source
+          <<~RUBY
+            Image =
+              Data.define(:src, :width, :height, :variants) do
+                def srcset
+                  return nil if variants.empty?
+
+                  variants.map { "\#{it.src} \#{it.descriptor}" }.join(", ")
+                end
+
+                def sizes
+                  display_width = variants.filter_map(&:width).max || width
+                  return nil unless display_width
+
+                  "(max-width: \#{display_width}px) 100vw, \#{display_width}px"
+                end
+              end
+
+            ImageVariant = Data.define(:src, :width, :height, :format, :descriptor, :metadata)
+          RUBY
+        end
+
+        def image_module_source(module_id, assets, image_runtime_dependency)
+          asset = assets.fetch(0)
+          variants = assets.drop(1).map { |variant_asset| image_variant_source(variant_asset) }
+
+          <<~RUBY
+            ImageRuntime = __klenod_import__(#{image_runtime_dependency.id.inspect})
+            Default =
+              ImageRuntime::Image.new(
+                src: #{asset.output_path.inspect},
+                width: #{asset.metadata[:width].inspect},
+                height: #{asset.metadata[:height].inspect},
+                variants: [
+                  #{variants.join(",\n    ")}
+                ]
+              )
+
+            def self.src = Default.src
+            def self.width = Default.width
+            def self.height = Default.height
+            def self.variants = Default.variants
+            def self.srcset = Default.srcset
+            def self.sizes = Default.sizes
+          RUBY
+        end
+
+        def image_variant_source(asset)
+          <<~RUBY.chomp
+            ImageRuntime::ImageVariant.new(
+              src: #{asset.output_path.inspect},
+              width: #{asset.metadata[:width].inspect},
+              height: #{asset.metadata[:height].inspect},
+              format: #{asset.metadata[:format].inspect},
+              descriptor: #{asset.metadata[:descriptor].inspect},
+              metadata: #{asset.metadata.inspect}
+            )
+          RUBY
+        end
 
         def variant_options_for(module_id)
           query = URI.decode_www_form(module_id.query || "").to_h

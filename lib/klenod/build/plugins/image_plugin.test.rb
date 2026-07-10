@@ -57,6 +57,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       image = loaded.load("entry").const_get(:Exports)::IMAGE
       asset = loaded.assets_for("images/logo.png").fetch(0)
 
+      refute_equal("Klenod::Build::Plugins::ImagePlugin::Image", image.class.name)
+      assert(loaded.modules.key?("virtual:klenod/image.rb"))
       assert_equal(4, image.width)
       assert_equal(5, image.height)
       assert_equal(4, asset.metadata[:width])
