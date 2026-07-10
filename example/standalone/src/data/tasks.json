@@ -1,0 +1,15 @@
+{
+  "tasks": [
+    {"name": "Resolver", "done": true},
+    {"name": "Ruby imports", "done": true},
+    {"name": "CSS assets", "done": true},
+    {"name": "Haml transform", "done": true},
+    {"name": "Image variants", "done": true},
+    {"name": "Data imports", "done": true},
+    {"name": "Router plugin", "done": true},
+    {"name": "Executable bundles", "done": true},
+    {"name": "External package imports", "done": false},
+    {"name": "Dev runner API", "done": false},
+    {"name": "Sourcemap polish", "done": false}
+  ]
+}
