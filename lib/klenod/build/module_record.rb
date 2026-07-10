@@ -14,6 +14,7 @@ module Klenod
         :source_map,
         :assets,
         :watched_patterns,
+        :metadata,
         :version,
         :status
       )

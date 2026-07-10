@@ -59,9 +59,11 @@ module Klenod
       def bundle(entrypoints:)
         loaded_entrypoints =
           entrypoints.to_h do |entrypoint|
-            [entrypoint, load(entrypoint).id.to_s]
+            dependency = Dependency.create(specifier: entrypoint, importer_id: nil, kind: :entrypoint)
+            resolved = resolve_dependency(dependency)
+            [entrypoint, collect_module(resolved.module_id).id.to_s]
           end
-        load_all_runtime_dependencies
+        collect_all_runtime_dependencies
 
         Runtime::Bundle.new(
           loaded_entrypoints,
@@ -238,6 +240,49 @@ module Klenod
         end
       end
 
+      def collect_module(module_id, force: false)
+        raise_import_cycle_if_present(module_id) unless force
+
+        return @loading_tasks.fetch(module_id).wait if !force && @loading_tasks.key?(module_id)
+
+        task = current_async_task
+        if task && !force
+          in_flight_load = InFlightLoad.create
+          @loading_tasks[module_id] = in_flight_load
+          loading_task = task.async { collect_module_now(module_id, force: force) }
+          in_flight_load.start(loading_task)
+          begin
+            return loading_task.wait
+          ensure
+            @loading_tasks.delete(module_id) if @loading_tasks[module_id].equal?(in_flight_load)
+          end
+        end
+
+        collect_module_now(module_id, force: force)
+      end
+
+      def collect_module_now(module_id, force: false)
+        with_loading_stack(module_id) do
+          source = read_module_source(module_id)
+          source_hash = Digest::SHA256.hexdigest(source)
+          cached = @records[module_id]
+
+          return cached if cached&.source_hash == source_hash && !force
+
+          transform = transform_module_source(module_id, source)
+          resolved_dependencies = resolve_transform_dependencies(transform)
+          dependency_records = collect_eager_dependency_records(resolved_dependencies)
+          transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
+          assert_supported_transform!(module_id, source, transform)
+          transformed_hash = Digest::SHA256.hexdigest(transform.code)
+          record = build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, cached)
+
+          @records[module_id] = record
+          @mods.delete(module_id)
+          record
+        end
+      end
+
       def tsort_each_node(&block)
         @records.each_key(&block)
       end
@@ -387,7 +432,16 @@ module Klenod
         end
       end
 
-      def build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, mod)
+      def build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, cached_or_mod)
+        version =
+          if cached_or_mod.is_a?(Runtime::Mod)
+            cached_or_mod.version
+          elsif cached_or_mod
+            cached_or_mod.version + 1
+          else
+            0
+          end
+
         ModuleRecord.new(
           module_id,
           source_hash,
@@ -399,7 +453,8 @@ module Klenod
           transform.source_map,
           transform.assets,
           transform.watched_patterns,
-          mod.version,
+          transform.metadata,
+          version,
           :loaded
         )
       end
@@ -480,6 +535,32 @@ module Klenod
         end
       end
 
+      def collect_dependency_records(resolved_dependencies)
+        return {} if resolved_dependencies.empty?
+
+        if resolved_dependencies.length == 1
+          resolved_dependency = resolved_dependencies.fetch(0)
+          return {
+            resolved_dependency.dependency.id => collect_module(resolved_dependency.module_id)
+          }
+        end
+
+        with_async_task do |task|
+          resolved_dependencies
+            .map do |resolved_dependency|
+              [
+                resolved_dependency.dependency.id,
+                task.async { collect_module(resolved_dependency.module_id) }
+              ]
+            end
+            .to_h { |dependency_id, child_task| [dependency_id, child_task.wait] }
+        end
+      end
+
+      def collect_eager_dependency_records(resolved_dependencies)
+        collect_dependency_records(eager_dependencies(resolved_dependencies))
+      end
+
       def eager_dependencies(resolved_dependencies)
         resolved_dependencies.select { |resolved_dependency| resolved_dependency.dependency.eager }
       end
@@ -492,6 +573,18 @@ module Klenod
           next if @records.key?(resolved_dependency.module_id)
 
           record = load_module(resolved_dependency.module_id)
+          queue.concat(record.resolved_dependencies)
+        end
+      end
+
+      def collect_all_runtime_dependencies
+        queue = @records.values.flat_map(&:resolved_dependencies)
+
+        until queue.empty?
+          resolved_dependency = queue.shift
+          next if @records.key?(resolved_dependency.module_id)
+
+          record = collect_module(resolved_dependency.module_id)
           queue.concat(record.resolved_dependencies)
         end
       end

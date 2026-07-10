@@ -28,6 +28,12 @@ module Klenod
           context.mods.fetch(record.id).const_get(:Exports)::Default
         end
 
+        def runtime_import_value(_resolved_dependency, record, _context)
+          return nil unless self.class::EXTENSIONS.include?(record.id.extname)
+
+          record.metadata.fetch(:data)
+        end
+
         private
 
         def module_source(data)

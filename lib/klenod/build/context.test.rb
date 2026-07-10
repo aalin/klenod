@@ -837,6 +837,45 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_build_collects_graph_without_evaluating_entrypoint_modules
+    Dir.mktmpdir do |dir|
+      output = "#{dir}/dist/klenod.bundle"
+      side_effect_path = "#{dir}/side-effect.txt"
+      File.write("#{dir}/entry.rb", "File.binwrite(#{side_effect_path.inspect}, \"built\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      bundle = context.build(entrypoints: ["entry"], output: output)
+
+      refute(File.exist?(side_effect_path), "Expected build to avoid evaluating top-level entrypoint code")
+      assert_equal(["entry"], bundle.entrypoints.keys)
+      assert_equal(["entry.rb"], bundle.modules.keys)
+      assert_equal([], context.graph.mods.keys)
+    end
+  end
+
+  def test_build_executable_collects_graph_without_evaluating_entrypoint_modules
+    Dir.mktmpdir do |dir|
+      output = "#{dir}/dist/app"
+      side_effect_path = "#{dir}/side-effect.txt"
+      File.write("#{dir}/entry.rb", "File.binwrite(#{side_effect_path.inspect}, \"ran\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.build_executable(entrypoints: ["entry"], output: output)
+
+      refute(File.exist?(side_effect_path), "Expected executable build to avoid evaluating top-level entrypoint code")
+
+      stdout, stderr, status =
+        Open3.capture3(
+          RbConfig.ruby,
+          "-I#{File.expand_path("..", __dir__)}",
+          output
+        )
+
+      assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
+      assert_equal("ran", File.binread(side_effect_path))
+    end
+  end
+
   def test_build_executable_writes_ruby_stub_and_runs_entrypoints
     Dir.mktmpdir do |dir|
       output = "#{dir}/dist/app"
