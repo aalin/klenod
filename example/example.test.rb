@@ -3,15 +3,15 @@
 require "minitest/autorun"
 require "tmpdir"
 
-require_relative "klenod_context"
+require_relative "../lib/klenod"
 
 class Klenod::ExampleTest < Minitest::Test
   Request = Data.define(:path)
 
   def test_example_app_loads_renders_and_emits_assets
-    source_dir = File.expand_path("src", __dir__)
-    context = Example.build_context(source_dir: source_dir)
-    entry = context.entry("pages/server")
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
     status, headers, body = entry.call(nil, context)
     html = body.join
 
@@ -34,9 +34,9 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_app_renders_nested_route_through_layout
-    source_dir = File.expand_path("src", __dir__)
-    context = Example.build_context(source_dir: source_dir)
-    entry = context.entry("pages/server")
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
     status, headers, body = entry.call(Request.new("/blog/hello"), context)
     html = body.join
 
@@ -49,9 +49,9 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_app_renders_route_gallery_pages
-    source_dir = File.expand_path("src", __dir__)
-    context = Example.build_context(source_dir: source_dir)
-    entry = context.entry("pages/server")
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
 
     assert_route_includes(entry, context, "/docs/guides/routing", "Path parts: guides / routing")
     assert_route_includes(entry, context, "/shop", "No filters selected")
@@ -68,9 +68,9 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_app_renders_router_tree_metadata
-    source_dir = File.expand_path("src", __dir__)
-    context = Example.build_context(source_dir: source_dir)
-    entry = context.entry("pages/server")
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
     status, _headers, body = entry.call(Request.new("/routes"), context)
     html = body.join
 
@@ -83,9 +83,9 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_app_emits_gallery_image_variants
-    source_dir = File.expand_path("src", __dir__)
-    context = Example.build_context(source_dir: source_dir)
-    entry = context.entry("pages/server")
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
     status, _headers, body = entry.call(Request.new("/gallery"), context)
     html = body.join
 
@@ -97,15 +97,15 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_app_builds_and_loads_runtime_bundle
-    source_dir = File.expand_path("src", __dir__)
+    config = example_config
 
     Dir.mktmpdir do |dir|
       output = "#{dir}/klenod.bundle"
       assets_dir = "#{dir}/public"
-      context = Example.build_context(source_dir: source_dir)
-      bundle = context.build(entrypoints: ["pages/server"], output: output, assets_dir: assets_dir)
+      context = config.context
+      bundle = context.build(entrypoints: config.entrypoints, output: output, assets_dir: assets_dir)
       loaded = Klenod::Runtime.load_bundle(output, source_root: "/app/src")
-      page = loaded.exports("pages/server")
+      page = loaded.exports(config.entrypoints.fetch(0))
       status, _headers, body = page.call(nil, loaded)
 
       assert_equal(200, status)
@@ -121,6 +121,10 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   private
+
+  def example_config
+    Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
+  end
 
   def assert_route_includes(entry, context, path, text)
     status, headers, body = entry.call(Request.new(path), context)

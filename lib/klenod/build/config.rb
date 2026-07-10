@@ -19,6 +19,36 @@ module Klenod
         def with(**attributes)
           self.class.new(**to_h.merge(attributes))
         end
+
+        def context(**overrides)
+          Context.new(
+            source_dir: source_path,
+            plugins: plugins,
+            mode: mode,
+            **overrides
+          )
+        end
+
+        def source_path
+          expand_path(source_dir)
+        end
+
+        def output_path
+          expand_path(output)
+        end
+
+        def assets_path
+          assets_dir && expand_path(assets_dir)
+        end
+
+        private
+
+        def expand_path(path)
+          path = path.to_s
+          return File.expand_path(path) if path.start_with?("/")
+
+          File.expand_path(path, base_dir)
+        end
       end
 
     class ConfigBuilder

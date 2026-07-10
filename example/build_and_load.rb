@@ -2,19 +2,20 @@
 
 require "fileutils"
 
-require_relative "klenod_context"
+require_relative "../lib/klenod"
 
-source_dir = File.expand_path("src", __dir__)
-output = File.expand_path("dist/klenod.bundle", __dir__)
-assets_dir = File.expand_path("dist/public", __dir__)
+config = Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
+source_dir = config.source_path
+output = config.output_path
+assets_dir = config.assets_path
 
 FileUtils.mkdir_p(File.dirname(output))
 
-context = Example.build_context(source_dir: source_dir)
-context.build(entrypoints: ["pages/server"], output: output, assets_dir: assets_dir)
+context = config.context
+context.build(entrypoints: config.entrypoints, output: output, assets_dir: assets_dir)
 
 bundle = Klenod::Runtime.load_bundle(output, source_root: source_dir)
-exports = bundle.exports("pages/server")
+exports = bundle.exports(config.entrypoints.fetch(0))
 status, headers, body = exports.call(nil, bundle)
 
 puts "Loaded bundle #{output}"

@@ -4,15 +4,16 @@ require "async"
 require "async/http"
 require "protocol/http/response"
 
-require_relative "klenod_context"
+require_relative "../lib/klenod"
 
-source_dir = File.expand_path("src", __dir__)
-entrypoint = "pages/server"
+config = Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
+source_dir = config.source_path
+entrypoint = config.entrypoints.fetch(0)
 port = Integer(ENV.fetch("PORT", "9292"))
 assets_dir = ENV["ASSETS_DIR"] && File.expand_path(ENV.fetch("ASSETS_DIR"))
 endpoint = Async::HTTP::Endpoint.parse("http://localhost:#{port}")
 
-context = Example.build_context(source_dir: source_dir)
+context = config.context
 entry = context.entry(entrypoint)
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
 context.write_assets(assets_dir) if assets_dir

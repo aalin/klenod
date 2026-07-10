@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
-require_relative "klenod_context"
+require_relative "../lib/klenod"
 
-source_dir = File.expand_path("src", __dir__)
+config = Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
+source_dir = config.source_path
 assets_dir = ENV["ASSETS_DIR"] && File.expand_path(ENV.fetch("ASSETS_DIR"))
-context = Example.build_context(source_dir: source_dir)
-entry = context.entry("pages/server")
+context = config.context
+entry = context.entry(config.entrypoints.fetch(0))
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
 write_result = assets_dir && context.write_assets(assets_dir)
 

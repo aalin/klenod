@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require_relative "klenod_context"
+require_relative "../lib/klenod"
 
-source_dir = File.expand_path("src", __dir__)
-context = Example.build_context(source_dir: source_dir)
-entry = context.entry("pages/server")
+config = Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
+context = config.context
+entry = context.entry(config.entrypoints.fetch(0))
 status, headers, body = entry.call(nil, context)
 
 puts "Loaded #{entry.id}"

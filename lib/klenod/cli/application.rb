@@ -27,13 +27,12 @@ module Klenod
         entrypoints = config.entrypoints
         raise Samovar::MissingValueError.new(self, :entry) if entrypoints.empty?
 
-        source_dir = expand_config_path(config.source_dir, config)
-        output = expand_config_path(config.output, config)
-        assets_dir = config.assets_dir && expand_config_path(config.assets_dir, config)
+        output = config.output_path
+        assets_dir = config.assets_path
 
         bundle = nil
         Dir.chdir(config.base_dir) do
-          context = Klenod::Build::Context.new(source_dir: source_dir, plugins: config.plugins, mode: config.mode)
+          context = config.context
           bundle = context.build(entrypoints: entrypoints, output: output, assets_dir: assets_dir)
         end
 
@@ -44,15 +43,6 @@ module Klenod
         self.output.puts "Assets directory: #{assets_dir}" if assets_dir
 
         bundle
-      end
-
-      private
-
-      def expand_config_path(path, config)
-        path = path.to_s
-        return File.expand_path(path) if path.start_with?("/")
-
-        File.expand_path(path, config.base_dir)
       end
     end
 

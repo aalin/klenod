@@ -33,6 +33,9 @@ class Klenod::Build::Config::Test < Minitest::Test
       assert_equal(:build, config.mode)
       assert_equal([Klenod::Build::Plugins::RubyPlugin], config.plugins.map(&:class))
       assert_equal(dir, config.base_dir)
+      assert_equal("#{dir}/app", config.source_path)
+      assert_equal("#{dir}/dist/app.bundle", config.output_path)
+      assert_equal("#{dir}/public", config.assets_path)
     end
   end
 
