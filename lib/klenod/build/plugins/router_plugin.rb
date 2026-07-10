@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "pathname"
-
 require_relative "../dependency"
 require_relative "../errors"
 require_relative "../module_id"

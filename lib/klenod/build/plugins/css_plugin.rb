@@ -102,7 +102,7 @@ module Klenod
         end
 
         def css_selectors(result)
-          result.classes.merge(result.elements.transform_keys { :"__#{_1}" })
+          result.classes.merge(result.elements.transform_keys { :"__#{it}" })
         end
 
         def asset_name(module_id)

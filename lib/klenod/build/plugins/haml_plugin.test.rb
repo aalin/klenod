@@ -658,7 +658,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       .call(
         source: File.read(path),
         module_id: module_id,
-        component_class_name: basename.split(/[^A-Za-z0-9]+/).map { _1[0].upcase + _1[1..] }.join,
+        component_class_name: basename.split(/[^A-Za-z0-9]+/).map { it[0].upcase + it[1..] }.join,
         component_base_class: "TestFramework::ComponentBase",
         factory: "TestFramework::H",
         styles_source: styles_source,

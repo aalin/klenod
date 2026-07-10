@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require "fileutils"
-require "pathname"
-
 require_relative "graph"
 require_relative "loaded_module"
 require_relative "plugins/ruby_plugin"

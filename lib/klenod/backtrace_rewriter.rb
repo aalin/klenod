@@ -113,7 +113,7 @@ module Klenod
 
     def format_source(source, interesting_lines)
       ranges =
-        merge_overlapping_ranges(interesting_lines.map { (_1 - 2)..(_1 + 2) })
+        merge_overlapping_ranges(interesting_lines.map { (it - 2)..(it + 2) })
       lines = source.each_line.to_a
 
       ranges
