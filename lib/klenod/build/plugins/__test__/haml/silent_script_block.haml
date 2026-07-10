@@ -1,0 +1,12 @@
+:ruby
+  Item = Data.define(:name)
+
+  def initialize
+    @items = [Item.new("A"), Item.new("B")]
+    @seen = []
+  end
+
+%ul
+  - @items.each do |item|
+    - @seen << item.name
+    %li= item.name

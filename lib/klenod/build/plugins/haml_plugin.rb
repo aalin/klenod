@@ -343,6 +343,10 @@ module Klenod
               ast_script_block(source, body) || raise(ArgumentError, "Could not build Ruby block from Haml script: #{source.inspect}")
             end
 
+            def silent_script_block(source, body)
+              ast_silent_script_block(source, body) || raise(ArgumentError, "Could not build Ruby block from Haml script: #{source.inspect}")
+            end
+
             def silent_script(source)
               ast_silent_script(source) || raise(ArgumentError, "Could not build Ruby begin block from Haml script: #{source.inspect}")
             end
@@ -413,6 +417,15 @@ module Klenod
             def ast_script_block(source, body)
               node = block_script_node(source, body)
               return nil unless node
+
+              Fragment.new(format_node(node), node)
+            end
+
+            def ast_silent_script_block(source, body)
+              node = block_script_node(source, body)
+              return nil unless node
+
+              node = ast_begin([node, nil_node])
 
               Fragment.new(format_node(node), node)
             end
@@ -840,6 +853,12 @@ module Klenod
           def compile_silent_script(node, factory:, builder:, styleable: false)
             source = script_source(node)
             return builder.silent_script(source) if node.children.empty?
+            if block_script?(source)
+              return builder.silent_script_block(
+                source,
+                compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder)
+              )
+            end
 
             compile_silent_branches(split_silent_script_branches(node), factory: factory, styleable: styleable, builder: builder)
           end
@@ -892,6 +911,10 @@ module Klenod
 
           def branch_start?(node)
             node.type == :script && %w[if unless case begin].include?(node.value.fetch(:keyword))
+          end
+
+          def block_script?(source)
+            source.match?(/\s+do(?:\s*\|[^|]*\|)?\s*\z/)
           end
 
           def compile_tag(node, factory:, builder:, styleable: false)

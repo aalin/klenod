@@ -480,6 +480,20 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal("items.map { |item| H[:li, item] }", fragment.source)
   end
 
+  def test_ruby_builder_builds_silent_script_blocks_with_nil_result
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    body = builder.expression("H[:li, item]")
+    fragment = builder.silent_script_block("items.each do |item|", body)
+
+    assert_kind_of(SyntaxTree::Begin, fragment.node)
+    assert_equal(<<~RUBY.chomp, fragment.source)
+      begin
+        items.each { |item| H[:li, item] }
+        nil
+      end
+    RUBY
+  end
+
   def test_ruby_builder_builds_script_block_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     node = builder.send(:block_script_node, "items.map do |item|", builder.expression("item").node)
@@ -1010,6 +1024,45 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       assert_equal([:ul, [[:li, "A"], [:li, "B"]]], exports::Default.new.render)
       assert_match(/SourceMapMark:8:/, record.transformed_source)
       assert_match(/SourceMapMark:9:/, record.transformed_source)
+    end
+  end
+
+  def test_default_haml_transformer_supports_silent_script_blocks_with_children
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/list.haml",
+        <<~HAML
+          :ruby
+            Item = Data.define(:name)
+
+            def initialize
+              @items = [Item.new("A"), Item.new("B")]
+              @seen = []
+            end
+
+            def seen
+              @seen
+            end
+
+          %ul
+            - @items.each do |item|
+              - @seen << item.name
+              %li= item.name
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.load("pages/list.haml")
+      component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default.new
+
+      assert_equal([:ul, nil], component.render)
+      assert_equal(["A", "B"], component.seen)
+      assert_match(/SourceMapMark:12:/, record.transformed_source)
+      assert_match(/SourceMapMark:13:/, record.transformed_source)
     end
   end
 

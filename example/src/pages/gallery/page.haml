@@ -7,6 +7,23 @@
   def initialize(name:, tagline:, image:, params: {})
     @name = name
     @tagline = tagline
+    @items = [
+      {
+        image: Coffee,
+        alt: "Coffee cup on a table",
+        caption: "Coffee imported from a routed Haml page."
+      },
+      {
+        image: SailingBoat,
+        alt: "Sailing boat on open water",
+        caption: "A sailing image with generated JPEG widths."
+      },
+      {
+        image: Vegetables,
+        alt: "Vegetables arranged for cooking",
+        caption: "Vegetables rendered through the shared Figure component."
+      }
+    ]
   end
 
 %article.gallery
@@ -15,9 +32,6 @@
     %h1 Image gallery
     %p= @tagline
   %section.grid
-    %div.card
-      %Figure{ image: Coffee, alt: "Coffee cup on a table", caption: "Coffee imported from a routed Haml page." }
-    %div.card
-      %Figure{ image: SailingBoat, alt: "Sailing boat on open water", caption: "A sailing image with generated JPEG widths." }
-    %div.card
-      %Figure{ image: Vegetables, alt: "Vegetables arranged for cooking", caption: "Vegetables rendered through the shared Figure component." }
+    = @items.map do |item|
+      %div.card
+        %Figure{ image: item.fetch(:image), alt: item.fetch(:alt), caption: item.fetch(:caption) }
