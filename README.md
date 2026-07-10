@@ -76,6 +76,16 @@ bundle = context.build(
 )
 ```
 
+The same build path is available through the CLI:
+
+```sh
+bundle exec exe/klenod build \
+  --source src \
+  --entry pages/server \
+  --output dist/klenod.bundle \
+  --assets-dir public
+```
+
 The runtime side can load the bundle without build plugins:
 
 ```ruby
