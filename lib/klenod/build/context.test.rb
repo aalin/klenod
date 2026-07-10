@@ -248,6 +248,26 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_collect_returns_loaded_module_handle_without_evaluating
+    Dir.mktmpdir do |dir|
+      side_effect_path = "#{dir}/side-effect.txt"
+      File.write("#{dir}/entry.rb", "File.binwrite(#{side_effect_path.inspect}, \"ran\")\nVALUE = 42\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      handle = context.collect("entry")
+
+      assert_instance_of(Klenod::Build::LoadedModule, handle)
+      assert_equal(Klenod::Build::ModuleId.new("entry.rb", nil), handle.id)
+      assert_same(handle.record, context.graph.records.fetch(handle.id))
+      refute(handle.evaluated?)
+      refute(File.exist?(side_effect_path), "Expected collect to avoid evaluating top-level code")
+
+      assert_equal(42, handle.exports::VALUE)
+      assert(handle.evaluated?)
+      assert_equal("ran", File.binread(side_effect_path))
+    end
+  end
+
   def test_entry_collects_assets_without_evaluating_module
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
