@@ -8,19 +8,27 @@
   %header.header
     %a.brand{ href: "/" } Klenod example
     %nav.nav
-      %a{ href: "/" } Home
-      %a{ href: "/blog/hello" } Blog
-      %a{ href: "/docs/guides/routing" } Docs
-      %a{ href: "/shop" } Shop
-      %a{ href: "/shop/sale/red" } Filters
-      %a{ href: "/gallery" } Gallery
-      %a{ href: "/about" } About
-      %a{ href: "/dashboard" } Dashboard
-      %a{ href: "/dashboard/settings" } Modal route
-      %a{ href: "/feed/photo" } Photo
-      %a{ href: "/profile" } Profile
-      %a{ href: "/login" } Login
-      %a{ href: "/routes" } Route gallery
+      %section.nav_group
+        %h2 Main
+        %a{ href: "/" } Home
+        %a{ href: "/gallery" } Gallery
+        %a{ href: "/about" } About
+      %section.nav_group
+        %h2 Dynamic
+        %a{ href: "/blog/hello" } Blog
+        %a{ href: "/docs/guides/routing" } Docs
+        %a{ href: "/shop" } Shop
+        %a{ href: "/shop/sale/red" } Filters
+      %section.nav_group
+        %h2 Layouts
+        %a{ href: "/dashboard" } Dashboard
+        %a{ href: "/dashboard/settings" } Modal route
+        %a{ href: "/routes" } Route gallery
+      %section.nav_group
+        %h2 Intercepts
+        %a{ href: "/feed/photo" } Photo
+        %a{ href: "/profile" } Profile
+        %a{ href: "/login" } Login
   %section.content
     = @children
   = if @slots[:modal]
