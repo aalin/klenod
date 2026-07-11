@@ -47,10 +47,24 @@ section {
   min-width: 0;
 }
 
+button {
+  width: fit-content;
+  padding: 0.55rem 0.8rem;
+  color: #ffffff;
+  background: #3858a6;
+  border: 0;
+}
+
 dialog {
   padding: 1rem;
   background: #ffffff;
   border: 1px solid #d9dde3;
+}
+
+dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 
 dialog::backdrop {

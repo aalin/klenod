@@ -11,5 +11,8 @@
   %section
     = @children
   = if @slots[:modal]
-    %dialog(open=true)
+    %button(type="button" commandfor="dashboard-modal" command="show-modal") Open dispatch notice
+    %dialog(id="dashboard-modal")
       = @slots[:modal]
+      %footer
+        %button(type="button" commandfor="dashboard-modal" command="close") Close
