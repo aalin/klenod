@@ -106,7 +106,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/pages/page.rb", "Dep = import(\"../dep\")\nVALUE = Dep::VALUE + 1\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("pages/page")
+      record = context.evaluate("pages/page")
       mod = context.graph.mods.fetch(record.id)
 
       assert_equal(42, mod.const_get(:Exports)::VALUE)
@@ -136,7 +136,7 @@ class Klenod::Build::Context::Test < Minitest::Test
           source_dir: dir,
           plugins: [VirtualFilePlugin.new, Klenod::Build::Plugins::RubyPlugin.new]
         )
-      record = context.load("virtual:file")
+      record = context.evaluate("virtual:file")
 
       assert_equal(:virtual, record.id.scheme)
       assert_equal("virtual:file.rb", context.exports(record)::FILE_PATH)
@@ -150,7 +150,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/pages/page.rb", "Shared = import(\"/shared\")\nVALUE = Shared::VALUE + 1\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("pages/page")
+      record = context.evaluate("pages/page")
 
       assert_equal(42, context.exports(record)::VALUE)
       assert_equal("shared.rb", context.module_id_for("#{dir}/shared.rb").path)
@@ -201,7 +201,7 @@ class Klenod::Build::Context::Test < Minitest::Test
           ]
         )
 
-      error = assert_raises(Klenod::Build::UnsupportedFileError) { context.load("entry") }
+      error = assert_raises(Klenod::Build::UnsupportedFileError) { context.evaluate("entry") }
 
       assert_includes(error.message, "No plugin transformed \"config.yaml\"")
       assert_includes(error.message, "Add a plugin for \".yaml\" files")
@@ -213,7 +213,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/entry.rb", "VALUE = 42\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("entry")
+      record = context.evaluate("entry")
 
       assert_equal(42, context.exports(record)::VALUE)
       assert_same(context.exports(record), context.exports(record.id))
@@ -348,7 +348,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("entry")
+      record = context.evaluate("entry")
       assets = context.assets_for_module(record, type: :css)
 
       assert_equal(["styles/entry.css", "styles/card.css"], assets.map(&:logical_name))
@@ -382,7 +382,7 @@ class Klenod::Build::Context::Test < Minitest::Test
           ]
         )
 
-      record = context.load("entry")
+      record = context.evaluate("entry")
       values = context.graph.mods.fetch(record.id).const_get(:Exports)::VALUES
 
       assert_equal(["deps/a.rb", "deps/b.rb"], values)
@@ -415,7 +415,7 @@ class Klenod::Build::Context::Test < Minitest::Test
           ]
         )
 
-      record = context.load("entry")
+      record = context.evaluate("entry")
       values = context.graph.mods.fetch(record.id).const_get(:Exports)::VALUES
 
       assert_equal([41, 42], values)
@@ -448,7 +448,7 @@ class Klenod::Build::Context::Test < Minitest::Test
           ]
         )
 
-      record = context.load("entry")
+      record = context.evaluate("entry")
       values = context.graph.mods.fetch(record.id).const_get(:Exports)::VALUES
 
       assert_equal(["deps/a.rb", "deps/b.rb"], values)
@@ -462,7 +462,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/entry.rb", "SelfImport = import(\"entry\")\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      error = assert_raises(Klenod::Build::ImportCycleError) { context.load("entry") }
+      error = assert_raises(Klenod::Build::ImportCycleError) { context.evaluate("entry") }
 
       assert_equal(
         [Klenod::Build::ModuleId.new("entry.rb", nil), Klenod::Build::ModuleId.new("entry.rb", nil)],
@@ -479,7 +479,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/c.rb", "A = import(\"a\")\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      error = assert_raises(Klenod::Build::ImportCycleError) { context.load("a") }
+      error = assert_raises(Klenod::Build::ImportCycleError) { context.evaluate("a") }
 
       assert_equal(["a.rb", "b.rb", "c.rb", "a.rb"], error.cycle.map(&:to_s))
       assert_equal("Import cycle detected: a.rb -> b.rb -> c.rb -> a.rb", error.message)
@@ -501,7 +501,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/b.rb", "A = import(\"a\")\nVALUE = 41\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("a")
+      record = context.evaluate("a")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       refute(exports::B.loaded?)
@@ -524,7 +524,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("entry")
+      record = context.evaluate("entry")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       refute(context.graph.records.key?(Klenod::Build::ModuleId.new("dep.rb", nil)))
@@ -551,7 +551,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("entry")
+      record = context.evaluate("entry")
       first, second = context.graph.mods.fetch(record.id).const_get(:Exports).loaded_values
 
       assert_same(first, second)
@@ -574,7 +574,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      entry_record = context.load("entry")
+      entry_record = context.evaluate("entry")
       exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
 
       assert_equal(42, exports.value)
@@ -606,7 +606,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      entry_record = context.load("entry")
+      entry_record = context.evaluate("entry")
       exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
 
       File.write(dep_path, "VALUE = 99\n")
@@ -1052,7 +1052,7 @@ class Klenod::Build::Context::Test < Minitest::Test
           ]
         )
 
-      context.load("entry")
+      context.evaluate("entry")
       variant_asset = context.assets_for("images/hero.png").find { |asset| asset.metadata[:type] == :image_variant }
 
       refute(variant_asset.ready?)
@@ -1069,7 +1069,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      context.load("entry")
+      context.evaluate("entry")
       asset = context.assets_for("styles/home.css").first
       context.write_assets(assets_dir)
       mirrored_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))
@@ -1088,7 +1088,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write(css_path, ".title { color: red; }\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      context.load("styles/home.css")
+      context.evaluate("styles/home.css")
       old_asset = context.assets_for("styles/home.css").first
       old_asset_path = old_asset.output_path
       old_disk_path = File.join(assets_dir, old_asset_path.delete_prefix("/"))
@@ -1295,7 +1295,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/pages/page.rb", "Dep = import(\"../dep\")\nVALUE = Dep::VALUE + 1\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("pages/page")
+      record = context.evaluate("pages/page")
 
       assert_equal(42, context.graph.mods.fetch(record.id).const_get(:Exports)::VALUE)
 
@@ -1320,7 +1320,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/entry.rb", "Dep = import(\"dep\")\nVALUE = Dep::VALUE\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      context.load("entry")
+      context.evaluate("entry")
 
       File.delete(dep_path)
 

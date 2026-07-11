@@ -65,7 +65,7 @@ class Klenod::Dev::Watcher::Test < Minitest::Test
       File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      context.load("pages/page.haml")
+      context.evaluate("pages/page.haml")
       events = []
       context.on_update { |event| events << event }
 
@@ -92,7 +92,7 @@ class Klenod::Dev::Watcher::Test < Minitest::Test
       File.write(css_path, ".title { color: red; }\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      context.load("pages/page.haml")
+      context.evaluate("pages/page.haml")
       old_asset = context.assets_for("pages/page.css").fetch(0)
 
       File.delete(css_path)
@@ -117,7 +117,7 @@ class Klenod::Dev::Watcher::Test < Minitest::Test
       File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      context.load("pages/page.haml")
+      context.evaluate("pages/page.haml")
 
       File.write(intl_path, "title = \"Hello\"\n")
       add_event = emit_update(context, [intl_path], [], 1)

@@ -95,8 +95,6 @@ module Klenod
         @graph.load(specifier)
       end
 
-      alias_method :load, :evaluate
-
       def collect(specifier)
         loaded(@graph.collect(specifier))
       end

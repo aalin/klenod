@@ -39,7 +39,7 @@ stylesheets = entry.assets(type: :css)
 
 `context.entry(...)` collects the module record, dependencies, watched files, and emitted assets without evaluating the entry module. `entry.call(...)` and `entry.exports` evaluate the module on demand and then resolve through the current graph state, so the same handle can be reused after development updates. `entry.assets` returns assets reachable from that entry and is recursive by default; pass `recursive: false` to include only assets emitted directly by the entry module.
 
-Use `context.collect(...)` when you want the same collected handle semantics for a non-entry module. Use `context.evaluate(...)` when you explicitly want to collect and evaluate immediately. `context.load(...)` is kept as a compatibility alias for `context.evaluate(...)`.
+Use `context.collect(...)` when you want the same collected handle semantics for a non-entry module. Use `context.evaluate(...)` when you explicitly want to collect and evaluate immediately.
 
 Watch-mode consumers can apply a graph update and keep using the same entry handle:
 

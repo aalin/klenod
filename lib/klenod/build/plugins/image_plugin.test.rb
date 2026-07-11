@@ -25,7 +25,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("entry")
+      record = context.evaluate("entry")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
       asset = context.assets_for("images/logo.png").fetch(0)
 
@@ -87,7 +87,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
           plugins: [Klenod::Build::Plugins::RubyPlugin.new, image_plugin]
         )
 
-      record = context.load("entry")
+      record = context.evaluate("entry")
       variants = context.graph.mods.fetch(record.id).const_get(:Exports)::VARIANTS
       srcset = context.graph.mods.fetch(record.id).const_get(:Exports)::SRCSET
       sizes = context.graph.mods.fetch(record.id).const_get(:Exports)::SIZES
@@ -129,7 +129,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
           ]
         )
 
-      record = context.load("entry")
+      record = context.evaluate("entry")
       variants = context.graph.mods.fetch(record.id).const_get(:Exports)::VARIANTS
       variant = variants.fetch(0)
       assets = context.assets_for("images/hero.png")
@@ -169,8 +169,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
           plugins: [Klenod::Build::Plugins::RubyPlugin.new, image_plugin]
         )
 
-      record_a = context.load("entry_a")
-      record_b = context.load("entry_b")
+      record_a = context.evaluate("entry_a")
+      record_b = context.evaluate("entry_b")
       variants_a = context.graph.mods.fetch(record_a.id).const_get(:Exports)::VARIANTS_A
       variants_b = context.graph.mods.fetch(record_b.id).const_get(:Exports)::VARIANTS_B
       shared_variant_a = variants_a.find { |variant| variant.descriptor == "3w" }
@@ -229,7 +229,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("entry")
+      record = context.evaluate("entry")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([], context.assets_for("images/logo.png"))
@@ -259,7 +259,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("entry")
+      record = context.evaluate("entry")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([2, 3], exports.image_size)
@@ -291,7 +291,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
           ]
         )
 
-      context.load("entry")
+      context.evaluate("entry")
       old_assets = context.assets_for("images/hero.png")
       old_original = old_assets.find { |asset| asset.metadata[:type] == :image }
       old_variant = old_assets.find { |asset| asset.metadata[:type] == :image_variant }

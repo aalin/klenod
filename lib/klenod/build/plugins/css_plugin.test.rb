@@ -17,7 +17,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       File.write("#{dir}/pages/home.rb", "Styles = import(\"../styles/home.css\")\nTITLE = Styles.fetch(:title)\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("pages/home")
+      record = context.evaluate("pages/home")
       mod = context.graph.mods.fetch(record.id)
       css_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/home.css", nil))
 
@@ -43,7 +43,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("pages/home")
+      record = context.evaluate("pages/home")
       mod = context.graph.mods.fetch(record.id)
       css_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/home.css", nil))
       asset = css_record.assets.fetch(0)
@@ -70,7 +70,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("styles/home.css")
+      record = context.evaluate("styles/home.css")
       css = record.assets.first.bytes
 
       assert_includes(css, "/assets/styles_base_css")
@@ -114,7 +114,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      entry_record = context.load("entry")
+      entry_record = context.evaluate("entry")
       old_home_asset = context.assets_for("styles/home.css").fetch(0)
       old_base_asset = context.assets_for("styles/base.css").fetch(0)
 
@@ -169,7 +169,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      entry_record = context.load("entry")
+      entry_record = context.evaluate("entry")
 
       assert_equal([:title], context.graph.mods.fetch(entry_record.id).const_get(:Exports)::CLASSES)
 
@@ -199,7 +199,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      entry_record = context.load("entry")
+      entry_record = context.evaluate("entry")
       exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
 
       assert_equal([], context.assets_for("styles/home.css"))
@@ -228,7 +228,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      entry_record = context.load("entry")
+      entry_record = context.evaluate("entry")
       exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
 
       assert_equal([:title], exports.classes)

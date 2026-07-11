@@ -105,7 +105,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
   - [x] In build mode, transform, resolve, and serialize modules without evaluating app module code.
   - [x] In development mode, avoid evaluating entry modules until exports or calls are requested.
   - [x] Add or document a public collection API distinct from eager evaluation, such as `context.collect`.
-  - [x] Decide whether `context.load` remains eager or gets renamed to make evaluation explicit.
+  - [x] Replace `context.load` with explicit `context.collect`, `context.entry`, and `context.evaluate` APIs.
   - [x] Track module evaluation state explicitly, or consistently derive it from `graph.mods`.
   - [x] Make invalidation preserve collected-but-not-evaluated modules without evaluating them.
   - [x] Make `apply_update` avoid forcing entry evaluation unless the entry was already evaluated or the caller requests exports.

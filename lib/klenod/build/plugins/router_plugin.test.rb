@@ -326,7 +326,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       File.write("#{dir}/pages/about/page.rb", "NAME = :about\n")
 
       context = router_context(dir, mode: :development)
-      router_record = context.load("virtual:router")
+      router_record = context.evaluate("virtual:router")
       router = context.exports(router_record)::Default
 
       assert_includes(router_record.transformed_source, "__klenod_lazy_import__")
@@ -345,7 +345,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       File.write("#{dir}/pages/about/page.rb", "NAME = :about\n")
 
       context = router_context(dir, mode: :build)
-      router_record = context.load("virtual:router")
+      router_record = context.evaluate("virtual:router")
 
       assert_includes(router_record.transformed_source, "__klenod_lazy_import__")
       refute_includes(router_record.transformed_source, "__klenod_import__(\"")
@@ -359,7 +359,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       File.write("#{dir}/pages/page.rb", "NAME = :root\n")
 
       context = router_context(dir, mode: :development)
-      record = context.load("virtual:router")
+      record = context.evaluate("virtual:router")
 
       expected =
         [

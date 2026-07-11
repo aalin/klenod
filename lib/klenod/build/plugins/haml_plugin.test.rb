@@ -612,7 +612,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
 
       assert_equal(
         ["pages/page.css", "pages/page.intl.*.toml"],
@@ -634,7 +634,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.load("pages/hello-world.haml")
+      record = context.evaluate("pages/hello-world.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_operator(exports::Default, :<, FakeFramework::ComponentBase)
@@ -751,7 +751,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([:main, [:h1, "Hello"], [:p, "From Ruby"], {class: "SHELL"}], exports::Default.new.render)
@@ -778,7 +778,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([:p, "Hello", {title: "HELLO"}], exports::Default.new.render)
@@ -808,7 +808,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([:div, "Hello", {key: [exports::Default::User.new(15), :greeting]}], exports::Default.new.render)
@@ -854,7 +854,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin])
-      record = context.load("page.haml")
+      record = context.evaluate("page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
       user = exports::Default::User.new(15)
 
@@ -881,7 +881,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([:p, "Hello"], exports::Default.new.render)
@@ -899,7 +899,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([" ", [:a, "link", {href: "#"}]], exports::Default.new.render)
@@ -916,7 +916,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([[:a, "link", {href: "#"}], " "], exports::Default.new.render)
@@ -933,7 +933,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([" ", [:a, "link", {href: "#"}], " "], exports::Default.new.render)
@@ -958,7 +958,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([:p, "before", " ", [:a, "link", {href: "#"}], " ", "after"], exports::Default.new.render)
@@ -985,7 +985,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/handlers.haml")
+      record = context.evaluate("pages/handlers.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_operator(exports::Default, :<, FakeFramework::ComponentBase)
@@ -1018,7 +1018,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.load("pages/list.haml")
+      record = context.evaluate("pages/list.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([:ul, [[:li, "A"], [:li, "B"]]], exports::Default.new.render)
@@ -1056,7 +1056,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.load("pages/list.haml")
+      record = context.evaluate("pages/list.haml")
       component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default.new
 
       assert_equal([:ul, nil], component.render)
@@ -1088,7 +1088,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.load("pages/conditional.haml")
+      record = context.evaluate("pages/conditional.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_nil(exports::Default.new(show: true).render)
@@ -1121,7 +1121,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.load("pages/conditional.haml")
+      record = context.evaluate("pages/conditional.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([:section, [:p, "Visible"]], exports::Default.new(show: true).render)
@@ -1137,7 +1137,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         factory: "#{self.class.name}::FakeFramework::H"
       )
     context = Klenod::Build::Context.new(source_dir: File.expand_path("__test__", __dir__), plugins: [plugin])
-    record = context.load("haml/output_conditional_without_else.haml")
+    record = context.evaluate("haml/output_conditional_without_else.haml")
     exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
     assert_equal([:section, [:p, "Visible"]], exports::Default.new(show: true).render)
@@ -1177,7 +1177,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin])
-      record = context.load("page.haml")
+      record = context.evaluate("page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
       details_class = context.graph.mods.fetch(ModuleId.new("components/details.haml", nil)).const_get(:Exports)::Default
 
@@ -1210,7 +1210,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       mod = context.graph.mods.fetch(record.id)
       exports = mod.const_get(:Exports)
 
@@ -1242,7 +1242,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       mod = context.graph.mods.fetch(record.id)
       exports = mod.const_get(:Exports)
 
@@ -1275,7 +1275,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       mod = context.graph.mods.fetch(record.id)
       exports = mod.const_get(:Exports)
 
@@ -1302,7 +1302,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       mod = context.graph.mods.fetch(record.id)
       exports = mod.const_get(:Exports)
 
@@ -1334,7 +1334,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       mod = context.graph.mods.fetch(record.id)
       exports = mod.const_get(:Exports)
 
@@ -1376,7 +1376,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      page_record = context.load("page.haml")
+      page_record = context.evaluate("page.haml")
       page_mod = context.graph.mods.fetch(page_record.id)
       details_mod = context.graph.mods.fetch(ModuleId.new("components/details.haml", nil))
       exports = page_mod.const_get(:Exports)
@@ -1420,7 +1420,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       exports = context.exports(record)
 
       assert_equal([:main, 7, 3, "__LINE__", [:span, 10], [:section, {key: 11}], {data_line: 6}], exports::Default.new.render)
@@ -1440,7 +1440,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           transformer: transformer
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.load("pages/custom.haml")
+      record = context.evaluate("pages/custom.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
       call = transformer.calls.fetch(0)
 
@@ -1464,7 +1464,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       File.write("#{dir}/pages/page.intl.sv-SE.toml", "title = \"Hej\"\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("pages/page.haml")
+      record = context.evaluate("pages/page.haml")
       translations = context.graph.mods.fetch(record.id).const_get(:Exports)::Translations
 
       assert_equal("Hello", translations.fetch("en-US").fetch("title"))
@@ -1502,7 +1502,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      haml_record = context.load("pages/page.haml")
+      haml_record = context.evaluate("pages/page.haml")
 
       assert_equal({}, context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles)
 
@@ -1530,7 +1530,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      haml_record = context.load("pages/page.haml")
+      haml_record = context.evaluate("pages/page.haml")
       virtual_css_id = ModuleId.new("pages/page.haml.inline.0.css", nil)
       css_record = context.graph.records.fetch(virtual_css_id)
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
@@ -1554,7 +1554,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      haml_record = context.load("pages/page.haml")
+      haml_record = context.evaluate("pages/page.haml")
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
       rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
 
@@ -1574,7 +1574,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      haml_record = context.load("pages/page.haml")
+      haml_record = context.evaluate("pages/page.haml")
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
       rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
 
@@ -1597,7 +1597,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      haml_record = context.load("pages/page.haml")
+      haml_record = context.evaluate("pages/page.haml")
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
       title_classes = styles.fetch(:title).split
 
@@ -1626,7 +1626,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      haml_record = context.load("pages/page.haml")
+      haml_record = context.evaluate("pages/page.haml")
       virtual_css_id = ModuleId.new("pages/page.haml.inline.0.css", nil)
 
       assert(context.graph.records.key?(virtual_css_id))
@@ -1648,7 +1648,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      haml_record = context.load("pages/page.haml")
+      haml_record = context.evaluate("pages/page.haml")
 
       File.write(intl_path, "title = \"Hello\"\n")
       result = context.invalidate_paths([intl_path])
@@ -1666,7 +1666,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       File.write(css_path, ".title { color: red; }\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      haml_record = context.load("pages/page.haml")
+      haml_record = context.evaluate("pages/page.haml")
       old_asset_path = context.graph.records.fetch(ModuleId.new("pages/page.css", nil)).assets.first.output_path
       old_styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
 
@@ -1691,7 +1691,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      haml_record = context.load("pages/page.haml")
+      haml_record = context.evaluate("pages/page.haml")
 
       File.write(intl_path, "title = \"Hello\"\n")
       add_result = context.invalidate_paths([intl_path])
@@ -1715,7 +1715,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       File.write(intl_path, "title = \"Hello\"\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      haml_record = context.load("pages/page.haml")
+      haml_record = context.evaluate("pages/page.haml")
 
       File.write(intl_path, "title = \"Hi\"\n")
       context.invalidate_paths([intl_path])
@@ -1732,7 +1732,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      context.load("pages/page.haml")
+      context.evaluate("pages/page.haml")
 
       File.write(intl_path, "title = \"Hello\"\ninvalid =\n")
       result = context.invalidate_paths([intl_path])
@@ -1750,7 +1750,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       File.write(css_path, ".title { color: red; }\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      haml_record = context.load("pages/page.haml")
+      haml_record = context.evaluate("pages/page.haml")
 
       assert_match(/title/, context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles.fetch(:title))
 

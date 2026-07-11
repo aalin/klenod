@@ -28,7 +28,7 @@ class Klenod::Build::Plugins::DataPlugin::Test < Minitest::Test
       )
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("entry")
+      record = context.evaluate("entry")
       values = context.graph.mods.fetch(record.id).const_get(:Exports)::VALUES
 
       assert_equal("Klenod", values.fetch(0).fetch("name"))
@@ -43,7 +43,7 @@ class Klenod::Build::Plugins::DataPlugin::Test < Minitest::Test
       File.write("#{dir}/config.json", JSON.dump({"name" => "Klenod"}))
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.load("config")
+      record = context.evaluate("config")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal({"name" => "Klenod"}, exports::Default)
@@ -69,7 +69,7 @@ class Klenod::Build::Plugins::DataPlugin::Test < Minitest::Test
 
       context = Klenod::Build::Context.new(source_dir: dir)
 
-      assert_raises(JSON::ParserError) { context.load("config.json") }
+      assert_raises(JSON::ParserError) { context.evaluate("config.json") }
     end
   end
 end
