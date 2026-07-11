@@ -23,7 +23,7 @@ def self.call(request, context)
       .layouts
       .reverse_each
       .reduce(body) do |inner, layout|
-        layout.new(children: [inner], slots: render_slots(match)).render
+        layout.new(children: [inner], slots: render_slots(match, layout)).render
       end
   css_assets = context.assets_for_module(__FILE__, type: :css)
 
@@ -51,8 +51,11 @@ def self.module_path
   __FILE__
 end
 
-def self.render_slots(match)
-  match.slots.to_h do |name, slot_match|
+def self.render_slots(match, layout)
+  match
+    .slots
+    .select { |_name, slot_match| slot_for_layout?(slot_match, layout) }
+    .to_h do |name, slot_match|
     [
       name,
       [
@@ -68,4 +71,8 @@ def self.render_slots(match)
       ]
     ]
   end
+end
+
+def self.slot_for_layout?(slot_match, layout)
+  slot_match.layout_module_id && layout.module_path.end_with?(slot_match.layout_module_id)
 end

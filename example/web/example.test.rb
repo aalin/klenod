@@ -61,7 +61,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/about", "inside a route group")
     assert_route_includes(entry, context, "/dashboard", "Dashboard")
     assert_route_includes(entry, context, "/dashboard", "Dashboard modal home")
-    assert_route_status(entry, context, "/dashboard/settings", 404)
+    assert_route_includes(entry, context, "/dashboard/settings", "Dashboard settings")
+    assert_route_includes(entry, context, "/dashboard/settings", "Dashboard settings modal")
     assert_route_includes(entry, context, "/feed/photo", "Photo intercept")
     assert_route_includes(entry, context, "/profile", "Profile intercept")
     assert_route_includes(entry, context, "/login", "Login intercept")
@@ -132,11 +133,5 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(200, status)
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
     assert_includes(body.join, text)
-  end
-
-  def assert_route_status(entry, context, path, expected_status)
-    status, _headers, _body = entry.call(Request.new(path), context)
-
-    assert_equal(expected_status, status)
   end
 end

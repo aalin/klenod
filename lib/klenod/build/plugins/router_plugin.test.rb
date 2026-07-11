@@ -203,14 +203,17 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
-  def test_virtual_router_matches_parallel_slots_only_with_matching_primary_route
+  def test_virtual_router_matches_parallel_slots_with_matching_primary_route
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/dashboard/@modal/settings")
       FileUtils.mkdir_p("#{dir}/pages/dashboard/@sidebar")
+      FileUtils.mkdir_p("#{dir}/pages/dashboard/settings")
+      File.write("#{dir}/pages/dashboard/layout.rb", "NAME = :dashboard_layout\n")
       File.write("#{dir}/pages/dashboard/page.rb", "NAME = :dashboard\n")
       File.write("#{dir}/pages/dashboard/@modal/page.rb", "NAME = :modal_home\n")
       File.write("#{dir}/pages/dashboard/@modal/settings/page.rb", "NAME = :settings\n")
       File.write("#{dir}/pages/dashboard/@sidebar/page.rb", "NAME = :sidebar\n")
+      File.write("#{dir}/pages/dashboard/settings/page.rb", "NAME = :settings_page\n")
 
       router = router_for(dir, mode: :development)
       dashboard = router.match("/dashboard")
@@ -221,7 +224,24 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal([:modal, :sidebar], dashboard.slots.keys.sort)
       assert_equal(:modal_home, dashboard.slots.fetch(:modal).page::NAME)
       assert_equal(:sidebar, dashboard.slots.fetch(:sidebar).page::NAME)
-      assert_nil(settings)
+      assert_equal(:settings_page, settings.page::NAME)
+      assert_equal("/dashboard/settings", settings.route.path)
+      assert_equal([:modal], settings.slots.keys)
+      assert_equal(:settings, settings.slots.fetch(:modal).page::NAME)
+      assert_equal("pages/dashboard/layout.rb", settings.slots.fetch(:modal).layout_module_id)
+    end
+  end
+
+  def test_virtual_router_does_not_match_slot_only_url_without_primary_route
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/dashboard/@modal/settings")
+      File.write("#{dir}/pages/dashboard/layout.rb", "NAME = :dashboard_layout\n")
+      File.write("#{dir}/pages/dashboard/page.rb", "NAME = :dashboard\n")
+      File.write("#{dir}/pages/dashboard/@modal/settings/page.rb", "NAME = :settings\n")
+
+      router = router_for(dir, mode: :development)
+
+      assert_nil(router.match("/dashboard/settings"))
     end
   end
 

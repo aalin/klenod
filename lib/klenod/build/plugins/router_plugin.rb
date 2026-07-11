@@ -39,7 +39,7 @@ module Klenod
         RouteParam = Data.define(:name, :kind)
         PARAM_SEGMENT_KINDS = [:dynamic, :catch_all, :optional_catch_all].freeze
 
-        PageRoute = Data.define(:path, :module_id, :segments, :layout_module_ids) do
+        PageRoute = Data.define(:path, :module_id, :segments, :layout_module_ids, :slot_layout_module_id) do
           def params
             segments
               .select { |segment| segment.param_name && PARAM_SEGMENT_KINDS.include?(segment.kind) }
@@ -137,7 +137,8 @@ module Klenod
         end
 
         def route_for(source_dir, paths)
-          route_path = route_path_for(route_segments_for(source_dir, paths.fetch(0)))
+          segments = route_segments_for(source_dir, paths.fetch(0))
+          route_path = route_path_for(segments)
           if paths.length > 1
             matches = paths.map { |path| relative_path_for(source_dir, path) }.sort.join(", ")
             raise ResolveError, "Ambiguous page route #{route_path}; matched #{matches}. Use only one page file per route."
@@ -147,8 +148,9 @@ module Klenod
           PageRoute.new(
             route_path,
             ModuleId.new(relative_path_for(source_dir, path), nil),
-            route_segments_for(source_dir, path),
-            layout_module_ids_for(source_dir, path)
+            segments,
+            layout_module_ids_for(source_dir, path),
+            slot_layout_module_id_for(source_dir, path, segments)
           )
         end
 
@@ -204,6 +206,19 @@ module Klenod
           end
         end
 
+        def slot_layout_module_id_for(source_dir, path, segments)
+          parallel_index = segments.index { |segment| segment.kind == :parallel }
+          return nil unless parallel_index
+
+          page_root = source_dir.join(pages_dir)
+          relative_dir = path.dirname.relative_path_from(page_root).to_s
+          owner_parts = (relative_dir == ".") ? [] : relative_dir.split("/").first(parallel_index)
+          owner_dir = owner_parts.empty? ? page_root : page_root.join(*owner_parts)
+          layout_path = layout_path_for(owner_dir)
+
+          ModuleId.new(relative_path_for(source_dir, layout_path), nil) if layout_path
+        end
+
         def layout_path_for(dir)
           matches = extensions.filter_map do |extension|
             path = dir.join("layout#{extension}")
@@ -228,7 +243,7 @@ module Klenod
             #{import_definitions(imports)}
 
             module Default
-              Route = Data.define(:path, :module_id, :segments, :match_parts, :layout_module_ids, :page_ref, :layout_refs) do
+              Route = Data.define(:path, :module_id, :segments, :match_parts, :layout_module_ids, :slot_layout_module_id, :page_ref, :layout_refs) do
                 def params
                   segments
                     .select { |segment| segment.param_name && [:dynamic, :catch_all, :optional_catch_all].include?(segment.kind) }
@@ -277,7 +292,7 @@ module Klenod
                 end
               end
 
-              SlotMatch = Data.define(:route, :params) do
+              SlotMatch = Data.define(:route, :params, :layout_module_id) do
                 def page
                   route.page
                 end
@@ -414,7 +429,7 @@ module Klenod
                   next unless route_matches?(route, parts)
                   next unless route_prefix_matches?(main_route, normalize_path(route.path))
 
-                  slots[slot_name_for(route)] = SlotMatch.new(route, params_for(route, parts))
+                  slots[slot_name_for(route)] = SlotMatch.new(route, params_for(route, parts), route.slot_layout_module_id)
                 end
               end
 
@@ -464,6 +479,7 @@ module Klenod
               "      #{segments_source(route.segments)},",
               "      #{match_parts_source(route.segments)},",
               "      #{route.layout_module_ids.map(&:to_s).inspect},",
+              "      #{route.slot_layout_module_id&.to_s.inspect},",
               "      #{imports.fetch(route.module_id.to_s)},",
               "      #{layouts_source(layouts)}",
               "    )"

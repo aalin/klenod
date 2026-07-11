@@ -22,7 +22,7 @@
       %section.nav_group
         %h2 Layouts
         %a{ href: "/dashboard" } Dashboard
-        %a{ href: "/dashboard" } Dashboard
+        %a{ href: "/dashboard/settings" } Settings
         %a{ href: "/routes" } Route gallery
       %section.nav_group
         %h2 Intercepts
@@ -31,6 +31,3 @@
         %a{ href: "/login" } Login
   %section.content
     = @children
-  = if @slots[:modal]
-    %aside.modal
-      = @slots[:modal]

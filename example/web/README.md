@@ -54,7 +54,7 @@ The example includes a small route gallery:
 - `/docs/guides/routing` demonstrates catch-all params.
 - `/shop` and `/shop/sale/red` demonstrate optional catch-all params.
 - `/about` demonstrates a route group.
-- `/dashboard` demonstrates a default page in the `@modal` parallel slot. `/dashboard/settings` is a slot-only URL in this example, so a hard request returns 404 until default-slot fallback or intercepting routes are implemented.
+- `/dashboard` demonstrates a default page in the `@modal` parallel slot. `/dashboard/settings` renders `dashboard/settings/page.haml` as the primary route and `dashboard/@modal/settings/page.haml` into `dashboard/layout.haml`.
 - `/feed/photo`, `/profile`, and `/login` demonstrate intercepted route segment metadata.
 - `/routes` reads `Router::Default.tree` and displays structural route metadata.
 

@@ -1,0 +1,11 @@
+:ruby
+  def initialize(children:, slots: {})
+    @children = children
+    @slots = slots
+  end
+
+%section.dashboard_layout
+  = @children
+  = if @slots[:modal]
+    %aside.modal
+      = @slots[:modal]
