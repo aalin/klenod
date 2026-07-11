@@ -48,15 +48,13 @@ section {
 }
 
 dialog {
-  width: min(100%, 34rem);
-  margin: 1rem 0 0 auto;
   padding: 1rem;
   background: #ffffff;
   border: 1px solid #d9dde3;
 }
 
 dialog::backdrop {
-  background: transparent;
+  background: rgb(32 33 36 / 28%);
 }
 
 @media (max-width: 720px) {
