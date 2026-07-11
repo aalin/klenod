@@ -2,22 +2,26 @@
 
 Router = import("virtual:router")
 
-def self.call(request, context)
-  match = Router::Default.match(request&.path || "/")
+def self.call(raw_request, context)
+  match = Router::Default.match(request_path(raw_request))
   return [404, {"content-type" => "text/plain"}, ["Not found\n"]] unless match
-  return call_route_handler(match.handler, request, context) if match.handler
+
+  request = Example::Request.from(raw_request, params: match.params)
+  return call_route_handler(match.handler, request) if match.handler
 
   page = match.page
   body =
     page
-      .new(params: match.params)
+      .new(request: request)
       .render
   body =
     match
       .layouts
       .reverse_each
       .reduce(body) do |inner, layout|
-        layout.new(children: [inner], slots: render_slots(match, layout)).render
+        layout
+          .new(children: [inner], request: request, slots: render_slots(match, layout, request))
+          .render
       end
   css_assets = context.assets_for_module(__FILE__, type: :css)
 
@@ -43,11 +47,17 @@ def self.module_path
   __FILE__
 end
 
-def self.call_route_handler(handler, request, context)
-  method_name = request_method(request)
-  return [405, {"content-type" => "text/plain"}, ["Method not allowed\n"]] unless handler.method_defined?(method_name)
+def self.request_path(raw_request)
+  raw_path = raw_request&.path.to_s
+  raw_path = "/" if raw_path.empty?
+  raw_path.split("?", 2).fetch(0)
+end
 
-  normalize_response(handler.new.public_send(method_name, request, context))
+def self.call_route_handler(handler, request)
+  method_name = request_method(request)
+  return Example::Response.text("Method not allowed\n", status: 405).to_a unless handler.method_defined?(method_name)
+
+  normalize_response(handler.new.public_send(method_name, request))
 end
 
 def self.request_method(request)
@@ -56,13 +66,14 @@ def self.request_method(request)
 end
 
 def self.normalize_response(response)
+  return response.to_a if response.is_a?(Example::Response)
   return response if response.is_a?(Array) && response.length == 3
   return [204, {}, []] if response.nil?
 
   [200, {"content-type" => "text/plain; charset=utf-8"}, [response.to_s]]
 end
 
-def self.render_slots(match, layout)
+def self.render_slots(match, layout, request)
   match
     .slots
     .select { |_name, slot_match| slot_for_layout?(slot_match, layout) }
@@ -72,7 +83,7 @@ def self.render_slots(match, layout)
       [
         slot_match
           .page
-          .new(params: slot_match.params)
+          .new(request: request.with_params(slot_match.params))
           .render
       ]
     ]

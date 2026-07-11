@@ -1,6 +1,7 @@
 :ruby
-  def initialize(children:, slots: {})
+  def initialize(children:, request: nil, slots: {})
     @children = children
+    @request = request
     @slots = slots
   end
 

@@ -1,7 +1,7 @@
 :ruby
-  def initialize(params: {}, **props)
-    super(params: params, **props)
-    @slug = params.fetch(:slug)
+  def initialize(request:, **props)
+    super(request: request, **props)
+    @slug = request.params.fetch(:slug)
   end
 
 %article

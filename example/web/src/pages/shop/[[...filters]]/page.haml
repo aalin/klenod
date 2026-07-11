@@ -1,6 +1,6 @@
 :ruby
-  def initialize(params: {}, **)
-    @filters = params.fetch(:filters)
+  def initialize(request:, **)
+    @filters = request.params.fetch(:filters)
   end
 
 %article

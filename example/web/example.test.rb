@@ -91,11 +91,31 @@ class Klenod::ExampleTest < Minitest::Test
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
-    status, headers, body = entry.call(request("/api/status"), context)
+    status, headers, body = entry.call(request("/api/status?via=test"), context)
 
     assert_equal(200, status)
     assert_equal("application/json; charset=utf-8", headers.fetch("content-type"))
-    assert_equal({"status" => "ok", "service" => "klenod"}, JSON.parse(body.join))
+    assert_equal(
+      {
+        "status" => "ok",
+        "service" => "klenod",
+        "method" => "GET",
+        "path" => "/api/status",
+        "query" => {"via" => "test"}
+      },
+      JSON.parse(body.join)
+    )
+  end
+
+  def test_example_app_renders_redirect_response
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, headers, body = entry.call(request("/api/redirect"), context)
+
+    assert_equal(302, status)
+    assert_equal("/", headers.fetch("location"))
+    assert_empty(body)
   end
 
   def test_example_app_emits_gallery_image_variants
