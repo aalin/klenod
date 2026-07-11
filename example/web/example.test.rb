@@ -7,7 +7,14 @@ require "tmpdir"
 require_relative "../../lib/klenod"
 
 class Klenod::ExampleTest < Minitest::Test
-  Request = Data.define(:path)
+  class Request
+    attr_reader :path, :method
+
+    def initialize(path, method: "GET")
+      @path = path
+      @method = method
+    end
+  end
 
   def test_example_app_loads_renders_and_emits_assets
     config = example_config

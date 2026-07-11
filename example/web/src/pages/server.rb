@@ -51,11 +51,7 @@ def self.call_route_handler(handler, request, context)
 end
 
 def self.request_method(request)
-  method =
-    if request
-      method_reader = request.method(:method)
-      method_reader.call if method_reader.arity == 0
-    end
+  method = request&.method
   method.to_s.empty? ? "GET" : method.to_s.upcase
 end
 
