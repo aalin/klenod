@@ -31,9 +31,7 @@ def self.call(request, context)
             <title>Klenod example</title>
             #{css_assets.map { |asset| %(<link rel="stylesheet" href="#{asset.output_path}">) }.join("\n")}
           </head>
-          <body>
-            #{body}
-          </body>
+          #{body}
         </html>
       HTML
     ]

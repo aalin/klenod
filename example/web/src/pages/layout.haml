@@ -28,13 +28,13 @@
     @slots = slots
   end
 
-%div.shell
-  %header.header
-    %a.brand{ href: "/" } Klenod example
-    %nav.nav(aria-label="Example routes")
+%body
+  %header
+    %a{ href: "/" } Klenod example
+    %nav(aria-label="Example routes")
       %NavGroup{ title: "Main", links: MainLinks }
       %NavGroup{ title: "Dynamic", links: DynamicLinks }
       %NavGroup{ title: "Layouts", links: LayoutLinks }
       %NavGroup{ title: "Intercepts", links: InterceptLinks }
-  %main.content
+  %main
     = @children
