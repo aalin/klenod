@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "cgi/escape"
+
 module Example
   class Component
     def initialize(...)
@@ -29,12 +31,7 @@ module Example
     def self.escape_html(value)
       return value.to_s if value.is_a?(HtmlString)
 
-      value
-        .to_s
-        .gsub("&", "&amp;")
-        .gsub("<", "&lt;")
-        .gsub(">", "&gt;")
-        .gsub('"', "&quot;")
+      CGI.escapeHTML(value.to_s)
     end
 
     def self.rendered_attribute(name, value)

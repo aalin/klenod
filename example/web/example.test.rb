@@ -62,7 +62,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/dashboard", "Harbor dispatch dashboard")
     assert_route_includes(entry, context, "/dashboard", "Control room")
     assert_route_includes(entry, context, "/dashboard", "Shift handover")
-    assert_route_includes(entry, context, "/dashboard", "<dialog open>")
+    assert_route_includes(entry, context, "/dashboard", "<dialog open ")
     assert_route_includes(entry, context, "/dashboard/settings", "Dispatch preferences")
     assert_route_includes(entry, context, "/dashboard/settings", "Unsaved policy changes")
     assert_route_includes(entry, context, "/feed/photo", "Photo intercept")

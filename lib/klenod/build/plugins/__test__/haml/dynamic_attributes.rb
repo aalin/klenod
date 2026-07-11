@@ -21,7 +21,7 @@ class DynamicAttributes < TestFramework::ComponentBase
         TestFramework::H[:p, "Hello"]
       end,
       **{
-        data-state:
+        "data-state":
           begin
             # SourceMapMark:1:ZGlhbG9n
             "ready"

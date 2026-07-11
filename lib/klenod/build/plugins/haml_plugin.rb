@@ -621,7 +621,7 @@ module Klenod
               AssocSplat(
                 HashLiteral(
                   LBrace("{"),
-                  props.map { |name, value| Assoc(Label("#{name}:"), argument_node(value, mark: mark)) }
+                  props.map { |name, value| Assoc(prop_key_node(name), argument_node(value, mark: mark)) }
                 )
               )
             end
@@ -679,6 +679,13 @@ module Klenod
               else
                 DynaSymbol([TStringContent(value)], ":\"")
               end
+            end
+
+            def prop_key_node(name)
+              name = name.to_s
+              return Label("#{name}:") if name.match?(/\A[a-zA-Z_]\w*\z/)
+
+              symbol_node(name)
             end
 
             def source_marked_fragment(mark, source, node)
