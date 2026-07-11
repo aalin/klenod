@@ -39,13 +39,13 @@ ASSETS_DIR=example/web/tmp/public bundle exec ruby example/web/server.rb
 
 When `ASSETS_DIR` is set, the examples write the current asset manifest once and then apply `event.asset_updates` after each successful graph update.
 
-The server entry imports the virtual router and an image with query-driven variants:
+The server entry imports the virtual router:
 
 ```ruby
-Shared = import("/shared")
 Router = import("virtual:router")
-SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 ```
+
+Pages import their own assets. For example, `src/pages/page.haml` imports an image with query-driven variants.
 
 `Router::Default.match(path).page` returns the matched component class. The server entry wraps the rendered page through `match.layouts`, passing the current HTML as `children: [inner]` and rendering named parallel routes from `match.slots`. The nested route `src/pages/blog/[slug]/page.haml` demonstrates dynamic params at `/blog/hello`.
 

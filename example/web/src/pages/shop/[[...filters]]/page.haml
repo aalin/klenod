@@ -1,5 +1,5 @@
 :ruby
-  def initialize(name:, tagline:, image:, params: {})
+  def initialize(params: {}, **)
     @filters = params.fetch(:filters)
   end
 

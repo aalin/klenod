@@ -42,7 +42,7 @@ puts "Mirroring assets to #{assets_dir}" if assets_dir
 puts "Initial asset files written: #{write_result.written_paths.length}" if write_result
 puts "Initial status: #{status}"
 puts "Initial body includes Haml page: #{body.join.include?("<main")}"
-puts "Edit example/web/src/pages/page.haml, example/web/src/pages/page.css, or example/web/src/shared.rb to see an update."
+puts "Edit example/web/src/pages/page.haml, example/web/src/pages/page.css, or example/web/src/pages/dashboard/page.haml to see an update."
 
 begin
   watcher.start

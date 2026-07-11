@@ -56,7 +56,7 @@ end
 puts "Serving http://localhost:#{port}"
 puts "Watching #{source_dir}"
 puts "Mirroring assets to #{assets_dir}" if assets_dir
-puts "Edit example/web/src/pages/page.haml, example/web/src/pages/page.css, or example/web/src/shared.rb to see updates."
+puts "Edit example/web/src/pages/page.haml, example/web/src/pages/page.css, or example/web/src/pages/dashboard/page.haml to see updates."
 
 begin
   watcher.start

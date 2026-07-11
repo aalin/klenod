@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
-Shared = import("/shared")
 Router = import("virtual:router")
-SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 
 def self.call(request, context)
   match = Router::Default.match(request&.path || "/")
@@ -11,12 +9,7 @@ def self.call(request, context)
   page = match.page
   body =
     page
-      .new(
-        name: Shared::NAME,
-        tagline: Shared::TAGLINE,
-        image: SmokedFish,
-        params: match.params
-      )
+      .new(params: match.params)
       .render
   body =
     match
@@ -61,12 +54,7 @@ def self.render_slots(match, layout)
       [
         slot_match
           .page
-          .new(
-            name: Shared::NAME,
-            tagline: Shared::TAGLINE,
-            image: nil,
-            params: slot_match.params
-          )
+          .new(params: slot_match.params)
           .render
       ]
     ]

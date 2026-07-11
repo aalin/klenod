@@ -2,6 +2,8 @@
 
 module Example
   class Component
+    def initialize(...)
+    end
   end
 
   module H

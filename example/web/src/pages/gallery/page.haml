@@ -4,34 +4,30 @@
   SailingBoat = import("./sailing-boat.jpg?width=360,720&format=jpeg")
   Vegetables = import("./vegetables.jpg?width=360,720&format=jpeg")
 
-  def initialize(name:, tagline:, image:, params: {})
-    @name = name
-    @tagline = tagline
-    @items = [
-      {
-        image: Coffee,
-        alt: "Coffee cup on a table",
-        caption: "Coffee imported from a routed Haml page."
-      },
-      {
-        image: SailingBoat,
-        alt: "Sailing boat on open water",
-        caption: "A sailing image with generated JPEG widths."
-      },
-      {
-        image: Vegetables,
-        alt: "Vegetables arranged for cooking",
-        caption: "Vegetables rendered through the shared Figure component."
-      }
-    ]
-  end
+  Items = [
+    {
+      image: Coffee,
+      alt: "Coffee cup on a table",
+      caption: "Coffee imported from a routed Haml page."
+    },
+    {
+      image: SailingBoat,
+      alt: "Sailing boat on open water",
+      caption: "A sailing image with generated JPEG widths."
+    },
+    {
+      image: Vegetables,
+      alt: "Vegetables arranged for cooking",
+      caption: "Vegetables rendered through the shared Figure component."
+    }
+  ]
 
 %article.gallery
   %header.hero
     %p.kicker Klenod images
     %h1 Image gallery
-    %p= @tagline
+    %p Assets are imported through routed Haml pages and emitted with generated variants.
   %section.grid
-    = @items.map do |item|
+    = Items.map do |item|
       %div.card
         %Figure{ image: item.fetch(:image), alt: item.fetch(:alt), caption: item.fetch(:caption) }

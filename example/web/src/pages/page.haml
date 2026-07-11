@@ -4,18 +4,12 @@
   Navigation = import("../data/navigation.yaml")
   Release = import("../data/release.toml")
   Note = import("../data/note.txt")
-
-  def initialize(name:, tagline:, image:, params: {})
-    @name = name
-    @tagline = tagline
-    @image = image
-    @image_alt = "Smoked fish"
-  end
+  SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 
 %main{ class: Styles.fetch(:title) }
-  %h1= "Hello from #{@name}"
-  %p= @tagline
-  %Figure{ image: @image, alt: @image_alt, caption: "Image imported through Klenod with generated variants." }
+  %h1 Hello from Klenod
+  %p Ruby modules loaded through a dependency graph
+  %Figure{ image: SmokedFish, alt: "Smoked fish", caption: "Image imported through Klenod with generated variants." }
   %p Served through async-http and reloaded through Klenod watch events.
   %section.data_panel
     %h2 Data imports
