@@ -145,6 +145,44 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal({"accept" => "application/json"}, request.headers)
   end
 
+  def test_example_request_parses_nested_query_params
+    request =
+      Example::Request.from(
+        Request[
+          "GET",
+          "/forms?tag=ruby&tag=klenod&user[name]=Andreas&filters[]=fresh&filters[]=smoked&items[][name]=Coffee&items[][name]=Tea"
+        ]
+      )
+
+    assert_equal(
+      {
+        "tag" => ["ruby", "klenod"],
+        "user" => {"name" => "Andreas"},
+        "filters" => ["fresh", "smoked"],
+        "items" => [
+          {"name" => "Coffee"},
+          {"name" => "Tea"}
+        ]
+      },
+      request.query
+    )
+  end
+
+  def test_example_request_parses_nested_form_params
+    body = "order[customer][name]=Andreas&order[items][]=coffee&order[items][]=tea"
+    request = Example::Request.from(BodyRequest["POST", "/forms/submit", HeaderList.new([]), body])
+
+    assert_equal(
+      {
+        "order" => {
+          "customer" => {"name" => "Andreas"},
+          "items" => ["coffee", "tea"]
+        }
+      },
+      request.form
+    )
+  end
+
   def test_example_app_stores_form_values_in_encrypted_session_cookie
     config = example_config
     context = config.context
