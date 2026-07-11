@@ -10,6 +10,9 @@ require_relative "../context"
 class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
   RouterPlugin = Klenod::Build::Plugins::RouterPlugin
 
+  class RouteBase
+  end
+
   def test_discovers_root_nested_routes_and_layouts
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/blog")
@@ -127,9 +130,26 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
           RouterPlugin.new.discover(source_dir: dir)
         end
 
-      assert_includes(error.message, "Ambiguous page route /")
+      assert_includes(error.message, "Ambiguous route /")
       assert_includes(error.message, "pages/page.rb")
       assert_includes(error.message, "pages/page.haml")
+    end
+  end
+
+  def test_raises_when_page_and_route_handler_share_directory
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/api")
+      File.write("#{dir}/pages/api/page.haml", "")
+      File.write("#{dir}/pages/api/route.rb", "")
+
+      error =
+        assert_raises(Klenod::Build::ResolveError) do
+          RouterPlugin.new.discover(source_dir: dir)
+        end
+
+      assert_includes(error.message, "Ambiguous route /api")
+      assert_includes(error.message, "pages/api/page.haml")
+      assert_includes(error.message, "pages/api/route.rb")
     end
   end
 
@@ -154,6 +174,68 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal({filters: []}, router.match("/shop").params)
       assert_equal({filters: ["sale", "red"]}, router.match("/shop/sale/red").params)
       assert_nil(router.match("/missing"))
+    end
+  end
+
+  def test_virtual_router_matches_route_handlers
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/api/[id]")
+      File.write(
+        "#{dir}/pages/api/[id]/route.rb",
+        <<~RUBY
+          def GET(_req, _res)
+            "api"
+          end
+        RUBY
+      )
+
+      router = router_for(dir, mode: :development)
+      match = router.match("/api/123")
+      handler = match.handler
+
+      assert_nil(match.page)
+      assert_equal({id: "123"}, match.params)
+      assert_equal(RouteBase, handler.superclass)
+      assert_equal("api", handler.new.GET(nil, nil))
+    end
+  end
+
+  def test_route_handlers_default_to_regular_classes_without_configured_base
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/api")
+      File.write("#{dir}/pages/api/route.rb", "def POST(_req, _res)\n  :ok\nend\n")
+
+      router = router_for(dir, mode: :development, plugin: RouterPlugin.new)
+      handler = router.match("/api").handler
+
+      assert_equal(Object, handler.superclass)
+      assert_equal(:ok, handler.new.POST(nil, nil))
+    end
+  end
+
+  def test_route_handlers_rewrite_imports_and_preserve_source_maps
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/api")
+      File.write("#{dir}/dep.rb", "VALUE = 42\n")
+      File.write(
+        "#{dir}/pages/api/route.rb",
+        <<~RUBY
+          Dep = import("/dep")
+          def GET(_req, _res)
+            Dep::VALUE
+          end
+        RUBY
+      )
+
+      context = router_context(dir, mode: :development)
+      handler = context.entry("virtual:router").exports::Default.match("/api").handler
+      record = context.graph.records.fetch(Klenod::Build::ModuleId.new("pages/api/route.rb", nil))
+      generated_line = record.transformed_source.lines.find_index { |line| line.include?("Dep::VALUE") } + 1
+
+      assert_equal(42, handler.new.GET(nil, nil))
+      assert_includes(record.transformed_source, "class Route < #{self.class.name}::RouteBase")
+      assert_includes(record.transformed_source, "__klenod_import__")
+      assert_equal(3, record.source_map.find_original_line_no(generated_line))
     end
   end
 
@@ -408,7 +490,8 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
           ["pages/**/layout.rb", :router_layout],
           ["pages/**/layout.haml", :router_layout],
           ["pages/**/page.rb", :router_page],
-          ["pages/**/page.haml", :router_page]
+          ["pages/**/page.haml", :router_page],
+          ["pages/**/route.rb", :router_route]
         ].sort_by { |glob, kind| [glob, kind.to_s] }
 
       assert_equal(
@@ -505,19 +588,19 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
 
   private
 
-  def router_context(dir, mode:)
+  def router_context(dir, mode:, plugin: nil)
     Klenod::Build::Context.new(
       source_dir: dir,
       mode: mode,
       plugins: [
-        Klenod::Build::Plugins::RubyPlugin.new,
-        RouterPlugin.new
+        plugin || RouterPlugin.new(route_base_class: "#{self.class.name}::RouteBase"),
+        Klenod::Build::Plugins::RubyPlugin.new
       ]
     )
   end
 
-  def router_for(dir, mode:)
-    context = router_context(dir, mode: mode)
+  def router_for(dir, mode:, plugin: nil)
+    context = router_context(dir, mode: mode, plugin: plugin)
     context.entry("virtual:router").exports::Default
   end
 

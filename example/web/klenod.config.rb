@@ -9,6 +9,9 @@ output "dist/klenod.bundle"
 assets_dir "dist/public"
 
 plugins [
+  Klenod::Build::Plugins::RouterPlugin.new(
+    route_base_class: "Example::Route"
+  ),
   Klenod::Build::Plugins::RubyPlugin.new,
   Klenod::Build::Plugins::IntlPlugin.new,
   Klenod::Build::Plugins::HamlPlugin.new(
@@ -20,6 +23,5 @@ plugins [
   Klenod::Build::Plugins::JsonPlugin.new,
   Klenod::Build::Plugins::YamlPlugin.new,
   Klenod::Build::Plugins::TomlPlugin.new,
-  Klenod::Build::Plugins::TextPlugin.new,
-  Klenod::Build::Plugins::RouterPlugin.new
+  Klenod::Build::Plugins::TextPlugin.new
 ]

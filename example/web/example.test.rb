@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "json"
 require "minitest/autorun"
 require "tmpdir"
 
@@ -84,6 +85,17 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "(.)photo:intercept_current")
     assert_includes(html, "(..)profile:intercept_parent")
     assert_includes(html, "(...)login:intercept_root")
+  end
+
+  def test_example_app_renders_route_handler_response
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, headers, body = entry.call(Request.new("/api/status"), context)
+
+    assert_equal(200, status)
+    assert_equal("application/json; charset=utf-8", headers.fetch("content-type"))
+    assert_equal({"status" => "ok", "service" => "klenod"}, JSON.parse(body.join))
   end
 
   def test_example_app_emits_gallery_image_variants

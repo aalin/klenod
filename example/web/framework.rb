@@ -1,10 +1,21 @@
 # frozen_string_literal: true
 
 require "cgi/escape"
+require "json"
 
 module Example
   class Component
     def initialize(...)
+    end
+  end
+
+  class Route
+    def json(value, status: 200)
+      [status, {"content-type" => "application/json; charset=utf-8"}, [JSON.generate(value)]]
+    end
+
+    def redirect_to(location, status: 302)
+      [status, {"location" => location}, []]
     end
   end
 

@@ -47,17 +47,18 @@ Router = import("virtual:router")
 
 Pages import their own assets. For example, `src/pages/page.haml` imports an image with query-driven variants.
 
-`Router::Default.match(path).page` returns the matched component class. The server entry wraps the rendered page through `match.layouts`, passing the current HTML as `children: [inner]` and rendering named parallel routes from `match.slots`. The nested route `src/pages/blog/[slug]/page.haml` demonstrates dynamic params at `/blog/hello`.
+`Router::Default.match(path).page` returns the matched component class. `Router::Default.match(path).handler` returns a matched `route.rb` handler class. The server entry wraps rendered pages through `match.layouts`, passing the current HTML as `children: [inner]`, renders named parallel routes from `match.slots`, and dispatches route handlers through the example `Example::Route` base class. The nested route `src/pages/blog/[slug]/page.haml` demonstrates dynamic params at `/blog/hello`.
 
 The example includes a small route gallery:
 
 - `/docs/guides/routing` demonstrates catch-all params.
 - `/shop` and `/shop/sale/red` demonstrate optional catch-all params.
 - `/about` demonstrates a route group.
+- `/api/status` demonstrates a `route.rb` handler that returns JSON.
 - `/dashboard` demonstrates a small logistics dashboard with `@sidebar` and `@modal` parallel slots. `/dashboard/settings` renders `dashboard/settings/page.haml` as the primary route and matching slot pages into `dashboard/layout.haml`.
 - `/feed/photo`, `/profile`, and `/login` demonstrate intercepted route segment metadata.
 - `/routes` reads `Router::Default.tree` and displays structural route metadata.
 
 `framework.rb` defines the example `Example::H` factory used by the Haml plugin. `src/pages/page.haml` renders through that factory, imports `src/components/Figure.haml`, and automatically imports its companion `src/pages/page.css` as `Styles`.
 
-The example uses explicit extensions for page imports. If both `page.rb` and `page.haml` exist, an extensionless import like `import("./page")` is ambiguous and Klenod asks for `import("./page.haml")` or `import("./page.rb")`.
+The example uses explicit extensions for page imports. If both `page.rb` and `page.haml` exist, an extensionless import like `import("./page")` is ambiguous and Klenod asks for `import("./page.haml")` or `import("./page.rb")`. A `route.rb` handler cannot live in the same directory as a `page.rb` or `page.haml` page.

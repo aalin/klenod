@@ -4,6 +4,7 @@ require_relative "../dependency"
 require_relative "../errors"
 require_relative "../module_id"
 require_relative "../plugin"
+require_relative "../../source_map"
 require_relative "../transform_result"
 require_relative "../watched_pattern"
 
@@ -39,7 +40,7 @@ module Klenod
         RouteParam = Data.define(:name, :kind)
         PARAM_SEGMENT_KINDS = [:dynamic, :catch_all, :optional_catch_all].freeze
 
-        PageRoute = Data.define(:path, :module_id, :segments, :layout_module_ids, :slot_layout_module_id) do
+        PageRoute = Data.define(:path, :module_id, :segments, :layout_module_ids, :slot_layout_module_id, :kind) do
           def params
             segments
               .select { |segment| segment.param_name && PARAM_SEGMENT_KINDS.include?(segment.kind) }
@@ -73,14 +74,15 @@ module Klenod
           end
         end
 
-        def initialize(specifier: "virtual:router", pages_dir: "pages", extensions: [".rb", ".haml"])
+        def initialize(specifier: "virtual:router", pages_dir: "pages", extensions: [".rb", ".haml"], route_base_class: nil)
           @specifier = specifier
           @pages_dir = pages_dir
           @extensions = extensions
+          @route_base_class = route_base_class
           @module_id = ModuleId.new("#{specifier}.rb", nil)
         end
 
-        attr_reader :specifier, :pages_dir, :extensions
+        attr_reader :specifier, :pages_dir, :extensions, :route_base_class
 
         def resolve(dependency, _context)
           return nil unless dependency.specifier == specifier
@@ -94,17 +96,41 @@ module Klenod
           generate_router_source(discover(source_dir: context.source_dir))
         end
 
-        def transform(module_id, code, _context)
-          return TransformResult.identity(code) unless module_id.scheme == :virtual && module_id == @module_id
+        def transform(module_id, code, context)
+          if module_id.scheme == :virtual && module_id == @module_id
+            return TransformResult.new(
+              code,
+              [],
+              nil,
+              [],
+              watched_patterns(module_id),
+              {}
+            )
+          end
 
+          return TransformResult.identity(code) unless route_handler_module_id?(module_id, context)
+
+          wrapped = route_handler_source(code)
           TransformResult.new(
-            code,
+            wrapped,
             [],
-            nil,
+            Klenod::SourceMap::SourceMap.parse(code, wrapped),
             [],
-            watched_patterns(module_id),
-            {}
+            [],
+            {router_route_handler: true}
           )
+        end
+
+        def import_value(_resolved_dependency, record, context)
+          return nil unless record.metadata[:router_route_handler]
+
+          context.mods.fetch(record.id).const_get(:Exports)::Default
+        end
+
+        def runtime_import_value(_resolved_dependency, record, _context)
+          return nil unless record.metadata[:router_route_handler]
+
+          Runtime::DefaultImport.new(:Default)
         end
 
         def discover(source_dir:)
@@ -124,16 +150,20 @@ module Klenod
           root = source_dir.join(pages_dir)
           return [] unless root.directory?
 
-          extensions.flat_map { |extension| root.glob("**/page#{extension}") }.select(&:file?)
+          [
+            *extensions.flat_map { |extension| root.glob("**/page#{extension}") },
+            *root.glob("**/route.rb")
+          ].select(&:file?)
         end
 
         def watched_patterns(module_id)
-          extensions.flat_map do |extension|
+          patterns = extensions.flat_map do |extension|
             [
               WatchedPattern.new(module_id, "#{pages_dir}/**/page#{extension}", :router_page, {}),
               WatchedPattern.new(module_id, "#{pages_dir}/**/layout#{extension}", :router_layout, {})
             ]
           end
+          patterns + [WatchedPattern.new(module_id, "#{pages_dir}/**/route.rb", :router_route, {})]
         end
 
         def route_for(source_dir, paths)
@@ -141,7 +171,7 @@ module Klenod
           route_path = route_path_for(segments)
           if paths.length > 1
             matches = paths.map { |path| relative_path_for(source_dir, path) }.sort.join(", ")
-            raise ResolveError, "Ambiguous page route #{route_path}; matched #{matches}. Use only one page file per route."
+            raise ResolveError, "Ambiguous route #{route_path}; matched #{matches}. Use only one page or route file per directory."
           end
 
           path = paths.fetch(0)
@@ -149,8 +179,9 @@ module Klenod
             route_path,
             ModuleId.new(relative_path_for(source_dir, path), nil),
             segments,
-            layout_module_ids_for(source_dir, path),
-            slot_layout_module_id_for(source_dir, path, segments)
+            route_handler_path?(path) ? [] : layout_module_ids_for(source_dir, path),
+            route_handler_path?(path) ? nil : slot_layout_module_id_for(source_dir, path, segments),
+            route_handler_path?(path) ? :handler : :page
           )
         end
 
@@ -243,7 +274,7 @@ module Klenod
             #{import_definitions(imports)}
 
             module Default
-              Route = Data.define(:path, :module_id, :segments, :match_parts, :layout_module_ids, :slot_layout_module_id, :page_ref, :layout_refs) do
+              Route = Data.define(:path, :module_id, :segments, :match_parts, :layout_module_ids, :slot_layout_module_id, :page_ref, :layout_refs, :kind) do
                 def params
                   segments
                     .select { |segment| segment.param_name && [:dynamic, :catch_all, :optional_catch_all].include?(segment.kind) }
@@ -251,6 +282,14 @@ module Klenod
                 end
 
                 def page
+                  return nil unless kind == :page
+
+                  Default.resolve_import(page_ref)
+                end
+
+                def handler
+                  return nil unless kind == :handler
+
                   Default.resolve_import(page_ref)
                 end
 
@@ -305,6 +344,10 @@ module Klenod
               Match = Data.define(:route, :params, :slots) do
                 def page
                   route.page
+                end
+
+                def handler
+                  route.handler
                 end
 
                 def layouts
@@ -481,7 +524,8 @@ module Klenod
               "      #{route.layout_module_ids.map(&:to_s).inspect},",
               "      #{route.slot_layout_module_id&.to_s.inspect},",
               "      #{imports.fetch(route.module_id.to_s)},",
-              "      #{layouts_source(layouts)}",
+              "      #{layouts_source(layouts)},",
+              "      #{route.kind.inspect}",
               "    )"
             ].join("\n")
           end
@@ -583,6 +627,57 @@ module Klenod
 
         def layouts_source(layouts)
           "[#{layouts.join(", ")}]"
+        end
+
+        def route_handler_module_id?(module_id, context)
+          return false unless module_id.path.start_with?("#{pages_dir}/")
+          return false unless module_id.path.end_with?("/route.rb")
+
+          route_handler_module_ids(context.source_dir).include?(module_id)
+        end
+
+        def route_handler_module_ids(source_dir)
+          discover(source_dir: source_dir).routes.select { |route| route.kind == :handler }.map(&:module_id)
+        end
+
+        def route_handler_path?(path)
+          path.basename.to_s == "route.rb"
+        end
+
+        def route_handler_source(source)
+          superclass = route_base_class ? " < #{route_base_class}" : ""
+          <<~RUBY
+            # frozen_string_literal: true
+            KlenodImport = method(:__klenod_import__)
+            class Route#{superclass}
+              def self.__klenod_import__(dependency_id)
+                KlenodImport.call(dependency_id)
+              end
+
+              def __klenod_import__(dependency_id)
+                self.class.__klenod_import__(dependency_id)
+              end
+
+            #{marked_route_handler_body(source)}
+            end
+            Default = Route
+          RUBY
+        end
+
+        def marked_route_handler_body(source)
+          source.each_line.with_index(1).map do |line, line_no|
+            if ruby_magic_comment?(line)
+              ""
+            elsif line.strip.empty?
+              line
+            else
+              "  # #{Klenod::SourceMap::Mark.new(line_no, line.chomp)}\n  #{line}"
+            end
+          end.join
+        end
+
+        def ruby_magic_comment?(line)
+          line.match?(/\A#\s*(?:frozen_string_literal|encoding):/)
         end
       end
     end
