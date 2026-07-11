@@ -60,7 +60,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/gallery", "Coffee imported from a routed Haml page.")
     assert_route_includes(entry, context, "/about", "inside a route group")
     assert_route_includes(entry, context, "/dashboard", "Dashboard")
-    assert_route_includes(entry, context, "/dashboard", "Dashboard settings modal")
+    assert_route_includes(entry, context, "/dashboard", "Dashboard modal home")
     assert_route_includes(entry, context, "/dashboard/settings", "Dashboard settings modal")
     assert_route_includes(entry, context, "/feed/photo", "Photo intercept")
     assert_route_includes(entry, context, "/profile", "Profile intercept")

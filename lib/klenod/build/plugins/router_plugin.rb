@@ -277,7 +277,17 @@ module Klenod
                 end
               end
 
-              Match = Data.define(:route, :params) do
+              SlotMatch = Data.define(:route, :params) do
+                def page
+                  route.page
+                end
+
+                def layouts
+                  route.layouts
+                end
+              end
+
+              Match = Data.define(:route, :params, :slots) do
                 def page
                   route.page
                 end
@@ -301,10 +311,10 @@ module Klenod
 
               def self.match(path)
                 parts = normalize_path(path)
-                route = ROUTES.find { |candidate| route_matches?(candidate, parts) }
+                route = main_route_for(parts)
                 return nil unless route
 
-                Match.new(route, params_for(route, parts))
+                Match.new(route, params_for(route, parts), slot_matches_for(route, parts))
               end
 
               def self.resolve_import(value)
@@ -378,6 +388,50 @@ module Klenod
                 cursor == parts.length
               end
 
+              def self.route_prefix_matches?(route, parts)
+                cursor = 0
+                route.match_parts.each do |match_part|
+                  case match_part[0]
+                  when :static
+                    return false unless parts[cursor] == match_part[1]
+                    cursor += 1
+                  when :dynamic
+                    return false unless parts[cursor]
+                    cursor += 1
+                  when :catch_all, :optional_catch_all
+                    cursor = parts.length
+                  end
+                end
+                true
+              end
+
+              def self.main_route_for(parts)
+                exact = MAIN_ROUTES.find { |candidate| route_matches?(candidate, parts) }
+                return exact if exact
+                return nil unless SLOT_ROUTES.any? { |candidate| route_matches?(candidate, parts) }
+
+                MAIN_ROUTES
+                  .select { |candidate| route_prefix_matches?(candidate, parts) }
+                  .max_by { |candidate| candidate.match_parts.length }
+              end
+
+              def self.slot_matches_for(main_route, parts)
+                SLOT_ROUTES.each_with_object({}) do |route, slots|
+                  next unless route_matches?(route, parts)
+                  next unless route_prefix_matches?(main_route, normalize_path(route.path))
+
+                  slots[slot_name_for(route)] = SlotMatch.new(route, params_for(route, parts))
+                end
+              end
+
+              def self.parallel_route?(route)
+                route.segments.any? { |segment| segment.kind == :parallel }
+              end
+
+              def self.slot_name_for(route)
+                route.segments.find { |segment| segment.kind == :parallel }.param_name.to_sym
+              end
+
               def self.params_for(route, parts)
                 cursor = 0
                 params = {}
@@ -399,6 +453,8 @@ module Klenod
                 params
               end
 
+              MAIN_ROUTES = ROUTES.reject { |route| parallel_route?(route) }.freeze
+              SLOT_ROUTES = ROUTES.select { |route| parallel_route?(route) }.freeze
               TREE = build_tree(ROUTES)
             end
           RUBY
