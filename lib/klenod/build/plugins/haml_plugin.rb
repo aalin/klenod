@@ -1030,7 +1030,8 @@ module Klenod
           end
 
           def dynamic_attributes(node, builder:)
-            source = node.value.fetch(:dynamic_attributes).old
+            dynamic_attributes = node.value.fetch(:dynamic_attributes)
+            source = dynamic_attributes.old || dynamic_attributes.new
             return {} unless source
 
             hash = builder.hash_expression(source, line_no: node.line)
@@ -1091,6 +1092,8 @@ module Klenod
             case node
             when SyntaxTree::Label
               node.value.delete_suffix(":").to_sym
+            when SyntaxTree::StringLiteral
+              node.parts.map(&:value).join.to_sym
             else
               builder.fragment(node).source.to_sym
             end

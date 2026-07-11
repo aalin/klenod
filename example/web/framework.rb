@@ -17,7 +17,7 @@ module Example
         props
           .compact
           .reject { |_name, value| value == false }
-          .map { |name, value| %( #{escape_html(name)}="#{escape_html(value)}") }
+          .map { |name, value| rendered_attribute(name, value) }
           .join
 
       return HtmlString.new("<#{tag}#{rendered_attributes}>") if VOID_TAGS.include?(tag)
@@ -35,6 +35,12 @@ module Example
         .gsub("<", "&lt;")
         .gsub(">", "&gt;")
         .gsub('"', "&quot;")
+    end
+
+    def self.rendered_attribute(name, value)
+      return " #{escape_html(name)}" if value == true
+
+      %( #{escape_html(name)}="#{escape_html(value)}")
     end
   end
 end
