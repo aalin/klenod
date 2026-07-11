@@ -8,6 +8,17 @@ require_relative "../../lib/klenod"
 
 class Klenod::ExampleTest < Minitest::Test
   Request = Data.define(:method, :path)
+  HeaderRequest = Data.define(:method, :path, :headers)
+
+  class HeaderList
+    def initialize(headers)
+      @headers = headers
+    end
+
+    def each(&)
+      @headers.each(&)
+    end
+  end
 
   def test_example_app_loads_renders_and_emits_assets
     config = example_config
@@ -105,6 +116,13 @@ class Klenod::ExampleTest < Minitest::Test
       },
       JSON.parse(body.join)
     )
+  end
+
+  def test_example_request_copies_protocol_style_headers
+    headers = HeaderList.new([["Accept", "application/json"]])
+    request = Example::Request.from(HeaderRequest["GET", "/api/status", headers])
+
+    assert_equal({"accept" => "application/json"}, request.headers)
   end
 
   def test_example_app_renders_redirect_response

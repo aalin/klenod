@@ -33,10 +33,12 @@ module Example
       headers = raw.headers if raw&.respond_to?(:headers)
       return {} unless headers&.respond_to?(:each)
 
-      headers.each_with_object({}) do |header, result|
+      result = {}
+      headers.each do |header|
         name, value = header
         result[name.to_s.downcase] = value.to_s if name
       end
+      result
     end
 
     def with_params(params)
