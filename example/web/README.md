@@ -47,14 +47,14 @@ Router = import("virtual:router")
 SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 ```
 
-`Router::Default.match(path).page` returns the matched component class. The server entry wraps the rendered page through `match.layouts`, passing the current HTML as `children: [inner]` and an empty `slots: {}` hash. The nested route `src/pages/blog/[slug]/page.haml` demonstrates dynamic params at `/blog/hello`.
+`Router::Default.match(path).page` returns the matched component class. The server entry wraps the rendered page through `match.layouts`, passing the current HTML as `children: [inner]` and rendering named parallel routes from `match.slots`. The nested route `src/pages/blog/[slug]/page.haml` demonstrates dynamic params at `/blog/hello`.
 
 The example includes a small route gallery:
 
 - `/docs/guides/routing` demonstrates catch-all params.
 - `/shop` and `/shop/sale/red` demonstrate optional catch-all params.
 - `/about` demonstrates a route group.
-- `/dashboard/settings` demonstrates a page in the `@modal` parallel slot.
+- `/dashboard` demonstrates a default page in the `@modal` parallel slot. `/dashboard/settings` is a slot-only URL in this example, so a hard request returns 404 until default-slot fallback or intercepting routes are implemented.
 - `/feed/photo`, `/profile`, and `/login` demonstrate intercepted route segment metadata.
 - `/routes` reads `Router::Default.tree` and displays structural route metadata.
 

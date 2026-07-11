@@ -203,7 +203,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
-  def test_virtual_router_matches_parallel_slots_without_replacing_primary_route
+  def test_virtual_router_matches_parallel_slots_only_with_matching_primary_route
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/dashboard/@modal/settings")
       FileUtils.mkdir_p("#{dir}/pages/dashboard/@sidebar")
@@ -221,10 +221,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal([:modal, :sidebar], dashboard.slots.keys.sort)
       assert_equal(:modal_home, dashboard.slots.fetch(:modal).page::NAME)
       assert_equal(:sidebar, dashboard.slots.fetch(:sidebar).page::NAME)
-      assert_equal(:dashboard, settings.page::NAME)
-      assert_equal("/dashboard", settings.route.path)
-      assert_equal([:modal], settings.slots.keys)
-      assert_equal(:settings, settings.slots.fetch(:modal).page::NAME)
+      assert_nil(settings)
     end
   end
 

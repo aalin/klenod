@@ -406,13 +406,7 @@ module Klenod
               end
 
               def self.main_route_for(parts)
-                exact = MAIN_ROUTES.find { |candidate| route_matches?(candidate, parts) }
-                return exact if exact
-                return nil unless SLOT_ROUTES.any? { |candidate| route_matches?(candidate, parts) }
-
-                MAIN_ROUTES
-                  .select { |candidate| route_prefix_matches?(candidate, parts) }
-                  .max_by { |candidate| candidate.match_parts.length }
+                MAIN_ROUTES.find { |candidate| route_matches?(candidate, parts) }
               end
 
               def self.slot_matches_for(main_route, parts)
