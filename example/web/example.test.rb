@@ -5,10 +5,12 @@ require "minitest/autorun"
 require "tmpdir"
 
 require_relative "../../lib/klenod"
+require_relative "framework"
 
 class Klenod::ExampleTest < Minitest::Test
   Request = Data.define(:method, :path)
   HeaderRequest = Data.define(:method, :path, :headers)
+  BodyRequest = Data.define(:method, :path, :headers, :body)
 
   class HeaderList
     def initialize(headers)
@@ -124,6 +126,27 @@ class Klenod::ExampleTest < Minitest::Test
     request = Example::Request.from(HeaderRequest["GET", "/api/status", headers])
 
     assert_equal({"accept" => "application/json"}, request.headers)
+  end
+
+  def test_example_app_stores_form_values_in_encrypted_session_cookie
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    headers = HeaderList.new([["Content-Type", "application/x-www-form-urlencoded"]])
+    status, response_headers, body = entry.call(BodyRequest["POST", "/forms/submit", headers, "name=Andreas"], context)
+
+    assert_equal(302, status)
+    assert_equal("/forms", response_headers.fetch("location"))
+    assert_empty(body)
+
+    cookie = response_headers.fetch("set-cookie").split(";", 2).fetch(0)
+    status, headers, body = entry.call(BodyRequest["GET", "/forms", HeaderList.new([["Cookie", cookie]]), nil], context)
+    html = body.join
+
+    assert_equal(200, status)
+    assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert_includes(html, "Session-backed form")
+    assert_includes(html, "Welcome back, Andreas.")
   end
 
   def test_example_app_renders_redirect_response

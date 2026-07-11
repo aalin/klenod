@@ -32,3 +32,5 @@ gem "async-http", "~> 0.95.1"
 gem "rmagick", "~> 7.0"
 
 gem "samovar", "~> 2.5"
+
+gem "rbnacl", "~> 7.1"
