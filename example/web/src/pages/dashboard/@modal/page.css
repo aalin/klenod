@@ -1,0 +1,21 @@
+article {
+  display: grid;
+  gap: 0.7rem;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+button {
+  padding: 0.55rem 0.8rem;
+  color: #ffffff;
+  background: #3858a6;
+  border: 0;
+}

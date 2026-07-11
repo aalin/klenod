@@ -4,8 +4,12 @@
     @slots = slots
   end
 
-%section
-  = @children
+%article
+  = if @slots[:sidebar]
+    %nav
+      = @slots[:sidebar]
+  %section
+    = @children
   = if @slots[:modal]
-    %aside.modal
+    %dialog(open=true)
       = @slots[:modal]

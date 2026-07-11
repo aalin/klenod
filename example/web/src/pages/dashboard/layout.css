@@ -1,0 +1,66 @@
+article {
+  display: grid;
+  grid-template-columns: minmax(11rem, 0.36fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+nav {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #d9dde3;
+}
+
+nav h2 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+nav a {
+  color: #3858a6;
+  text-decoration: none;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+nav hr {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid #d9dde3;
+}
+
+nav p {
+  margin: 0;
+  color: #6d747d;
+  font-size: 0.88rem;
+}
+
+nav strong {
+  font-size: 1.4rem;
+}
+
+section {
+  min-width: 0;
+}
+
+dialog {
+  width: min(100%, 34rem);
+  margin: 1rem 0 0 auto;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #d9dde3;
+}
+
+dialog::backdrop {
+  background: transparent;
+}
+
+@media (max-width: 720px) {
+  article {
+    grid-template-columns: 1fr;
+  }
+}

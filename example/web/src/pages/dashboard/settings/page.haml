@@ -3,5 +3,36 @@
   end
 
 %article
-  %h1 Dashboard settings
-  %p This primary route lets the dashboard layout render its modal slot on a hard request.
+  %header
+    %p Settings
+    %h1 Dispatch preferences
+  %section
+    %h2 Alert rules
+    %dl
+      %dt Late loading warning
+      %dd Send an alert when loading has not started 45 minutes before departure.
+      %dt Customs escalation
+      %dd Notify operations leads when export documents are missing after noon.
+      %dt Capacity threshold
+      %dd Flag warehouses when available cold storage drops below 18%.
+  %section
+    %h2 Notification channels
+    %table
+      %thead
+        %tr
+          %th Channel
+          %th Audience
+          %th State
+      %tbody
+        %tr
+          %td Email digest
+          %td Operations
+          %td Enabled
+        %tr
+          %td SMS escalation
+          %td Shift leads
+          %td Enabled
+        %tr
+          %td Partner webhook
+          %td Carriers
+          %td Draft
