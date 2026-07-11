@@ -68,11 +68,15 @@ module Example
       return body if body.is_a?(String)
       if body.respond_to?(:read)
         chunks = []
-        loop do
-          chunk = body.read
-          break unless chunk
+        begin
+          loop do
+            chunk = body.read
+            break unless chunk
 
-          chunks << chunk
+            chunks << chunk
+          end
+        ensure
+          body.close if body.respond_to?(:close)
         end
         return chunks.join
       end
