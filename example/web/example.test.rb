@@ -35,6 +35,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "<figure")
     assert_includes(html, "Smoked fish")
     assert_includes(html, "srcset=")
+    assert_includes(html, "Current request path: /")
     assert_includes(html, "4 modules loaded")
     assert_includes(html, "Main / Dynamic / Layouts / Intercepts")
     assert_includes(html, "v0.1 example")
@@ -134,6 +135,23 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(302, status)
     assert_equal("/", headers.fetch("location"))
     assert_empty(body)
+  end
+
+  def test_example_app_passes_route_params_to_handler_request
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, headers, body = entry.call(request("/api/posts/hello-world"), context)
+
+    assert_equal(200, status)
+    assert_equal("application/json; charset=utf-8", headers.fetch("content-type"))
+    assert_equal(
+      {
+        "slug" => "hello-world",
+        "path" => "/api/posts/hello-world"
+      },
+      JSON.parse(body.join)
+    )
   end
 
   def test_example_app_emits_gallery_image_variants

@@ -6,9 +6,14 @@
   Note = import("../data/note.txt")
   SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
 
+  def initialize(request:, **)
+    @request = request
+  end
+
 %main{ class: Styles.fetch(:title) }
   %h1 Hello from Klenod
   %p Ruby modules loaded through a dependency graph
+  %p= "Current request path: #{@request.path}"
   %Figure{ image: SmokedFish, alt: "Smoked fish", caption: "Image imported through Klenod with generated variants." }
   %p Served through async-http and reloaded through Klenod watch events.
   %section.data_panel
