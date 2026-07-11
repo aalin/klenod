@@ -205,6 +205,8 @@ Plugin hooks run in separate phases:
 - `import_value` is a development/evaluation hook. It runs when an evaluated module resolves an import value.
 - `runtime_import_value` is a serialization hook. It provides values stored in runtime bundles and must not rely on evaluated build-time exports.
 
+See [Graph And Plugin Phases](docs/graph-and-plugin-phases.md) for the collection/evaluation model and the difference between `import_value` and `runtime_import_value`.
+
 Sibling dependency modules may be loaded or collected concurrently. Plugin hooks should avoid unguarded shared mutable state, because `load` and `transform` calls for independent modules can overlap. `finalize` still runs after eager dependency records for that module have been collected.
 
 Assets can be static or generated. Generated assets expose metadata immediately and generate bytes on demand; call `asset.wait` before serving or writing an asset when the bytes may not be ready yet. Failed generation marks the asset as failed and exposes `asset.error`. Build mode drains generated assets before writing the bundle.
