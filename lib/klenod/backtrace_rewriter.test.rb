@@ -108,4 +108,14 @@ class Klenod::BacktraceRewriter::Test < Minitest::Test
     assert_includes(formatted, "Something went wrong")
     assert_includes(formatted, "/app/components/MyComponent.haml:2")
   end
+
+  def test_format_exception_omits_sources_section_without_source_maps
+    e = StandardError.new("Plain Ruby error")
+    e.set_backtrace(["/app/server.rb:12:in `call'"])
+
+    formatted = BacktraceRewriter.new({}).format_exception(e)
+
+    assert_includes(formatted, "Plain Ruby error")
+    refute_includes(formatted, "Sources:")
+  end
 end

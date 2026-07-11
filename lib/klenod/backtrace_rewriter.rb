@@ -43,6 +43,7 @@ module Klenod
     def format_exception(e, source_path: nil)
       reset = "\e[0;48;5;52m"
       rewrite_exception(e)
+      sources = format_sources(e.backtrace)
 
       [
         "\e[1;31;47m ERROR \e[3;31;47m #{e.class.name}: #{e.message} #{reset}",
@@ -60,13 +61,8 @@ module Klenod
             end
           end
           .join("\n"),
-        "\e[1;34mSources:#{reset}",
-        format_sources(e.backtrace)
-          .map do |file, formatted_source|
-            "\e[1m#{file}\e[0m\n#{formatted_source}"
-          end
-          .join("\n")
-      ].join("\n") + "\e[0m"
+        formatted_sources(sources, reset)
+      ].compact.join("\n") + "\e[0m"
     end
 
     def rewrite_exception(e)
@@ -84,6 +80,19 @@ module Klenod
     end
 
     private
+
+    def formatted_sources(sources, reset)
+      return nil if sources.empty?
+
+      [
+        "\e[1;34mSources:#{reset}",
+        sources
+          .map do |file, formatted_source|
+            "\e[1m#{file}\e[0m\n#{formatted_source}"
+          end
+          .join("\n")
+      ].join("\n")
+    end
 
     def source_maps_for(mods)
       mods.each_with_object({}) do |(key, mod), index|
