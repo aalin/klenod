@@ -187,8 +187,21 @@ class Klenod::ExampleTest < Minitest::Test
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
-    headers = HeaderList.new([["Content-Type", "application/x-www-form-urlencoded"]])
-    status, response_headers, body = entry.call(BodyRequest["POST", "/forms/submit", headers, "name=Andreas"], context)
+    status, response_headers, body = entry.call(BodyRequest["GET", "/forms", HeaderList.new([]), nil], context)
+    html = body.join
+
+    assert_equal(200, status)
+    assert_equal("text/html; charset=utf-8", response_headers.fetch("content-type"))
+    assert_includes(html, "Session-backed form")
+
+    cookie = response_headers.fetch("set-cookie").split(";", 2).fetch(0)
+    csrf_token = csrf_token_from(html)
+    headers = HeaderList.new([
+      ["Content-Type", "application/x-www-form-urlencoded"],
+      ["Cookie", cookie]
+    ])
+    form = URI.encode_www_form("csrf_token" => csrf_token, "name" => "Andreas")
+    status, response_headers, body = entry.call(BodyRequest["POST", "/forms/submit", headers, form], context)
 
     assert_equal(302, status)
     assert_equal("/forms", response_headers.fetch("location"))
@@ -204,7 +217,13 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Welcome back, Andreas.")
     assert_includes(html, "Clear session")
 
-    status, response_headers, body = entry.call(BodyRequest["POST", "/forms/clear", HeaderList.new([["Cookie", cookie]]), ""], context)
+    csrf_token = csrf_token_from(html)
+    headers = HeaderList.new([
+      ["Content-Type", "application/x-www-form-urlencoded"],
+      ["Cookie", cookie]
+    ])
+    form = URI.encode_www_form("csrf_token" => csrf_token)
+    status, response_headers, body = entry.call(BodyRequest["POST", "/forms/clear", headers, form], context)
 
     assert_equal(302, status)
     assert_equal("/forms", response_headers.fetch("location"))
@@ -220,6 +239,24 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
     assert_includes(html, "Submit the form to store your name in an encrypted session cookie.")
     refute_includes(html, "Welcome back, Andreas.")
+  end
+
+  def test_example_app_rejects_invalid_csrf_tokens
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    _status, response_headers, _body = entry.call(BodyRequest["GET", "/forms", HeaderList.new([]), nil], context)
+    cookie = response_headers.fetch("set-cookie").split(";", 2).fetch(0)
+    headers = HeaderList.new([
+      ["Content-Type", "application/x-www-form-urlencoded"],
+      ["Cookie", cookie]
+    ])
+    form = URI.encode_www_form("csrf_token" => "nope", "name" => "Andreas")
+    status, headers, body = entry.call(BodyRequest["POST", "/forms/submit", headers, form], context)
+
+    assert_equal(403, status)
+    assert_equal("text/plain; charset=utf-8", headers.fetch("content-type"))
+    assert_equal("Invalid CSRF token\n", body.join)
   end
 
   def test_example_request_closes_readable_bodies_after_parsing_forms
@@ -304,6 +341,10 @@ class Klenod::ExampleTest < Minitest::Test
 
   def request(path, method: "GET")
     Request[method, path]
+  end
+
+  def csrf_token_from(html)
+    html.match(/<input[^>]*name="csrf_token"[^>]*value="([^"]+)"/)[1]
   end
 
   def assert_route_includes(entry, context, path, text)

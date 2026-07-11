@@ -9,6 +9,7 @@ require "uri"
 module Example
   SESSION_COOKIE = "klenod_example_session"
   SESSION_SECRET = ENV.fetch("KLENOD_EXAMPLE_SESSION_SECRET", "klenod example development session secret")
+  CSRF_TOKEN_KEY = "_csrf_token"
 
   Request = Data.define(:method, :path, :params, :query, :headers, :cookies, :form, :session, :raw) do
     def self.from(raw, params: {})
@@ -26,7 +27,7 @@ module Example
         headers,
         cookies,
         parse_form(read_body(raw)),
-        SessionCookie.decode(cookies[SESSION_COOKIE]),
+        Session.new(SessionCookie.decode(cookies[SESSION_COOKIE])),
         raw
       ]
     end
@@ -91,6 +92,43 @@ module Example
 
     def with_params(params)
       self.class[method, path, params, query, headers, cookies, form, session, raw]
+    end
+
+    def csrf_token
+      session[CSRF_TOKEN_KEY] ||= SessionCookie.encode64(RbNaCl::Random.random_bytes(32))
+    end
+  end
+
+  class Session
+    def initialize(values = {})
+      @values = values
+      @dirty = false
+    end
+
+    def [](key)
+      @values[key]
+    end
+
+    def []=(key, value)
+      @dirty = true unless @values[key] == value
+      @values[key] = value
+    end
+
+    def fetch(...)
+      @values.fetch(...)
+    end
+
+    def delete(key)
+      @dirty = true if @values.key?(key)
+      @values.delete(key)
+    end
+
+    def dirty?
+      @dirty
+    end
+
+    def to_h
+      @values
     end
   end
 
@@ -210,11 +248,35 @@ module Example
     end
   end
 
+  module CSRF
+    SAFE_METHODS = %w[GET HEAD OPTIONS TRACE].freeze
+
+    module_function
+
+    def valid?(request)
+      return true if SAFE_METHODS.include?(request.method)
+
+      token = request.session[CSRF_TOKEN_KEY]
+      submitted = request.form["csrf_token"] || request.headers["x-csrf-token"]
+      secure_compare(token, submitted)
+    end
+
+    def secure_compare(left, right)
+      return false if left.to_s.empty? || right.to_s.empty?
+
+      left_bytes = left.to_s.unpack("C*")
+      right_bytes = right.to_s.unpack("C*")
+      return false unless left_bytes.length == right_bytes.length
+
+      left_bytes.zip(right_bytes).reduce(0) { |result, (a, b)| result | (a ^ b) } == 0
+    end
+  end
+
   module SessionCookie
     module_function
 
     def encode(session)
-      payload = JSON.generate(session)
+      payload = JSON.generate(session.to_h)
       nonce = RbNaCl::Random.random_bytes(RbNaCl::SecretBox.nonce_bytes)
       encrypted = secret_box.encrypt(nonce, payload)
 

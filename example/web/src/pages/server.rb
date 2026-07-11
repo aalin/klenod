@@ -25,11 +25,9 @@ def self.call(raw_request, context)
       end
   css_assets = context.assets_for_module(__FILE__, type: :css)
 
-  [
-    200,
-    {"content-type" => "text/html; charset=utf-8"},
-    [
-      <<~HTML
+  commit_session(
+    Example::Response.html(
+      <<~HTML,
         <!doctype html>
         <html>
           <head>
@@ -39,8 +37,10 @@ def self.call(raw_request, context)
           #{body}
         </html>
       HTML
-    ]
-  ]
+      headers: {}
+    ),
+    request
+  ).to_a
 end
 
 def self.module_path
@@ -56,8 +56,9 @@ end
 def self.call_route_handler(handler, request)
   method_name = request_method(request)
   return Example::Response.text("Method not allowed\n", status: 405).to_a unless handler.method_defined?(method_name)
+  return Example::Response.text("Invalid CSRF token\n", status: 403).to_a unless Example::CSRF.valid?(request)
 
-  normalize_response(handler.new.public_send(method_name, request))
+  normalize_response(handler.new.public_send(method_name, request), request)
 end
 
 def self.request_method(request)
@@ -65,12 +66,18 @@ def self.request_method(request)
   method.to_s.empty? ? "GET" : method.to_s.upcase
 end
 
-def self.normalize_response(response)
-  return response.to_a if response.is_a?(Example::Response)
+def self.normalize_response(response, request)
+  return commit_session(response, request).to_a if response.is_a?(Example::Response)
   return response if response.is_a?(Array) && response.length == 3
   return [204, {}, []] if response.nil?
 
   [200, {"content-type" => "text/plain; charset=utf-8"}, [response.to_s]]
+end
+
+def self.commit_session(response, request)
+  return response unless request.session.dirty?
+
+  response.with_session(request)
 end
 
 def self.render_slots(match, layout, request)

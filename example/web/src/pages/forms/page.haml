@@ -1,6 +1,7 @@
 :ruby
   def initialize(request:, **)
     @name = request.session["name"]
+    @csrf_token = request.csrf_token
   end
 
 %article
@@ -10,9 +11,11 @@
   = else
     %p Submit the form to store your name in an encrypted session cookie.
   %form(method="post" action="/forms/submit")
+    %input(type="hidden" name="csrf_token" value=@csrf_token)
     %label(for="name") Name
     %input(id="name" name="name" type="text" value=@name required)
     %button(type="submit") Save name
   = if @name
     %form(method="post" action="/forms/clear")
+      %input(type="hidden" name="csrf_token" value=@csrf_token)
       %button(type="submit") Clear session
