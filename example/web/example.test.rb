@@ -7,14 +7,7 @@ require "tmpdir"
 require_relative "../../lib/klenod"
 
 class Klenod::ExampleTest < Minitest::Test
-  class Request
-    attr_reader :path, :method
-
-    def initialize(path, method: "GET")
-      @path = path
-      @method = method
-    end
-  end
+  Request = Data.define(:method, :path)
 
   def test_example_app_loads_renders_and_emits_assets
     config = example_config
@@ -45,7 +38,7 @@ class Klenod::ExampleTest < Minitest::Test
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
-    status, headers, body = entry.call(Request.new("/blog/hello"), context)
+    status, headers, body = entry.call(request("/blog/hello"), context)
     html = body.join
 
     assert_equal(200, status)
@@ -83,7 +76,7 @@ class Klenod::ExampleTest < Minitest::Test
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
-    status, _headers, body = entry.call(Request.new("/routes"), context)
+    status, _headers, body = entry.call(request("/routes"), context)
     html = body.join
 
     assert_equal(200, status)
@@ -98,7 +91,7 @@ class Klenod::ExampleTest < Minitest::Test
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
-    status, headers, body = entry.call(Request.new("/api/status"), context)
+    status, headers, body = entry.call(request("/api/status"), context)
 
     assert_equal(200, status)
     assert_equal("application/json; charset=utf-8", headers.fetch("content-type"))
@@ -109,7 +102,7 @@ class Klenod::ExampleTest < Minitest::Test
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
-    status, _headers, body = entry.call(Request.new("/gallery"), context)
+    status, _headers, body = entry.call(request("/gallery"), context)
     html = body.join
 
     assert_equal(200, status)
@@ -149,8 +142,12 @@ class Klenod::ExampleTest < Minitest::Test
     Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
   end
 
+  def request(path, method: "GET")
+    Request[method, path]
+  end
+
   def assert_route_includes(entry, context, path, text)
-    status, headers, body = entry.call(Request.new(path), context)
+    status, headers, body = entry.call(request(path), context)
 
     assert_equal(200, status)
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
