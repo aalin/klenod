@@ -6,13 +6,13 @@ article {
 header,
 section {
   padding: 1rem;
-  background: #ffffff;
-  border: 1px solid #d9dde3;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 header p {
   margin: 0 0 0.3rem;
-  color: #6d747d;
+  color: var(--color-muted);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -38,7 +38,7 @@ dt {
 
 dd {
   margin: 0;
-  color: #4f5964;
+  color: var(--color-muted);
 }
 
 table {
@@ -50,12 +50,12 @@ table {
 th,
 td {
   padding: 0.65rem 0;
-  border-bottom: 1px solid #d9dde3;
+  border-bottom: 1px solid var(--color-border);
   text-align: left;
 }
 
 th {
-  color: #6d747d;
+  color: var(--color-muted);
   font-size: 0.78rem;
   text-transform: uppercase;
 }

@@ -1,0 +1,12 @@
+:ruby
+  def initialize(title:, links:, children: nil)
+    @title = title
+    @links = links
+  end
+
+%section
+  %h2= @title
+  %ul
+    = @links.map do |link|
+      %li
+        %a{ href: link.fetch(:href) }= link.fetch(:label)

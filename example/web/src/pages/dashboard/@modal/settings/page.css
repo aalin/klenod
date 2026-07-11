@@ -15,7 +15,7 @@ footer {
 
 button {
   padding: 0.55rem 0.8rem;
-  color: #ffffff;
-  background: #9a4b35;
+  color: var(--color-surface);
+  background: var(--color-warning);
   border: 0;
 }

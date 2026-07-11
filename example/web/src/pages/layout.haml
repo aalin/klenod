@@ -1,4 +1,28 @@
 :ruby
+  NavGroup = import("/components/NavGroup.haml")
+
+  MainLinks = [
+    { href: "/", label: "Home" },
+    { href: "/gallery", label: "Gallery" },
+    { href: "/about", label: "About" }
+  ]
+  DynamicLinks = [
+    { href: "/blog/hello", label: "Blog" },
+    { href: "/docs/guides/routing", label: "Docs" },
+    { href: "/shop", label: "Shop" },
+    { href: "/shop/sale/red", label: "Filters" }
+  ]
+  LayoutLinks = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/dashboard/settings", label: "Settings" },
+    { href: "/routes", label: "Route gallery" }
+  ]
+  InterceptLinks = [
+    { href: "/feed/photo", label: "Photo" },
+    { href: "/profile", label: "Profile" },
+    { href: "/login", label: "Login" }
+  ]
+
   def initialize(children:, slots: {})
     @children = children
     @slots = slots
@@ -7,27 +31,10 @@
 %div.shell
   %header.header
     %a.brand{ href: "/" } Klenod example
-    %nav.nav
-      %section.nav_group
-        %h2 Main
-        %a{ href: "/" } Home
-        %a{ href: "/gallery" } Gallery
-        %a{ href: "/about" } About
-      %section.nav_group
-        %h2 Dynamic
-        %a{ href: "/blog/hello" } Blog
-        %a{ href: "/docs/guides/routing" } Docs
-        %a{ href: "/shop" } Shop
-        %a{ href: "/shop/sale/red" } Filters
-      %section.nav_group
-        %h2 Layouts
-        %a{ href: "/dashboard" } Dashboard
-        %a{ href: "/dashboard/settings" } Settings
-        %a{ href: "/routes" } Route gallery
-      %section.nav_group
-        %h2 Intercepts
-        %a{ href: "/feed/photo" } Photo
-        %a{ href: "/profile" } Profile
-        %a{ href: "/login" } Login
+    %nav.nav(aria-label="Example routes")
+      %NavGroup{ title: "Main", links: MainLinks }
+      %NavGroup{ title: "Dynamic", links: DynamicLinks }
+      %NavGroup{ title: "Layouts", links: LayoutLinks }
+      %NavGroup{ title: "Intercepts", links: InterceptLinks }
   %main.content
     = @children

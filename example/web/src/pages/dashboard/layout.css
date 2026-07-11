@@ -9,8 +9,8 @@ nav {
   display: grid;
   gap: 0.55rem;
   padding: 1rem;
-  background: #ffffff;
-  border: 1px solid #d9dde3;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 nav h2 {
@@ -19,23 +19,24 @@ nav h2 {
 }
 
 nav a {
-  color: #3858a6;
+  color: var(--color-accent);
   text-decoration: none;
 }
 
 nav a:hover {
+  color: var(--color-accent-hover);
   text-decoration: underline;
 }
 
 nav hr {
   width: 100%;
   border: 0;
-  border-top: 1px solid #d9dde3;
+  border-top: 1px solid var(--color-border);
 }
 
 nav p {
   margin: 0;
-  color: #6d747d;
+  color: var(--color-muted);
   font-size: 0.88rem;
 }
 
@@ -50,15 +51,15 @@ section {
 button {
   width: fit-content;
   padding: 0.55rem 0.8rem;
-  color: #ffffff;
-  background: #3858a6;
+  color: var(--color-surface);
+  background: var(--color-accent);
   border: 0;
 }
 
 dialog {
   padding: 1rem;
-  background: #ffffff;
-  border: 1px solid #d9dde3;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 dialog footer {
@@ -68,7 +69,7 @@ dialog footer {
 }
 
 dialog::backdrop {
-  background: rgb(32 33 36 / 28%);
+  background: var(--color-backdrop);
 }
 
 @media (max-width: 720px) {

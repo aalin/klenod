@@ -5,13 +5,13 @@ article {
 
 header {
   padding: 1.2rem;
-  background: #ffffff;
-  border: 1px solid #d9dde3;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 header p {
   margin: 0 0 0.3rem;
-  color: #6d747d;
+  color: var(--color-muted);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -33,8 +33,8 @@ section:first-of-type {
 section:first-of-type article {
   gap: 0.45rem;
   padding: 1rem;
-  background: #ffffff;
-  border: 1px solid #d9dde3;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 strong {
@@ -46,19 +46,19 @@ strong {
 table {
   width: 100%;
   border-collapse: collapse;
-  background: #ffffff;
-  border: 1px solid #d9dde3;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 th,
 td {
   padding: 0.65rem;
-  border-bottom: 1px solid #d9dde3;
+  border-bottom: 1px solid var(--color-border);
   text-align: left;
 }
 
 th {
-  color: #6d747d;
+  color: var(--color-muted);
   font-size: 0.78rem;
   text-transform: uppercase;
 }
