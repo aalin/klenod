@@ -13,3 +13,6 @@
     %label(for="name") Name
     %input(id="name" name="name" type="text" value=@name required)
     %button(type="submit") Save name
+  = if @name
+    %form(method="post" action="/forms/clear")
+      %button(type="submit") Clear session

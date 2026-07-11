@@ -22,6 +22,23 @@ class Klenod::ExampleTest < Minitest::Test
     end
   end
 
+  class ReadableBody
+    attr_reader :closed
+
+    def initialize(*chunks)
+      @chunks = chunks
+      @closed = false
+    end
+
+    def read
+      @chunks.shift
+    end
+
+    def close
+      @closed = true
+    end
+  end
+
   def test_example_app_loads_renders_and_emits_assets
     config = example_config
     context = config.context
@@ -147,6 +164,32 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
     assert_includes(html, "Session-backed form")
     assert_includes(html, "Welcome back, Andreas.")
+    assert_includes(html, "Clear session")
+
+    status, response_headers, body = entry.call(BodyRequest["POST", "/forms/clear", HeaderList.new([["Cookie", cookie]]), ""], context)
+
+    assert_equal(302, status)
+    assert_equal("/forms", response_headers.fetch("location"))
+    assert_includes(response_headers.fetch("set-cookie"), "#{Example::SESSION_COOKIE}=")
+    assert_includes(response_headers.fetch("set-cookie"), "Max-Age=0")
+    assert_empty(body)
+
+    expired_cookie = response_headers.fetch("set-cookie").split(";", 2).fetch(0)
+    status, headers, body = entry.call(BodyRequest["GET", "/forms", HeaderList.new([["Cookie", expired_cookie]]), nil], context)
+    html = body.join
+
+    assert_equal(200, status)
+    assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert_includes(html, "Submit the form to store your name in an encrypted session cookie.")
+    refute_includes(html, "Welcome back, Andreas.")
+  end
+
+  def test_example_request_closes_readable_bodies_after_parsing_forms
+    body = ReadableBody.new("name=And", "reas")
+    request = Example::Request.from(BodyRequest["POST", "/forms/submit", HeaderList.new([]), body])
+
+    assert_equal({"name" => "Andreas"}, request.form)
+    assert_equal(true, body.closed)
   end
 
   def test_example_app_renders_redirect_response

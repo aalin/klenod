@@ -142,8 +142,20 @@ module Example
       with_header("set-cookie", directives.join("; "))
     end
 
+    def delete_cookie(name, path: "/", http_only: true, same_site: "Lax", secure: false)
+      directives = ["#{name}=", "Path=#{path}", "Max-Age=0", "SameSite=#{same_site}"]
+      directives << "HttpOnly" if http_only
+      directives << "Secure" if secure
+
+      with_header("set-cookie", directives.join("; "))
+    end
+
     def with_session(request)
       with_cookie(SESSION_COOKIE, SessionCookie.encode(request.session))
+    end
+
+    def delete_session
+      delete_cookie(SESSION_COOKIE)
     end
   end
 
