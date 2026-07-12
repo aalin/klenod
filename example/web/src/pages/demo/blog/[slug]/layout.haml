@@ -1,0 +1,19 @@
+:ruby
+  Posts = [
+    import("../posts/graph.toml"),
+    import("../posts/assets.toml"),
+    import("../posts/routing.toml")
+  ].sort_by { |post| post.fetch("date") }.reverse
+
+  def initialize(children:, slots: {})
+    @children = children
+  end
+
+%article
+  %aside
+    %h2 Blog posts
+    %nav(aria-label="Blog posts")
+      = Posts.map do |post|
+        %a{ href: "/demo/blog/#{post.fetch('slug')}" }= post.fetch("title")
+  %section
+    = @children
