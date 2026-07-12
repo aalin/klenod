@@ -8,4 +8,4 @@
 /tmp/
 /vendor/
 /example/**/dist/
-/.rubocop-cache/
+/.rubocop_cache/
