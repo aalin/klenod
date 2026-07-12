@@ -18,6 +18,73 @@ module Klenod
   module Build
     module Plugins
       class HamlPlugin < Plugin
+        class ParseError < StandardError
+          attr_reader :module_id, :source, :line, :column, :cause
+
+          def initialize(error, source:, module_id:)
+            @cause = error
+            @module_id = module_id
+            @source = source
+            @line = source_line_for(error)
+            @column = nil
+
+            super(message_for(error))
+            set_backtrace(error.backtrace)
+          end
+
+          private
+
+          def source_line_for(error)
+            return nil unless error.respond_to?(:line)
+
+            line = error.line
+            return nil unless line.is_a?(Integer)
+
+            # Haml reports zero-based line indexes.
+            line + 1
+          end
+
+          def message_for(error)
+            location =
+              if module_id && line
+                "#{module_id}:#{line}"
+              elsif module_id
+                module_id.to_s
+              elsif line
+                "line #{line}"
+              end
+
+            title = "Haml parse error"
+            title = "#{title} in #{location}" if location
+
+            [
+              title,
+              error.message,
+              source_excerpt
+            ].compact.join("\n\n")
+          end
+
+          def source_excerpt
+            return nil unless line
+
+            lines = source.lines
+            return nil if lines.empty?
+
+            index = line - 1
+            first = [index - 2, 0].max
+            last = [index + 2, lines.length - 1].min
+            width = (last + 1).to_s.length
+            excerpt =
+              (first..last).map do |line_index|
+                marker = (line_index == index) ? ">" : " "
+                number = (line_index + 1).to_s.rjust(width)
+                "#{marker} #{number} | #{lines.fetch(line_index).chomp}"
+              end
+
+            "Source:\n#{excerpt.join("\n")}"
+          end
+        end
+
         HamlTransformResult = Data.define(:code, :source_map, :metadata, :ast) do
           def self.from_ast(ast, source:, metadata:)
             new(
@@ -31,6 +98,12 @@ module Klenod
 
         DEFAULT_COMPONENT_BASE_CLASS = "Object"
         DEFAULT_FACTORY = "Object"
+
+        def self.parse_haml(source, module_id: nil)
+          SyntaxTree::Haml.parse(source)
+        rescue Haml::SyntaxError => error
+          raise ParseError.new(error, source: source, module_id: module_id)
+        end
 
         class DefaultTransformer
           VALID_CONST_PATH = /\A[A-Z]\w*(?:::[A-Z]\w*)*\z/
@@ -778,7 +851,7 @@ module Klenod
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
             builder = RubyBuilder.new
-            template = compile_template(source, factory: factory, styleable: styleable, builder: builder)
+            template = compile_template(source, module_id: module_id, factory: factory, styleable: styleable, builder: builder)
             ast =
               builder.component_program(
                 component_class_name: component_class_name,
@@ -800,8 +873,8 @@ module Klenod
           Template = Data.define(:ruby, :render)
           RubyLine = Data.define(:line_no, :source)
 
-          def compile_template(source, factory:, builder:, styleable: false)
-            parsed = SyntaxTree::Haml.parse(source)
+          def compile_template(source, factory:, builder:, module_id: nil, styleable: false)
+            parsed = HamlPlugin.parse_haml(source, module_id: module_id)
             render_nodes = parsed.children.reject { |node| ruby_filter?(node) || css_filter?(node) }
             ruby_nodes = parsed.children.select { |node| ruby_filter?(node) }
             ruby = compile_ruby_filters(ruby_nodes, builder: builder)
@@ -1165,7 +1238,7 @@ module Klenod
             dependencies << dependency
             style_dependencies << dependency
           end
-          inline_css_sources(code).each_with_index do |source, index|
+          inline_css_sources(code, module_id: module_id).each_with_index do |source, index|
             virtual_module_id = ModuleId.new("#{module_id.path}.inline.#{index}.css", nil)
             context.register_virtual_module(virtual_module_id, source, owner_id: module_id)
             dependency =
@@ -1237,9 +1310,9 @@ module Klenod
           classified.empty? ? "Component" : classified
         end
 
-        def inline_css_sources(source)
-          SyntaxTree::Haml
-            .parse(source)
+        def inline_css_sources(source, module_id: nil)
+          HamlPlugin
+            .parse_haml(source, module_id: module_id)
             .children
             .select { |node| node.type == :filter && node.value.fetch(:name) == "css" }
             .map { |node| node.value.fetch(:text) }
