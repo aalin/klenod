@@ -2,6 +2,8 @@
 
 require "json"
 require "minitest/autorun"
+require "open3"
+require "rbconfig"
 require "tmpdir"
 
 require_relative "../../lib/klenod"
@@ -128,6 +130,19 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/demo/feed/photo", "Photo intercept")
     assert_route_includes(entry, context, "/profile", "Profile intercept")
     assert_route_includes(entry, context, "/login", "Login intercept")
+  end
+
+  def test_example_routes_utility_prints_route_table
+    stdout, stderr, status = Open3.capture3(RbConfig.ruby, "routes.rb", chdir: __dir__)
+
+    assert(status.success?, stderr)
+    assert_includes(stdout, "METHOD")
+    assert_includes(stdout, "PATH")
+    assert_includes(stdout, "SOURCE")
+    assert_includes(stdout, "GET     /demo/blog/:slug")
+    assert_includes(stdout, "pages/demo/blog/[slug]/page.haml")
+    assert_includes(stdout, "POST    /demo/forms/submit")
+    assert_includes(stdout, "pages/demo/forms/submit/route.rb")
   end
 
   def test_example_app_renders_router_tree_metadata

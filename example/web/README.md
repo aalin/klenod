@@ -8,6 +8,7 @@ Run it from the repository root:
 bundle exec ruby example/web/run.rb
 bundle exec ruby example/web/build_and_load.rb
 bundle exec ruby example/web/watch.rb
+bundle exec ruby example/web/routes.rb
 bundle exec ruby example/web/server.rb
 ```
 
@@ -28,6 +29,8 @@ bundle exec ../../exe/klenod build
 
 `watch.rb` keeps the process running and prints invalidation events when loaded files under `example/web/src` change.
 
+`routes.rb` prints a Rails-style route table with the HTTP method, server path, route type, and source file for each discovered `page.haml` and `route.rb`.
+
 `server.rb` starts a small `async-http` server on `http://localhost:9292`. It watches the source tree, matches each request through the router plugin, and serves emitted CSS/image assets from the build context.
 
 `watch.rb` and `server.rb` can also mirror emitted assets to disk:
@@ -47,17 +50,17 @@ Router = import("virtual:router")
 
 Pages import their own assets. For example, `src/pages/page.haml` imports an image with query-driven variants.
 
-`Router::Default.match(path).page` returns the matched component class. `Router::Default.match(path).handler` returns a matched `route.rb` handler class. The server entry wraps rendered pages through `match.layouts`, passing the current HTML as `children: [inner]`, renders named parallel routes from `match.slots`, and dispatches route handlers through the example `Example::Route` base class. The nested route `src/pages/blog/[slug]/page.haml` demonstrates dynamic params at `/blog/hello`.
+`Router::Default.match(path).page` returns the matched component class. `Router::Default.match(path).handler` returns a matched `route.rb` handler class. The server entry wraps rendered pages through `match.layouts`, passing the current HTML as `children: [inner]`, renders named parallel routes from `match.slots`, and dispatches route handlers through the example `Example::Route` base class. The nested route `src/pages/demo/blog/[slug]/page.haml` demonstrates dynamic params at `/demo/blog/graph`.
 
 The example includes a small route gallery:
 
-- `/docs/guides/routing` demonstrates catch-all params.
-- `/shop` and `/shop/sale/red` demonstrate optional catch-all params.
+- `/demo/docs/guides/routing` demonstrates catch-all params.
+- `/demo/shop` and `/demo/shop/sale/red` demonstrate optional catch-all params.
 - `/about` demonstrates a route group.
 - `/api/status` demonstrates a `route.rb` handler that returns JSON.
-- `/dashboard` demonstrates a small logistics dashboard with `@sidebar` and `@modal` parallel slots. `/dashboard/settings` renders `dashboard/settings/page.haml` as the primary route and matching slot pages into `dashboard/layout.haml`.
+- `/demo/dashboard` demonstrates a small logistics dashboard with `@sidebar` and `@modal` parallel slots. `/demo/dashboard/settings` renders `dashboard/settings/page.haml` as the primary route and matching slot pages into `dashboard/layout.haml`.
 - `/feed/photo`, `/profile`, and `/login` demonstrate intercepted route segment metadata.
-- `/routes` reads `Router::Default.tree` and displays structural route metadata.
+- `/demo/routing` reads `Router::Default.tree` and displays structural route metadata.
 
 `framework.rb` defines the example `Example::H` factory used by the Haml plugin. `src/pages/page.haml` renders through that factory, imports `src/components/Figure.haml`, and automatically imports its companion `src/pages/page.css` as `Styles`.
 
