@@ -1,0 +1,12 @@
+:root {
+  --color-ink: oklch(24% 0.02 260);
+  --color-muted: oklch(from var(--color-ink) 52% calc(c * 0.7) h);
+  --color-page: oklch(97% 0.008 255);
+  --color-surface: oklch(100% 0 0);
+  --color-border: oklch(from var(--color-surface) 86% 0.012 255);
+  --color-accent: oklch(47% 0.13 255);
+  --color-accent-hover: oklch(from var(--color-accent) calc(l - 0.06) c h);
+  --color-warning: oklch(50% 0.12 42);
+  --color-backdrop: oklch(from var(--color-ink) l c h / 28%);
+  --radius: 8px;
+}
