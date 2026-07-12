@@ -9,20 +9,22 @@ def self.call(raw_request, context)
   request = Example::Request.from(raw_request, params: match.params)
   return call_route_handler(match.handler, request) if match.handler
 
-  page = match.page
   body =
-    page
-      .new(request: request)
-      .render
-  body =
-    match
-      .layouts
-      .reverse_each
-      .reduce(body) do |inner, layout|
+    Example::Context.with(request: request) do
+      page = match.page
+      body =
+        page
+          .new
+          .render
+      match
+        .layouts
+        .reverse_each
+        .reduce(body) do |inner, layout|
         layout
-          .new(children: [inner], request: request, slots: render_slots(match, layout, request))
+          .new(children: [inner], slots: render_slots(match, layout, request))
           .render
       end
+    end
   css_assets = context.assets_for_module(__FILE__, type: :css)
 
   commit_session(
@@ -88,10 +90,12 @@ def self.render_slots(match, layout, request)
     [
       name,
       [
-        slot_match
-          .page
-          .new(request: request.with_params(slot_match.params))
-          .render
+        Example::Context.with(request: request.with_params(slot_match.params)) do
+          slot_match
+            .page
+            .new
+            .render
+        end
       ]
     ]
   end

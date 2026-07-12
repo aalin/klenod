@@ -10,6 +10,7 @@ module Example
   SESSION_COOKIE = "klenod_example_session"
   SESSION_SECRET = ENV.fetch("KLENOD_EXAMPLE_SESSION_SECRET", "klenod example development session secret")
   CSRF_TOKEN_KEY = "_csrf_token"
+  CONTEXT_KEY = :example_web_context
 
   Request = Data.define(:method, :path, :params, :query, :headers, :cookies, :form, :session, :raw) do
     def self.from(raw, params: {})
@@ -310,8 +311,54 @@ module Example
     end
   end
 
+  Context = Data.define(:request, :parent) do
+    def self.current
+      Thread.current[CONTEXT_KEY]
+    end
+
+    def self.with(request: nil)
+      previous = current
+      Thread.current[CONTEXT_KEY] = new(request || previous&.request, previous)
+      yield
+    ensure
+      Thread.current[CONTEXT_KEY] = previous
+    end
+  end
+
   class Component
+    def context
+      Context.current
+    end
+
+    def request
+      context&.request
+    end
+
     def initialize(...)
+    end
+  end
+
+  class Form < Component
+    def initialize(action:, method: "get", children: [], **props)
+      @action = action
+      @method = method
+      @children = children
+      @props = props
+    end
+
+    def render
+      H[
+        :form,
+        csrf_field,
+        *@children,
+        **@props.merge(action: @action, method: @method)
+      ]
+    end
+
+    def csrf_field
+      return nil if %w[get head].include?(@method.to_s.downcase)
+
+      H[:input, type: "hidden", name: "csrf_token", value: request.csrf_token]
     end
   end
 
