@@ -1,10 +1,35 @@
 :ruby
+  PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+  Posts = [
+    import("../posts/graph.toml"),
+    import("../posts/assets.toml"),
+    import("../posts/routing.toml")
+  ]
+
   def initialize(...)
     super
     @slug = request.params.fetch(:slug)
+    @post = Posts.find { |post| post.fetch("slug") == @slug }
   end
 
 %article
-  %h1= "Blog post: #{@slug}"
-  %p Rendered from a dynamic route segment.
-  %p Ruby modules loaded through a dependency graph
+  = if @post
+    %PageHeader{
+      kicker: "Dynamic TOML route",
+      title: @post.fetch("title"),
+      summary: @post.fetch("summary")
+    }
+    %Panel{ title: "Post body" }
+      %p
+        %time{ datetime: @post.fetch("date") }= @post.fetch("date")
+      %p= @post.fetch("body").strip
+      %p Ruby modules loaded through a dependency graph
+  = else
+    %PageHeader{
+      kicker: "Dynamic TOML route",
+      title: "Blog post: #{@slug}",
+      summary: "No TOML post exists for this slug, but the dynamic route still rendered."
+    }
+    %Panel{ title: "Missing post" }
+      %p Ruby modules loaded through a dependency graph

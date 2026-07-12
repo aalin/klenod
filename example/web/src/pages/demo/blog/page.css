@@ -1,0 +1,9 @@
+section {
+  display: grid;
+  gap: 1rem;
+}
+
+time {
+  color: var(--muted);
+  font-size: 0.9rem;
+}

@@ -62,14 +62,14 @@ class Klenod::ExampleTest < Minitest::Test
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
-    status, headers, body = entry.call(request("/demo/blog/hello"), context)
+    status, headers, body = entry.call(request("/demo/blog/graph"), context)
     html = body.join
 
     assert_equal(200, status)
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
     assert_includes(html, "<body")
     assert_includes(html, "Klenod example")
-    assert_includes(html, "Blog post: hello")
+    assert_includes(html, "Building a lazy module graph")
     assert_includes(html, "Ruby modules loaded through a dependency graph")
   end
 
@@ -79,6 +79,8 @@ class Klenod::ExampleTest < Minitest::Test
     entry = context.entry(config.entrypoints.fetch(0))
 
     assert_route_includes(entry, context, "/demo", "Explore Klenod features")
+    assert_route_includes(entry, context, "/demo/blog", "Blog posts loaded from data files")
+    assert_route_includes(entry, context, "/demo/blog/assets", "Generated assets as imports")
     assert_route_includes(entry, context, "/demo/data", "Imported from a plain text file.")
     assert_route_includes(entry, context, "/demo/docs/guides/routing", "Path parts: guides / routing")
     assert_route_includes(entry, context, "/demo/shop", "No filters selected")

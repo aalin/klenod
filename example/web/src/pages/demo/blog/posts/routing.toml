@@ -1,0 +1,10 @@
+slug = "routing"
+title = "Routes as discovered modules"
+date = "2026-07-10"
+summary = "The router plugin turns the pages directory into a tree that supports layouts, params, slots, and handlers."
+
+body = """
+The router stays optional, but it can generate a virtual module for frameworks
+that want file-system routes. In development, those routes can still be loaded
+lazily through the graph.
+"""

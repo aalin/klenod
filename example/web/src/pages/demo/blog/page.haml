@@ -1,0 +1,22 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+  Posts = [
+    import("./posts/graph.toml"),
+    import("./posts/assets.toml"),
+    import("./posts/routing.toml")
+  ].sort_by { |post| post.fetch("date") }.reverse
+
+%article
+  %PageHeader{
+    kicker: "TOML content",
+    title: "Blog posts loaded from data files",
+    summary: "This route imports a few TOML files and renders them as ordinary Ruby hashes."
+  }
+  %section
+    = Posts.map do |post|
+      %Panel{ title: post.fetch("title") }
+        %p= post.fetch("summary")
+        %p
+          %time{ datetime: post.fetch("date") }= post.fetch("date")
+        %a{ href: "/demo/blog/#{post.fetch('slug')}" } Read post

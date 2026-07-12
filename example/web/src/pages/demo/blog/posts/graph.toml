@@ -1,0 +1,10 @@
+slug = "graph"
+title = "Building a lazy module graph"
+date = "2026-07-12"
+summary = "A small note about collecting source files first and evaluating modules only when the route asks for them."
+
+body = """
+Klenod can collect dependencies without evaluating every module immediately.
+That keeps development startup fast and leaves room for framework adapters to
+choose when a page or route handler should run.
+"""
