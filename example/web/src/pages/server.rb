@@ -7,7 +7,8 @@ def self.call(raw_request, context)
   return [404, {"content-type" => "text/plain"}, ["Not found\n"]] unless match
 
   request = Example::Request.from(raw_request, params: match.params)
-  return call_route_handler(match.handler, request) if match.handler
+  return call_route_handler(match.handler, request, vary_accept: hybrid_get_request?(match, request)) if route_handler_request?(match, request)
+  return Example::Response.text("Method not allowed\n", status: 405).to_a unless page_request?(match, request)
 
   body =
     Example::Context.with(request: request) do
@@ -61,17 +62,77 @@ def self.request_path(raw_request)
   raw_path.split("?", 2).fetch(0)
 end
 
-def self.call_route_handler(handler, request)
+def self.call_route_handler(handler, request, vary_accept: false)
   method_name = request_method(request)
   return Example::Response.text("Method not allowed\n", status: 405).to_a unless handler.method_defined?(method_name)
   return Example::Response.text("Invalid CSRF token\n", status: 403).to_a unless Example::CSRF.valid?(request)
 
-  normalize_response(handler.new.public_send(method_name, request), request)
+  response = normalize_response(handler.new.public_send(method_name, request), request)
+  vary_accept ? with_vary_accept(response) : response
 end
 
 def self.request_method(request)
   method = request&.method
   method.to_s.empty? ? "GET" : method.to_s.upcase
+end
+
+def self.route_handler_request?(match, request)
+  return false unless match.handler
+  return true unless match.page
+
+  method = request_method(request)
+  return true if %w[PUT PATCH DELETE OPTIONS].include?(method)
+  return false unless %w[GET POST HEAD].include?(method)
+
+  !accepts_html?(request)
+end
+
+def self.page_request?(match, request)
+  return false unless match.page
+  return true unless match.handler
+
+  %w[GET POST HEAD].include?(request_method(request)) && accepts_html?(request)
+end
+
+def self.hybrid_get_request?(match, request)
+  match.page && request_method(request) == "GET"
+end
+
+def self.accepts_html?(request)
+  accept = request.headers.fetch("accept", nil).to_s
+  return true if accept.empty?
+
+  preferred_accept_type(accept) == "text/html"
+end
+
+def self.preferred_accept_type(accept)
+  accept
+    .split(",")
+    .map
+    .with_index { |entry, index| accept_entry(entry, index) }
+    .compact
+    .max_by { |entry| [entry.fetch(:quality), -entry.fetch(:index)] }
+    &.fetch(:type, nil)
+end
+
+def self.accept_entry(entry, index)
+  type, *params = entry.strip.split(";").map(&:strip)
+  return nil if type.empty?
+
+  quality =
+    params
+      .find { |param| param.start_with?("q=") }
+      &.delete_prefix("q=")
+      &.to_f || 1.0
+  {type:, quality:, index:}
+end
+
+def self.with_vary_accept(response)
+  status, headers, body = response
+  vary = headers.fetch("vary", nil)
+  return response if vary.to_s.split(",").map { |value| value.strip.downcase }.include?("accept")
+
+  [status, headers.merge("vary" => [vary, "Accept"].compact.join(", ")), body]
 end
 
 def self.normalize_response(response, request)

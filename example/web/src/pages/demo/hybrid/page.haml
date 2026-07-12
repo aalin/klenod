@@ -1,0 +1,11 @@
+%section
+  %p TOML CONTENT
+  %h1 Hybrid page and route handler
+  %p This URL renders HTML for browser requests and JSON for API-style requests.
+  %dl
+    %dt Request path
+    %dd= request.path
+    %dt Browser response
+    %dd page.haml
+    %dt API response
+    %dd route.rb

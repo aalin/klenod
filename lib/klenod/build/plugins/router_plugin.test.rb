@@ -136,20 +136,19 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
-  def test_raises_when_page_and_route_handler_share_directory
+  def test_discovers_page_and_route_handler_in_same_directory
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/api")
-      File.write("#{dir}/pages/api/page.haml", "")
-      File.write("#{dir}/pages/api/route.rb", "")
+      File.write("#{dir}/pages/api/page.rb", "NAME = :page\n")
+      File.write("#{dir}/pages/api/route.rb", "def GET(_req)\n  :handler\nend\n")
 
-      error =
-        assert_raises(Klenod::Build::ResolveError) do
-          RouterPlugin.new.discover(source_dir: dir)
-        end
+      route = RouterPlugin.new.discover(source_dir: dir).fetch("/api")
 
-      assert_includes(error.message, "Ambiguous route /api")
-      assert_includes(error.message, "pages/api/page.haml")
-      assert_includes(error.message, "pages/api/route.rb")
+      assert_equal(:page_and_handler, route.kind)
+      assert_equal(Klenod::Build::ModuleId.new("pages/api/page.rb", nil), route.page_module_id)
+      assert_equal(Klenod::Build::ModuleId.new("pages/api/route.rb", nil), route.handler_module_id)
+      assert_equal(Klenod::Build::ModuleId.new("pages/api/page.rb", nil), route.module_id)
+      assert_equal(["pages/api/page.rb", "pages/api/route.rb"], RouterPlugin.new.discover(source_dir: dir).entrypoints)
     end
   end
 
@@ -197,6 +196,30 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal({id: "123"}, match.params)
       assert_equal(RouteBase, handler.superclass)
       assert_equal("api", handler.new.GET(nil, nil))
+    end
+  end
+
+  def test_virtual_router_matches_page_and_route_handler_for_same_path
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/api")
+      File.write("#{dir}/pages/api/page.rb", "NAME = :page\n")
+      File.write(
+        "#{dir}/pages/api/route.rb",
+        <<~RUBY
+          def GET(_req)
+            :handler
+          end
+        RUBY
+      )
+
+      match = router_for(dir, mode: :development).match("/api")
+
+      assert_equal(:page, match.page::NAME)
+      assert_equal(RouteBase, match.handler.superclass)
+      assert_equal(:handler, match.handler.new.GET(nil))
+      assert_equal(:page_and_handler, match.route.kind)
+      assert_equal("pages/api/page.rb", match.route.page_module_id)
+      assert_equal("pages/api/route.rb", match.route.handler_module_id)
     end
   end
 
@@ -557,6 +580,25 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal(["virtual:router"], bundle.entrypoints.keys)
       assert_equal(:root, router.match("/").page::NAME)
       assert_equal(:about, router.match("/about").page::NAME)
+    end
+  end
+
+  def test_bundle_loads_hybrid_page_and_route_handler
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/api")
+      File.write("#{dir}/pages/api/page.rb", "NAME = :page\n")
+      File.write("#{dir}/pages/api/route.rb", "def GET(_req)\n  :handler\nend\n")
+      output = "#{dir}/bundle.dump"
+      context = router_context(dir, mode: :build)
+
+      bundle = context.build(entrypoints: ["virtual:router"], output: output)
+      loaded = Klenod::Runtime.load_bundle(output)
+      match = loaded.exports("virtual:router")::Default.match("/api")
+
+      assert_includes(bundle.modules.keys, "pages/api/page.rb")
+      assert_includes(bundle.modules.keys, "pages/api/route.rb")
+      assert_equal(:page, match.page::NAME)
+      assert_equal(:handler, match.handler.new.GET(nil))
     end
   end
 

@@ -117,6 +117,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/demo/blog", "Blog posts loaded from data files")
     assert_route_includes(entry, context, "/demo/blog/assets", "Generated assets as imports")
     assert_route_includes(entry, context, "/demo/data", "Imported from a plain text file.")
+    assert_route_includes(entry, context, "/demo/hybrid", "Hybrid page and route handler")
     assert_route_includes(entry, context, "/demo/docs/guides/routing", "Path parts: guides / routing")
     assert_route_includes(entry, context, "/demo/shop", "No filters selected")
     assert_route_includes(entry, context, "/demo/shop/sale/red", "Filters: sale, red")
@@ -142,10 +143,12 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(stdout, "METHOD")
     assert_includes(stdout, "PATH")
     assert_includes(stdout, "SOURCE")
-    assert_includes(stdout, "GET     /demo/blog/:slug")
+    assert_includes(stdout, "GET      /demo/blog/:slug")
     assert_includes(stdout, "pages/demo/blog/[slug]/page.haml")
-    assert_includes(stdout, "POST    /demo/forms/submit")
+    assert_includes(stdout, "POST     /demo/forms/submit")
     assert_includes(stdout, "pages/demo/forms/submit/route.rb")
+    assert_includes(stdout, "GET      /demo/hybrid")
+    assert_includes(stdout, "OPTIONS  /demo/hybrid")
     assert_includes(stdout, "Route tree")
     assert_includes(stdout, "GET /demo/blog/:slug (page)")
     assert_includes(stdout, "layout pages/demo/blog/[slug]/layout.haml")
@@ -154,6 +157,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(stdout, "slot @sidebar pages/demo/dashboard/@sidebar/page.haml")
     assert_includes(stdout, "POST /demo/forms/submit (handler)")
     assert_includes(stdout, "handler pages/demo/forms/submit/route.rb:3")
+    assert_includes(stdout, "GET,PUT,OPTIONS /demo/hybrid (page+handler)")
+    assert_includes(stdout, "handler pages/demo/hybrid/route.rb:1")
     assert_includes(stdout, "└─ layout pages/layout.haml\n   page pages/feed/(.)photo/page.haml")
     assert_includes(stdout, "└─ layout pages/layout.haml\n   └─ layout pages/demo/layout.haml\n      └─ layout pages/demo/dashboard/layout.haml\n         page pages/demo/dashboard/settings/page.haml")
   end
@@ -191,6 +196,39 @@ class Klenod::ExampleTest < Minitest::Test
       },
       JSON.parse(body.join)
     )
+  end
+
+  def test_example_app_dispatches_hybrid_route_by_accept_header
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    html_status, html_headers, html_body =
+      entry.call(HeaderRequest["GET", "/demo/hybrid", HeaderList.new([["Accept", "text/html"]])], context)
+    json_status, json_headers, json_body =
+      entry.call(HeaderRequest["GET", "/demo/hybrid", HeaderList.new([["Accept", "application/json"]])], context)
+
+    assert_equal(200, html_status)
+    assert_equal("text/html; charset=utf-8", html_headers.fetch("content-type"))
+    assert_includes(html_body.join, "Hybrid page and route handler")
+
+    assert_equal(200, json_status)
+    assert_equal("application/json; charset=utf-8", json_headers.fetch("content-type"))
+    assert_equal("Accept", json_headers.fetch("vary"))
+    assert_equal({"type" => "hybrid", "path" => "/demo/hybrid", "request" => "api"}, JSON.parse(json_body.join))
+  end
+
+  def test_example_app_dispatches_hybrid_route_non_page_methods_to_handler
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    status, headers, body =
+      entry.call(HeaderRequest["OPTIONS", "/demo/hybrid", HeaderList.new([["Accept", "text/html"]])], context)
+
+    assert_equal(200, status)
+    assert_equal("application/json; charset=utf-8", headers.fetch("content-type"))
+    assert_equal({"type" => "hybrid", "path" => "/demo/hybrid", "method" => "OPTIONS"}, JSON.parse(body.join))
   end
 
   def test_example_request_copies_protocol_style_headers

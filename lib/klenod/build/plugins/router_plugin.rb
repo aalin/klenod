@@ -40,17 +40,28 @@ module Klenod
         RouteParam = Data.define(:name, :kind)
         PARAM_SEGMENT_KINDS = [:dynamic, :catch_all, :optional_catch_all].freeze
 
-        PageRoute = Data.define(:path, :module_id, :segments, :layout_module_ids, :slot_layout_module_id, :kind) do
+        PageRoute = Data.define(:path, :page_module_id, :handler_module_id, :segments, :layout_module_ids, :slot_layout_module_id) do
           def params
             segments
               .select { |segment| segment.param_name && PARAM_SEGMENT_KINDS.include?(segment.kind) }
               .map { |segment| RouteParam.new(segment.param_name, segment.kind) }
           end
+
+          def module_id
+            page_module_id || handler_module_id
+          end
+
+          def kind
+            return :page_and_handler if page_module_id && handler_module_id
+            return :page if page_module_id
+
+            :handler
+          end
         end
 
         RouteManifest = Data.define(:routes) do
           def entrypoints
-            routes.map { |route| route.module_id.to_s }
+            routes.flat_map { |route| [route.page_module_id, route.handler_module_id] }.compact.map(&:to_s)
           end
 
           def [](path)
@@ -169,19 +180,21 @@ module Klenod
         def route_for(source_dir, paths)
           segments = route_segments_for(source_dir, paths.fetch(0))
           route_path = route_path_for(segments)
-          if paths.length > 1
-            matches = paths.map { |path| relative_path_for(source_dir, path) }.sort.join(", ")
-            raise ResolveError, "Ambiguous route #{route_path}; matched #{matches}. Use only one page or route file per directory."
+          page_paths = paths.reject { |path| route_handler_path?(path) }
+          handler_path = paths.find { |path| route_handler_path?(path) }
+          if page_paths.length > 1
+            matches = page_paths.map { |path| relative_path_for(source_dir, path) }.sort.join(", ")
+            raise ResolveError, "Ambiguous route #{route_path}; matched #{matches}. Use only one page file per directory."
           end
 
-          path = paths.fetch(0)
+          path = page_paths.fetch(0, handler_path)
           PageRoute.new(
             route_path,
-            ModuleId.new(relative_path_for(source_dir, path), nil),
+            page_paths.fetch(0, nil)&.then { |page_path| ModuleId.new(relative_path_for(source_dir, page_path), nil) },
+            handler_path&.then { |route_path| ModuleId.new(relative_path_for(source_dir, route_path), nil) },
             segments,
-            route_handler_path?(path) ? [] : layout_module_ids_for(source_dir, path),
-            route_handler_path?(path) ? nil : slot_layout_module_id_for(source_dir, path, segments),
-            route_handler_path?(path) ? :handler : :page
+            page_paths.empty? ? [] : layout_module_ids_for(source_dir, path),
+            page_paths.empty? ? nil : slot_layout_module_id_for(source_dir, path, segments)
           )
         end
 
@@ -274,23 +287,34 @@ module Klenod
             #{import_definitions(imports)}
 
             module Default
-              Route = Data.define(:path, :module_id, :segments, :match_parts, :layout_module_ids, :slot_layout_module_id, :page_ref, :layout_refs, :kind) do
+              Route = Data.define(:path, :page_module_id, :handler_module_id, :segments, :match_parts, :layout_module_ids, :slot_layout_module_id, :page_ref, :handler_ref, :layout_refs) do
                 def params
                   segments
                     .select { |segment| segment.param_name && [:dynamic, :catch_all, :optional_catch_all].include?(segment.kind) }
                     .map { |segment| Param.new(segment.param_name, segment.kind) }
                 end
 
+                def module_id
+                  page_module_id || handler_module_id
+                end
+
+                def kind
+                  return :page_and_handler if page_module_id && handler_module_id
+                  return :page if page_module_id
+
+                  :handler
+                end
+
                 def page
-                  return nil unless kind == :page
+                  return nil unless page_ref
 
                   Default.resolve_import(page_ref)
                 end
 
                 def handler
-                  return nil unless kind == :handler
+                  return nil unless handler_ref
 
-                  Default.resolve_import(page_ref)
+                  Default.resolve_import(handler_ref)
                 end
 
                 def layouts
@@ -518,14 +542,15 @@ module Klenod
             [
               "    Route.new(",
               "      #{route.path.inspect},",
-              "      #{route.module_id.to_s.inspect},",
+              "      #{route.page_module_id&.to_s.inspect},",
+              "      #{route.handler_module_id&.to_s.inspect},",
               "      #{segments_source(route.segments)},",
               "      #{match_parts_source(route.segments)},",
               "      #{route.layout_module_ids.map(&:to_s).inspect},",
               "      #{route.slot_layout_module_id&.to_s.inspect},",
-              "      #{imports.fetch(route.module_id.to_s)},",
-              "      #{layouts_source(layouts)},",
-              "      #{route.kind.inspect}",
+              "      #{route.page_module_id ? imports.fetch(route.page_module_id.to_s) : "nil"},",
+              "      #{route.handler_module_id ? imports.fetch(route.handler_module_id.to_s) : "nil"},",
+              "      #{layouts_source(layouts)}",
               "    )"
             ].join("\n")
           end
@@ -569,8 +594,13 @@ module Klenod
         def import_refs(manifest)
           specifiers =
             manifest.routes.flat_map do |route|
-              [route.module_id.to_s, *route.layout_module_ids.map(&:to_s)]
+              [
+                route.page_module_id&.to_s,
+                route.handler_module_id&.to_s,
+                *route.layout_module_ids.map(&:to_s)
+              ]
             end.uniq
+          specifiers.compact!
 
           specifiers.each_with_index.to_h do |specifier, index|
             [specifier, "ROUTER_IMPORT_#{index}"]
@@ -637,7 +667,7 @@ module Klenod
         end
 
         def route_handler_module_ids(source_dir)
-          discover(source_dir: source_dir).routes.select { |route| route.kind == :handler }.map(&:module_id)
+          discover(source_dir: source_dir).routes.filter_map(&:handler_module_id)
         end
 
         def route_handler_path?(path)

@@ -22,16 +22,14 @@ def color(name, value)
   "#{COLORS.fetch(name)}#{value}#{COLORS.fetch(:reset)}"
 end
 
-def route_methods(route, source_path)
-  return ["GET"] unless route.kind == :handler
+def route_methods(source_path)
   return [] unless File.file?(source_path)
 
   source = File.read(source_path)
   HTTP_METHODS.select { |method| source.match?(/^\s*def\s+#{method}\b/) }
 end
 
-def route_method_lines(route, source_path)
-  return {} unless route.kind == :handler
+def route_method_lines(source_path)
   return {} unless File.file?(source_path)
 
   File
@@ -45,8 +43,9 @@ def route_method_lines(route, source_path)
 end
 
 def route_type(route)
-  return "handler" if route.kind == :handler
   return "slot" if route.slot_layout_module_id
+  return "page+handler" if route.page_module_id && route.handler_module_id
+  return "handler" unless route.page_module_id
 
   "page"
 end
@@ -61,13 +60,16 @@ def route_rows(router, config)
   context = config.context
 
   router.routes.flat_map do |route|
-    source_path = context.graph.absolute_path(Klenod::Build::ModuleId.new(route.module_id, nil)).to_s
-    methods = route_methods(route, source_path)
-    methods = ["-"] if methods.empty?
-
-    methods.map do |method|
-      [method, route.path, route_type(route), route.module_id]
+    rows = []
+    rows << ["GET", route.path, route.slot_layout_module_id ? "slot" : "page", route.page_module_id] if route.page_module_id
+    if route.handler_module_id
+      source_path = context.graph.absolute_path(Klenod::Build::ModuleId.new(route.handler_module_id, nil)).to_s
+      methods = route_methods(source_path)
+      methods = ["-"] if methods.empty?
+      rows.concat(methods.map { |method| [method, route.path, "handler", route.handler_module_id] })
     end
+
+    rows
   end
 end
 
@@ -110,7 +112,7 @@ def print_layout_tree(primary, slot_routes, config)
   layout_ids = primary.layout_module_ids
   leaf_routes =
     [
-      route_leaf(primary, config),
+      *route_leaves(primary, config),
       *slot_routes.map { |slot_route| slot_leaf(slot_route) }
     ]
   return print_leaf_group(leaf_routes, "") if layout_ids.empty?
@@ -127,19 +129,30 @@ def tree_prefix(depth)
   TREE_INDENT * depth
 end
 
-def route_leaf(route, config)
-  {
-    layout_id: route.layout_module_ids.last,
-    label: color(:type, route_type(route)),
-    source: source_for_route(route, config)
-  }
+def route_leaves(route, config)
+  leaves = []
+  if route.page_module_id
+    leaves << {
+      layout_id: route.layout_module_ids.last,
+      label: color(:type, "page"),
+      source: route.page_module_id
+    }
+  end
+  if route.handler_module_id
+    leaves << {
+      layout_id: route.layout_module_ids.last,
+      label: color(:type, "handler"),
+      source: source_for_handler(route, config)
+    }
+  end
+  leaves
 end
 
 def slot_leaf(route)
   {
     layout_id: route.slot_layout_module_id,
     label: color(:slot, "slot @#{slot_name(route)}"),
-    source: route.module_id
+    source: route.page_module_id
   }
 end
 
@@ -154,25 +167,26 @@ def print_leaf_group(leaf_routes, prefix)
 end
 
 def route_methods_for_display(route, config)
-  return ["GET"] unless route.kind == :handler
+  methods = []
+  methods << "GET" if route.page_module_id
+  return methods unless route.handler_module_id
 
-  source_path = config.context.graph.absolute_path(Klenod::Build::ModuleId.new(route.module_id, nil)).to_s
-  methods = route_methods(route, source_path)
-  methods.empty? ? ["-"] : methods
+  source_path = config.context.graph.absolute_path(Klenod::Build::ModuleId.new(route.handler_module_id, nil)).to_s
+  handler_methods = route_methods(source_path)
+  methods.concat(handler_methods.empty? ? ["-"] : handler_methods)
+  methods.uniq
 end
 
 def route_heading(route, config)
   "#{color(:method, route_methods_for_display(route, config).join(","))} #{color(:path, route.path)} #{color(:type, "(#{route_type(route)})")}"
 end
 
-def source_for_route(route, config)
-  return route.module_id unless route.kind == :handler
-
-  source_path = config.context.graph.absolute_path(Klenod::Build::ModuleId.new(route.module_id, nil)).to_s
-  lines = route_method_lines(route, source_path)
+def source_for_handler(route, config)
+  source_path = config.context.graph.absolute_path(Klenod::Build::ModuleId.new(route.handler_module_id, nil)).to_s
+  lines = route_method_lines(source_path)
   methods = route_methods_for_display(route, config)
   line = methods.filter_map { |method| lines[method] }.min
-  line ? "#{route.module_id}:#{line}" : route.module_id
+  line ? "#{route.handler_module_id}:#{line}" : route.handler_module_id
 end
 
 def slot_name(route)
