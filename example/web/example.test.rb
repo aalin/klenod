@@ -133,7 +133,7 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_routes_utility_prints_route_table
-    stdout, stderr, status = Open3.capture3(RbConfig.ruby, "routes.rb", chdir: __dir__)
+    stdout, stderr, status = Open3.capture3({"NO_COLOR" => "1"}, RbConfig.ruby, "routes.rb", chdir: __dir__)
 
     assert(status.success?, stderr)
     assert_includes(stdout, "METHOD")
@@ -143,6 +143,12 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(stdout, "pages/demo/blog/[slug]/page.haml")
     assert_includes(stdout, "POST    /demo/forms/submit")
     assert_includes(stdout, "pages/demo/forms/submit/route.rb")
+    assert_includes(stdout, "Route tree")
+    assert_includes(stdout, "/demo/blog/:slug (page)")
+    assert_includes(stdout, "layout pages/demo/blog/[slug]/layout.haml")
+    assert_includes(stdout, "GET page pages/demo/blog/[slug]/page.haml")
+    assert_includes(stdout, "slot @modal -> pages/demo/dashboard/layout.haml")
+    assert_includes(stdout, "GET page pages/demo/dashboard/@modal/page.haml")
   end
 
   def test_example_app_renders_router_tree_metadata
