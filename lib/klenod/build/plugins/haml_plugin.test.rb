@@ -708,10 +708,37 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
     assert_equal(ModuleId.new("pages/demo/blog/page.haml", nil), error.module_id)
     assert_equal(2, error.line)
-    assert_includes(error.message, "Haml parse error in pages/demo/blog/page.haml:2")
+    assert_includes(error.message, "pages/demo/blog/page.haml:2: Haml parse error")
     assert_includes(error.message, "Invalid attribute list")
     assert_includes(error.message, "> 2 | %time(datetime=post.fetch(\"date\"))= post.fetch(\"date\")")
     assert_kind_of(Haml::SyntaxError, error.cause)
+  end
+
+  def test_default_haml_transformer_wraps_invalid_tag_parse_errors_with_source_context
+    transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
+    source = <<~HAML
+      %p Before
+      %*
+      %p After
+    HAML
+    error =
+      assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
+        transformer.call(
+          source: source,
+          module_id: ModuleId.new("pages/demo/blog/[slug]/page.haml", nil),
+          component_class_name: "Page",
+          component_base_class: "Object",
+          factory: "#{self.class.name}::FakeFramework::H",
+          styles_source: "{}.freeze",
+          translations_source: "{}.freeze"
+        )
+      end
+
+    assert_equal(ModuleId.new("pages/demo/blog/[slug]/page.haml", nil), error.module_id)
+    assert_equal(2, error.line)
+    assert_includes(error.message, "pages/demo/blog/[slug]/page.haml:2: Haml parse error")
+    assert_includes(error.message, "Invalid tag")
+    assert_includes(error.message, "> 2 | %*")
   end
 
   def test_haml_plugin_wraps_inline_css_parse_errors_with_source_context
@@ -727,7 +754,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       end
 
     assert_equal(2, error.line)
-    assert_includes(error.message, "Haml parse error in pages/page.haml:2")
+    assert_includes(error.message, "pages/page.haml:2: Haml parse error")
     assert_includes(error.message, "> 2 | %time(datetime=post.fetch(\"date\"))= post.fetch(\"date\")")
   end
 

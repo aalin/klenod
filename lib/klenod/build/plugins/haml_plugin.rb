@@ -35,13 +35,22 @@ module Klenod
           private
 
           def source_line_for(error)
-            return nil unless error.respond_to?(:line)
-
-            line = error.line
+            line = error.line if error.respond_to?(:line)
+            line ||= full_message_line_for(error)
             return nil unless line.is_a?(Integer)
 
             # Haml reports zero-based line indexes.
-            line + 1
+            error_line_zero_based?(error) ? line + 1 : line
+          end
+
+          def full_message_line_for(error)
+            return nil unless error.respond_to?(:full_message)
+
+            error.full_message(highlight: false, order: :top).match(/\A\(haml\):(?<line>\d+):/) { it[:line].to_i }
+          end
+
+          def error_line_zero_based?(error)
+            error.respond_to?(:line) && error.line.is_a?(Integer)
           end
 
           def message_for(error)
@@ -54,8 +63,7 @@ module Klenod
                 "line #{line}"
               end
 
-            title = "Haml parse error"
-            title = "#{title} in #{location}" if location
+            title = location ? "#{location}: Haml parse error" : "Haml parse error"
 
             [
               title,
@@ -78,7 +86,12 @@ module Klenod
               (first..last).map do |line_index|
                 marker = (line_index == index) ? ">" : " "
                 number = (line_index + 1).to_s.rjust(width)
-                "#{marker} #{number} | #{lines.fetch(line_index).chomp}"
+                formatted = "#{marker} #{number} | #{lines.fetch(line_index).chomp}"
+                if marker == ">"
+                  "\e[1;31m#{formatted}\e[0m"
+                else
+                  formatted
+                end
               end
 
             "Source:\n#{excerpt.join("\n")}"
