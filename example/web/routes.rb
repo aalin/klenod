@@ -29,6 +29,20 @@ def route_methods(route, source_path)
   HTTP_METHODS.select { |method| source.match?(/^\s*def\s+#{method}\b/) }
 end
 
+def route_method_lines(route, source_path)
+  return {} unless route.kind == :handler
+  return {} unless File.file?(source_path)
+
+  File
+    .readlines(source_path)
+    .each_with_index
+    .each_with_object({}) do |(line, index), lines|
+    HTTP_METHODS.each do |method|
+      lines[method] = index + 1 if line.match?(/^\s*def\s+#{method}\b/)
+    end
+  end
+end
+
 def route_type(route)
   return "handler" if route.kind == :handler
   return "slot" if route.slot_layout_module_id
@@ -86,7 +100,7 @@ def print_route_tree(router, config)
     slot_routes = routes.select(&:slot_layout_module_id).sort_by { |route| slot_name(route) }
 
     puts
-    puts "#{color(:path, path)} #{color(:type, "(#{route_type(primary)})")}"
+    puts route_heading(primary, config)
     print_layout_tree(primary, slot_routes, config)
   end
 end
@@ -113,8 +127,8 @@ end
 def route_leaf(route, config)
   {
     layout_id: route.layout_module_ids.last,
-    label: "#{color(:method, route_methods_for_display(route, config).join(","))} #{color(:type, route_type(route))}",
-    source: route.module_id
+    label: color(:type, route_type(route)),
+    source: source_for_route(route, config)
   }
 end
 
@@ -142,6 +156,20 @@ def route_methods_for_display(route, config)
   source_path = config.context.graph.absolute_path(Klenod::Build::ModuleId.new(route.module_id, nil)).to_s
   methods = route_methods(route, source_path)
   methods.empty? ? ["-"] : methods
+end
+
+def route_heading(route, config)
+  "#{color(:method, route_methods_for_display(route, config).join(","))} #{color(:path, route.path)} #{color(:type, "(#{route_type(route)})")}"
+end
+
+def source_for_route(route, config)
+  return route.module_id unless route.kind == :handler
+
+  source_path = config.context.graph.absolute_path(Klenod::Build::ModuleId.new(route.module_id, nil)).to_s
+  lines = route_method_lines(route, source_path)
+  methods = route_methods_for_display(route, config)
+  line = methods.filter_map { |method| lines[method] }.min
+  line ? "#{route.module_id}:#{line}" : route.module_id
 end
 
 def slot_name(route)

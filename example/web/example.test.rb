@@ -144,11 +144,13 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(stdout, "POST    /demo/forms/submit")
     assert_includes(stdout, "pages/demo/forms/submit/route.rb")
     assert_includes(stdout, "Route tree")
-    assert_includes(stdout, "/demo/blog/:slug (page)")
+    assert_includes(stdout, "GET /demo/blog/:slug (page)")
     assert_includes(stdout, "layout pages/demo/blog/[slug]/layout.haml")
-    assert_includes(stdout, "GET page pages/demo/blog/[slug]/page.haml")
+    assert_includes(stdout, "page pages/demo/blog/[slug]/page.haml")
     assert_includes(stdout, "slot @modal pages/demo/dashboard/@modal/page.haml")
     assert_includes(stdout, "slot @sidebar pages/demo/dashboard/@sidebar/page.haml")
+    assert_includes(stdout, "POST /demo/forms/submit (handler)")
+    assert_includes(stdout, "handler pages/demo/forms/submit/route.rb:3")
   end
 
   def test_example_app_renders_router_tree_metadata
