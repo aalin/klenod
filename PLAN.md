@@ -169,6 +169,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
   - [x] Keep generated route page/layout references lazy in the router module.
   - [x] Ensure build bundles still include every discovered page/layout module.
   - [x] Add a regression where a page imports `virtual:router` and the router bundle still builds.
+- [ ] Revisit route utility ordering and visualization so displayed routes follow actual router match priority.
 
 ## Testing And Examples
 

@@ -10,6 +10,7 @@ module Klenod
 
     AssetSpec =
       Data.define(:logical_name, :content_hash, :output_path, :content_type, :metadata)
+    AssetReference = Data.define(:index, :asset)
 
     class Bundle
       attr_reader :entrypoints, :modules, :assets, :source_root
@@ -75,10 +76,23 @@ module Klenod
       end
 
       def assets_for_module(module_ref, type: nil, content_type: nil, recursive: true)
+        asset_references_for_module(module_ref, type: type, content_type: content_type, recursive: recursive)
+          .map(&:asset)
+      end
+
+      def asset_references_for_module(module_ref, type: nil, content_type: nil, recursive: true)
+        seen_assets = {}
         module_ids_for_assets(module_ref, recursive: recursive)
-          .flat_map { |module_id| assets_for(module_id) }
-          .select { |asset| asset_matches?(asset, type: type, content_type: content_type) }
-          .uniq(&:output_path)
+          .each_with_index
+          .flat_map do |module_id, index|
+            assets_for(module_id).filter_map do |asset|
+              next unless asset_matches?(asset, type: type, content_type: content_type)
+              next if seen_assets.key?(asset.output_path)
+
+              seen_assets[asset.output_path] = true
+              AssetReference.new(index:, asset:)
+            end
+          end
       end
 
       def each_asset(&block)

@@ -25,7 +25,7 @@ def self.call(raw_request, context)
           .render
       end
     end
-  css_assets = context.assets_for_module(css_module_ids_for(match), type: :css)
+  css_asset_references = context.asset_references_for_module(css_module_ids_for(match), type: :css)
 
   commit_session(
     Example::Response.html(
@@ -34,7 +34,7 @@ def self.call(raw_request, context)
         <html>
           <head>
             <title>Klenod example</title>
-            #{css_assets.map { |asset| %(<link rel="stylesheet" href="#{asset.output_path}">) }.join("\n")}
+            #{stylesheet_links(css_asset_references)}
           </head>
           #{body}
         </html>
@@ -47,6 +47,12 @@ end
 
 def self.module_path
   __FILE__
+end
+
+def self.stylesheet_links(asset_references)
+  asset_references
+    .map { |reference| %(<link rel="stylesheet" href="#{reference.asset.output_path}" data-index="#{reference.index}">) }
+    .join("\n")
 end
 
 def self.request_path(raw_request)

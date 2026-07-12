@@ -101,10 +101,24 @@ module Klenod
       end
 
       def assets_for_module(record_or_module_id, type: nil, content_type: nil, recursive: true)
+        asset_references_for_module(record_or_module_id, type: type, content_type: content_type, recursive: recursive)
+          .map(&:asset)
+      end
+
+      def asset_references_for_module(record_or_module_id, type: nil, content_type: nil, recursive: true)
+        seen_assets = {}
         module_ids_for_assets(record_or_module_id, recursive: recursive)
-          .flat_map { |module_id| @records.fetch(module_id).assets }
-          .select { |asset| asset_matches?(asset, type: type, content_type: content_type) }
-          .uniq(&:output_path)
+          .each_with_index
+          .flat_map do |module_id, index|
+            module_assets = @records.fetch(module_id).assets
+            module_assets.filter_map do |asset|
+              next unless asset_matches?(asset, type: type, content_type: content_type)
+              next if seen_assets.key?(asset.output_path)
+
+              seen_assets[asset.output_path] = true
+              Runtime::AssetReference.new(index:, asset:)
+            end
+          end
       end
 
       def each_asset(&block)

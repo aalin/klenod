@@ -385,12 +385,16 @@ class Klenod::Build::Context::Test < Minitest::Test
       context.collect("extra")
 
       assets = context.assets_for_module([layout, page], type: :css)
+      asset_references = context.asset_references_for_module([layout, page], type: :css)
 
       assert_equal(
         ["styles/root.css", "styles/layout.css", "styles/page.css", "styles/card.css"],
         assets.map(&:logical_name)
       )
+      assert_equal(assets, asset_references.map(&:asset))
+      assert_equal([1, 2, 4, 6], asset_references.map(&:index))
       assert_equal(["styles/layout.css", "styles/page.css"], context.assets_for_module(["styles/layout.css", "styles/page.css"], type: :css, recursive: false).map(&:logical_name))
+      assert_equal([0, 1], context.asset_references_for_module(["styles/layout.css", "styles/page.css"], type: :css, recursive: false).map(&:index))
     end
   end
 

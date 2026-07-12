@@ -59,6 +59,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "/assets/pages_layout_css")
     assert_includes(html, "/assets/pages_page_css")
     paths = stylesheet_paths(html)
+    assert_stylesheet_indexes_present(html)
     assert_stylesheet_order(paths, "pages_root_css", "pages_layout_css", "pages_page_css", "components_Button_css")
     refute(paths.any? { |path| path.include?("pages_demo_dashboard") })
     refute(paths.any? { |path| path.include?("pages_demo_assets") })
@@ -69,9 +70,11 @@ class Klenod::ExampleTest < Minitest::Test
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
     status, _headers, body = entry.call(request("/demo/dashboard"), context)
-    paths = stylesheet_paths(body.join)
+    html = body.join
+    paths = stylesheet_paths(html)
 
     assert_equal(200, status)
+    assert_stylesheet_indexes_present(html)
     assert(paths.any? { |path| path.include?("pages_demo_dashboard_page_css") })
     assert(paths.any? { |path| path.include?("components_MetricCard_css") })
     refute(paths.any? { |path| path.include?("pages_page_css") })
@@ -401,6 +404,18 @@ class Klenod::ExampleTest < Minitest::Test
 
   def stylesheet_paths(html)
     html.scan(%r{<link rel="stylesheet" href="([^"]+)"}).flatten
+  end
+
+  def stylesheet_indexes(html)
+    html.scan(%r{<link rel="stylesheet" href="[^"]+" data-index="(\d+)"}).flatten.map(&:to_i)
+  end
+
+  def assert_stylesheet_indexes_present(html)
+    paths = stylesheet_paths(html)
+    indexes = stylesheet_indexes(html)
+
+    assert_equal(paths.length, indexes.length)
+    assert_equal(indexes.sort, indexes)
   end
 
   def assert_stylesheet_order(paths, *names)

@@ -383,6 +383,16 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_equal([entry_css_asset], bundle.assets_for_module("entry.rb", type: :css, recursive: false))
     assert_equal([], bundle.assets_for_module("entry.rb", type: :image))
     assert_equal([root_css_asset, layout_css_asset, entry_css_asset, css_asset], bundle.assets_for_module(["styles/layout.css", "entry.rb"], type: :css))
+    assert_equal(
+      [
+        Klenod::Runtime::AssetReference.new(index: 0, asset: root_css_asset),
+        Klenod::Runtime::AssetReference.new(index: 1, asset: layout_css_asset),
+        Klenod::Runtime::AssetReference.new(index: 2, asset: entry_css_asset),
+        Klenod::Runtime::AssetReference.new(index: 4, asset: css_asset)
+      ],
+      bundle.asset_references_for_module(["styles/layout.css", "entry.rb"], type: :css)
+    )
     assert_equal([layout_css_asset, entry_css_asset], bundle.assets_for_module(["styles/layout.css", "entry.rb"], type: :css, recursive: false))
+    assert_equal([0, 1], bundle.asset_references_for_module(["styles/layout.css", "entry.rb"], type: :css, recursive: false).map(&:index))
   end
 end

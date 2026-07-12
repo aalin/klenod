@@ -170,15 +170,11 @@ module Klenod
       end
 
       def assets_for_module(record_or_module_id, type: nil, content_type: nil, recursive: true)
-        record_or_module_id =
-          if record_or_module_id.is_a?(Array)
-            record_or_module_id.map { |module_ref| module_ref.is_a?(LoadedModule) ? module_ref.id : module_ref }
-          elsif record_or_module_id.is_a?(LoadedModule)
-            record_or_module_id.id
-          else
-            record_or_module_id
-          end
-        @graph.assets_for_module(record_or_module_id, type: type, content_type: content_type, recursive: recursive)
+        @graph.assets_for_module(module_refs_for_assets(record_or_module_id), type: type, content_type: content_type, recursive: recursive)
+      end
+
+      def asset_references_for_module(record_or_module_id, type: nil, content_type: nil, recursive: true)
+        @graph.asset_references_for_module(module_refs_for_assets(record_or_module_id), type: type, content_type: content_type, recursive: recursive)
       end
 
       def each_asset(&block)
@@ -271,6 +267,16 @@ module Klenod
 
       def asset_disk_path(output_path, assets_root)
         assets_root.join(output_path.delete_prefix("/"))
+      end
+
+      def module_refs_for_assets(record_or_module_id)
+        if record_or_module_id.is_a?(Array)
+          record_or_module_id.map { |module_ref| module_ref.is_a?(LoadedModule) ? module_ref.id : module_ref }
+        elsif record_or_module_id.is_a?(LoadedModule)
+          record_or_module_id.id
+        else
+          record_or_module_id
+        end
       end
     end
   end
