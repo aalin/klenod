@@ -1,0 +1,28 @@
+:ruby
+  DataTable = import("/components/DataTable.haml")
+  PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+
+%article
+  %PageHeader{
+    kicker: "Settings",
+    title: "Dashboard settings",
+    summary: "A nested dashboard route with its own page content and matching parallel slots."
+  }
+  %Panel{ title: "Route options" }
+    %dl
+      %dt Layout module
+      %dd pages/demo/dashboard/layout.haml
+      %dt Sidebar slot
+      %dd pages/demo/dashboard/@sidebar/settings/page.haml
+      %dt Modal slot
+      %dd pages/demo/dashboard/@modal/settings/page.haml
+  %Panel{ title: "Notification channels" }
+    %DataTable{
+      columns: ["Channel", "Audience", "State"],
+      rows: [
+        ["Reload events", "Development server", "Enabled"],
+        ["Asset writes", "Framework adapter", "Enabled"],
+        ["Route manifest", "Build output", "Draft"]
+      ]
+    }

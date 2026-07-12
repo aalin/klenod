@@ -1,0 +1,36 @@
+:ruby
+  Figure = import("/components/Figure.haml")
+  PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+  Coffee = import("./coffee.jpg?width=360,720&format=jpeg")
+  SailingBoat = import("./sailing-boat.jpg?width=360,720&format=jpeg")
+  Vegetables = import("./vegetables.jpg?width=360,720&format=jpeg")
+
+  Items = [
+    {
+      image: Coffee,
+      alt: "Coffee cup on a table",
+      caption: "Coffee imported from a routed Haml page."
+    },
+    {
+      image: SailingBoat,
+      alt: "Sailing boat on open water",
+      caption: "A sailing image with generated JPEG widths."
+    },
+    {
+      image: Vegetables,
+      alt: "Vegetables arranged for cooking",
+      caption: "Vegetables rendered through the shared Figure component."
+    }
+  ]
+
+%article
+  %PageHeader{
+    kicker: "Assets",
+    title: "Images become generated browser assets",
+    summary: "Assets are imported through routed Haml pages and emitted with generated variants for responsive image markup."
+  }
+  %section
+    = Items.map do |item|
+      %Panel
+        %Figure{ image: item.fetch(:image), alt: item.fetch(:alt), caption: item.fetch(:caption) }

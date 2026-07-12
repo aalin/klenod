@@ -1,0 +1,26 @@
+table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+th,
+td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+th {
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}

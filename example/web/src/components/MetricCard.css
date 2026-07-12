@@ -1,0 +1,28 @@
+article {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+p:first-child {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+strong {
+  display: block;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1;
+}
+
+p:last-child {
+  margin: 0;
+  color: var(--color-muted);
+}

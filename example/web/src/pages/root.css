@@ -1,12 +1,32 @@
 :root {
-  --color-ink: oklch(24% 0.02 260);
-  --color-muted: oklch(from var(--color-ink) 52% calc(c * 0.7) h);
-  --color-page: oklch(97% 0.008 255);
+  --color-ink: oklch(22% 0.024 252);
+  --color-muted: oklch(48% 0.026 252);
+  --color-page: oklch(97% 0.012 248);
   --color-surface: oklch(100% 0 0);
-  --color-border: oklch(from var(--color-surface) 86% 0.012 255);
-  --color-accent: oklch(47% 0.13 255);
+  --color-raised: oklch(99% 0.006 248);
+  --color-border: oklch(88% 0.018 248);
+  --color-accent: oklch(47% 0.14 254);
   --color-accent-hover: oklch(from var(--color-accent) calc(l - 0.06) c h);
+  --color-accent-soft: oklch(94% 0.035 254);
+  --color-success: oklch(47% 0.12 155);
   --color-warning: oklch(50% 0.12 42);
   --color-backdrop: oklch(from var(--color-ink) l c h / 28%);
+  --shadow-soft: 0 14px 38px oklch(28% 0.03 252 / 9%);
   --radius: 8px;
+  --radius-sm: 5px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --font-size-small: 0.86rem;
+  --font-size-body: 1rem;
+  --font-size-h1: clamp(2rem, 3vw, 3.15rem);
+  --font-size-h2: clamp(1.35rem, 2vw, 2rem);
+}
+
+html {
+  background: var(--color-page);
 }

@@ -1,0 +1,22 @@
+:ruby
+  NavTabs = import("/components/NavTabs.haml")
+
+  Links = [
+    { href: "/demo", label: "Overview" },
+    { href: "/demo/assets", label: "Assets" },
+    { href: "/demo/forms", label: "Forms" },
+    { href: "/demo/dashboard", label: "Dashboard" },
+    { href: "/demo/data", label: "Data imports" },
+    { href: "/demo/routing", label: "Routing" },
+    { href: "/demo/blog/hello", label: "Dynamic params" },
+    { href: "/demo/shop/sale/red", label: "Catch-all" }
+  ]
+
+  def initialize(children:, slots: {})
+    @children = children
+  end
+
+%article
+  %NavTabs{ links: Links }
+  %section
+    = @children

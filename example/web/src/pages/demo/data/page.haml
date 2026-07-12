@@ -1,0 +1,25 @@
+:ruby
+  DataTable = import("/components/DataTable.haml")
+  PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+  Metrics = import("./imports/metrics.json")
+  Navigation = import("./imports/navigation.yaml")
+  Release = import("./imports/release.toml")
+  Note = import("./imports/note.txt")
+
+%article
+  %PageHeader{
+    kicker: "Data imports",
+    title: "Load structured files as module values",
+    summary: "The data plugins transform JSON, YAML, TOML, and text files into values that routed Ruby or Haml modules can import."
+  }
+  %Panel{ title: "Imported values" }
+    %DataTable{
+      columns: ["Format", "Imported value"],
+      rows: [
+        ["JSON", Metrics.inspect],
+        ["YAML", Navigation.inspect],
+        ["TOML", Release.inspect],
+        ["Text", Note.inspect]
+      ]
+    }

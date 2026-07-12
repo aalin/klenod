@@ -1,0 +1,12 @@
+:ruby
+  def initialize(label:, value:, summary: nil, children: nil)
+    @label = label
+    @value = value
+    @summary = summary
+  end
+
+%article
+  %p= @label
+  %strong= @value
+  = if @summary
+    %p= @summary

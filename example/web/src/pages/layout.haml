@@ -1,27 +1,7 @@
 :ruby
-  NavGroup = import("/components/NavGroup.haml")
-
-  MainLinks = [
-    { href: "/", label: "Home" },
-    { href: "/gallery", label: "Gallery" },
-    { href: "/forms", label: "Forms" },
-    { href: "/about", label: "About" }
-  ]
-  DynamicLinks = [
-    { href: "/blog/hello", label: "Blog" },
-    { href: "/docs/guides/routing", label: "Docs" },
-    { href: "/shop", label: "Shop" },
-    { href: "/shop/sale/red", label: "Filters" }
-  ]
-  LayoutLinks = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/dashboard/settings", label: "Settings" },
-    { href: "/routes", label: "Route gallery" }
-  ]
-  InterceptLinks = [
-    { href: "/feed/photo", label: "Photo" },
-    { href: "/profile", label: "Profile" },
-    { href: "/login", label: "Login" }
+  Links = [
+    { href: "/", label: "Overview" },
+    { href: "/demo", label: "Demo" }
   ]
 
   def initialize(children:, slots: {})
@@ -31,11 +11,11 @@
 
 %body
   %header
-    %a{ href: "/" } Klenod example
-    %nav(aria-label="Example routes")
-      %NavGroup{ title: "Main", links: MainLinks }
-      %NavGroup{ title: "Dynamic", links: DynamicLinks }
-      %NavGroup{ title: "Layouts", links: LayoutLinks }
-      %NavGroup{ title: "Intercepts", links: InterceptLinks }
+    %a{ href: "/" }
+      %span Klenod
+      %span example
+    %nav(aria-label="Primary")
+      = Links.map do |link|
+        %a{ href: link.fetch(:href) }= link.fetch(:label)
   %main
     = @children

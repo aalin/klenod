@@ -1,0 +1,20 @@
+:ruby
+  Button = import("/components/Button.haml")
+
+  def initialize(children:, slots: {})
+    @children = children
+    @slots = slots
+  end
+
+%article
+  = if @slots[:sidebar]
+    %aside
+      = @slots[:sidebar]
+  %section
+    = @children
+  = if @slots[:modal]
+    %Button(type="button" commandfor="dashboard-modal" command="show-modal") Open showcase notice
+    %dialog(id="dashboard-modal")
+      = @slots[:modal]
+      %footer
+        %Button(type="button" commandfor="dashboard-modal" command="close") Close

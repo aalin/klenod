@@ -1,0 +1,81 @@
+article {
+  display: grid;
+  grid-template-columns: minmax(14rem, 0.32fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+aside {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+
+aside h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+aside a {
+  color: var(--color-accent);
+  font-weight: 750;
+  text-decoration: none;
+}
+
+aside a:hover {
+  color: var(--color-accent-hover);
+  text-decoration: underline;
+}
+
+aside hr {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+aside p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+}
+
+aside strong {
+  font-size: 1.4rem;
+}
+
+section {
+  min-width: 0;
+}
+
+button {
+  margin-top: var(--space-4);
+}
+
+dialog {
+  max-width: 30rem;
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+
+dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+dialog::backdrop {
+  background: var(--color-backdrop);
+}
+
+@media (max-width: 720px) {
+  article {
+    grid-template-columns: 1fr;
+  }
+}

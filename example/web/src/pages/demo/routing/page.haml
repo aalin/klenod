@@ -1,0 +1,28 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+  Router = import("virtual:router")
+
+  def initialize(...)
+    super
+    tree = Router::Default.tree
+    demo = tree.children.find { |node| node.segment&.name == "demo" }
+    dashboard = demo&.children&.find { |node| node.segment&.name == "dashboard" }
+    feed = demo&.children&.find { |node| node.segment&.name == "feed" }
+    @slots = dashboard&.slots&.keys || []
+    @intercepts =
+      feed
+        &.children
+        &.select { |node| node.segment.kind.to_s.start_with?("intercept_") }
+        &.map { |node| "#{node.segment.name}:#{node.segment.kind}" } || []
+  end
+
+%article
+  %PageHeader{
+    kicker: "Routing",
+    title: "Route examples",
+    summary: "Dynamic params, catch-all routes, parallel branches, and intercepted routes are all discovered by the router plugin."
+  }
+  %Panel{ title: "Manifest details" }
+    %p= "Parallel slots: #{@slots.sort.join(", ")}"
+    %p= "Intercepted routes: #{@intercepts.sort.join(", ")}"

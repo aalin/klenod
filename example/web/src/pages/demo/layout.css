@@ -1,0 +1,8 @@
+article {
+  display: grid;
+  gap: var(--space-5);
+}
+
+section {
+  min-width: 0;
+}

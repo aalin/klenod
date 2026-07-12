@@ -1,0 +1,10 @@
+:ruby
+  def initialize(title: nil, children: [])
+    @title = title
+    @children = children
+  end
+
+%section
+  = if @title
+    %h2= @title
+  = @children

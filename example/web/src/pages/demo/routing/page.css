@@ -1,0 +1,8 @@
+article {
+  display: grid;
+  gap: var(--space-5);
+}
+
+p {
+  margin: 0 0 var(--space-2);
+}

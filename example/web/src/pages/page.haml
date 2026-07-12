@@ -1,29 +1,21 @@
 :ruby
-  Figure = import("../components/Figure.haml")
-  Metrics = import("../data/metrics.json")
-  Navigation = import("../data/navigation.yaml")
-  Release = import("../data/release.toml")
-  Note = import("../data/note.txt")
-  SmokedFish = import("./smoked-fish.png?width=320,640&format=png")
+  Button = import("../components/Button.haml")
+  PageHeader = import("../components/PageHeader.haml")
+  Panel = import("../components/Panel.haml")
 
-%main{ class: Styles.fetch(:title) }
-  %h1 Hello from Klenod
-  %p Ruby modules loaded through a dependency graph
-  %p= "Current request path: #{request.path}"
-  %Figure{ image: SmokedFish, alt: "Smoked fish", caption: "Image imported through Klenod with generated variants." }
-  %p Served through async-http and reloaded through Klenod watch events.
-  %section.data_panel
-    %h2 Data imports
-    %dl.data_grid
-      %div
-        %dt JSON
-        %dd= "#{Metrics.fetch("modules")} modules loaded"
-      %div
-        %dt YAML
-        %dd= Navigation.fetch("groups").join(" / ")
-      %div
-        %dt TOML
-        %dd= "v#{Release.fetch("version")} #{Release.fetch("channel")}"
-      %div
-        %dt Text
-        %dd= Note.strip
+%article
+  %PageHeader{
+    kicker: "Overview",
+    title: "Build Ruby modules like a modern frontend graph",
+    summary: "Klenod loads Ruby, Haml, CSS, data files, and assets through one dependency graph with development reloading and production bundles."
+  }
+  %section
+    %Panel{ title: "Transform source files" }
+      %p Haml components become Ruby classes, CSS selectors are scoped, and imports become dependency records.
+    %Panel{ title: "Emit browser assets" }
+      %p Images and stylesheets are generated from imports while Ruby modules receive stable runtime values.
+    %Panel{ title: "Bundle for runtime" }
+      %p The collected graph can be serialized with Marshal and loaded later without build plugins.
+  %footer
+    %Button(href="/demo") Explore demos
+    %Button(href="/demo/assets") View assets

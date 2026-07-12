@@ -1,0 +1,17 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+
+%article
+  %PageHeader{
+    kicker: "Demos",
+    title: "Explore Klenod features in small routed examples",
+    summary: "These pages keep the examples focused: data file loading, dynamic routes, catch-all params, intercepted routes, and composed layouts."
+  }
+  %section
+    %Panel{ title: "Data imports" }
+      %p Import JSON, YAML, TOML, and text from a routed Haml page.
+    %Panel{ title: "Routing" }
+      %p Inspect dynamic params, catch-all segments, route groups, parallel slots, and intercepted routes.
+    %Panel{ title: "Runtime HTTP" }
+      %p Forms, encrypted sessions, redirects, and CSRF live in the example framework.

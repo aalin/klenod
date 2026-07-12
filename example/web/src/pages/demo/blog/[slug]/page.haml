@@ -1,0 +1,10 @@
+:ruby
+  def initialize(...)
+    super
+    @slug = request.params.fetch(:slug)
+  end
+
+%article
+  %h1= "Blog post: #{@slug}"
+  %p Rendered from a dynamic route segment.
+  %p Ruby modules loaded through a dependency graph

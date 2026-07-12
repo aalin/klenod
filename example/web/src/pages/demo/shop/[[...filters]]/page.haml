@@ -1,0 +1,11 @@
+:ruby
+  def initialize(...)
+    @filters = request.params.fetch(:filters)
+  end
+
+%article
+  %h1 Shop optional catch-all
+  = if @filters.empty?
+    %p No filters selected
+  = else
+    %p= "Filters: #{@filters.join(", ")}"

@@ -1,0 +1,13 @@
+:ruby
+  def initialize(kicker: nil, title:, summary: nil, children: nil)
+    @kicker = kicker
+    @title = title
+    @summary = summary
+  end
+
+%header
+  = if @kicker
+    %p= @kicker
+  %h1= @title
+  = if @summary
+    %p= @summary

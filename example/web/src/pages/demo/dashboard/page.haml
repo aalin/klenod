@@ -1,0 +1,25 @@
+:ruby
+  DataTable = import("/components/DataTable.haml")
+  MetricCard = import("/components/MetricCard.haml")
+  PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+
+%article
+  %PageHeader{
+    kicker: "Composed routes",
+    title: "Dashboard showcase",
+    summary: "This route combines a page, dashboard layout, parallel sidebar slot, modal slot, and shared components."
+  }
+  %section
+    %MetricCard{ label: "Loaded modules", value: "48", summary: "Collected lazily and evaluated on request." }
+    %MetricCard{ label: "Asset variants", value: "12", summary: "Generated through image imports and CSS assets." }
+    %MetricCard{ label: "Route slots", value: "2", summary: "Sidebar and modal branches render beside the page." }
+  %Panel{ title: "Runtime queue" }
+    %DataTable{
+      columns: ["Feature", "Module", "State"],
+      rows: [
+        ["Haml transform", "pages/demo/dashboard/page.haml", "Rendered"],
+        ["Parallel route", "pages/demo/dashboard/@sidebar/page.haml", "Mounted"],
+        ["Intercept modal", "pages/demo/dashboard/@modal/page.haml", "Available"]
+      ]
+    }
