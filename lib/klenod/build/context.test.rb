@@ -359,6 +359,41 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_assets_for_module_accepts_multiple_roots_and_sorts_by_graph_order
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/components")
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/root.css", ":root { color: black; }\n")
+      File.write("#{dir}/styles/layout.css", "@import \"./root.css\";\nbody { margin: 0; }\n")
+      File.write("#{dir}/styles/page.css", "@import \"./root.css\";\nmain { display: block; }\n")
+      File.write("#{dir}/styles/card.css", ".card { display: grid; }\n")
+      File.write("#{dir}/styles/extra.css", ".extra { display: none; }\n")
+      File.write("#{dir}/components/card.rb", "Styles = import(\"../styles/card.css\")\n")
+      File.write("#{dir}/layout.rb", "Styles = import(\"styles/layout.css\")\n")
+      File.write(
+        "#{dir}/page.rb",
+        <<~RUBY
+          Styles = import("styles/page.css")
+          Card = import("components/card")
+        RUBY
+      )
+      File.write("#{dir}/extra.rb", "Styles = import(\"styles/extra.css\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      layout = context.collect("layout")
+      page = context.collect("page")
+      context.collect("extra")
+
+      assets = context.assets_for_module([layout, page], type: :css)
+
+      assert_equal(
+        ["styles/root.css", "styles/layout.css", "styles/page.css", "styles/card.css"],
+        assets.map(&:logical_name)
+      )
+      assert_equal(["styles/layout.css", "styles/page.css"], context.assets_for_module(["styles/layout.css", "styles/page.css"], type: :css, recursive: false).map(&:logical_name))
+    end
+  end
+
   def test_loads_sibling_dependencies_with_async
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/deps")

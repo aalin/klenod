@@ -274,6 +274,22 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
   end
 
   def test_bundle_assets_for_module_returns_reachable_filtered_assets
+    root_css_asset =
+      Klenod::Runtime::AssetSpec.new(
+        "styles/root.css",
+        "root123",
+        "/assets/root.root123.css",
+        "text/css",
+        {type: :css}
+      )
+    layout_css_asset =
+      Klenod::Runtime::AssetSpec.new(
+        "styles/layout.css",
+        "layout123",
+        "/assets/layout.layout123.css",
+        "text/css",
+        {type: :css}
+      )
     entry_css_asset =
       Klenod::Runtime::AssetSpec.new(
         "entry.rb",
@@ -302,6 +318,26 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
       Klenod::Runtime::Bundle.new(
         {"entry" => "entry.rb"},
         {
+          "styles/root.css" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "styles/root.css",
+              "styles/root.css",
+              "",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("styles/root.css")
+            ),
+          "styles/layout.css" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "styles/layout.css",
+              "styles/layout.css",
+              "",
+              {"root" => Klenod::Runtime::ImportSpec.new("styles/root.css", nil, true)},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("styles/layout.css")
+            ),
           "entry.rb" =>
             Klenod::Runtime::ModuleSpec.new(
               "entry.rb",
@@ -334,6 +370,8 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
             )
         },
         {
+          root_css_asset.output_path => root_css_asset,
+          layout_css_asset.output_path => layout_css_asset,
           entry_css_asset.output_path => entry_css_asset,
           css_asset.output_path => css_asset,
           image_asset.output_path => image_asset
@@ -344,5 +382,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_equal([entry_css_asset, css_asset], bundle.assets_for_module("entry.rb", content_type: "text/css"))
     assert_equal([entry_css_asset], bundle.assets_for_module("entry.rb", type: :css, recursive: false))
     assert_equal([], bundle.assets_for_module("entry.rb", type: :image))
+    assert_equal([root_css_asset, layout_css_asset, entry_css_asset, css_asset], bundle.assets_for_module(["styles/layout.css", "entry.rb"], type: :css))
+    assert_equal([layout_css_asset, entry_css_asset], bundle.assets_for_module(["styles/layout.css", "entry.rb"], type: :css, recursive: false))
   end
 end

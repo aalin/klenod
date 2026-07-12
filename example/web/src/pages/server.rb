@@ -25,7 +25,7 @@ def self.call(raw_request, context)
           .render
       end
     end
-  css_assets = context.assets_for_module(__FILE__, type: :css)
+  css_assets = context.assets_for_module(css_module_ids_for(match), type: :css)
 
   commit_session(
     Example::Response.html(
@@ -97,6 +97,30 @@ def self.render_slots(match, layout, request)
             .render
         end
       ]
+    ]
+  end
+end
+
+def self.css_module_ids_for(match)
+  [
+    *match.route.layout_module_ids,
+    match.route.module_id,
+    *slot_css_module_ids_for(match)
+  ].compact.uniq
+end
+
+def self.slot_css_module_ids_for(match)
+  rendered_layout_ids = match.route.layout_module_ids
+
+  match
+    .slots
+    .sort_by { |name, _slot_match| name.to_s }
+    .flat_map do |_name, slot_match|
+    next [] unless rendered_layout_ids.include?(slot_match.layout_module_id)
+
+    [
+      *slot_match.route.layout_module_ids,
+      slot_match.route.module_id
     ]
   end
 end

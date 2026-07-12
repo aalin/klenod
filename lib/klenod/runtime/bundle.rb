@@ -78,6 +78,7 @@ module Klenod
         module_ids_for_assets(module_ref, recursive: recursive)
           .flat_map { |module_id| assets_for(module_id) }
           .select { |asset| asset_matches?(asset, type: type, content_type: content_type) }
+          .uniq(&:output_path)
       end
 
       def each_asset(&block)
@@ -148,9 +149,31 @@ module Klenod
       end
 
       def module_ids_for_assets(module_ref, recursive:)
-        return reachable_module_ids(module_ref) if recursive
+        return Array(module_ref).map { |ref| module_id_for(ref) }.uniq unless recursive
 
-        [module_id_for(module_ref)]
+        seen = []
+        Array(module_ref).flat_map do |ref|
+          ordered_module_ids_for_assets(module_id_for(ref), seen)
+        end
+      end
+
+      def ordered_module_ids_for_assets(module_id, seen)
+        return [] if seen.include?(module_id)
+        return [] unless @modules.key?(module_id)
+
+        seen << module_id
+        dependency_ids =
+          @modules
+            .fetch(module_id)
+            .imports
+            .values
+            .map { |import_spec| import_spec.is_a?(ImportSpec) ? import_spec.target_id : import_spec }
+
+        if File.extname(module_id) == ".css"
+          dependency_ids.flat_map { |dependency_id| ordered_module_ids_for_assets(dependency_id, seen) } + [module_id]
+        else
+          [module_id] + dependency_ids.flat_map { |dependency_id| ordered_module_ids_for_assets(dependency_id, seen) }
+        end
       end
 
       def asset_matches?(asset, type:, content_type:)
