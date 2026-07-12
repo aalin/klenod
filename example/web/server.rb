@@ -53,6 +53,39 @@ def strip_ansi(value)
   value.gsub(/\e\[[0-9;]*m/, "")
 end
 
+def duration_ms(start_time)
+  format("%.4fms", (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) * 1000)
+end
+
+def color_status(status)
+  color =
+    case status
+    when 200..299 then 32
+    when 300..399 then 36
+    when 400..499 then 33
+    else 31
+    end
+
+  "\e[#{color}m#{status}\e[0m"
+end
+
+def asset_request?(path)
+  path.start_with?("/assets/")
+end
+
+def log_request(request, status, start_time)
+  method = request&.method.to_s.empty? ? "GET" : request.method.to_s.upcase
+  path = request&.path.to_s.empty? ? "/" : request.path
+  line = "#{method} #{path} -> #{color_status(status)} (#{duration_ms(start_time)})"
+  line = "\e[2m#{line}\e[0m" if asset_request?(path)
+
+  puts line
+end
+
+def protocol_response(status, headers, body)
+  Protocol::HTTP::Response[status, headers, body]
+end
+
 puts "Serving http://localhost:#{port}"
 puts "Watching #{source_dir}"
 puts "Mirroring assets to #{assets_dir}" if assets_dir
@@ -64,20 +97,20 @@ begin
   Async do
     server =
       Async::HTTP::Server.for(endpoint) do |request|
+        start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
         if (asset_response = asset_app.response_for(request.path))
-          asset_response.protocol_response
+          status, headers, body = asset_response.status, asset_response.headers, [asset_response.body]
         else
           status, headers, body = entry.call(request, context)
-          Protocol::HTTP::Response[status, headers, body]
         end
+        log_request(request, status, start_time)
+        protocol_response(status, headers, body)
       rescue => e
         formatted = format_exception(e, context)
         warn formatted
-        Protocol::HTTP::Response[
-          500,
-          {"content-type" => "text/plain"},
-          [strip_ansi(formatted), "\n"]
-        ]
+        log_request(request, 500, start_time) if start_time
+        protocol_response(500, {"content-type" => "text/plain"}, [strip_ansi(formatted), "\n"])
       end
 
     server.run.wait
