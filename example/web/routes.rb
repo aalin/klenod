@@ -87,15 +87,52 @@ def print_route_tree(router, config)
 
     puts
     puts "#{color(:path, path)} #{color(:type, "(#{route_type(primary)})")}"
-    primary.layout_module_ids.each_with_index do |layout_module_id, index|
-      puts "#{branch(index, primary.layout_module_ids.length + 1)}#{color(:layout, "layout")} #{color(:source, layout_module_id)}"
-    end
-    puts "#{branch(primary.layout_module_ids.length, primary.layout_module_ids.length + 1)}#{color(:method, route_methods_for_display(primary, config).join(","))} #{color(:type, route_type(primary))} #{color(:source, primary.module_id)}"
+    print_layout_tree(primary, slot_routes, config)
+  end
+end
 
-    slot_routes.each do |slot_route|
-      puts "  #{color(:slot, "slot @#{slot_name(slot_route)}")} -> #{color(:layout, slot_route.slot_layout_module_id)}"
-      puts "    #{color(:method, "GET")} #{color(:type, "page")} #{color(:source, slot_route.module_id)}"
-    end
+def print_layout_tree(primary, slot_routes, config)
+  layout_ids = primary.layout_module_ids
+  leaf_routes =
+    [
+      route_leaf(primary, config),
+      *slot_routes.map { |slot_route| slot_leaf(slot_route) }
+    ]
+  return print_leaf_group(leaf_routes, "") if layout_ids.empty?
+
+  layout_ids.each_with_index do |layout_module_id, index|
+    prefix = "  " * index
+    branch = index.zero? ? "└─ " : "  └─ "
+    puts "#{prefix}#{branch}#{color(:layout, "layout")} #{color(:source, layout_module_id)}"
+    next unless index == layout_ids.length - 1
+
+    print_leaf_group(leaf_routes_for_layout(layout_module_id, leaf_routes), "#{prefix}    ")
+  end
+end
+
+def route_leaf(route, config)
+  {
+    layout_id: route.layout_module_ids.last,
+    label: "#{color(:method, route_methods_for_display(route, config).join(","))} #{color(:type, route_type(route))}",
+    source: route.module_id
+  }
+end
+
+def slot_leaf(route)
+  {
+    layout_id: route.slot_layout_module_id,
+    label: color(:slot, "slot @#{slot_name(route)}"),
+    source: route.module_id
+  }
+end
+
+def leaf_routes_for_layout(layout_module_id, leaf_routes)
+  leaf_routes.select { |leaf| leaf.fetch(:layout_id) == layout_module_id }
+end
+
+def print_leaf_group(leaf_routes, prefix)
+  leaf_routes.each do |leaf|
+    puts "#{prefix}#{leaf.fetch(:label)} #{color(:source, leaf.fetch(:source))}"
   end
 end
 
@@ -105,14 +142,6 @@ def route_methods_for_display(route, config)
   source_path = config.context.graph.absolute_path(Klenod::Build::ModuleId.new(route.module_id, nil)).to_s
   methods = route_methods(route, source_path)
   methods.empty? ? ["-"] : methods
-end
-
-def branch(index, count)
-  if index == count - 1
-    "└─ "
-  else
-    "├─ "
-  end
 end
 
 def slot_name(route)
