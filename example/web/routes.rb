@@ -4,6 +4,7 @@ require_relative "../../lib/klenod"
 
 CONFIG_PATH = File.expand_path("klenod.config.rb", __dir__)
 HTTP_METHODS = %w[GET POST PUT PATCH DELETE OPTIONS HEAD].freeze
+TREE_INDENT = "   "
 COLORS = {
   reset: "\e[0m",
   heading: "\e[1;34m",
@@ -115,13 +116,15 @@ def print_layout_tree(primary, slot_routes, config)
   return print_leaf_group(leaf_routes, "") if layout_ids.empty?
 
   layout_ids.each_with_index do |layout_module_id, index|
-    prefix = "  " * index
-    branch = index.zero? ? "└─ " : "  └─ "
-    puts "#{prefix}#{branch}#{color(:layout, "layout")} #{color(:source, layout_module_id)}"
+    puts "#{tree_prefix(index)}└─ #{color(:layout, "layout")} #{color(:source, layout_module_id)}"
     next unless index == layout_ids.length - 1
 
-    print_leaf_group(leaf_routes_for_layout(layout_module_id, leaf_routes), "#{prefix}    ")
+    print_leaf_group(leaf_routes_for_layout(layout_module_id, leaf_routes), tree_prefix(index + 1))
   end
+end
+
+def tree_prefix(depth)
+  TREE_INDENT * depth
 end
 
 def route_leaf(route, config)

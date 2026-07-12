@@ -151,6 +151,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(stdout, "slot @sidebar pages/demo/dashboard/@sidebar/page.haml")
     assert_includes(stdout, "POST /demo/forms/submit (handler)")
     assert_includes(stdout, "handler pages/demo/forms/submit/route.rb:3")
+    assert_includes(stdout, "└─ layout pages/layout.haml\n   page pages/feed/(.)photo/page.haml")
+    assert_includes(stdout, "└─ layout pages/layout.haml\n   └─ layout pages/demo/layout.haml\n      └─ layout pages/demo/dashboard/layout.haml\n         page pages/demo/dashboard/settings/page.haml")
   end
 
   def test_example_app_renders_router_tree_metadata
