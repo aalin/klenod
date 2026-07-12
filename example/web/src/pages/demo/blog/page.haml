@@ -1,6 +1,5 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
-  Panel = import("/components/Panel.haml")
   Posts = [
     import("./posts/graph.toml"),
     import("./posts/assets.toml"),
@@ -15,8 +14,9 @@
   }
   %section
     = Posts.map do |post|
-      %Panel{ title: post.fetch("title") }
-        %p= post.fetch("summary")
-        %p
+      %article
+        %header
+          %h2= post.fetch("title")
           %time{ datetime: post.fetch("date") }= post.fetch("date")
+        %p= post.fetch("summary")
         %a{ href: "/demo/blog/#{post.fetch('slug')}" } Read post

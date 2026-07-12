@@ -65,7 +65,7 @@ nav a:hover {
 main {
   width: min(1120px, calc(100% - 2rem));
   margin: 0 auto;
-  padding: var(--space-7) 0;
+  padding: var(--space-6) 0;
 }
 
 @media (max-width: 760px) {
