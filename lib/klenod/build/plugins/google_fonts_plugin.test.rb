@@ -121,7 +121,73 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
     end
   end
 
+  def test_default_fetcher_downloads_with_async_http_internet
+    response = FakeResponse.new(200, "font bytes")
+    internet = FakeInternet.new(response)
+    fetcher = Klenod::Build::Plugins::GoogleFontsPlugin::DefaultFetcher.new(internet: internet)
+
+    assert_equal("font bytes", fetcher.call(FONT_URL))
+    assert_equal([FONT_URL], internet.urls)
+    assert(response.closed?)
+  end
+
+  def test_default_fetcher_rejects_failed_http_responses
+    response = FakeResponse.new(404, "not found")
+    internet = FakeInternet.new(response)
+    fetcher = Klenod::Build::Plugins::GoogleFontsPlugin::DefaultFetcher.new(internet: internet)
+
+    error =
+      assert_raises(Klenod::Build::Plugins::GoogleFontsPlugin::Error) do
+        fetcher.call(FONT_URL)
+      end
+
+    assert_equal("HTTP 404", error.message)
+    assert(response.closed?)
+  end
+
   private
+
+  class FakeInternet
+    attr_reader :urls
+
+    def initialize(response)
+      @response = response
+      @urls = []
+    end
+
+    def get(url)
+      @urls << url
+      yield @response
+    ensure
+      @response.close
+    end
+  end
+
+  class FakeResponse
+    attr_reader :status
+
+    def initialize(status, body)
+      @status = status
+      @body = body
+      @closed = false
+    end
+
+    def success?
+      status >= 200 && status < 300
+    end
+
+    def read
+      @body
+    end
+
+    def close
+      @closed = true
+    end
+
+    def closed?
+      @closed
+    end
+  end
 
   def context_with(dir, plugin)
     Klenod::Build::Context.new(

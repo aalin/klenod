@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 require "digest"
-require "net/http"
+require "async"
+require "async/http/internet"
 require "uri"
 
 require_relative "../asset"
@@ -22,6 +23,22 @@ module Klenod
 
         Error = Class.new(StandardError)
         FontFace = Data.define(:family, :style, :weight)
+
+        class DefaultFetcher
+          def initialize(internet: Async::HTTP::Internet.new)
+            @internet = internet
+          end
+
+          def call(url)
+            Sync do
+              @internet.get(url) do |response|
+                raise Error, "HTTP #{response.status}" unless response.success?
+
+                response.read
+              end
+            end
+          end
+        end
 
         class FontFaceParser
           FONT_FACE_PATTERN = /@font-face\s*\{(?<body>.*?)\}/m
@@ -63,7 +80,7 @@ module Klenod
         end
 
         def initialize(fetcher: nil)
-          @fetcher = fetcher || method(:fetch_url)
+          @fetcher = fetcher || DefaultFetcher.new
           @assets_by_module_id = {}
         end
 
@@ -117,8 +134,6 @@ module Klenod
 
         private
 
-        attr_reader :fetcher
-
         def google_fonts_url?(value)
           uri = URI.parse(value)
           uri.is_a?(URI::HTTPS) &&
@@ -137,20 +152,9 @@ module Klenod
         end
 
         def fetch(url)
-          fetcher.call(url).b
+          @fetcher.call(url).b
         rescue => error
           raise Error, "Could not download Google Fonts asset #{url.inspect}: #{error.message}"
-        end
-
-        def fetch_url(url)
-          uri = URI.parse(url)
-          response = Net::HTTP.get_response(uri)
-
-          unless response.is_a?(Net::HTTPSuccess)
-            raise Error, "HTTP #{response.code}"
-          end
-
-          response.body
         end
 
         def css_asset(module_id, url, css)
