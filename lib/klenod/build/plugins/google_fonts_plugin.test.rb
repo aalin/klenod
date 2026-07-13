@@ -36,7 +36,9 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       assert_includes(google_css_asset.bytes, font_asset.output_path)
       refute_includes(google_css_asset.bytes, "fonts.gstatic.com")
       assert_equal("font/woff2", font_asset.content_type)
+      refute(font_asset.ready?)
       assert_equal("font bytes", font_asset.bytes)
+      assert(font_asset.ready?)
     end
   end
 
@@ -60,6 +62,36 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
 
       assert_equal(2, font_assets.length)
       assert_equal([FONT_URL, OTHER_FONT_URL].sort, font_assets.map { |asset| asset.metadata[:source_url] }.sort)
+    end
+  end
+
+  def test_google_font_files_are_downloaded_lazily
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
+      fetched = []
+      plugin =
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
+          fetcher: lambda do |url|
+            fetched << url
+            case url
+            when GOOGLE_CSS_URL
+              %(@font-face { src: url("#{FONT_URL}") format("woff2"); })
+            when FONT_URL
+              "font bytes"
+            else
+              raise KeyError, url
+            end
+          end
+        )
+
+      context = context_with(dir, plugin)
+      context.evaluate("styles/home.css")
+      font_asset = context.assets.values.find { |asset| asset.metadata[:google_fonts] && asset.metadata[:type] == :font }
+
+      assert_equal([GOOGLE_CSS_URL], fetched)
+      assert_equal("font bytes", font_asset.bytes)
+      assert_equal([GOOGLE_CSS_URL, FONT_URL], fetched)
     end
   end
 

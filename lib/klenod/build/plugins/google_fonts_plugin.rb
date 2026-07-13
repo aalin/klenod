@@ -41,7 +41,7 @@ module Klenod
           ResolvedDependency.new(dependency, module_id, {virtual: true})
         end
 
-        def load(module_id, _context)
+        def load(module_id, context)
           return nil unless google_fonts_module?(module_id)
 
           url = google_fonts_url_for(module_id)
@@ -51,7 +51,7 @@ module Klenod
             css.gsub(FONT_URL_PATTERN) do
               quote = Regexp.last_match[:quote]
               font_url = Regexp.last_match[:url]
-              asset = font_assets[font_url] ||= font_asset(font_url)
+              asset = font_assets[font_url] ||= font_asset(font_url, context)
 
               %(url(#{quote}#{asset.output_path}#{quote}))
             end
@@ -127,22 +127,23 @@ module Klenod
           )
         end
 
-        def font_asset(url)
-          bytes = fetch(url)
-          hash = Digest::SHA256.hexdigest(bytes)[0, 16]
+        def font_asset(url, context)
+          hash = Digest::SHA256.hexdigest(url)[0, 16]
           uri = URI.parse(url)
           extname = File.extname(uri.path)
           output_path = "/assets/#{font_asset_name(uri)}.#{hash}#{extname}"
 
-          Asset.new(
+          Asset.generated(
             url,
             hash,
             output_path,
             nil,
-            bytes,
             content_type(extname),
-            {type: :font, google_fonts: true, source_url: url}
-          )
+            {type: :font, google_fonts: true, source_url: url},
+            queue: context.asset_generation_queue
+          ) do
+            fetch(url)
+          end
         end
 
         def ruby_module_source(css_asset_path)
