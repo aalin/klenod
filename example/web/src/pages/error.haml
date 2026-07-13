@@ -7,6 +7,15 @@
     @status = status
     @error = error
     @error_details = error_details || error.full_message
+    @backtrace_details, @source_details = split_error_details(@error_details)
+  end
+
+  def split_error_details(details)
+    _, separator, body = details.to_s.partition("\nBacktrace:\n")
+    body = details.to_s if separator.empty?
+    backtrace, _source_separator, sources = body.partition("\nSources:\n")
+
+    [backtrace.strip, sources.strip]
   end
 
 %article
@@ -15,15 +24,22 @@
     title: "Something went wrong",
     summary: "Rendering #{@path} raised #{@error.class}."
   }
-  %section
+  %section.error-details
     %Panel{ title: "Error summary" }
-      %dl
-        %dt Class
-        %dd= @error.class
-        %dt Message
-        %dd= @error.message
-        %dt Path
-        %dd= @path
+      .message-card
+        %span= @error.class
+        %p= @error.message
+      %dl.summary-list
+        %div
+          %dt Status
+          %dd= @status
+        %div
+          %dt Path
+          %dd= @path
     %Panel{ title: "Backtrace" }
-      %pre
-        %code= @error_details
+      %pre.trace-block
+        %code= @backtrace_details
+    = if !@source_details.empty?
+      %Panel{ title: "Source context" }
+        %pre.source-block
+          %code= @source_details
