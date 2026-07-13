@@ -192,7 +192,8 @@ module Klenod
               style: font_face&.style,
               weight: font_face&.weight
             },
-            queue: context.asset_generation_queue
+            queue: context.asset_generation_queue,
+            queue_kind: :io
           ) do
             fetch(url)
           end

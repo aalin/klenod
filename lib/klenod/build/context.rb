@@ -75,7 +75,8 @@ module Klenod
         source_dir:,
         plugins: DEFAULT_PLUGINS,
         mode: :development,
-        asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY
+        asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY,
+        asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY
       )
         @source_dir = source_dir
         @plugins = plugins
@@ -86,7 +87,8 @@ module Klenod
             source_dir: source_dir,
             plugins: plugins,
             mode: mode,
-            asset_generation_concurrency: asset_generation_concurrency
+            asset_generation_concurrency: asset_generation_concurrency,
+            asset_download_concurrency: asset_download_concurrency
           )
       end
 

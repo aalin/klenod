@@ -5,9 +5,9 @@ require "async"
 module Klenod
   module Build
     class Asset
-      attr_reader :logical_name, :content_hash, :output_path, :source_path, :content_type, :metadata, :error
+      attr_reader :logical_name, :content_hash, :output_path, :source_path, :content_type, :metadata, :queue_kind, :error
 
-      def initialize(logical_name, content_hash, output_path, source_path, bytes, content_type, metadata, generator: nil, queue: nil)
+      def initialize(logical_name, content_hash, output_path, source_path, bytes, content_type, metadata, generator: nil, queue: nil, queue_kind: :cpu)
         @logical_name = logical_name
         @content_hash = content_hash
         @output_path = output_path
@@ -17,14 +17,15 @@ module Klenod
         @metadata = metadata
         @generator = generator
         @queue = queue
+        @queue_kind = queue_kind
         @task = nil
         @mutex = Mutex.new
         @state = bytes.nil? ? :pending : :ready
         @error = nil
       end
 
-      def self.generated(logical_name, content_hash, output_path, source_path, content_type, metadata, queue: nil, &generator)
-        new(logical_name, content_hash, output_path, source_path, nil, content_type, metadata, generator: generator, queue: queue)
+      def self.generated(logical_name, content_hash, output_path, source_path, content_type, metadata, queue: nil, queue_kind: :cpu, &generator)
+        new(logical_name, content_hash, output_path, source_path, nil, content_type, metadata, generator: generator, queue: queue, queue_kind: queue_kind)
       end
 
       def bytes
@@ -123,13 +124,13 @@ module Klenod
       end
 
       def queued_generation_task(task)
-        return @queue.run { generate_now } if @queue
+        return @queue.run(kind: queue_kind) { generate_now } if @queue
 
         task.async { generate_now }
       end
 
       def generate_now_or_queued
-        return @queue.run { generate_now } if @queue
+        return @queue.run(kind: queue_kind) { generate_now } if @queue
 
         generate_now
       end

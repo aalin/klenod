@@ -125,6 +125,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal("(max-width: 2px) 100vw, 2px", sizes)
       assert_equal(variant.src, variant_asset.output_path)
       assert_equal("image/png", variant_asset.content_type)
+      assert_equal(:cpu, variant_asset.queue_kind)
       refute(variant_asset.ready?)
       assert_match(/\A.PNG/, variant_asset.bytes)
       assert(variant_asset.ready?)

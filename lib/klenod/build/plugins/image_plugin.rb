@@ -217,7 +217,8 @@ module Klenod
             nil,
             content_type(extname),
             metadata,
-            queue: queue
+            queue: queue,
+            queue_kind: :cpu
           ) do
             generate_variant_bytes(bytes, width, format)
           end

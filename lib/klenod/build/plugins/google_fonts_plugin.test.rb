@@ -43,6 +43,7 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       assert_equal("Source Sans 3", font_asset.metadata[:family])
       assert_equal("normal", font_asset.metadata[:style])
       assert_equal("400", font_asset.metadata[:weight])
+      assert_equal(:io, font_asset.queue_kind)
       refute(font_asset.ready?)
       assert_equal("font bytes", font_asset.bytes)
       assert(font_asset.ready?)

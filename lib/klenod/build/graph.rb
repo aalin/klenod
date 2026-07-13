@@ -38,11 +38,21 @@ module Klenod
       attr_reader :records, :mods, :asset_generation_queue, :mode
       attr_reader :plugins
 
-      def initialize(source_dir:, plugins:, mode: :development, asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY)
+      def initialize(
+        source_dir:,
+        plugins:,
+        mode: :development,
+        asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY,
+        asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY
+      )
         @resolver = Resolver.new(source_dir: source_dir, extensions: resolver_extensions(plugins))
         @plugins = plugins
         @mode = mode
-        @asset_generation_queue = AssetGenerationQueue.new(concurrency: asset_generation_concurrency)
+        @asset_generation_queue =
+          AssetGenerationQueue.new(
+            concurrency: asset_generation_concurrency,
+            download_concurrency: asset_download_concurrency
+          )
         @records = {}
         @mods = {}
         @virtual_sources = {}
