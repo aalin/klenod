@@ -52,6 +52,12 @@
     title: "Images become generated browser assets",
     summary: "Assets are imported through routed Haml pages and emitted with generated variants for responsive image markup."
   }
+
+  %Panel{ title: "CSS url()" }
+    %div.css-frame
+      %div.css-image
+    %p CSS can reference image files with `url("./coffee.jpg")`; the CSS plugin rewrites the URL to the generated asset path.
+
   %section
     = Items.map do |item|
       %Panel
@@ -71,6 +77,3 @@
                   %strong= variant.descriptor
                   %span= "#{variant.width} x #{variant.height} #{variant.format}"
                 %a(href="#{variant.src}" target="_blank")= variant.src
-  %Panel{ title: "CSS url()" }
-    %div.css-image
-    %p CSS can reference image files with `url("./coffee.jpg")`; the CSS plugin rewrites the URL to the generated asset path.
