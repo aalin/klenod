@@ -99,6 +99,36 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_css_importing_ruby_raises_unsupported_file_error
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/dep.rb", "VALUE = 1\n")
+      File.write("#{dir}/styles/home.css", "@import \"./dep.rb\";\n.title { color: red; }\n")
+
+      error = assert_raises(Klenod::Build::UnsupportedFileError) do
+        Klenod::Build::Context.new(source_dir: dir).evaluate("styles/home.css")
+      end
+
+      assert_match(/CSS @import/, error.message)
+      assert_match(/styles\/dep.rb/, error.message)
+    end
+  end
+
+  def test_css_importing_haml_raises_unsupported_file_error
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/dep.haml", "%p Hello\n")
+      File.write("#{dir}/styles/home.css", "@import \"./dep.haml\";\n.title { color: red; }\n")
+
+      error = assert_raises(Klenod::Build::UnsupportedFileError) do
+        Klenod::Build::Context.new(source_dir: dir).evaluate("styles/home.css")
+      end
+
+      assert_match(/CSS @import/, error.message)
+      assert_match(/styles\/dep.haml/, error.message)
+    end
+  end
+
   def test_css_importing_css_refinalizes_parent_when_child_asset_changes
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")

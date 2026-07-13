@@ -92,8 +92,23 @@ module Klenod
           css_result.replace_dependencies do |css_dependency|
             resolved_dependency = dependencies_by_placeholder.fetch(css_dependency.placeholder)
             record = dependency_records.fetch(resolved_dependency.dependency.id)
-            record.assets.first&.output_path || record.id.to_s
+            asset_path_for_dependency(resolved_dependency, record)
           end
+        end
+
+        def asset_path_for_dependency(resolved_dependency, record)
+          case resolved_dependency.dependency.kind
+          when :css_import
+            unless record.id.extname == ".css"
+              raise UnsupportedFileError, "CSS @import #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to unsupported #{record.id.extname} module #{record.id}"
+            end
+          when :asset_url
+            unless record.assets.first
+              raise UnsupportedFileError, "CSS url() #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to module #{record.id}, which does not emit an asset"
+            end
+          end
+
+          record.assets.first&.output_path || record.id.to_s
         end
 
         def ruby_module_source(classes, asset_path)
