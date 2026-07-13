@@ -2,27 +2,51 @@
   Figure = import("/components/Figure.haml")
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
-  Coffee = import("./coffee.jpg?width=360,720&format=jpeg")
   SailingBoat = import("./sailing-boat.jpg?width=360,720&format=jpeg")
   Vegetables = import("./vegetables.jpg?width=360,720&format=jpeg")
 
   Items = [
     {
-      image: Coffee,
+      name: "coffee.jpg",
+      image: import("./coffee.jpg"),
       alt: "Coffee cup on a table",
-      caption: "Coffee imported from a routed Haml page."
+      caption: "Default import"
     },
     {
+      name: "coffee.jpg",
+      image: import("./coffee.jpg?width=240,360,720,960"),
+      alt: "Coffee cup on a table",
+      caption: "Imported with configured widths"
+    },
+    {
+      name: "coffee.jpg",
+      image: import("./coffee.jpg?width=360,720&format=webp"),
+      alt: "Coffee cup on a table",
+      caption: "Imported as webp."
+    },
+    {
+      name: "sailing-boat.jpg",
       image: SailingBoat,
       alt: "Sailing boat on open water",
       caption: "A sailing image with generated JPEG widths."
     },
     {
+      name: "vegetables.jpg",
       image: Vegetables,
       alt: "Vegetables arranged for cooking",
       caption: "Vegetables rendered through the shared Figure component."
     }
   ]
+
+  def image_rows(image)
+    [
+      ["src", image.src],
+      ["width", image.width],
+      ["height", image.height],
+      ["sizes", image.sizes],
+      ["srcset", image.srcset]
+    ]
+  end
 
 %article
   %PageHeader{
@@ -33,4 +57,19 @@
   %section
     = Items.map do |item|
       %Panel
-        %Figure{ image: item.fetch(:image), alt: item.fetch(:alt), caption: item.fetch(:caption) }
+        %Figure{ image: item[:image], alt: item[:alt], caption: item[:caption] }
+        %div.metadata
+          %h2= item[:name]
+          %dl
+            = image_rows(item[:image]).map do |label, value|
+              %dt= label
+              %dd
+                %code= value
+          %h3 Variants
+          %ol
+            = item[:image].variants.map do |variant|
+              %li
+                %span.variant-label
+                  %strong= variant.descriptor
+                  %span= "#{variant.width} x #{variant.height} #{variant.format}"
+                %a(href="#{variant.src}" target="_blank")= variant.src
