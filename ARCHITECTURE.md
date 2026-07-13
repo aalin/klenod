@@ -125,7 +125,9 @@ import("images/hero.png?width=640")
 
 Generated variants should dedupe overlapping work.
 
-Build assets can hold or generate bytes. Runtime asset specs keep metadata only. Development servers/frameworks can serve assets from `context.asset(path).bytes` or `context.asset_bytes(path, assets_dir:)`.
+Build assets can hold or generate bytes. Generated assets use `queue_kind` to classify work. `:cpu` is the default and is used explicitly by image variants. `:io` is used by downloaded assets such as Google font files. `AssetGenerationQueue` keeps separate CPU and IO semaphores so IO-bound downloads can overlap with CPU-bound image resizing without allowing unbounded work.
+
+Runtime asset specs keep metadata only. Development servers/frameworks can serve assets from `context.asset(path).bytes` or `context.asset_bytes(path, assets_dir:)`.
 
 `assets_for_module(...)` and `asset_references_for_module(...)` accept a module id or an array of route roots. This allows route-scoped CSS inclusion instead of including every graph stylesheet on every page.
 
@@ -148,6 +150,8 @@ Scoped CSS maps:
 The Haml transformer can automatically apply scoped tag classes and explicit Haml classes. Class joining should be centralized in a `clsx`-style helper.
 
 CSS order is derived from route-scoped graph traversal. Root/layout CSS should come before page and component CSS.
+
+External CSS-like imports can be handled by adjacent plugins instead of overloading the CSS plugin. `GoogleFontsPlugin` resolves Google Fonts CSS URLs, downloads the CSS during collection to discover font files, rewrites font URLs to local asset paths, and emits font files as lazy IO-generated assets. The default fetcher uses one `Async::HTTP::Internet` instance so multiple font downloads can reuse HTTP clients while remaining bounded by the IO queue.
 
 ## Haml
 
@@ -175,6 +179,7 @@ Haml semantics:
 - Silent blocks must evaluate to `nil`.
 - Printed blocks such as `= if ...` should render their body.
 - Object references like `%div[@user, :greeting]` are treated as a key-style prop rather than HTML id/class generation.
+- Whitespace handling should use Haml parser node flags such as `nuke_inner_whitespace` and `nuke_outer_whitespace`; avoid source-line based marker detection in later transform phases.
 
 The factory API currently expects:
 
@@ -196,6 +201,10 @@ Supported route files:
 - `route.rb`
 - `layout.rb`
 - `layout.haml`
+- `error.rb`
+- `error.haml`
+- `not-found.rb`
+- `not-found.haml`
 
 Supported segment forms:
 
@@ -218,6 +227,8 @@ Generated router matches expose:
 - `match.route`
 
 A directory can contain both a page and `route.rb`. The router exposes both; the framework decides which one to use for a request.
+
+When no page route matches, the router resolves the closest `not-found` module for the URL path. When a page render raises, the example framework renders the closest `error` module for the failed route. Error and not-found pages use layouts closest to the fallback module being rendered, not necessarily layouts closest to the originally requested page.
 
 The example server follows SvelteKit-style dispatch:
 
@@ -280,6 +291,8 @@ It demonstrates:
 - asset serving from the build context
 
 Framework-specific concerns should usually stay there or in a separate integration layer, not in `Klenod::Build` or `Klenod::Runtime`.
+
+The example framework also owns request error policy: it maps explicit `NotFoundError` failures to 404 rendering, maps other render exceptions to 500 rendering, and logs formatted backtraces/source context to the console. These behaviors document one integration style rather than core router policy.
 
 ## Open Design Areas
 
