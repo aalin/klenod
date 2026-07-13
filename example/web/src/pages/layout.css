@@ -5,7 +5,7 @@ body {
   margin: 0;
   background: var(--color-page);
   color: var(--color-ink);
-  font-family: system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: var(--font-size-body);
   line-height: 1.55;
 }

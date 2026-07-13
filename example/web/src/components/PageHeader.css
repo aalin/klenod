@@ -15,7 +15,9 @@ p:first-child {
 
 h1 {
   margin: 0;
+  font-family: var(--font-serif);
   font-size: var(--font-size-h1);
+  font-weight: 760;
   line-height: 1;
 }
 

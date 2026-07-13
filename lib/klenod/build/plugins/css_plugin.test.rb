@@ -81,6 +81,28 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_css_external_imports_are_preserved
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      font_url = "https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@200..900&display=swap"
+      File.write(
+        "#{dir}/styles/home.css",
+        <<~CSS
+          @import url("#{font_url}");
+
+          .title { font-family: "Source Sans 3", sans-serif; }
+        CSS
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.evaluate("styles/home.css")
+      css = record.assets.first.bytes
+
+      assert_includes(css, font_url)
+      assert_equal(["styles/home.css"], context.graph.records.keys.map(&:to_s))
+    end
+  end
+
   def test_css_importing_css_emits_both_assets_in_bundle_manifest
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")

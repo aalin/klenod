@@ -2,6 +2,7 @@
 
 require "digest"
 require "mayu/css"
+require "uri"
 
 require_relative "../asset"
 require_relative "../dependency"
@@ -24,6 +25,8 @@ module Klenod
           result = Mayu::CSS.transform(module_id.path, code, minify: false)
           dependencies =
             result.dependencies.each_with_index.map do |dependency, index|
+              next if external_url?(dependency.url)
+
               Dependency
                 .create(
                   specifier: dependency.url,
@@ -33,7 +36,7 @@ module Klenod
                   metadata: {placeholder: dependency.placeholder}
                 )
                 .with(id: "#{module_id}:dependency:#{index}")
-            end
+            end.compact
 
           TransformResult.new(
             ruby_module_source(css_selectors(result), nil),
@@ -43,7 +46,8 @@ module Klenod
             [],
             {
               css_result: result,
-              css_classes: css_selectors(result)
+              css_classes: css_selectors(result),
+              external_dependencies: external_dependencies(result.dependencies)
             }
           )
         end
@@ -88,8 +92,11 @@ module Klenod
             resolved_dependencies.to_h do |resolved_dependency|
               [resolved_dependency.dependency.metadata.fetch(:placeholder), resolved_dependency]
             end
+          external_dependencies = external_dependencies(css_result.dependencies)
 
           css_result.replace_dependencies do |css_dependency|
+            next external_dependencies.fetch(css_dependency.placeholder) if external_dependencies.key?(css_dependency.placeholder)
+
             resolved_dependency = dependencies_by_placeholder.fetch(css_dependency.placeholder)
             record = dependency_records.fetch(resolved_dependency.dependency.id)
             asset_path_for_dependency(resolved_dependency, record)
@@ -109,6 +116,19 @@ module Klenod
           end
 
           record.assets.first&.output_path || record.id.to_s
+        end
+
+        def external_dependencies(dependencies)
+          dependencies
+            .select { |dependency| external_url?(dependency.url) }
+            .to_h { |dependency| [dependency.placeholder, dependency.url] }
+        end
+
+        def external_url?(value)
+          uri = URI.parse(value)
+          uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
+        rescue URI::InvalidURIError
+          false
         end
 
         def ruby_module_source(classes, asset_path)

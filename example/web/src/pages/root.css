@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&family=Source+Sans+3:ital,wght@0,200..900;1,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap");
+
 :root {
   --color-ink: oklch(22% 0.024 252);
   --color-muted: oklch(48% 0.026 252);
@@ -21,6 +23,9 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
   --space-7: 3rem;
+  --font-sans: "Source Sans 3", system-ui, sans-serif;
+  --font-serif: "Source Serif 4", Georgia, serif;
+  --font-mono: "Source Code Pro", ui-monospace, monospace;
   --font-size-small: 0.86rem;
   --font-size-body: 1rem;
   --font-size-h1: clamp(2rem, 3vw, 3.15rem);
