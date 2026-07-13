@@ -19,7 +19,9 @@ plugins [
     factory: "Example::H"
   ),
   Klenod::Build::Plugins::CssPlugin.new,
-  Klenod::Build::Plugins::ImagePlugin.new,
+  Klenod::Build::Plugins::ImagePlugin.new(
+    widths: [320, 640, 960],
+  ),
   Klenod::Build::Plugins::JsonPlugin.new,
   Klenod::Build::Plugins::YamlPlugin.new,
   Klenod::Build::Plugins::TomlPlugin.new,
