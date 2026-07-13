@@ -59,9 +59,18 @@ module Klenod
           end
         end
 
-        RouteManifest = Data.define(:routes) do
+        SpecialView = Data.define(:kind, :path, :view_module_id, :segments, :layout_module_ids, :status) do
+          def module_id
+            view_module_id
+          end
+        end
+
+        RouteManifest = Data.define(:routes, :special_views) do
           def entrypoints
-            routes.flat_map { |route| [route.page_module_id, route.handler_module_id] }.compact.map(&:to_s)
+            [
+              *routes.flat_map { |route| [route.page_module_id, route.handler_module_id] },
+              *special_views.map(&:view_module_id)
+            ].compact.map(&:to_s)
           end
 
           def [](path)
@@ -145,7 +154,8 @@ module Klenod
         end
 
         def discover(source_dir:)
-          RouteManifest.new(routes(source_dir: Pathname.new(source_dir).expand_path))
+          root = Pathname.new(source_dir).expand_path
+          RouteManifest.new(routes(source_dir: root), special_views(source_dir: root))
         end
 
         private
@@ -167,11 +177,59 @@ module Klenod
           ].select(&:file?)
         end
 
+        def special_views(source_dir:)
+          special_view_files(source_dir)
+            .group_by { |path| [special_view_kind_for(path), route_key_for(route_segments_for(source_dir, path))] }
+            .map { |(_kind, _route_key), paths| special_view_for(source_dir, paths) }
+            .sort_by { |view| [view.kind.to_s, view.path] }
+        end
+
+        def special_view_files(source_dir)
+          root = source_dir.join(pages_dir)
+          return [] unless root.directory?
+
+          extensions.flat_map do |extension|
+            [
+              *root.glob("**/not-found#{extension}"),
+              *root.glob("**/error#{extension}")
+            ]
+          end.select(&:file?).reject { |path| route_segments_for(source_dir, path).any? { |segment| segment.kind == :parallel } }
+        end
+
+        def special_view_for(source_dir, paths)
+          path = paths.fetch(0)
+          kind = special_view_kind_for(path)
+          if paths.length > 1
+            matches = paths.map { |match| relative_path_for(source_dir, match) }.sort.join(", ")
+            raise ResolveError, "Ambiguous #{kind.to_s.tr("_", "-")} route #{route_path_for(route_segments_for(source_dir, path))}; matched #{matches}. Use only one special view file per directory."
+          end
+
+          segments = route_segments_for(source_dir, path)
+          SpecialView.new(
+            kind,
+            route_path_for(segments),
+            ModuleId.new(relative_path_for(source_dir, path), nil),
+            segments,
+            layout_module_ids_for(source_dir, path),
+            (kind == :not_found) ? 404 : 500
+          )
+        end
+
+        def special_view_kind_for(path)
+          name = path.basename(path.extname).to_s
+          return :not_found if name == "not-found"
+          return :error if name == "error"
+
+          raise ResolveError, "Unsupported special view #{path}"
+        end
+
         def watched_patterns(module_id)
           patterns = extensions.flat_map do |extension|
             [
               WatchedPattern.new(module_id, "#{pages_dir}/**/page#{extension}", :router_page, {}),
-              WatchedPattern.new(module_id, "#{pages_dir}/**/layout#{extension}", :router_layout, {})
+              WatchedPattern.new(module_id, "#{pages_dir}/**/layout#{extension}", :router_layout, {}),
+              WatchedPattern.new(module_id, "#{pages_dir}/**/not-found#{extension}", :router_not_found, {}),
+              WatchedPattern.new(module_id, "#{pages_dir}/**/error#{extension}", :router_error, {})
             ]
           end
           patterns + [WatchedPattern.new(module_id, "#{pages_dir}/**/route.rb", :router_route, {})]
@@ -322,6 +380,16 @@ module Klenod
                 end
               end
 
+              SpecialView = Data.define(:kind, :path, :status, :module_id, :segments, :match_parts, :layout_module_ids, :page_ref, :layout_refs) do
+                def page
+                  Default.resolve_import(page_ref)
+                end
+
+                def layouts
+                  layout_refs.map { |layout_ref| Default.resolve_import(layout_ref) }
+                end
+              end
+
               class RouteNode
                 attr_reader :segment, :path, :children, :slots
                 attr_accessor :route
@@ -379,12 +447,44 @@ module Klenod
                 end
               end
 
+              SpecialMatch = Data.define(:route, :params) do
+                def page
+                  route.page
+                end
+
+                def layouts
+                  route.layouts
+                end
+
+                def slots
+                  {}
+                end
+
+                def status
+                  route.status
+                end
+              end
+
               ROUTES = [
             #{route_entries(matching_routes(manifest), imports: imports).join(",\n")}
+              ].freeze
+              NOT_FOUND_VIEWS = [
+            #{special_view_entries(special_views_for(manifest, :not_found), imports: imports).join(",\n")}
+              ].freeze
+              ERROR_VIEWS = [
+            #{special_view_entries(special_views_for(manifest, :error), imports: imports).join(",\n")}
               ].freeze
 
               def self.routes
                 ROUTES
+              end
+
+              def self.not_found_views
+                NOT_FOUND_VIEWS
+              end
+
+              def self.error_views
+                ERROR_VIEWS
               end
 
               def self.tree
@@ -397,6 +497,14 @@ module Klenod
                 return nil unless route
 
                 Match.new(route, params_for(route, parts), slot_matches_for(route, parts))
+              end
+
+              def self.not_found(path)
+                special_match(NOT_FOUND_VIEWS, path)
+              end
+
+              def self.error(path)
+                special_match(ERROR_VIEWS, path)
               end
 
               def self.resolve_import(value)
@@ -487,6 +595,58 @@ module Klenod
                 true
               end
 
+              def self.special_match(views, path)
+                parts = normalize_path(path)
+                view = special_view_for(views, parts)
+                return nil unless view
+
+                SpecialMatch.new(view, params_for(view, parts))
+              end
+
+              def self.special_view_for(views, parts)
+                views
+                  .select { |view| special_view_matches?(view, parts) }
+                  .max_by { |view| [fallback_depth(view), -route_score_for(view)] }
+              end
+
+              def self.special_view_matches?(view, parts)
+                cursor = 0
+                view.match_parts.each do |match_part|
+                  case match_part[0]
+                  when :static
+                    return false unless parts[cursor] == match_part[1]
+                    cursor += 1
+                  when :dynamic
+                    return false unless parts[cursor]
+                    cursor += 1
+                  when :catch_all, :optional_catch_all
+                    cursor = parts.length
+                  end
+                end
+                cursor <= parts.length
+              end
+
+              def self.fallback_depth(view)
+                view.match_parts.count { |match_part| [:static, :dynamic, :catch_all, :optional_catch_all].include?(match_part[0]) }
+              end
+
+              def self.route_score_for(route)
+                route.match_parts.sum do |match_part|
+                  case match_part[0]
+                  when :static
+                    0
+                  when :dynamic
+                    10
+                  when :catch_all
+                    100
+                  when :optional_catch_all
+                    1_000
+                  else
+                    0
+                  end
+                end
+              end
+
               def self.main_route_for(parts)
                 MAIN_ROUTES.find { |candidate| route_matches?(candidate, parts) }
               end
@@ -556,6 +716,29 @@ module Klenod
           end
         end
 
+        def special_view_entries(views, imports:)
+          views.map do |view|
+            layouts = view.layout_module_ids.map { |module_id| imports.fetch(module_id.to_s) }
+            [
+              "    SpecialView.new(",
+              "      #{view.kind.inspect},",
+              "      #{view.path.inspect},",
+              "      #{view.status.inspect},",
+              "      #{view.view_module_id.to_s.inspect},",
+              "      #{segments_source(view.segments)},",
+              "      #{match_parts_source(view.segments)},",
+              "      #{view.layout_module_ids.map(&:to_s).inspect},",
+              "      #{imports.fetch(view.view_module_id.to_s)},",
+              "      #{layouts_source(layouts)}",
+              "    )"
+            ].join("\n")
+          end
+        end
+
+        def special_views_for(manifest, kind)
+          manifest.special_views.select { |view| view.kind == kind }
+        end
+
         def matching_routes(manifest)
           manifest.routes.sort_by { |route| route_priority(route) }
         end
@@ -593,13 +776,21 @@ module Klenod
 
         def import_refs(manifest)
           specifiers =
-            manifest.routes.flat_map do |route|
-              [
-                route.page_module_id&.to_s,
-                route.handler_module_id&.to_s,
-                *route.layout_module_ids.map(&:to_s)
-              ]
-            end.uniq
+            [
+              *manifest.routes.flat_map do |route|
+                [
+                  route.page_module_id&.to_s,
+                  route.handler_module_id&.to_s,
+                  *route.layout_module_ids.map(&:to_s)
+                ]
+              end,
+              *manifest.special_views.flat_map do |view|
+                [
+                  view.view_module_id.to_s,
+                  *view.layout_module_ids.map(&:to_s)
+                ]
+              end
+            ].uniq
           specifiers.compact!
 
           specifiers.each_with_index.to_h do |specifier, index|

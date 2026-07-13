@@ -3,19 +3,37 @@
 Router = import("virtual:router")
 
 def self.call(raw_request, context)
-  match = Router::Default.match(request_path(raw_request))
-  return [404, {"content-type" => "text/plain"}, ["Not found\n"]] unless match
+  path = request_path(raw_request)
+  match = Router::Default.match(path)
+  unless match
+    not_found_match = Router::Default.not_found(path)
+    return [404, {"content-type" => "text/plain"}, ["Not found\n"]] unless not_found_match
+
+    request = Example::Request.from(raw_request, params: not_found_match.params)
+    return render_page_response(not_found_match, request, context, status: 404, props: {path: path, status: 404})
+  end
 
   request = Example::Request.from(raw_request, params: match.params)
   return call_route_handler(match.handler, request, vary_accept: hybrid_get_request?(match, request)) if route_handler_request?(match, request)
   return Example::Response.text("Method not allowed\n", status: 405).to_a unless page_request?(match, request)
 
+  begin
+    render_page_response(match, request, context)
+  rescue => error
+    error_match = Router::Default.error(path)
+    raise unless error_match
+
+    error_request = Example::Request.from(raw_request, params: error_match.params)
+    render_page_response(error_match, error_request, context, status: 500, props: {path: path, status: 500, error: error})
+  end
+end
+
+def self.render_page_response(match, request, context, status: 200, props: {})
   body =
     Example::Context.with(request: request) do
       page = match.page
       body =
-        page
-          .new
+        page_instance(page, props)
           .render
       match
         .layouts
@@ -40,10 +58,17 @@ def self.call(raw_request, context)
           #{body}
         </html>
       HTML
+      status: status,
       headers: {}
     ),
     request
   ).to_a
+end
+
+def self.page_instance(page, props)
+  return page.new if props.empty?
+
+  page.new(**props)
 end
 
 def self.module_path

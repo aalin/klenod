@@ -1,0 +1,19 @@
+:ruby
+  PageHeader = import("../components/PageHeader.haml")
+  Panel = import("../components/Panel.haml")
+
+  def initialize(path:, status:, error:)
+    @path = path
+    @status = status
+    @error = error
+  end
+
+%article
+  %PageHeader{
+    kicker: @status.to_s,
+    title: "Something went wrong",
+    summary: "Rendering #{@path} raised #{@error.class}."
+  }
+  %section
+    %Panel{ title: "Error detail" }
+      %p= @error.message

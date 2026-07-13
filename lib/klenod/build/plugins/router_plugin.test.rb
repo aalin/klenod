@@ -113,6 +113,29 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
+  def test_discovers_special_views_with_their_own_layouts
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/demo")
+      File.write("#{dir}/pages/layout.rb", "NAME = :root_layout\n")
+      File.write("#{dir}/pages/demo/layout.rb", "NAME = :demo_layout\n")
+      File.write("#{dir}/pages/not-found.rb", "NAME = :root_not_found\n")
+      File.write("#{dir}/pages/demo/not-found.rb", "NAME = :demo_not_found\n")
+      File.write("#{dir}/pages/error.rb", "NAME = :root_error\n")
+      File.write("#{dir}/pages/demo/page.rb", "NAME = :demo\n")
+
+      manifest = RouterPlugin.new.discover(source_dir: dir)
+      special_views = manifest.special_views.to_h { |view| [[view.kind, view.path], view] }
+
+      assert_equal(["pages/demo/page.rb"], manifest.routes.map(&:module_id).map(&:to_s))
+      assert_equal(
+        ["pages/demo/page.rb", "pages/error.rb", "pages/not-found.rb", "pages/demo/not-found.rb"],
+        manifest.entrypoints
+      )
+      assert_equal(["pages/layout.rb"], special_views.fetch([:error, "/"]).layout_module_ids.map(&:to_s))
+      assert_equal(["pages/layout.rb", "pages/demo/layout.rb"], special_views.fetch([:not_found, "/demo"]).layout_module_ids.map(&:to_s))
+    end
+  end
+
   def test_missing_pages_directory_returns_no_routes
     Dir.mktmpdir do |dir|
       assert_equal([], RouterPlugin.new.discover(source_dir: dir).routes)
@@ -133,6 +156,23 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_includes(error.message, "Ambiguous route /")
       assert_includes(error.message, "pages/page.rb")
       assert_includes(error.message, "pages/page.haml")
+    end
+  end
+
+  def test_raises_for_ambiguous_special_view_files
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/error.rb", "")
+      File.write("#{dir}/pages/error.haml", "")
+
+      error =
+        assert_raises(Klenod::Build::ResolveError) do
+          RouterPlugin.new.discover(source_dir: dir)
+        end
+
+      assert_includes(error.message, "Ambiguous error route /")
+      assert_includes(error.message, "pages/error.rb")
+      assert_includes(error.message, "pages/error.haml")
     end
   end
 
@@ -173,6 +213,41 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal({filters: []}, router.match("/shop").params)
       assert_equal({filters: ["sale", "red"]}, router.match("/shop/sale/red").params)
       assert_nil(router.match("/missing"))
+    end
+  end
+
+  def test_virtual_router_matches_closest_not_found_view
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/demo/[section]")
+      File.write("#{dir}/pages/not-found.rb", "NAME = :root_not_found\n")
+      File.write("#{dir}/pages/demo/[section]/not-found.rb", "NAME = :section_not_found\n")
+
+      router = router_for(dir, mode: :development)
+      match = router.not_found("/demo/assets/missing")
+
+      assert_nil(router.match("/demo/assets/missing"))
+      assert_equal(:section_not_found, match.page::NAME)
+      assert_equal(404, match.status)
+      assert_equal({section: "assets"}, match.params)
+      assert_equal({}, match.slots)
+      assert_equal("pages/demo/[section]/not-found.rb", match.route.module_id)
+    end
+  end
+
+  def test_virtual_router_matches_error_view_with_view_layouts
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/demo/foobar")
+      File.write("#{dir}/pages/layout.rb", "NAME = :root_layout\n")
+      File.write("#{dir}/pages/demo/layout.rb", "NAME = :demo_layout\n")
+      File.write("#{dir}/pages/error.rb", "NAME = :root_error\n")
+      File.write("#{dir}/pages/demo/foobar/page.rb", "NAME = :page\n")
+
+      match = router_for(dir, mode: :development).error("/demo/foobar")
+
+      assert_equal(:root_error, match.page::NAME)
+      assert_equal(500, match.status)
+      assert_equal([:root_layout], match.layouts.map { |layout| layout::NAME })
+      assert_equal(["pages/layout.rb"], match.route.layout_module_ids)
     end
   end
 
@@ -500,6 +575,23 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
+  def test_development_router_uses_lazy_imports_for_special_views
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/not-found.rb", "NAME = :not_found\n")
+
+      context = router_context(dir, mode: :development)
+      router_record = context.evaluate("virtual:router")
+      router = context.exports(router_record)::Default
+
+      assert_includes(router_record.transformed_source, "__klenod_lazy_import__")
+      assert_equal(["virtual:router.rb"], context.graph.records.keys.map(&:to_s))
+
+      assert_equal(:not_found, router.not_found("/missing").page::NAME)
+      assert_includes(context.graph.records.keys.map(&:to_s), "pages/not-found.rb")
+    end
+  end
+
   def test_virtual_router_records_page_and_layout_watched_patterns
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -510,8 +602,12 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
 
       expected =
         [
+          ["pages/**/error.rb", :router_error],
+          ["pages/**/error.haml", :router_error],
           ["pages/**/layout.rb", :router_layout],
           ["pages/**/layout.haml", :router_layout],
+          ["pages/**/not-found.rb", :router_not_found],
+          ["pages/**/not-found.haml", :router_not_found],
           ["pages/**/page.rb", :router_page],
           ["pages/**/page.haml", :router_page],
           ["pages/**/route.rb", :router_route]
@@ -580,6 +676,25 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       assert_equal(["virtual:router"], bundle.entrypoints.keys)
       assert_equal(:root, router.match("/").page::NAME)
       assert_equal(:about, router.match("/about").page::NAME)
+    end
+  end
+
+  def test_bundle_loads_special_views
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/not-found.rb", "NAME = :not_found\n")
+      File.write("#{dir}/pages/error.rb", "NAME = :error\n")
+      output = "#{dir}/bundle.dump"
+      context = router_context(dir, mode: :build)
+
+      bundle = context.build(entrypoints: ["virtual:router"], output: output)
+      loaded = Klenod::Runtime.load_bundle(output)
+      router = loaded.exports("virtual:router")::Default
+
+      assert_includes(bundle.modules.keys, "pages/not-found.rb")
+      assert_includes(bundle.modules.keys, "pages/error.rb")
+      assert_equal(:not_found, router.not_found("/missing").page::NAME)
+      assert_equal(:error, router.error("/missing").page::NAME)
     end
   end
 

@@ -178,6 +178,37 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "(...)login:intercept_root")
   end
 
+  def test_example_app_renders_not_found_page
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, headers, body = entry.call(request("/demo/missing"), context)
+    html = body.join
+
+    assert_equal(404, status)
+    assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert_includes(html, "Page not found")
+    assert_includes(html, "No route matched /demo/missing.")
+    assert_includes(html, "Browse the demo routes")
+  end
+
+  def test_example_app_renders_error_page_with_error_view_layout
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, headers, body = entry.call(request("/demo/error"), context)
+    html = body.join
+    paths = stylesheet_paths(html)
+
+    assert_equal(500, status)
+    assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert_includes(html, "Something went wrong")
+    assert_includes(html, "Rendering /demo/error raised RuntimeError.")
+    assert_includes(html, "Demo render failure")
+    assert(paths.any? { |path| path.include?("pages_layout_css") })
+    refute(paths.any? { |path| path.include?("pages_demo_layout_css") })
+  end
+
   def test_example_app_renders_route_handler_response
     config = example_config
     context = config.context
