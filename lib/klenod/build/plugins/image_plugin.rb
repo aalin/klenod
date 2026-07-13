@@ -217,6 +217,7 @@ module Klenod
             nil,
             content_type(extname),
             metadata,
+            writer: ->(io) { write_variant_bytes(bytes, width, format, io) },
             queue: queue,
             queue_kind: :cpu
           ) do
@@ -232,6 +233,10 @@ module Klenod
         ensure
           variant_image&.destroy!
           image&.destroy!
+        end
+
+        def write_variant_bytes(bytes, width, format, io)
+          io.write(generate_variant_bytes(bytes, width, format))
         end
 
         def scaled_height(dimensions, width)

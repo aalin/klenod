@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "async"
 require "fileutils"
 
 require_relative "../../lib/klenod"
@@ -32,16 +31,16 @@ class BuildLogger
     output.puts "  #{color(:generated, "generate")} #{asset.output_path} #{color(:dim, asset_details(asset, include_queue: true))}"
   end
 
-  def generated_done(asset, duration)
-    output.puts "    #{color(:success, "done")} #{asset.output_path} #{bytesize(asset.bytes)} #{color(:dim, "(#{duration})")}"
-  end
-
   def static_asset(asset)
     output.puts "  #{color(:dim, "static")} #{asset.output_path} #{color(:dim, asset_details(asset))}"
   end
 
   def written(path)
     output.puts "  #{color(:written, "written")} #{path}"
+  end
+
+  def skipped(path)
+    output.puts "  #{color(:dim, "skipped")} #{path}"
   end
 
   private
@@ -54,10 +53,6 @@ class BuildLogger
     details.empty? ? "" : "(#{details.join(", ")})"
   end
 
-  def bytesize(bytes)
-    "#{bytes.bytesize} bytes"
-  end
-
   def color(name, value)
     return value.to_s if env["NO_COLOR"]
 
@@ -65,36 +60,13 @@ class BuildLogger
   end
 end
 
-def duration_ms(start_time)
-  format("%.4fms", (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) * 1000)
-end
-
-def with_async_task(&block)
-  enabled = Warning[:experimental]
-  Warning[:experimental] = false
-  Async(&block).wait
-ensure
-  Warning[:experimental] = enabled
-end
-
-def generate_assets(context, logger)
-  generated_assets = context.each_asset.select(&:generated?)
-  static_assets = context.each_asset.reject(&:generated?)
-
-  static_assets.each { |asset| logger.static_asset(asset) }
-  return if generated_assets.empty?
-
-  with_async_task do |task|
-    generated_assets
-      .map do |asset|
-        task.async do
-          logger.generated_start(asset)
-          start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-          asset.wait
-          logger.generated_done(asset, duration_ms(start_time))
-        end
-      end
-      .each(&:wait)
+def log_assets(context, logger)
+  context.each_asset do |asset|
+    if asset.generated?
+      logger.generated_start(asset)
+    else
+      logger.static_asset(asset)
+    end
   end
 end
 
@@ -113,12 +85,14 @@ logger.detail("entrypoints: #{config.entrypoints.join(", ")}")
 logger.detail("modules: #{bundle.modules.length}")
 logger.detail("assets: #{context.assets.length}")
 
-logger.step("Generating assets")
-generate_assets(context, logger)
+logger.step("Assets")
+log_assets(context, logger)
 
 if assets_dir
   logger.step("Writing assets")
-  context.write_assets(assets_dir).written_paths.each { |path| logger.written(path) }
+  write_result = context.write_assets(assets_dir)
+  write_result.written_paths.each { |path| logger.written(path) }
+  write_result.skipped_paths.each { |path| logger.skipped(path) }
 end
 
 logger.step("Writing bundle")

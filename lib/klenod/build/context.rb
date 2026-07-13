@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "async"
 require "fileutils"
 
 require_relative "graph"
@@ -16,7 +17,19 @@ require_relative "config"
 
 module Klenod
   module Build
-    AssetWriteResult = Data.define(:written_paths, :removed_paths) do
+    AssetWriteResult = Data.define(:written_paths, :removed_paths, :skipped_paths) do
+      def initialize(written_paths = nil, removed_paths = nil, skipped_paths = nil, **keywords)
+        written_paths = keywords.fetch(:written_paths, written_paths)
+        removed_paths = keywords.fetch(:removed_paths, removed_paths)
+        skipped_paths = keywords.fetch(:skipped_paths, skipped_paths || [])
+
+        super(
+          written_paths: written_paths,
+          removed_paths: removed_paths,
+          skipped_paths: skipped_paths
+        )
+      end
+
       def empty?
         written_paths.empty? && removed_paths.empty?
       end
@@ -55,6 +68,10 @@ module Klenod
 
       def removed_asset_paths
         asset_write_result&.removed_paths || []
+      end
+
+      def skipped_asset_paths
+        asset_write_result&.skipped_paths || []
       end
     end
 
@@ -114,8 +131,7 @@ module Klenod
 
       def build(entrypoints:, output:, assets_dir: nil)
         bundle = @graph.bundle(entrypoints: entrypoints)
-        wait_for_assets
-        write_assets(assets_dir) if assets_dir
+        assets_dir ? write_assets(assets_dir) : wait_for_assets
         FileUtils.mkdir_p(File.dirname(output))
         File.binwrite(output, Marshal.dump(bundle))
         bundle
@@ -123,8 +139,7 @@ module Klenod
 
       def build_executable(entrypoints:, output:, assets_dir: nil)
         bundle = @graph.bundle(entrypoints: entrypoints)
-        wait_for_assets
-        write_assets(assets_dir) if assets_dir
+        assets_dir ? write_assets(assets_dir) : wait_for_assets
         FileUtils.mkdir_p(File.dirname(output))
         File.binwrite(output, executable_bundle_source + Marshal.dump(bundle))
         FileUtils.chmod("+x", output)
@@ -164,8 +179,9 @@ module Klenod
         asset = asset(output_path)
         return asset.bytes unless assets_dir
 
-        asset.wait
-        File.binread(asset_disk_path(asset.output_path, Pathname.new(assets_dir)))
+        path = asset_disk_path(asset.output_path, Pathname.new(assets_dir))
+        write_asset(asset, Pathname.new(assets_dir)) unless File.file?(path)
+        File.binread(path)
       end
 
       def assets_for(logical_name)
@@ -194,9 +210,12 @@ module Klenod
 
       def write_assets(assets_dir)
         assets_root = Pathname.new(assets_dir)
-        written_paths = assets.each_value.map { |asset| write_asset(asset, assets_root) }
+        results =
+          with_async_task do |task|
+            assets.each_value.map { |asset| task.async { write_asset(asset, assets_root) } }.map(&:wait)
+          end
 
-        AssetWriteResult.new(written_paths.freeze, [].freeze)
+        asset_write_result(results, removed_paths: [])
       end
 
       def write_asset_updates(asset_updates, assets_dir:)
@@ -210,7 +229,7 @@ module Klenod
             write_asset(update.current_asset, assets_root) if update.current_asset
           end
 
-        AssetWriteResult.new(written_paths.freeze, removed_paths.freeze)
+        asset_write_result(written_paths, removed_paths: removed_paths)
       end
 
       def apply_update(event, entry:, assets_dir: nil)
@@ -256,9 +275,26 @@ module Klenod
       def write_asset(asset, assets_root)
         output_path = asset_disk_path(asset.output_path, assets_root)
 
-        FileUtils.mkdir_p(output_path.dirname)
-        File.binwrite(output_path, asset.bytes)
-        output_path.to_s
+        [asset.write_to(output_path), output_path.to_s]
+      end
+
+      def asset_write_result(results, removed_paths:)
+        written_paths = []
+        skipped_paths = []
+
+        results.each do |status, path|
+          case status
+          when :written then written_paths << path
+          when :skipped then skipped_paths << path
+          else raise ArgumentError, "unknown asset write status: #{status.inspect}"
+          end
+        end
+
+        AssetWriteResult.new(
+          written_paths: written_paths.freeze,
+          removed_paths: removed_paths.freeze,
+          skipped_paths: skipped_paths.freeze
+        )
       end
 
       def remove_asset(output_path, assets_root)
@@ -266,6 +302,29 @@ module Klenod
 
         FileUtils.rm_f(path)
         path.to_s
+      end
+
+      def with_async_task(&block)
+        task = current_async_task
+        return block.call(task) if task
+
+        with_experimental_warnings_suppressed do
+          Async(&block).wait
+        end
+      end
+
+      def current_async_task
+        Async::Task.current
+      rescue RuntimeError
+        nil
+      end
+
+      def with_experimental_warnings_suppressed
+        enabled = Warning[:experimental]
+        Warning[:experimental] = false
+        yield
+      ensure
+        Warning[:experimental] = enabled
       end
 
       def asset_disk_path(output_path, assets_root)

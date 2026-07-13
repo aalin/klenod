@@ -38,6 +38,20 @@ module Klenod
               end
             end
           end
+
+          def write(url, io)
+            Sync do
+              @internet.get(url) do |response|
+                raise Error, "HTTP #{response.status}" unless response.success?
+
+                if response.body
+                  response.body.each { |chunk| io.write(chunk) }
+                else
+                  io.write(response.read)
+                end
+              end
+            end
+          end
         end
 
         class FontFaceParser
@@ -157,6 +171,16 @@ module Klenod
           raise Error, "Could not download Google Fonts asset #{url.inspect}: #{error.message}"
         end
 
+        def write_fetch(url, io)
+          if @fetcher.respond_to?(:write)
+            @fetcher.write(url, io)
+          else
+            io.write(fetch(url))
+          end
+        rescue => error
+          raise Error, "Could not download Google Fonts asset #{url.inspect}: #{error.message}"
+        end
+
         def css_asset(module_id, url, css)
           hash = Digest::SHA256.hexdigest(css)[0, 16]
           output_path = "/assets/#{google_fonts_asset_name(url)}.#{hash}.css"
@@ -192,6 +216,7 @@ module Klenod
               style: font_face&.style,
               weight: font_face&.weight
             },
+            writer: ->(io) { write_fetch(url, io) },
             queue: context.asset_generation_queue,
             queue_kind: :io
           ) do
