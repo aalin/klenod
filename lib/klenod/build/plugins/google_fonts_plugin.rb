@@ -21,6 +21,46 @@ module Klenod
         FONT_URL_PATTERN = /url\((?<quote>["']?)(?<url>https:\/\/fonts\.gstatic\.com\/[^"')]+)\k<quote>\)/
 
         Error = Class.new(StandardError)
+        FontFace = Data.define(:family, :style, :weight)
+
+        class FontFaceParser
+          FONT_FACE_PATTERN = /@font-face\s*\{(?<body>.*?)\}/m
+          FONT_URL_PATTERN = GoogleFontsPlugin::FONT_URL_PATTERN
+          DECLARATION_PATTERN = /(?<name>font-family|font-style|font-weight)\s*:\s*(?<value>[^;]+);/i
+
+          def initialize(css)
+            @css = css
+          end
+
+          def font_faces_by_url
+            css.scan(FONT_FACE_PATTERN).each_with_object({}) do |(body), index|
+              font_url = body.match(FONT_URL_PATTERN) { it[:url] }
+              next unless font_url
+
+              declarations = font_face_declarations(body)
+              index[font_url] =
+                FontFace.new(
+                  unquote(declarations["font-family"]),
+                  declarations["font-style"],
+                  declarations["font-weight"]
+                )
+            end
+          end
+
+          private
+
+          attr_reader :css
+
+          def font_face_declarations(body)
+            body.scan(DECLARATION_PATTERN).to_h do |name, value|
+              [name.downcase, value.strip]
+            end
+          end
+
+          def unquote(value)
+            value&.delete_prefix("\"")&.delete_suffix("\"")&.delete_prefix("'")&.delete_suffix("'")
+          end
+        end
 
         def initialize(fetcher: nil)
           @fetcher = fetcher || method(:fetch_url)
@@ -46,17 +86,18 @@ module Klenod
 
           url = google_fonts_url_for(module_id)
           css = fetch(url)
+          font_faces = FontFaceParser.new(css).font_faces_by_url
           font_assets = {}
           rewritten_css =
             css.gsub(FONT_URL_PATTERN) do
               quote = Regexp.last_match[:quote]
               font_url = Regexp.last_match[:url]
-              asset = font_assets[font_url] ||= font_asset(font_url, context)
+              asset = font_assets[font_url] ||= font_asset(font_url, font_faces[font_url], context)
 
               %(url(#{quote}#{asset.output_path}#{quote}))
             end
 
-          css_asset = css_asset(module_id, rewritten_css)
+          css_asset = css_asset(module_id, url, rewritten_css)
           @assets_by_module_id[module_id] = [css_asset, *font_assets.values]
           ruby_module_source(css_asset.output_path)
         end
@@ -112,9 +153,9 @@ module Klenod
           response.body
         end
 
-        def css_asset(module_id, css)
+        def css_asset(module_id, url, css)
           hash = Digest::SHA256.hexdigest(css)[0, 16]
-          output_path = "/assets/#{asset_name(module_id)}.#{hash}.css"
+          output_path = "/assets/#{google_fonts_asset_name(url)}.#{hash}.css"
 
           Asset.new(
             module_id.to_s,
@@ -127,11 +168,11 @@ module Klenod
           )
         end
 
-        def font_asset(url, context)
+        def font_asset(url, font_face, context)
           hash = Digest::SHA256.hexdigest(url)[0, 16]
           uri = URI.parse(url)
           extname = File.extname(uri.path)
-          output_path = "/assets/#{font_asset_name(uri)}.#{hash}#{extname}"
+          output_path = "/assets/#{font_asset_name(uri, font_face)}.#{hash}#{extname}"
 
           Asset.generated(
             url,
@@ -139,7 +180,14 @@ module Klenod
             output_path,
             nil,
             content_type(extname),
-            {type: :font, google_fonts: true, source_url: url},
+            {
+              type: :font,
+              google_fonts: true,
+              source_url: url,
+              family: font_face&.family,
+              style: font_face&.style,
+              weight: font_face&.weight
+            },
             queue: context.asset_generation_queue
           ) do
             fetch(url)
@@ -153,13 +201,43 @@ module Klenod
           RUBY
         end
 
-        def asset_name(module_id)
-          module_id.path.gsub(/[^A-Za-z0-9]+/, "_").sub(/\A_+/, "").sub(/_+\z/, "")
+        def google_fonts_asset_name(url)
+          uri = URI.parse(url)
+          families =
+            URI
+              .decode_www_form(uri.query || "")
+              .filter_map do |key, value|
+                next unless key == "family"
+
+                value.split(":", 2).fetch(0)
+              end
+
+          slug = families.empty? ? "fonts" : families.join("_")
+          "google_fonts_#{slugify(slug)}"
         end
 
-        def font_asset_name(uri)
-          basename = File.basename(uri.path, File.extname(uri.path))
-          "google_font_#{basename.gsub(/[^A-Za-z0-9]+/, "_")}"
+        def font_asset_name(uri, font_face)
+          return font_face_asset_name(font_face) if font_face&.family
+
+          parts = uri.path.split("/").reject(&:empty?)
+          useful_parts = parts.last(3)
+          useful_parts[-1] = File.basename(useful_parts.fetch(-1), File.extname(useful_parts.fetch(-1)))
+
+          "google_font_#{slugify(useful_parts.join("_"))}"
+        end
+
+        def font_face_asset_name(font_face)
+          parts = [font_face.family, font_face.style, font_face.weight].compact
+
+          "google_font_#{slugify(parts.join("_"))}"
+        end
+
+        def slugify(value)
+          value
+            .downcase
+            .gsub(/[^a-z0-9]+/, "_")
+            .sub(/\A_+/, "")
+            .sub(/_+\z/, "")
         end
 
         def content_type(extname)
