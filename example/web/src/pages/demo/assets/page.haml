@@ -2,8 +2,6 @@
   Figure = import("/components/Figure.haml")
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
-  SailingBoat = import("./sailing-boat.jpg?width=360,720&format=jpeg")
-  Vegetables = import("./vegetables.jpg?width=360,720&format=jpeg")
 
   Items = [
     {
@@ -26,13 +24,13 @@
     },
     {
       name: "sailing-boat.jpg",
-      image: SailingBoat,
+      image: import("./sailing-boat.jpg?width=360,720&format=jpeg"),
       alt: "Sailing boat on open water",
       caption: "A sailing image with generated JPEG widths."
     },
     {
       name: "vegetables.jpg",
-      image: Vegetables,
+      image: import("./vegetables.jpg?width=360,720&format=jpeg"),
       alt: "Vegetables arranged for cooking",
       caption: "Vegetables rendered through the shared Figure component."
     }
@@ -73,3 +71,6 @@
                   %strong= variant.descriptor
                   %span= "#{variant.width} x #{variant.height} #{variant.format}"
                 %a(href="#{variant.src}" target="_blank")= variant.src
+  %Panel{ title: "CSS url()" }
+    %div.css-image
+    %p CSS can reference image files with `url("./coffee.jpg")`; the CSS plugin rewrites the URL to the generated asset path.

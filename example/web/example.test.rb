@@ -122,7 +122,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/demo/shop", "No filters selected")
     assert_route_includes(entry, context, "/demo/shop/sale/red", "Filters: sale, red")
     assert_route_includes(entry, context, "/demo/assets", "Images become generated browser assets")
-    assert_route_includes(entry, context, "/demo/assets", "Coffee imported from a routed Haml page.")
+    assert_route_includes(entry, context, "/demo/assets", "CSS url()")
     assert_route_includes(entry, context, "/about", "inside a route group")
     assert_route_includes(entry, context, "/demo/dashboard", "Dashboard showcase")
     assert_route_includes(entry, context, "/demo/dashboard", "Showcase routes")
