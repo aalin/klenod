@@ -80,6 +80,18 @@ module Klenod
           )
         end
 
+        def import_value(_resolved_dependency, record, context)
+          return nil unless EXTENSIONS.include?(record.id.extname)
+
+          context.mods.fetch(record.id).const_get(:Exports)::Default
+        end
+
+        def runtime_import_value(_resolved_dependency, record, _context)
+          return Runtime::DefaultImport.new(:Default) if EXTENSIONS.include?(record.id.extname)
+
+          super
+        end
+
         private
 
         Dimensions = Data.define(:width, :height, :format)
@@ -149,12 +161,6 @@ module Klenod
                 ]
               )
 
-            def self.src = Default.src
-            def self.width = Default.width
-            def self.height = Default.height
-            def self.variants = Default.variants
-            def self.srcset = Default.srcset
-            def self.sizes = Default.sizes
           RUBY
         end
 

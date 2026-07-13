@@ -38,6 +38,27 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     end
   end
 
+  def test_ruby_import_of_image_returns_default_export
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/logo.png", png_bytes(width: 2, height: 3))
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Logo = import("images/logo.png")
+          IMAGE = Logo
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.evaluate("entry")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.png\z}, exports::IMAGE.src)
+      refute_match(/::Exports\z/, exports::IMAGE.inspect)
+    end
+  end
+
   def test_runtime_bundle_preserves_image_import_value_and_metadata
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")
@@ -58,6 +79,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       asset = loaded.assets_for("images/logo.png").fetch(0)
 
       refute_equal("Klenod::Build::Plugins::ImagePlugin::Image", image.class.name)
+      refute_match(/::Exports\z/, image.inspect)
       assert(loaded.modules.key?("virtual:klenod/image.rb"))
       assert_equal(4, image.width)
       assert_equal(5, image.height)
