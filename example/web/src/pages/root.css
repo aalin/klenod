@@ -27,6 +27,10 @@
   --font-size-h2: clamp(1.35rem, 2vw, 2rem);
 }
 
-html {
+:global(html) {
   background: var(--color-page);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
