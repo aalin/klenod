@@ -19,6 +19,12 @@ def self.call(raw_request, context)
 
   begin
     render_page_response(match, request, context)
+  rescue Example::NotFoundError
+    not_found_match = Router::Default.not_found(path)
+    raise unless not_found_match
+
+    not_found_request = Example::Request.from(raw_request, params: not_found_match.params)
+    render_page_response(not_found_match, not_found_request, context, status: 404, props: {path: path, status: 404})
   rescue => error
     error_match = Router::Default.error(path)
     raise unless error_match

@@ -192,6 +192,20 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Browse the demo routes")
   end
 
+  def test_example_app_renders_not_found_page_for_not_found_error
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, headers, body = entry.call(request("/demo/not-found-error"), context)
+    html = body.join
+
+    assert_equal(404, status)
+    assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert_includes(html, "Page not found")
+    assert_includes(html, "No route matched /demo/not-found-error.")
+    refute_includes(html, "Something went wrong")
+  end
+
   def test_example_app_renders_error_page_with_error_view_layout
     config = example_config
     context = config.context

@@ -12,6 +12,8 @@ module Example
   CSRF_TOKEN_KEY = "_csrf_token"
   CONTEXT_KEY = :example_web_context
 
+  class NotFoundError < StandardError; end
+
   Request = Data.define(:method, :path, :params, :query, :headers, :cookies, :form, :session, :raw) do
     def self.from(raw, params: {})
       raw_path = raw&.path.to_s
