@@ -901,7 +901,7 @@ module Klenod
           end
 
           def compile_node_expressions(nodes, factory:, builder:, styleable: false)
-            expressions = []
+            entries = []
             index = 0
 
             while index < nodes.length
@@ -916,15 +916,27 @@ module Klenod
                   index += 1
                 end
 
-                expressions << compile_script_group(group, factory: factory, styleable: styleable, builder: builder)
+                entries << [node, compile_script_group(group, factory: factory, styleable: styleable, builder: builder)]
               else
                 expression = compile_node(node, factory: factory, styleable: styleable, builder: builder)
-                expression.is_a?(Array) ? expressions.concat(expression) : expressions << expression
+                entries << [node, expression]
                 index += 1
               end
             end
 
-            expressions
+            expressions_with_whitespace(entries, builder: builder)
+          end
+
+          def expressions_with_whitespace(entries, builder:)
+            entries.each_cons(2).each_with_object([entries.first&.last].compact) do |((left, _left_expression), (right, right_expression)), expressions|
+              expressions << builder.literal(" ") if whitespace_between?(left, right)
+              expressions << right_expression
+            end
+          end
+
+          def whitespace_between?(left, right)
+            (right.type == :tag && right.value.fetch(:nuke_inner_whitespace)) ||
+              (left.type == :tag && left.value.fetch(:nuke_outer_whitespace))
           end
 
           def compile_node(node, factory:, builder:, styleable: false)
@@ -932,8 +944,7 @@ module Klenod
             expression =
               case node.type
               when :tag
-                tag = builder.marked_expression(mark, compile_tag(node, factory: factory, styleable: styleable, builder: builder))
-                spaced_tag_expressions(node, tag, builder: builder)
+                builder.marked_expression(mark, compile_tag(node, factory: factory, styleable: styleable, builder: builder))
               when :plain
                 builder.literal(node.value.fetch(:text))
               when :script
@@ -1048,14 +1059,6 @@ module Klenod
             children.concat(compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder))
 
             compile_factory_call(node, children, factory: factory, styleable: styleable, builder: builder)
-          end
-
-          def spaced_tag_expressions(node, tag, builder:)
-            expressions = []
-            expressions << builder.literal(" ") if node.value.fetch(:nuke_inner_whitespace)
-            expressions << tag
-            expressions << builder.literal(" ") if node.value.fetch(:nuke_outer_whitespace)
-            expressions
           end
 
           def compile_factory_call(node, children, factory:, builder:, styleable: false)

@@ -964,6 +964,87 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   def test_default_haml_transformer_maps_inner_whitespace_marker_to_left_space
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          %p
+            before
+            %a{ href: "#" }< link
+        HAML
+      )
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      record = context.evaluate("pages/page.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([:p, "before", " ", [:a, "link", {href: "#"}]], exports::Default.new.render)
+    end
+  end
+
+  def test_default_haml_transformer_does_not_add_space_before_nested_script_tag
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          :ruby
+            def value
+              "hello"
+            end
+
+          %pre
+            %code= value
+        HAML
+      )
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      record = context.evaluate("pages/page.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([:pre, [:code, "hello"]], exports::Default.new.render)
+    end
+  end
+
+  def test_default_haml_transformer_adds_space_before_nested_script_tag_with_inner_whitespace_marker
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          :ruby
+            def value
+              "hello"
+            end
+
+          %pre
+            before
+            %code<= value
+        HAML
+      )
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      record = context.evaluate("pages/page.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([:pre, "before", " ", [:code, "hello"]], exports::Default.new.render)
+    end
+  end
+
+  def test_default_haml_transformer_does_not_add_edge_space_for_isolated_whitespace_marker
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
       File.write("#{dir}/pages/page.haml", "%a{ href: \"#\" }< link\n")
 
       plugin =
@@ -974,14 +1055,21 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       record = context.evaluate("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
-      assert_equal([" ", [:a, "link", {href: "#"}]], exports::Default.new.render)
+      assert_equal([:a, "link", {href: "#"}], exports::Default.new.render)
     end
   end
 
   def test_default_haml_transformer_maps_outer_whitespace_marker_to_right_space
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
-      File.write("#{dir}/pages/page.haml", "%a{ href: \"#\" }> link\n")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          %p
+            %a{ href: "#" }> link
+            after
+        HAML
+      )
 
       plugin =
         Klenod::Build::Plugins::HamlPlugin.new(
@@ -991,14 +1079,22 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       record = context.evaluate("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
-      assert_equal([[:a, "link", {href: "#"}], " "], exports::Default.new.render)
+      assert_equal([:p, [:a, "link", {href: "#"}], " ", "after"], exports::Default.new.render)
     end
   end
 
   def test_default_haml_transformer_maps_both_whitespace_markers
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
-      File.write("#{dir}/pages/page.haml", "%a{ href: \"#\" }<> link\n")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          %p
+            before
+            %a{ href: "#" }<> link
+            after
+        HAML
+      )
 
       plugin =
         Klenod::Build::Plugins::HamlPlugin.new(
@@ -1008,7 +1104,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       record = context.evaluate("pages/page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
-      assert_equal([" ", [:a, "link", {href: "#"}], " "], exports::Default.new.render)
+      assert_equal([:p, "before", " ", [:a, "link", {href: "#"}], " ", "after"], exports::Default.new.render)
     end
   end
 
