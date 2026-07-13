@@ -5,6 +5,7 @@ require "async/http"
 require "protocol/http/response"
 
 require_relative "../../lib/klenod"
+require_relative "update_logger"
 
 config = Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
 source_dir = config.source_path
@@ -18,26 +19,14 @@ entry = context.entry(entrypoint)
 watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
 context.write_assets(assets_dir) if assets_dir
 asset_app = Klenod::HTTP::AssetApp.new(context, assets_dir: assets_dir)
+update_logger = Example::UpdateLogger.new(source_dir: source_dir)
 
 context.on_update do |event|
+  start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   update = context.apply_update(event, entry: entry, assets_dir: assets_dir)
 
-  if update.failed?
-    warn "Update ##{event.graph_version} failed"
-    update.each_error do |module_id, error|
-      warn indent_lines(format_update_error(module_id, error, context), "  ")
-    end
-  else
-    puts "Update ##{event.graph_version}: dependency tree updated"
-    unless event.asset_changes.empty?
-      puts "  assets added: #{event.asset_changes.added.join(", ")}" unless event.asset_changes.added.empty?
-      puts "  assets changed: #{event.asset_changes.changed.join(", ")}" unless event.asset_changes.changed.empty?
-      puts "  assets removed: #{event.asset_changes.removed.join(", ")}" unless event.asset_changes.removed.empty?
-    end
-    if update.asset_files_changed?
-      puts "  asset files written: #{update.written_asset_paths.join(", ")}" unless update.written_asset_paths.empty?
-      puts "  asset files removed: #{update.removed_asset_paths.join(", ")}" unless update.removed_asset_paths.empty?
-    end
+  update_logger.log(event: event, update: update, duration: duration_ms(start_time)) do |module_id, error|
+    format_update_error(module_id, error, context)
   end
 end
 
