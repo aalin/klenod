@@ -54,7 +54,8 @@ Example app commands:
 
 ```sh
 bundle exec ruby example/web/run.rb
-bundle exec ruby example/web/build_and_load.rb
+bundle exec ruby example/web/build.rb
+bundle exec ruby example/web/load.rb
 bundle exec ruby example/web/watch.rb
 bundle exec ruby example/web/routes.rb
 bundle exec ruby example/web/server.rb

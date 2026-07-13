@@ -1,18 +1,11 @@
 # frozen_string_literal: true
 
-require "fileutils"
-
 require_relative "../../lib/klenod"
 
 config = Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
 source_dir = config.source_path
 output = config.output_path
 assets_dir = config.assets_path
-
-FileUtils.mkdir_p(File.dirname(output))
-
-context = config.context
-context.build(entrypoints: config.entrypoints, output: output, assets_dir: assets_dir)
 
 bundle = Klenod::Runtime.load_bundle(output, source_root: source_dir)
 exports = bundle.exports(config.entrypoints.fetch(0))

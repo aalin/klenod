@@ -6,7 +6,8 @@ Run it from the repository root:
 
 ```sh
 bundle exec ruby example/web/run.rb
-bundle exec ruby example/web/build_and_load.rb
+bundle exec ruby example/web/build.rb
+bundle exec ruby example/web/load.rb
 bundle exec ruby example/web/watch.rb
 bundle exec ruby example/web/routes.rb
 bundle exec ruby example/web/server.rb
@@ -14,7 +15,7 @@ bundle exec ruby example/web/server.rb
 
 `run.rb` loads `src/pages/server.rb`, which imports `virtual:router`, matches `/`, renders `src/pages/page.haml`, and wraps it in `src/pages/layout.haml`.
 
-`build_and_load.rb` writes `example/web/dist/klenod.bundle`, reloads it through the runtime API, and evaluates the entrypoint without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
+`build.rb` writes `example/web/dist/klenod.bundle` and `example/web/dist/public`, printing the collected module count, emitted assets, generated assets, and written files. `load.rb` reloads that bundle through the runtime API and evaluates the entrypoint without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
 
 ```ruby
 bundle = Klenod::Runtime.load_bundle("example/web/dist/klenod.bundle", source_root: "/app/src")
