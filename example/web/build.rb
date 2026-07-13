@@ -17,35 +17,47 @@ class BuildLogger
   def initialize(output: $stdout, env: ENV)
     @output = output
     @env = env
+    @mutex = Mutex.new
   end
 
   def step(message)
-    output.puts color(:title, message)
+    log color(:title, message)
   end
 
   def detail(message)
-    output.puts "  #{message}"
+    log "  #{message}"
   end
 
-  def generated_start(asset)
-    output.puts "  #{color(:generated, "generate")} #{asset.output_path} #{color(:dim, asset_details(asset, include_queue: true))}"
+  def asset(asset)
+    marker = asset.generated? ? "generated" : "static"
+    details = asset_details(asset, include_queue: asset.generated?)
+
+    log "  #{color(:dim, marker)} #{asset.output_path} #{color(:dim, details)}"
   end
 
-  def static_asset(asset)
-    output.puts "  #{color(:dim, "static")} #{asset.output_path} #{color(:dim, asset_details(asset))}"
+  def write_start(asset)
+    log "  #{color(:written, "write")} #{asset.output_path} #{color(:dim, asset_details(asset))}"
+  end
+
+  def generate_start(asset)
+    log "  #{color(:generated, "generate")} #{asset.output_path} #{color(:dim, asset_details(asset, include_queue: true))}"
   end
 
   def written(path)
-    output.puts "  #{color(:written, "written")} #{path}"
+    log "  #{color(:written, "written")} #{path}"
   end
 
   def skipped(path)
-    output.puts "  #{color(:dim, "skipped")} #{path}"
+    log "  #{color(:dim, "skipped")} #{path}"
   end
 
   private
 
-  attr_reader :output, :env
+  attr_reader :output, :env, :mutex
+
+  def log(message)
+    mutex.synchronize { output.puts(message) }
+  end
 
   def asset_details(asset, include_queue: false)
     details = [asset.metadata[:type], asset.queue_kind].compact
@@ -61,12 +73,14 @@ class BuildLogger
 end
 
 def log_assets(context, logger)
-  context.each_asset do |asset|
-    if asset.generated?
-      logger.generated_start(asset)
-    else
-      logger.static_asset(asset)
-    end
+  context.each_asset { |asset| logger.asset(asset) }
+end
+
+def log_asset_write_event(logger, event, asset, _path)
+  case event
+  when :generate_start then logger.generate_start(asset)
+  when :write_start then logger.write_start(asset)
+  else raise ArgumentError, "unknown asset write event: #{event.inspect}"
   end
 end
 
@@ -85,12 +99,14 @@ logger.detail("entrypoints: #{config.entrypoints.join(", ")}")
 logger.detail("modules: #{bundle.modules.length}")
 logger.detail("assets: #{context.assets.length}")
 
-logger.step("Assets")
+logger.step("Asset manifest")
 log_assets(context, logger)
 
 if assets_dir
-  logger.step("Writing assets")
-  write_result = context.write_assets(assets_dir)
+  logger.step("Materializing assets")
+  write_result = context.write_assets(assets_dir) do |event, asset, path|
+    log_asset_write_event(logger, event, asset, path)
+  end
   write_result.written_paths.each { |path| logger.written(path) }
   write_result.skipped_paths.each { |path| logger.skipped(path) }
 end

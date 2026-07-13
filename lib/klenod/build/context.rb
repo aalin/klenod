@@ -208,17 +208,17 @@ module Klenod
         @graph.asset_generation_queue
       end
 
-      def write_assets(assets_dir)
+      def write_assets(assets_dir, &block)
         assets_root = Pathname.new(assets_dir)
         results =
           with_async_task do |task|
-            assets.each_value.map { |asset| task.async { write_asset(asset, assets_root) } }.map(&:wait)
+            assets.each_value.map { |asset| task.async { write_asset(asset, assets_root, &block) } }.map(&:wait)
           end
 
         asset_write_result(results, removed_paths: [])
       end
 
-      def write_asset_updates(asset_updates, assets_dir:)
+      def write_asset_updates(asset_updates, assets_dir:, &block)
         assets_root = Pathname.new(assets_dir)
         removed_paths =
           asset_updates.filter_map do |update|
@@ -226,7 +226,7 @@ module Klenod
           end
         written_paths =
           asset_updates.filter_map do |update|
-            write_asset(update.current_asset, assets_root) if update.current_asset
+            write_asset(update.current_asset, assets_root, &block) if update.current_asset
           end
 
         asset_write_result(written_paths, removed_paths: removed_paths)
@@ -272,10 +272,10 @@ module Klenod
         RUBY
       end
 
-      def write_asset(asset, assets_root)
+      def write_asset(asset, assets_root, &block)
         output_path = asset_disk_path(asset.output_path, assets_root)
 
-        [asset.write_to(output_path), output_path.to_s]
+        [asset.write_to(output_path, &block), output_path.to_s]
       end
 
       def asset_write_result(results, removed_paths:)

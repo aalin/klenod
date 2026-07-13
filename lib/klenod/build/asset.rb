@@ -72,13 +72,13 @@ module Klenod
         !static?
       end
 
-      def write_to(path)
+      def write_to(path, &block)
         path = path.to_s
 
         return skip_existing(path) if File.file?(path)
 
-        task = start_write(path)
-        task ? wait_for_task(task) : write_now_or_queued(path)
+        task = start_write(path, &block)
+        task ? wait_for_task(task) : write_now_or_queued(path, &block)
         raise error if failed?
 
         :written
@@ -99,7 +99,7 @@ module Klenod
         end
       end
 
-      def start_write(path)
+      def start_write(path, &block)
         @mutex.synchronize do
           return @task if @task
           return nil if ready? && materialized_for?(path)
@@ -108,7 +108,7 @@ module Klenod
           return nil unless task
 
           @state = :running
-          @task = queued_task(task) { write_now(path) }
+          @task = queued_task(task) { write_now(path, &block) }
         end
       end
 
@@ -138,12 +138,13 @@ module Klenod
         raise
       end
 
-      def write_now(path)
+      def write_now(path, &block)
         return skip_existing(path) if File.file?(path)
         return mark_disk_ready(path) if ready? && materialized_for?(path)
 
         temp_path = "#{path}.tmp.#{$$}.#{object_id}"
         FileUtils.mkdir_p(File.dirname(path))
+        block&.call(generated? ? :generate_start : :write_start, self, path)
 
         File.open(temp_path, "wb") do |file|
           if @writer
@@ -209,10 +210,10 @@ module Klenod
         generate_now
       end
 
-      def write_now_or_queued(path)
-        return @queue.run(kind: queue_kind) { write_now(path) } if @queue
+      def write_now_or_queued(path, &block)
+        return @queue.run(kind: queue_kind) { write_now(path, &block) } if @queue
 
-        write_now(path)
+        write_now(path, &block)
       end
 
       def generate_bytes
