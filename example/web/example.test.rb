@@ -137,7 +137,16 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_routes_utility_prints_route_table
-    stdout, stderr, status = Open3.capture3({"NO_COLOR" => "1"}, RbConfig.ruby, "routes.rb", chdir: __dir__)
+    stdout, stderr, status =
+      Open3.capture3(
+        {
+          "NO_COLOR" => "1",
+          "KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1"
+        },
+        RbConfig.ruby,
+        "routes.rb",
+        chdir: __dir__
+      )
 
     assert(status.success?, stderr)
     assert_includes(stdout, "METHOD")
@@ -481,7 +490,23 @@ class Klenod::ExampleTest < Minitest::Test
   private
 
   def example_config
-    Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
+    with_env("KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1") do
+      Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
+    end
+  end
+
+  def with_env(values)
+    previous = values.to_h { |key, value| [key, ENV[key]] }
+    values.each { |key, value| ENV[key] = value }
+    yield
+  ensure
+    previous.each do |key, value|
+      if value
+        ENV[key] = value
+      else
+        ENV.delete(key)
+      end
+    end
   end
 
   def request(path, method: "GET")

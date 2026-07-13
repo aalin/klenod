@@ -19,35 +19,22 @@ module Klenod
           Mayu::CSS::UrlDependency => :asset_url
         }.freeze
 
-        def transform(module_id, code, _context)
+        def transform(module_id, code, context)
           return super unless module_id.extname == ".css"
 
           result = Mayu::CSS.transform(module_id.path, code, minify: false)
-          dependencies =
-            result.dependencies.each_with_index.map do |dependency, index|
-              next if external_url?(dependency.url)
-
-              Dependency
-                .create(
-                  specifier: dependency.url,
-                  importer_id: module_id,
-                  kind: CSS_DEPENDENCY_TYPES.fetch(dependency.class),
-                  loc: dependency.loc,
-                  metadata: {placeholder: dependency.placeholder}
-                )
-                .with(id: "#{module_id}:dependency:#{index}")
-            end.compact
+          css_dependencies = build_dependencies(module_id, result.dependencies, context)
 
           TransformResult.new(
             ruby_module_source(css_selectors(result), nil),
-            dependencies,
+            css_dependencies.dependencies,
             nil,
             [],
             [],
             {
               css_result: result,
               css_classes: css_selectors(result),
-              external_dependencies: external_dependencies(result.dependencies)
+              external_dependencies: css_dependencies.external_dependencies
             }
           )
         end
@@ -56,7 +43,12 @@ module Klenod
           css_result = result.metadata[:css_result]
           return result unless css_result
 
-          css = replace_dependencies(css_result, resolved_dependencies, dependency_records)
+          css = replace_dependencies(
+            css_result,
+            resolved_dependencies,
+            dependency_records,
+            result.metadata.fetch(:external_dependencies)
+          )
           hash = Digest::SHA256.hexdigest(css)[0, 16]
           output_path = "/assets/#{asset_name(module_id)}.#{hash}.css"
           asset =
@@ -72,7 +64,7 @@ module Klenod
 
           result.with(
             code: ruby_module_source(result.metadata[:css_classes], output_path),
-            assets: [asset],
+            assets: [asset, *result.assets],
             metadata: result.metadata.merge(css_asset_path: output_path)
           )
         end
@@ -87,12 +79,48 @@ module Klenod
 
         private
 
-        def replace_dependencies(css_result, resolved_dependencies, dependency_records)
+        CssDependencies = Data.define(:dependencies, :external_dependencies)
+
+        def build_dependencies(module_id, dependencies, context)
+          external_dependencies = {}
+          resolved_dependencies =
+            dependencies.each_with_index.filter_map do |dependency, index|
+              resolved_dependency =
+                Dependency
+                  .create(
+                    specifier: dependency.url,
+                    importer_id: module_id,
+                    kind: CSS_DEPENDENCY_TYPES.fetch(dependency.class),
+                    loc: dependency.loc,
+                    metadata: {placeholder: dependency.placeholder}
+                  )
+                  .with(id: "#{module_id}:dependency:#{index}")
+
+              if external_url?(dependency.url) && !plugin_resolvable_external_import?(resolved_dependency, dependency, context)
+                external_dependencies[dependency.placeholder] = dependency.url
+                next
+              end
+
+              resolved_dependency
+            end
+
+          CssDependencies.new(resolved_dependencies, external_dependencies.freeze)
+        end
+
+        def plugin_resolvable_external_import?(dependency, css_dependency, context)
+          return false unless css_dependency.is_a?(Mayu::CSS::ImportDependency)
+
+          context.resolve_dependency(dependency)
+          true
+        rescue ResolveError
+          false
+        end
+
+        def replace_dependencies(css_result, resolved_dependencies, dependency_records, external_dependencies)
           dependencies_by_placeholder =
             resolved_dependencies.to_h do |resolved_dependency|
               [resolved_dependency.dependency.metadata.fetch(:placeholder), resolved_dependency]
             end
-          external_dependencies = external_dependencies(css_result.dependencies)
 
           css_result.replace_dependencies do |css_dependency|
             next external_dependencies.fetch(css_dependency.placeholder) if external_dependencies.key?(css_dependency.placeholder)
@@ -106,9 +134,11 @@ module Klenod
         def asset_path_for_dependency(resolved_dependency, record)
           case resolved_dependency.dependency.kind
           when :css_import
-            unless record.id.extname == ".css"
-              raise UnsupportedFileError, "CSS @import #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to unsupported #{record.id.extname} module #{record.id}"
+            css_asset = record.assets.find { |asset| asset.metadata[:type] == :css }
+            unless css_asset
+              raise UnsupportedFileError, "CSS @import #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to module #{record.id}, which does not emit a CSS asset"
             end
+            return css_asset.output_path
           when :asset_url
             unless record.assets.first
               raise UnsupportedFileError, "CSS url() #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to module #{record.id}, which does not emit an asset"
@@ -116,12 +146,6 @@ module Klenod
           end
 
           record.assets.first&.output_path || record.id.to_s
-        end
-
-        def external_dependencies(dependencies)
-          dependencies
-            .select { |dependency| external_url?(dependency.url) }
-            .to_h { |dependency| [dependency.placeholder, dependency.url] }
         end
 
         def external_url?(value)
