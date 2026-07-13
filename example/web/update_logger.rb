@@ -33,6 +33,7 @@ module Example
         log_modules(event.result)
         log_assets(event.asset_changes)
         log_asset_files(update)
+        log_no_graph_changes(event.result) if graph_changes_empty?(event.result)
       end
     end
 
@@ -41,14 +42,28 @@ module Example
     attr_reader :source_dir, :output, :error_output, :env
 
     def log_trigger_paths(event, stream)
-      stream.puts "  changed files: #{format_paths(event.changed_paths).join(", ")}" unless event.changed_paths.empty?
-      stream.puts "  removed files: #{format_paths(event.removed_paths).join(", ")}" unless event.removed_paths.empty?
+      log_list(stream, "changed files", format_paths(event.changed_paths), marker: "~", color: :changed)
+      log_list(stream, "removed files", format_paths(event.removed_paths), marker: "-", color: :removed)
     end
 
     def log_modules(result)
-      output.puts "  reloaded: #{format_values(result.reloaded_module_ids).join(", ")}" unless result.reloaded_module_ids.empty?
-      output.puts "  reevaluated: #{format_values(result.reevaluated_module_ids).join(", ")}" unless result.reevaluated_module_ids.empty?
-      output.puts "  removed modules: #{format_values(result.removed_module_ids).join(", ")}" unless result.removed_module_ids.empty?
+      log_list(output, "reloaded", format_values(result.reloaded_module_ids), marker: "~", color: :changed)
+      log_list(output, "reevaluated", format_values(result.reevaluated_module_ids), marker: "*", color: :success)
+      log_list(output, "removed modules", format_values(result.removed_module_ids), marker: "-", color: :removed)
+    end
+
+    def graph_changes_empty?(result)
+      result.changed_module_ids.empty? &&
+        result.removed_module_ids.empty? &&
+        result.reloaded_module_ids.empty? &&
+        result.reevaluated_module_ids.empty? &&
+        result.asset_changes.empty?
+    end
+
+    def log_no_graph_changes(result)
+      return unless result.errors.empty?
+
+      output.puts "  #{color(:dim, "modules: no loaded graph modules affected")}"
     end
 
     def log_assets(asset_changes)
@@ -66,6 +81,13 @@ module Example
       output.puts "  asset files:"
       update.written_asset_paths.each { |path| output.puts "    #{color(:added, "written")} #{path}" }
       update.removed_asset_paths.each { |path| output.puts "    #{color(:removed, "removed")} #{path}" }
+    end
+
+    def log_list(stream, label, values, marker:, color:)
+      return if values.empty?
+
+      stream.puts "  #{label}:"
+      values.each { |value| stream.puts "    #{color(color, marker)} #{value}" }
     end
 
     def format_paths(paths)

@@ -56,9 +56,11 @@ class Example::UpdateLogger::Test < Minitest::Test
       text = out.string
       assert_includes(text, "Update #4 completed")
       assert_includes(text, "(12.0000ms)")
-      assert_includes(text, "changed files: pages/page.haml")
-      assert_includes(text, "reloaded: pages/page.haml")
-      assert_includes(text, "reevaluated: pages/server.rb")
+      assert_includes(text, "changed files:")
+      assert_includes(text, "pages/page.haml")
+      assert_includes(text, "reloaded:")
+      assert_includes(text, "reevaluated:")
+      assert_includes(text, "pages/server.rb")
       assert_includes(text, "+")
       assert_includes(text, "/assets/new.css")
       assert_includes(text, "~")
@@ -81,8 +83,26 @@ class Example::UpdateLogger::Test < Minitest::Test
 
       logger(dir, out: out).log(event: event, update: FakeUpdate.new([], nil), duration: "1.0000ms")
 
-      assert_includes(out.string, "removed files: pages/old.haml")
-      assert_includes(out.string, "removed modules: pages/old.haml")
+      assert_includes(out.string, "removed files:")
+      assert_includes(out.string, "removed modules:")
+      assert_includes(out.string, "pages/old.haml")
+    end
+  end
+
+  def test_logs_when_changed_file_does_not_affect_loaded_graph
+    Dir.mktmpdir do |dir|
+      out = StringIO.new
+      event =
+        event(
+          changed_paths: ["#{dir}/components/Figure.css"],
+          result: result
+        )
+
+      logger(dir, out: out, env: {"NO_COLOR" => "1"}).log(event: event, update: FakeUpdate.new([], nil), duration: "1.0000ms")
+
+      assert_includes(out.string, "changed files:")
+      assert_includes(out.string, "components/Figure.css")
+      assert_includes(out.string, "modules: no loaded graph modules affected")
     end
   end
 
@@ -100,7 +120,8 @@ class Example::UpdateLogger::Test < Minitest::Test
 
       assert_empty(out.string)
       assert_includes(err.string, "Update #4 failed")
-      assert_includes(err.string, "changed files: pages/page.haml")
+      assert_includes(err.string, "changed files:")
+      assert_includes(err.string, "pages/page.haml")
       assert_includes(err.string, "  pages/page.haml: broken")
       assert_includes(err.string, "  Source:")
     end
