@@ -29,8 +29,10 @@ def self.call(raw_request, context)
     error_match = Router::Default.error(path)
     raise unless error_match
 
+    formatted_error = format_render_error(error, context)
+    warn formatted_error
     error_request = Example::Request.from(raw_request, params: error_match.params)
-    render_page_response(error_match, error_request, context, status: 500, props: {path: path, status: 500, error: error})
+    render_page_response(error_match, error_request, context, status: 500, props: {path: path, status: 500, error: error, error_details: strip_ansi(formatted_error)})
   end
 end
 
@@ -75,6 +77,28 @@ def self.page_instance(page, props)
   return page.new if props.empty?
 
   page.new(**props)
+end
+
+def self.format_render_error(error, context)
+  if defined?(Klenod::BacktraceRewriter)
+    mods =
+      if context.respond_to?(:graph)
+        context.graph.mods.each_with_object({}) do |(module_id, mod), index|
+          index[module_id.to_s] = mod
+          index[module_id.path] = mod
+        end
+      elsif context.respond_to?(:modules)
+        context.modules
+      end
+
+    return Klenod::BacktraceRewriter.new(mods || {}).format_exception(error)
+  end
+
+  error.full_message
+end
+
+def self.strip_ansi(value)
+  value.gsub(/\e\[[0-9;]*m/, "")
 end
 
 def self.module_path

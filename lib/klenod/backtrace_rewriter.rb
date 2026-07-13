@@ -142,8 +142,11 @@ module Klenod
         .map do |range|
           range
             .map do |i|
-              next if i < 0
-              str = format("%3d: %s", i, lines[i - 1].chomp)
+              next if i <= 0
+              line = lines[i - 1]
+              next unless line
+
+              str = format("%3d: %s", i, line.chomp)
               interesting_lines.include?(i) ? "\e[1;31m#{str}\e[0m" : str
             end
             .compact

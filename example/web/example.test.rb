@@ -210,7 +210,10 @@ class Klenod::ExampleTest < Minitest::Test
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
-    status, headers, body = entry.call(request("/demo/error"), context)
+    status = headers = body = nil
+    _stdout, stderr = capture_io do
+      status, headers, body = entry.call(request("/demo/error"), context)
+    end
     html = body.join
     paths = stylesheet_paths(html)
 
@@ -219,6 +222,10 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Something went wrong")
     assert_includes(html, "Rendering /demo/error raised RuntimeError.")
     assert_includes(html, "Demo render failure")
+    assert_includes(html, "RuntimeError")
+    assert_includes(html, "Backtrace")
+    assert_includes(stderr, "RuntimeError: Demo render failure")
+    assert_includes(stderr, "pages/demo/error/page.haml")
     assert(paths.any? { |path| path.include?("pages_layout_css") })
     refute(paths.any? { |path| path.include?("pages_demo_layout_css") })
   end

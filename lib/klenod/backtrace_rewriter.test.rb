@@ -118,4 +118,22 @@ class Klenod::BacktraceRewriter::Test < Minitest::Test
     assert_includes(formatted, "Plain Ruby error")
     refute_includes(formatted, "Sources:")
   end
+
+  def test_format_exception_handles_source_ranges_past_end_of_file
+    source_map = SourceMap::SourceMap.parse(<<~INPUT, <<~OUTPUT)
+      raise "boom"
+    INPUT
+      # #{SourceMap::Mark[3, 'raise "boom"']}
+      raise "boom"
+    OUTPUT
+    error = StandardError.new("Boom")
+    error.set_backtrace(["/app/page.haml:2:in `render'"])
+
+    formatted = BacktraceRewriter.new({"/app/page.haml" => FakeMod.new(source_map)}).format_exception(error)
+
+    assert_includes(formatted, "Boom")
+    assert_includes(formatted, "/app/page.haml")
+    assert_includes(formatted, "  1: raise \"boom\"")
+    refute_includes(formatted, "  0:")
+  end
 end

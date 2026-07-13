@@ -2,10 +2,11 @@
   PageHeader = import("../components/PageHeader.haml")
   Panel = import("../components/Panel.haml")
 
-  def initialize(path:, status:, error:)
+  def initialize(path:, status:, error:, error_details: nil)
     @path = path
     @status = status
     @error = error
+    @error_details = error_details || error.full_message
   end
 
 %article
@@ -15,5 +16,14 @@
     summary: "Rendering #{@path} raised #{@error.class}."
   }
   %section
-    %Panel{ title: "Error detail" }
-      %p= @error.message
+    %Panel{ title: "Error summary" }
+      %dl
+        %dt Class
+        %dd= @error.class
+        %dt Message
+        %dd= @error.message
+        %dt Path
+        %dd= @path
+    %Panel{ title: "Backtrace" }
+      %pre
+        %code= @error_details
