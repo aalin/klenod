@@ -132,6 +132,20 @@ def color_status(status)
   "\e[#{color}m#{status}\e[0m"
 end
 
+def color(name, value)
+  return value.to_s if ENV["NO_COLOR"]
+
+  colors = {
+    reset: "\e[0m",
+    dim: "\e[2m",
+    title: "\e[1;36m",
+    label: "\e[1;37m",
+    value: "\e[32m"
+  }
+
+  "#{colors.fetch(name)}#{value}#{colors.fetch(:reset)}"
+end
+
 def asset_request?(path)
   path.start_with?("/assets/")
 end
@@ -149,10 +163,25 @@ def protocol_response(status, headers, body)
   Protocol::HTTP::Response[status, headers, body]
 end
 
-puts "Serving http://localhost:#{port}"
-puts "Watching #{source_dir}"
-puts "Mirroring assets to #{assets_dir}" if assets_dir
-puts "Edit example/web/src/pages/page.haml, example/web/src/pages/page.css, or example/web/src/pages/dashboard/page.haml to see updates."
+def suppress_io_buffer_experimental_warning
+  return unless defined?(IO::Buffer)
+
+  previous = Warning[:experimental]
+  Warning[:experimental] = false
+  IO::Buffer.new(0)
+ensure
+  Warning[:experimental] = previous unless previous.nil?
+end
+
+def log_startup(port:, source_dir:, assets_dir:)
+  puts color(:title, "Klenod example server")
+  puts "  #{color(:label, "url")}      #{color(:value, "http://localhost:#{port}")}"
+  puts "  #{color(:label, "watching")} #{source_dir}"
+  puts "  #{color(:label, "assets")}   #{assets_dir || color(:dim, "in memory")}"
+end
+
+suppress_io_buffer_experimental_warning
+log_startup(port:, source_dir:, assets_dir:)
 
 begin
   watcher.start
