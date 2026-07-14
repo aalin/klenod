@@ -45,6 +45,7 @@ class Klenod::HTTP::AssetApp::Test < Minitest::Test
     assert_equal(200, response.status)
     assert_equal("text/css", response.headers.fetch("content-type"))
     assert_equal("7", response.headers.fetch("content-length"))
+    assert_equal("public, max-age=31536000, immutable", response.headers.fetch("cache-control"))
     assert_equal("body {}", response.body)
   end
 
@@ -87,6 +88,7 @@ class Klenod::HTTP::AssetApp::Test < Minitest::Test
       response = app.response_for("/assets/home.abc123.css")
 
       assert_equal(200, response.status)
+      assert_equal("public, max-age=31536000, immutable", response.headers.fetch("cache-control"))
       assert_equal("runtime bytes", response.body)
     end
   end

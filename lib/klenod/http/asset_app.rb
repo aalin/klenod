@@ -15,6 +15,8 @@ module Klenod
     end
 
     class AssetApp
+      CACHE_CONTROL = "public, max-age=31536000, immutable"
+
       def initialize(source, app: nil, assets_dir: nil, path_prefix: "/assets/")
         @source = source
         @app = app
@@ -42,7 +44,8 @@ module Klenod
           200,
           {
             "content-type" => asset.content_type,
-            "content-length" => body.bytesize.to_s
+            "content-length" => body.bytesize.to_s,
+            "cache-control" => CACHE_CONTROL
           },
           body
         )
