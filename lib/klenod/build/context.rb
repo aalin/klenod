@@ -5,15 +5,8 @@ require "fileutils"
 
 require_relative "graph"
 require_relative "loaded_module"
-require_relative "plugins/ruby_plugin"
-require_relative "plugins/intl_plugin"
-require_relative "plugins/haml_plugin"
-require_relative "plugins/css_plugin"
-require_relative "plugins/google_fonts_plugin"
-require_relative "plugins/svg_plugin"
-require_relative "plugins/image_plugin"
-require_relative "plugins/data_plugin"
-require_relative "plugins/router_plugin"
+require_relative "plugin"
+require_relative "plugins"
 require_relative "config"
 
 module Klenod
@@ -77,18 +70,36 @@ module Klenod
     end
 
     class Context
-      DEFAULT_PLUGINS = [
-        Plugins::RubyPlugin.new,
-        Plugins::IntlPlugin.new,
-        Plugins::HamlPlugin.new,
-        Plugins::CssPlugin.new,
-        Plugins::SvgPlugin.new,
-        Plugins::ImagePlugin.new,
-        Plugins::JsonPlugin.new,
-        Plugins::YamlPlugin.new,
-        Plugins::TomlPlugin.new,
-        Plugins::TextPlugin.new
-      ].freeze
+      class DefaultPlugins
+        include Enumerable
+
+        def each(&block)
+          return enum_for(:each) unless block
+
+          Context.default_plugins.each(&block)
+        end
+
+        def to_a
+          Context.default_plugins
+        end
+      end
+
+      DEFAULT_PLUGINS = DefaultPlugins.new.freeze
+
+      def self.default_plugins
+        [
+          Plugins::RubyPlugin.new,
+          Plugins::IntlPlugin.new,
+          Plugins::HamlPlugin.new,
+          Plugins::CssPlugin.new,
+          Plugins::SvgPlugin.new,
+          Plugins::ImagePlugin.new,
+          Plugins::JsonPlugin.new,
+          Plugins::YamlPlugin.new,
+          Plugins::TomlPlugin.new,
+          Plugins::TextPlugin.new
+        ]
+      end
 
       def initialize(
         source_dir:,
@@ -98,6 +109,7 @@ module Klenod
         asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY
       )
         @source_dir = source_dir
+        plugins = plugins.to_a if plugins.equal?(DEFAULT_PLUGINS)
         @plugins = plugins
         @mode = mode
         @update_handlers = []
