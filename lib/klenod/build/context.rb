@@ -274,8 +274,12 @@ module Klenod
 
       def write_asset(asset, assets_root, &block)
         output_path = asset_disk_path(asset.output_path, assets_root)
+        status = asset.write_to(output_path) do |event, event_asset, event_path|
+          block&.call(event, event_asset, event_path)
+        end
+        block&.call(status, asset, output_path.to_s)
 
-        [asset.write_to(output_path, &block), output_path.to_s]
+        [status, output_path.to_s]
       end
 
       def asset_write_result(results, removed_paths:)

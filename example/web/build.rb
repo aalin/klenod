@@ -29,7 +29,7 @@ class BuildLogger
   end
 
   def asset(asset)
-    marker = asset.generated? ? "generated" : "static"
+    marker = asset.generated? ? "generated asset" : "static asset"
     details = asset_details(asset, include_queue: asset.generated?)
 
     log "  #{color(:dim, marker)} #{asset.output_path} #{color(:dim, details)}"
@@ -76,10 +76,20 @@ def log_assets(context, logger)
   context.each_asset { |asset| logger.asset(asset) }
 end
 
-def log_asset_write_event(logger, event, asset, _path)
+def log_asset_counts(context, logger)
+  assets = context.each_asset.to_a
+  generated = assets.count(&:generated?)
+
+  logger.detail("static assets: #{assets.length - generated}")
+  logger.detail("generated assets: #{generated}")
+end
+
+def log_asset_write_event(logger, event, asset, path)
   case event
   when :generate_start then logger.generate_start(asset)
   when :write_start then logger.write_start(asset)
+  when :written then logger.written(path)
+  when :skipped then logger.skipped(path)
   else raise ArgumentError, "unknown asset write event: #{event.inspect}"
   end
 end
@@ -98,17 +108,18 @@ bundle = context.graph.bundle(entrypoints: config.entrypoints)
 logger.detail("entrypoints: #{config.entrypoints.join(", ")}")
 logger.detail("modules: #{bundle.modules.length}")
 logger.detail("assets: #{context.assets.length}")
+log_asset_counts(context, logger)
 
-logger.step("Asset manifest")
-log_assets(context, logger)
+if ENV["VERBOSE_ASSETS"]
+  logger.step("Asset manifest")
+  log_assets(context, logger)
+end
 
 if assets_dir
   logger.step("Materializing assets")
-  write_result = context.write_assets(assets_dir) do |event, asset, path|
+  context.write_assets(assets_dir) do |event, asset, path|
     log_asset_write_event(logger, event, asset, path)
   end
-  write_result.written_paths.each { |path| logger.written(path) }
-  write_result.skipped_paths.each { |path| logger.skipped(path) }
 end
 
 logger.step("Writing bundle")
