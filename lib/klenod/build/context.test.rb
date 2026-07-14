@@ -1453,6 +1453,57 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_async_dependency_failures_do_not_emit_unhandled_task_warnings
+    Dir.mktmpdir do |dir|
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Broken = import("broken.haml")
+          Other = import("other.rb")
+        RUBY
+      )
+      File.write(
+        "#{dir}/broken.haml",
+        <<~HAML
+          %ul
+            = @items.map do |item| }
+              %li= item
+        HAML
+      )
+      File.write("#{dir}/other.rb", "VALUE = 1\n")
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      _out, err =
+        capture_io do
+          Async do
+            assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.evaluate("entry.rb") }
+          end.wait
+        end
+
+      refute_includes(err, "Task may have ended with unhandled exception")
+    end
+  end
+
+  def test_invalidate_paths_does_not_reevaluate_dependents_after_reload_failure
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/components")
+      File.write("#{dir}/components/Table.haml", "%table\n  %tbody OK\n")
+      File.write("#{dir}/first.rb", "Table = import(\"components/Table.haml\")\n")
+      File.write("#{dir}/second.rb", "Table = import(\"components/Table.haml\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("first.rb")
+      context.evaluate("second.rb")
+
+      File.write("#{dir}/components/Table.haml", "%table\n  = rows.map do |row| }\n    %tr= row\n")
+      result = context.invalidate_paths(["#{dir}/components/Table.haml"])
+
+      assert_equal(["components/Table.haml"], result.errors.map { |module_id, _error| module_id.to_s })
+      assert_equal([], result.reevaluated_module_ids)
+      assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.evaluate("first.rb") }
+    end
+  end
+
   private
 
   def fake_task(&block)

@@ -11,6 +11,8 @@ require_relative "formatting"
 
 module Example
   class DevServer
+    ERROR_LOG_REPEAT_INTERVAL = 2.0
+
     def initialize(config_path:, port: Integer(ENV.fetch("PORT", "9292")), assets_dir: ENV["ASSETS_DIR"])
       @config = Klenod::Build::ConfigLoader.load(config_path)
       @port = port
@@ -107,7 +109,7 @@ module Example
       protocol_response(status, headers, body)
     rescue => e
       formatted = ServerErrors.format_exception(e, context)
-      warn formatted unless logged_error?(e)
+      log_error_unless_recent(e, formatted)
       ServerFormatting.log_request(request, 500, start_time) if start_time
       protocol_response(500, {"content-type" => "text/plain"}, [ServerFormatting.strip_ansi(formatted), "\n"])
     end
@@ -116,12 +118,17 @@ module Example
       Protocol::HTTP::Response[status, headers, body]
     end
 
-    def remember_logged_error(error)
-      logged_errors[error_log_key(error)] = true
+    def remember_logged_error(error, logged_at: current_time)
+      logged_errors[error_log_key(error)] = logged_at
     end
 
     def logged_error?(error)
       logged_errors.key?(error_log_key(error))
+    end
+
+    def recently_logged_error?(error, now: current_time)
+      logged_at = logged_errors[error_log_key(error)]
+      logged_at && (now - logged_at) < ERROR_LOG_REPEAT_INTERVAL
     end
 
     def clear_logged_errors
@@ -133,7 +140,18 @@ module Example
     end
 
     def error_log_key(error)
-      [error.class.name, error.message]
+      [error.class.name, ServerFormatting.strip_ansi(error.message)]
+    end
+
+    def log_error_unless_recent(error, formatted)
+      return if recently_logged_error?(error)
+
+      warn formatted
+      remember_logged_error(error)
+    end
+
+    def current_time
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
   end
 end

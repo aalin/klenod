@@ -265,6 +265,27 @@ class Klenod::ExampleTest < Minitest::Test
     refute(server.send(:logged_error?, error))
   end
 
+  def test_example_server_suppresses_recent_logged_update_errors
+    server = Example::DevServer.allocate
+    error = RuntimeError.new("broken module")
+
+    server.send(:remember_logged_error, error, logged_at: 10.0)
+
+    assert(server.send(:recently_logged_error?, RuntimeError.new("broken module"), now: 11.0))
+    refute(server.send(:recently_logged_error?, RuntimeError.new("broken module"), now: 13.0))
+  end
+
+  def test_example_server_logs_repeated_errors_after_interval
+    server = Example::DevServer.allocate
+    error = RuntimeError.new("broken module")
+
+    server.send(:remember_logged_error, error, logged_at: -Example::DevServer::ERROR_LOG_REPEAT_INTERVAL)
+
+    _stdout, stderr = capture_io { server.send(:log_error_unless_recent, RuntimeError.new("broken module"), "formatted error") }
+
+    assert_equal("formatted error\n", stderr)
+  end
+
   def test_example_app_renders_route_handler_response
     config = example_config
     context = config.context

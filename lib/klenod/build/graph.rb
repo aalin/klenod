@@ -20,18 +20,36 @@ module Klenod
     class Graph
       include TSort
 
-      InFlightLoad = Struct.new(:task, :condition) do
+      AsyncResult = Data.define(:value, :error) do
+        def self.capture
+          new(yield, nil)
+        rescue => e
+          new(nil, e)
+        end
+
+        def self.unwrap(value)
+          return value unless value.is_a?(self)
+
+          raise value.error if value.error
+
+          value.value
+        end
+      end
+
+      FailedModule = Data.define(:error)
+
+      InFlightLoad = Struct.new(:result, :condition) do
         def self.create
           new(nil, Async::Condition.new)
         end
 
         def wait
-          (task || condition.wait).wait
+          AsyncResult.unwrap(result || condition.wait)
         end
 
-        def start(task)
-          self.task = task
-          condition.signal(task)
+        def finish(result)
+          self.result = result
+          condition.signal(result)
         end
       end
 
@@ -90,7 +108,7 @@ module Klenod
       end
 
       def assets
-        @records.values.flat_map(&:assets).to_h { |asset| [asset.output_path, asset] }
+        @records.values.select { |record| record.status == :loaded }.flat_map(&:assets).to_h { |asset| [asset.output_path, asset] }
       end
 
       def asset(output_path)
@@ -103,7 +121,8 @@ module Klenod
       end
 
       def evaluated?(record_or_module_id)
-        @mods.key?(module_id_for(record_or_module_id))
+        mod = @mods[module_id_for(record_or_module_id)]
+        mod && !mod.is_a?(FailedModule)
       end
 
       def assets_for(logical_name)
@@ -204,14 +223,19 @@ module Klenod
             end
             module_id
           rescue => e
+            mark_module_failed(module_id, e)
             errors << [module_id, e]
             nil
           end
+        failed_reload_ids = errors.map(&:first) & reload_module_ids
+        blocked_dependent_ids = dependent_closure(failed_reload_ids)
+        blocked_dependent_ids.each { |module_id| @mods.delete(module_id) }
 
         reevaluated_module_ids =
           affected_dependents.filter_map do |module_id|
             next if removed_module_ids.include?(module_id)
             next if reload_module_ids.include?(module_id)
+            next if blocked_dependent_ids.include?(module_id)
 
             if evaluated_module_ids.include?(module_id)
               load_module(module_id, reevaluate: true)
@@ -243,18 +267,15 @@ module Klenod
       def load_module(module_id, force: false, reevaluate: false)
         raise_import_cycle_if_present(module_id) unless force || reevaluate
 
-        unless force || reevaluate
+        if !force && !reevaluate
           return @loading_tasks.fetch(module_id).wait if @loading_tasks.key?(module_id)
-        end
 
-        task = current_async_task
-        if task && !force && !reevaluate
-          in_flight_load = InFlightLoad.create
-          @loading_tasks[module_id] = in_flight_load
-          loading_task = task.async { load_module_now(module_id, force: force, reevaluate: reevaluate) }
-          in_flight_load.start(loading_task)
           begin
-            return loading_task.wait
+            in_flight_load = InFlightLoad.create
+            @loading_tasks[module_id] = in_flight_load
+            result = AsyncResult.capture { load_module_now(module_id, force: force, reevaluate: reevaluate) }
+            in_flight_load.finish(result)
+            return AsyncResult.unwrap(result)
           ensure
             @loading_tasks.delete(module_id) if @loading_tasks[module_id].equal?(in_flight_load)
           end
@@ -268,6 +289,8 @@ module Klenod
           source = read_module_source(module_id)
           source_hash = Digest::SHA256.hexdigest(source)
           cached = @records[module_id]
+
+          raise_failed_module!(cached)
 
           if cached&.source_hash == source_hash && !force && !reevaluate
             evaluate_module(module_id) unless @mods.key?(module_id)
@@ -292,16 +315,15 @@ module Klenod
       def collect_module(module_id, force: false)
         raise_import_cycle_if_present(module_id) unless force
 
-        return @loading_tasks.fetch(module_id).wait if !force && @loading_tasks.key?(module_id)
+        if !force
+          return @loading_tasks.fetch(module_id).wait if @loading_tasks.key?(module_id)
 
-        task = current_async_task
-        if task && !force
-          in_flight_load = InFlightLoad.create
-          @loading_tasks[module_id] = in_flight_load
-          loading_task = task.async { collect_module_now(module_id, force: force) }
-          in_flight_load.start(loading_task)
           begin
-            return loading_task.wait
+            in_flight_load = InFlightLoad.create
+            @loading_tasks[module_id] = in_flight_load
+            result = AsyncResult.capture { collect_module_now(module_id, force: force) }
+            in_flight_load.finish(result)
+            return AsyncResult.unwrap(result)
           ensure
             @loading_tasks.delete(module_id) if @loading_tasks[module_id].equal?(in_flight_load)
           end
@@ -315,6 +337,8 @@ module Klenod
           source = read_module_source(module_id)
           source_hash = Digest::SHA256.hexdigest(source)
           cached = @records[module_id]
+
+          raise_failed_module!(cached)
 
           return cached if cached&.source_hash == source_hash && !force
 
@@ -336,6 +360,7 @@ module Klenod
         return @mods.fetch(module_id) if @mods.key?(module_id)
 
         record = @records.fetch(module_id) { collect_module(module_id) }
+        raise_failed_module!(record)
         evaluate_eager_dependencies(record.resolved_dependencies)
         mod =
           Runtime::Mod.new(
@@ -356,6 +381,8 @@ module Klenod
 
       def tsort_each_child(node, &block)
         record = @records.fetch(node)
+        return if record.status != :loaded
+
         record.resolved_dependencies.map(&:module_id).each(&block)
       end
 
@@ -395,7 +422,8 @@ module Klenod
           next unless @records.key?(module_id)
 
           seen << module_id
-          queue.concat(@records.fetch(module_id).resolved_dependencies.map(&:module_id))
+          record = @records.fetch(module_id)
+          queue.concat(record.resolved_dependencies.map(&:module_id)) if record.status == :loaded
         end
 
         seen.to_a
@@ -505,11 +533,13 @@ module Klenod
           value =
             if resolved_dependency.dependency.eager
               record = dependency_records.fetch(resolved_dependency.dependency.id)
+              raise_failed_module!(record)
               import_value(resolved_dependency, record)
             else
               Runtime::LazyImport.new do
                 evaluate_module(resolved_dependency.module_id)
                 record = @records.fetch(resolved_dependency.module_id)
+                raise_failed_module!(record)
                 import_value(resolved_dependency, record)
               end
             end
@@ -642,7 +672,7 @@ module Klenod
             resolved_dependencies.map do |resolved_dependency|
               [
                 resolved_dependency.dependency.id,
-                task.async { load_module(resolved_dependency.module_id) }
+                task.async { AsyncResult.capture { load_module(resolved_dependency.module_id) } }
               ]
             end
           )
@@ -664,7 +694,7 @@ module Klenod
             resolved_dependencies.map do |resolved_dependency|
               [
                 resolved_dependency.dependency.id,
-                task.async { collect_module(resolved_dependency.module_id) }
+                task.async { AsyncResult.capture { collect_module(resolved_dependency.module_id) } }
               ]
             end
           )
@@ -675,12 +705,46 @@ module Klenod
         first_error = nil
 
         tasks.each_with_object({}) do |(dependency_id, child_task), records|
-          records[dependency_id] = child_task.wait
+          records[dependency_id] = AsyncResult.unwrap(child_task.wait)
         rescue => e
           first_error ||= e
         end.tap do
           raise first_error if first_error
         end
+      end
+
+      def mark_module_failed(module_id, error)
+        cached = @records[module_id]
+        source =
+          begin
+            read_module_source(module_id)
+          rescue
+            cached&.source || ""
+          end
+        source_hash = Digest::SHA256.hexdigest(source)
+        version = cached ? cached.version + 1 : 0
+
+        @records[module_id] =
+          ModuleRecord.new(
+            module_id,
+            source_hash,
+            "",
+            [],
+            [],
+            source,
+            "",
+            nil,
+            [],
+            [],
+            {error: error},
+            version,
+            :failed
+          )
+        @mods[module_id] = FailedModule.new(error)
+      end
+
+      def raise_failed_module!(record)
+        raise record.metadata.fetch(:error) if record&.status == :failed
       end
 
       def collect_eager_dependency_records(resolved_dependencies)
@@ -846,6 +910,8 @@ module Klenod
       end
 
       def import_value(resolved_dependency, record)
+        raise_failed_module!(record)
+
         value = plugin_import_value(resolved_dependency, record)
         return value unless value.nil?
 
