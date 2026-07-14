@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby -rbundler/setup
+#!/usr/bin/env -S asdf exec ruby -rbundler/setup
 # frozen_string_literal: true
 
 require_relative "../lib/server/app"
