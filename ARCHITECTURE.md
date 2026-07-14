@@ -253,6 +253,10 @@ Invalidation considers:
 
 Collected-but-not-evaluated modules should remain unevaluated after invalidation. `apply_update` should not force entry evaluation unless the entry was already evaluated or the caller explicitly asks for exports/calls.
 
+Failed reloads are represented in the graph rather than discarded silently. When a changed module fails to transform or collect, the graph stores a failed `ModuleRecord` with the original error and reports that module as the update error. Dependents of that failed reload are not reevaluated during the same update, which avoids repeatedly parsing/importing the same broken module. Already evaluated dependents are evicted, so a later request that actually needs the failed dependency re-evaluates and raises the stored error instead of continuing to use stale exports. Routes that do not depend on the failed module can continue to render from the previous good graph.
+
+Graph dependency loading may run sibling loads concurrently. Worker tasks capture expected build/parse failures as result values and re-raise them from the parent graph path. This keeps errors attributable to the update/request that caused them and avoids noisy `Async::Task` unhandled-exception warnings for normal development syntax errors.
+
 Frameworks can subscribe to updates:
 
 ```ruby
@@ -260,6 +264,8 @@ context.on_update do |event|
   update = context.apply_update(event, entry: entry, assets_dir: "public")
 end
 ```
+
+The example web server formats update errors and request errors consistently. It remembers recently logged errors for a short interval so an update failure plus immediate browser follow-up requests do not flood the console, while later failed requests still report their error.
 
 ## Build And Bundle
 

@@ -76,6 +76,14 @@ Graph collection and module evaluation are separate:
 - `entry.exports`, `entry.call(...)`, `context.exports(...)`, and `context.evaluate(...)` evaluate on demand.
 - Build mode should serialize collected records without evaluating app modules.
 
+Development invalidation should preserve this split:
+
+- If a changed module fails to reload, store a failed `ModuleRecord` for that module and keep the original reload error as the root error.
+- Do not reevaluate dependents of a failed reload during the same update; that would parse/import the same broken module repeatedly and produce duplicate errors.
+- Do evict evaluated dependent mods, so a later request that actually needs the broken dependency re-evaluates and raises the stored error instead of using stale exports.
+- Unrelated routes/modules should continue using the previous good graph when they do not depend on the failed module.
+- Async graph worker tasks should capture failures as values and re-raise from the parent path; expected parse/build errors must not leak as `Async::Task: Task may have ended with unhandled exception`.
+
 Plugin hook phases:
 
 - `resolve`, `load`, `transform`, and `finalize` are collection-time hooks.
@@ -263,7 +271,7 @@ Important routes:
 - `/demo/forms`: sessions, forms, CSRF, redirects.
 - `/demo/routing`: router metadata.
 
-The example server uses `async-http`. It logs requests and update events with ANSI formatting, dims asset requests, and prints formatted render errors to the console.
+The example server uses `async-http`. It logs requests and update events with ANSI formatting, dims asset requests, and prints formatted render errors to the console. Update-time parse errors and request-time errors share a short recent-error cache so browser follow-up requests do not flood the console, but later failed requests still log normally.
 
 ## Testing Tricks
 
