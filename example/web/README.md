@@ -5,17 +5,13 @@ This example exercises the current module graph, plugin pipeline, emitted assets
 Run it from the repository root:
 
 ```sh
-bundle exec ruby example/web/run.rb
-bundle exec ruby example/web/build.rb
-bundle exec ruby example/web/load.rb
-bundle exec ruby example/web/watch.rb
-bundle exec ruby example/web/routes.rb
-bundle exec ruby example/web/server.rb
+example/web/bin/build
+example/web/bin/run
+example/web/bin/routes
+example/web/bin/server
 ```
 
-`run.rb` loads `src/pages/server.rb`, which imports `virtual:router`, matches `/`, renders `src/pages/page.haml`, and wraps it in `src/pages/layout.haml`.
-
-`build.rb` writes `example/web/dist/klenod.bundle` and `example/web/dist/public`, printing the collected module count, emitted assets, generated assets, and written files. `load.rb` reloads that bundle through the runtime API and evaluates the entrypoint without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
+`bin/build` writes `example/web/dist/klenod.bundle` and `example/web/dist/public`, printing the collected module count, emitted assets, generated assets, and written files. `bin/run` reloads that bundle through the runtime API and evaluates the entrypoint without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
 
 ```ruby
 bundle = Klenod::Runtime.load_bundle("example/web/dist/klenod.bundle", source_root: "/app/src")
@@ -28,17 +24,14 @@ cd example/web
 bundle exec ../../exe/klenod build
 ```
 
-`watch.rb` keeps the process running and prints invalidation events when loaded files under `example/web/src` change.
+`bin/routes` prints a Rails-style route table with the HTTP method, server path, route type, and source file for each discovered `page.haml` and `route.rb`.
 
-`routes.rb` prints a Rails-style route table with the HTTP method, server path, route type, and source file for each discovered `page.haml` and `route.rb`.
+`bin/server` starts a small `async-http` server on `http://localhost:9292`. It watches the source tree, matches each request through the router plugin, and serves emitted CSS/image assets from the build context.
 
-`server.rb` starts a small `async-http` server on `http://localhost:9292`. It watches the source tree, matches each request through the router plugin, and serves emitted CSS/image assets from the build context.
-
-`watch.rb` and `server.rb` can also mirror emitted assets to disk:
+`bin/server` can also mirror emitted assets to disk:
 
 ```sh
-ASSETS_DIR=example/web/tmp/public bundle exec ruby example/web/watch.rb
-ASSETS_DIR=example/web/tmp/public bundle exec ruby example/web/server.rb
+ASSETS_DIR=example/web/tmp/public example/web/bin/server
 ```
 
 When `ASSETS_DIR` is set, the examples write the current asset manifest once and then apply `event.asset_updates` after each successful graph update.

@@ -235,7 +235,7 @@ bundle exec rake
 The example app can be run from the repository root:
 
 ```sh
-bundle exec ruby example/web/server.rb
+example/web/bin/server
 ```
 
 It starts a small `async-http` server, serves emitted assets from the build context, and watches the source tree for graph updates.

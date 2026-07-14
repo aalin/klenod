@@ -1,7 +1,0 @@
-# frozen_string_literal: true
-
-require_relative "../../lib/klenod"
-require_relative "tools/route_report"
-
-config = Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
-Example::RouteReport.new(config).print

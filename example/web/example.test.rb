@@ -144,7 +144,7 @@ class Klenod::ExampleTest < Minitest::Test
           "KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1"
         },
         RbConfig.ruby,
-        "routes.rb",
+        "bin/routes",
         chdir: __dir__
       )
 

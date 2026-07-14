@@ -53,12 +53,10 @@ The cache root matters in sandboxed environments. Plain `standardrb` may try to 
 Example app commands:
 
 ```sh
-bundle exec ruby example/web/run.rb
-bundle exec ruby example/web/build.rb
-bundle exec ruby example/web/load.rb
-bundle exec ruby example/web/watch.rb
-bundle exec ruby example/web/routes.rb
-bundle exec ruby example/web/server.rb
+example/web/bin/build
+example/web/bin/run
+example/web/bin/routes
+example/web/bin/server
 ```
 
 CLI build from config:
@@ -146,7 +144,7 @@ Hybrid route behavior is framework/server policy, not router policy. The example
 - Otherwise they go to `route.rb`.
 - Hybrid `GET` handler responses should include `Vary: Accept`.
 
-`example/web/routes.rb` is the current route visualization tool. It prints a table and a tree. Route display ordering still needs a future pass so it follows actual router match priority.
+`example/web/bin/routes` is the current route visualization tool. It prints a table and a tree. Route display ordering still needs a future pass so it follows actual router match priority.
 
 ## Haml Rules
 
@@ -276,13 +274,13 @@ bundle exec ruby lib/klenod/build/plugins/router_plugin.test.rb
 bundle exec ruby example/web/example.test.rb
 ```
 
-Use `NO_COLOR=1` when asserting CLI output from `example/web/routes.rb`.
+Use `NO_COLOR=1` when asserting CLI output from `example/web/bin/routes`.
 
 Use `HeaderRequest` in `example/web/example.test.rb` to test `Accept` behavior.
 
 Use `BodyRequest` and `ReadableBody` in example tests for forms.
 
-For route handler line numbers, `example/web/routes.rb` scans `def GET`, `def POST`, etc. Keep route handler examples simple enough for that scanner unless the scanner is being improved.
+For route handler line numbers, `example/web/bin/routes` scans `def GET`, `def POST`, etc. Keep route handler examples simple enough for that scanner unless the scanner is being improved.
 
 ## Code Style And Editing
 
