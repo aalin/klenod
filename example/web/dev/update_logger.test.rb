@@ -4,8 +4,8 @@ require "minitest/autorun"
 require "stringio"
 require "tmpdir"
 
-require_relative "../../lib/klenod"
-require_relative "dev/update_logger"
+require_relative "../../../lib/klenod"
+require_relative "update_logger"
 
 class Example::UpdateLogger::Test < Minitest::Test
   FakeUpdate = Data.define(:errors, :asset_write_result) do
