@@ -560,6 +560,41 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
+  def test_development_router_does_not_parse_unmatched_lazy_haml_page_on_startup
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/broken")
+      File.write("#{dir}/pages/page.haml", "%h1 Home\n")
+      File.write("#{dir}/pages/broken/page.haml", "= @columns.map do |column| }\n  %th= column\n")
+
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          mode: :development,
+          plugins: [
+            RouterPlugin.new(route_base_class: "#{self.class.name}::RouteBase"),
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::HamlPlugin.new(factory: "Object")
+          ]
+        )
+      router_record = context.evaluate("virtual:router")
+      router = context.exports(router_record)::Default
+
+      assert_includes(router_record.transformed_source, "__klenod_lazy_import__")
+      assert_equal(["virtual:router.rb"], context.graph.records.keys.map(&:to_s))
+
+      assert(router.match("/"))
+      assert_equal(["virtual:router.rb"], context.graph.records.keys.map(&:to_s))
+
+      router.match("/").page
+      assert_includes(context.graph.records.keys.map(&:to_s), "pages/page.haml")
+      refute_includes(context.graph.records.keys.map(&:to_s), "pages/broken/page.haml")
+
+      assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
+        router.match("/broken").page
+      end
+    end
+  end
+
   def test_companion_css_change_collects_lazy_router_page
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/blog/[slug]")

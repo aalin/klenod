@@ -362,11 +362,12 @@ module Klenod
         record = @records.fetch(module_id) { collect_module(module_id) }
         raise_failed_module!(record)
         evaluate_eager_dependencies(record.resolved_dependencies)
+        dependency_records = dependency_records_for(eager_dependencies(record.resolved_dependencies))
         mod =
           Runtime::Mod.new(
             module_id.to_s,
             record.transformed_source,
-            imports: imports_for(record.resolved_dependencies, dependency_records_for(record.resolved_dependencies)),
+            imports: imports_for(record.resolved_dependencies, dependency_records),
             source_map: record.source_map,
             version: record.version,
             eval_path: eval_path_for(module_id)
