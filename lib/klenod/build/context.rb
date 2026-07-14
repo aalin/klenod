@@ -10,6 +10,7 @@ require_relative "plugins/intl_plugin"
 require_relative "plugins/haml_plugin"
 require_relative "plugins/css_plugin"
 require_relative "plugins/google_fonts_plugin"
+require_relative "plugins/svg_plugin"
 require_relative "plugins/image_plugin"
 require_relative "plugins/data_plugin"
 require_relative "plugins/router_plugin"
@@ -81,6 +82,7 @@ module Klenod
         Plugins::IntlPlugin.new,
         Plugins::HamlPlugin.new,
         Plugins::CssPlugin.new,
+        Plugins::SvgPlugin.new,
         Plugins::ImagePlugin.new,
         Plugins::JsonPlugin.new,
         Plugins::YamlPlugin.new,

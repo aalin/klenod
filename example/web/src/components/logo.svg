@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Outer package / cube -->
+  <g fill="#B90F1B">
+    <!-- Top -->
+    <path d="M512 96 188 292l118 70 206-124 206 124 118-70L512 96Z"/>
+    <!-- Left -->
+    <path d="M168 336v370l328 198V736L294 614V416L168 336Z"/>
+    <!-- Right -->
+    <path d="M856 336v370L528 904V736l202-122V416l126-80Z"/>
+  </g>
+
+  <!-- Inner ruby -->
+  <g fill="#E31535">
+    <!-- Top center facet -->
+    <path d="M402 350h220l-42 92H444l-42-92Z"/>
+    <!-- Top left facet -->
+    <path d="M386 366 326 438h92l-32-72Z"/>
+    <!-- Top right facet -->
+    <path d="m638 366-32 72h92l-60-72Z"/>
+    <!-- Lower left facet -->
+    <path d="M330 458h108l58 226-166-226Z"/>
+    <!-- Lower center facet -->
+    <path d="M456 458h112l-56 246-56-246Z"/>
+    <!-- Lower right facet -->
+    <path d="M586 458h108L528 684l58-226Z"/>
+  </g>
+</svg>

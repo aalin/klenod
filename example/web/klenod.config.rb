@@ -39,6 +39,7 @@ plugins [
   ),
   Klenod::Build::Plugins::GoogleFontsPlugin.new(fetcher: google_fonts_fetcher),
   Klenod::Build::Plugins::CssPlugin.new,
+  Klenod::Build::Plugins::SvgPlugin.new,
   Klenod::Build::Plugins::ImagePlugin.new(
     widths: [320, 640, 960]
   ),
