@@ -55,22 +55,50 @@ class Klenod::Build::Resolver::Test < Minitest::Test
     end
   end
 
-  def test_rejects_ambiguous_extensionless_imports
+  def test_resolves_extensionless_imports_by_extension_order
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write("#{dir}/pages/page.rb", "")
       File.write("#{dir}/pages/page.haml", "")
 
       resolver = Resolver.new(source_dir: dir)
-      error =
-        assert_raises(Klenod::Build::ResolveError) do
-          resolver.resolve(
-            Dependency.create(specifier: "pages/page", importer_id: nil, kind: :entrypoint)
-          )
-        end
+      resolved =
+        resolver.resolve(
+          Dependency.create(specifier: "pages/page", importer_id: nil, kind: :entrypoint)
+        )
 
-      assert_includes(error.message, "Ambiguous import pages/page")
-      assert_includes(error.message, "Use an explicit extension")
+      assert_equal("pages/page.rb", resolved.module_id.path)
+    end
+  end
+
+  def test_skips_explicit_only_extensions_for_extensionless_imports
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/components")
+      File.write("#{dir}/components/PageHeader.haml", "")
+      File.write("#{dir}/components/PageHeader.css", "")
+
+      resolver = Resolver.new(source_dir: dir)
+      resolved =
+        resolver.resolve(
+          Dependency.create(specifier: "components/PageHeader", importer_id: nil, kind: :ruby_import)
+        )
+
+      assert_equal("components/PageHeader.haml", resolved.module_id.path)
+    end
+  end
+
+  def test_resolves_explicit_css_imports
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/components")
+      File.write("#{dir}/components/PageHeader.css", "")
+
+      resolver = Resolver.new(source_dir: dir)
+      resolved =
+        resolver.resolve(
+          Dependency.create(specifier: "components/PageHeader.css", importer_id: nil, kind: :ruby_import)
+        )
+
+      assert_equal("components/PageHeader.css", resolved.module_id.path)
     end
   end
 

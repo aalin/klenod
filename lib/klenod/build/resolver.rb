@@ -7,7 +7,7 @@ require_relative "dependency"
 module Klenod
   module Build
     class Resolver
-      DEFAULT_EXTENSIONS = [".rb", ".haml", ".css"].freeze
+      DEFAULT_EXTENSIONS = [".rb", ".haml"].freeze
 
       def initialize(source_dir:, extensions: DEFAULT_EXTENSIONS)
         @source_dir = Pathname.new(source_dir).expand_path
@@ -46,17 +46,9 @@ module Klenod
       def resolve_existing_path(path)
         return path if path.file?
 
-        candidates =
-          @extensions.filter_map do |extension|
-            candidate = Pathname.new("#{path}#{extension}")
-            candidate if candidate.file?
-          end
-        return candidates.fetch(0) if candidates.length == 1
-
-        if candidates.length > 1
-          relative = path.relative_path_from(@source_dir)
-          matches = candidates.map { |candidate| candidate.relative_path_from(@source_dir) }.join(", ")
-          raise ResolveError, "Ambiguous import #{relative}; matched #{matches}. Use an explicit extension."
+        @extensions.each do |extension|
+          candidate = Pathname.new("#{path}#{extension}")
+          return candidate if candidate.file?
         end
 
         raise ResolveError, "Could not resolve #{path.relative_path_from(@source_dir)}"

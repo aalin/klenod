@@ -45,7 +45,7 @@ module Klenod
         asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY,
         asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY
       )
-        @resolver = Resolver.new(source_dir: source_dir, extensions: resolver_extensions(plugins))
+        @resolver = Resolver.new(source_dir: source_dir)
         @plugins = plugins
         @mode = mode
         @asset_generation_queue =
@@ -801,15 +801,6 @@ module Klenod
         value = plugin_runtime_import_value(resolved_dependency, record)
 
         Runtime::ImportSpec.new(record.id.to_s, value, resolved_dependency.dependency.eager)
-      end
-
-      def resolver_extensions(plugins)
-        image_extensions =
-          plugins.flat_map do |plugin|
-            plugin.class.const_defined?(:EXTENSIONS, false) ? plugin.class.const_get(:EXTENSIONS) : []
-          end
-
-        (Resolver::DEFAULT_EXTENSIONS + image_extensions).uniq
       end
 
       def load_source(module_id, absolute_path)
