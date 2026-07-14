@@ -63,6 +63,8 @@ nav a:hover {
 }
 
 main {
+  view-transition-name: page-content;
+  contain: layout;
   width: min(1120px, calc(100% - 2rem));
   margin: 0 auto;
   padding: var(--space-6) 0;
