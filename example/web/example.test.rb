@@ -8,6 +8,7 @@ require "tmpdir"
 
 require_relative "../../lib/klenod"
 require_relative "lib/framework"
+require_relative "lib/server/app"
 require_relative "lib/server/errors"
 
 class Klenod::ExampleTest < Minitest::Test
@@ -251,6 +252,17 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(formatted, "components/DataTable.haml:2: Haml parse error")
     assert_includes(formatted, "> 2 |   = @columns.map { |column| )")
     refute_includes(formatted, "Backtrace:")
+  end
+
+  def test_example_server_tracks_logged_update_errors
+    server = Example::DevServer.allocate
+    error = RuntimeError.new("broken module")
+
+    refute(server.send(:logged_error?, error))
+    server.send(:remember_logged_error, error)
+    assert(server.send(:logged_error?, error))
+    server.send(:clear_logged_errors)
+    refute(server.send(:logged_error?, error))
   end
 
   def test_example_app_renders_route_handler_response

@@ -638,14 +638,14 @@ module Klenod
         end
 
         with_async_task do |task|
-          resolved_dependencies
-            .map do |resolved_dependency|
+          wait_for_dependency_tasks(
+            resolved_dependencies.map do |resolved_dependency|
               [
                 resolved_dependency.dependency.id,
                 task.async { load_module(resolved_dependency.module_id) }
               ]
             end
-            .to_h { |dependency_id, child_task| [dependency_id, child_task.wait] }
+          )
         end
       end
 
@@ -660,14 +660,26 @@ module Klenod
         end
 
         with_async_task do |task|
-          resolved_dependencies
-            .map do |resolved_dependency|
+          wait_for_dependency_tasks(
+            resolved_dependencies.map do |resolved_dependency|
               [
                 resolved_dependency.dependency.id,
                 task.async { collect_module(resolved_dependency.module_id) }
               ]
             end
-            .to_h { |dependency_id, child_task| [dependency_id, child_task.wait] }
+          )
+        end
+      end
+
+      def wait_for_dependency_tasks(tasks)
+        first_error = nil
+
+        tasks.each_with_object({}) do |(dependency_id, child_task), records|
+          records[dependency_id] = child_task.wait
+        rescue => e
+          first_error ||= e
+        end.tap do
+          raise first_error if first_error
         end
       end
 

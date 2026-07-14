@@ -1423,7 +1423,45 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_graph_waits_for_all_dependency_tasks_before_reraising
+    Dir.mktmpdir do |dir|
+      context = Klenod::Build::Context.new(source_dir: dir)
+      graph = context.graph
+      failure = RuntimeError.new("first failed")
+      waited = []
+      tasks = [
+        [
+          :first,
+          fake_task do
+            waited << :first
+            raise failure
+          end
+        ],
+        [
+          :second,
+          fake_task do
+            waited << :second
+            "second record"
+          end
+        ]
+      ]
+
+      error = assert_raises(RuntimeError) { graph.send(:wait_for_dependency_tasks, tasks) }
+
+      assert_same(failure, error)
+      assert_equal([:first, :second], waited)
+    end
+  end
+
   private
+
+  def fake_task(&block)
+    Struct.new(:block) do
+      def wait
+        block.call
+      end
+    end.new(block)
+  end
 
   def default_plugins_with(plugin)
     Klenod::Build::Context::DEFAULT_PLUGINS.map do |default_plugin|

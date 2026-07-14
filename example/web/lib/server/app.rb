@@ -86,6 +86,12 @@ module Example
         update_logger.log(event: event, update: update, duration: ServerFormatting.duration_ms(start_time)) do |module_id, error|
           ServerErrors.format_update_error(module_id, error, context)
         end
+
+        if update.failed?
+          update.each_error { |_module_id, error| remember_logged_error(error) }
+        else
+          clear_logged_errors
+        end
       end
     end
 
@@ -101,13 +107,33 @@ module Example
       protocol_response(status, headers, body)
     rescue => e
       formatted = ServerErrors.format_exception(e, context)
-      warn formatted
+      warn formatted unless logged_error?(e)
       ServerFormatting.log_request(request, 500, start_time) if start_time
       protocol_response(500, {"content-type" => "text/plain"}, [ServerFormatting.strip_ansi(formatted), "\n"])
     end
 
     def protocol_response(status, headers, body)
       Protocol::HTTP::Response[status, headers, body]
+    end
+
+    def remember_logged_error(error)
+      logged_errors[error_log_key(error)] = true
+    end
+
+    def logged_error?(error)
+      logged_errors.key?(error_log_key(error))
+    end
+
+    def clear_logged_errors
+      logged_errors.clear
+    end
+
+    def logged_errors
+      @logged_errors ||= {}
+    end
+
+    def error_log_key(error)
+      [error.class.name, error.message]
     end
   end
 end
