@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Klenod development error</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #edf4fb;
+        color: #172232;
+      }
+
+      body {
+        margin: 0;
+        padding: clamp(1rem, 4vw, 3rem);
+      }
+
+      main {
+        display: grid;
+        gap: 1.25rem;
+        max-width: 78rem;
+      }
+
+      .kicker {
+        margin: 0;
+        color: #0f5fac;
+        font-weight: 850;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        line-height: 1;
+      }
+
+      .panel {
+        border: 1px solid #c9d7e6;
+        border-radius: 6px;
+        background: white;
+        box-shadow: 0 16px 40px rgba(26, 42, 68, 0.08);
+      }
+
+      .summary {
+        display: grid;
+        gap: 0.75rem;
+        padding: 1.25rem;
+      }
+
+      .summary strong {
+        color: #9c1d1d;
+      }
+
+      .summary p {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .lead {
+        font-size: 1.2rem;
+        font-weight: 750;
+      }
+
+      .meta {
+        color: #516074;
+      }
+
+      .error-list {
+        display: grid;
+        gap: 0.45rem;
+        margin: 0;
+        padding-left: 1.25rem;
+      }
+
+      .error-list li::marker {
+        color: #9c1d1d;
+      }
+
+      .panel {
+        overflow: hidden;
+      }
+
+      .panel h2 {
+        margin: 0;
+        padding: 1rem;
+        border-bottom: 1px solid #c9d7e6;
+        font-size: 1rem;
+      }
+
+      pre {
+        margin: 0;
+        overflow: auto;
+        padding: 1rem;
+        background: #1b2638;
+        color: #eef5ff;
+        font: 0.88rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+        <p class="kicker">500</p>
+        <h1>Development error</h1>
+      <section class="panel summary">
+        <p><strong>{{ERROR_LABEL}}</strong></p>
+        <p class="lead">{{ERROR_TITLE}}</p>
+        <p class="meta">Request {{REQUEST_PATH}} raised {{ERROR_CLASS}}.</p>
+        {{ERROR_LIST}}
+      </section>
+      {{SOURCE_SECTION}}
+      {{BACKTRACE_SECTION}}
+    </main>
+  </body>
+</html>

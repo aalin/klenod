@@ -254,6 +254,71 @@ class Klenod::ExampleTest < Minitest::Test
     refute_includes(formatted, "Backtrace:")
   end
 
+  def test_example_server_returns_pretty_html_error_response_for_html_requests
+    server = Example::DevServer.allocate
+    error = RuntimeError.new("<broken>")
+    status, headers, body =
+      server.send(
+        :error_response_for,
+        HeaderRequest["GET", "/demo/data", HeaderList.new([["Accept", "text/html"]])],
+        error,
+        "\e[31mRuntimeError: <broken>\e[0m"
+      )
+    html = body.join
+
+    assert_equal(500, status)
+    assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert_includes(html, "Development error")
+    assert_includes(html, "Request /demo/data raised RuntimeError.")
+    assert_includes(html, "&lt;broken&gt;")
+    refute_includes(html, "\e[31m")
+  end
+
+  def test_example_server_formats_haml_parse_error_html_as_sections
+    server = Example::DevServer.allocate
+    server.instance_variable_set(:@config, example_config)
+    error = Klenod::Build::Plugins::HamlPlugin::ParseError.new(
+      Klenod::Build::Plugins::HamlPlugin::RubyParseError.new(
+        "Could not build Ruby block from Haml script: \"@columns.map do |column| }\"\n\nErrors:\n  Unmatched `}', missing `{' ?\n  Unmatched keyword, missing `end' ?",
+        line: 2
+      ),
+      source: "%table\n  = @columns.map do |column| }\n    %th= column\n",
+      module_id: Klenod::Build::ModuleId.new("components/DataTable.haml", nil)
+    )
+    status, _headers, body =
+      server.send(
+        :error_response_for,
+        HeaderRequest["GET", "/demo/data", HeaderList.new([["Accept", "text/html"]])],
+        error,
+        Example::ServerErrors.format_exception(error, nil)
+      )
+    html = body.join
+
+    assert_equal(500, status)
+    assert_includes(html, "src/components/DataTable.haml:2: Haml parse error")
+    assert_includes(html, "Could not build Ruby block from Haml script:")
+    assert_includes(html, "<li>Unmatched `}&#39;, missing `{&#39; ?</li>")
+    assert_includes(html, "<h2>Source</h2>")
+    assert_includes(html, "&gt; 2 |   = @columns.map do |column| }")
+    refute_includes(html, "<h2>Backtrace</h2>")
+    refute_includes(html, "ERROR  components/DataTable.haml")
+  end
+
+  def test_example_server_keeps_plain_error_response_for_non_html_requests
+    server = Example::DevServer.allocate
+    status, headers, body =
+      server.send(
+        :error_response_for,
+        HeaderRequest["GET", "/demo/data", HeaderList.new([["Accept", "application/json"]])],
+        RuntimeError.new("broken"),
+        "\e[31mRuntimeError: broken\e[0m"
+      )
+
+    assert_equal(500, status)
+    assert_equal("text/plain; charset=utf-8", headers.fetch("content-type"))
+    assert_equal(["RuntimeError: broken", "\n"], body)
+  end
+
   def test_example_server_tracks_logged_update_errors
     server = Example::DevServer.allocate
     error = RuntimeError.new("broken module")
