@@ -4,6 +4,8 @@ require "ripper"
 require "syntax_tree"
 require "syntax_tree/dsl"
 require "syntax_tree/haml"
+require "syntax_suggest/api"
+require "syntax_suggest/explain_syntax"
 
 require_relative "../../source_map"
 require_relative "../plugin"
@@ -95,6 +97,16 @@ module Klenod
               end
 
             "Source:\n#{excerpt.join("\n")}"
+          end
+        end
+
+        class RubyParseError < StandardError
+          attr_reader :line
+
+          def initialize(message, line: nil)
+            @line = line
+
+            super(message)
           end
         end
 
@@ -430,14 +442,14 @@ module Klenod
               ast_factory_call(factory: factory, tag: tag, children: children, props: props, mark: mark)
             end
 
-            def script_block(source, body)
+            def script_block(source, body, line_no: nil)
               source = rewrite_line_constant(source, nil)
-              ast_script_block(source, body) || raise(ArgumentError, "Could not build Ruby block from Haml script: #{source.inspect}")
+              ast_script_block(source, body) || raise_ruby_parse_error(source, line_no: line_no, context: "Could not build Ruby block from Haml script")
             end
 
-            def silent_script_block(source, body)
+            def silent_script_block(source, body, line_no: nil)
               source = rewrite_line_constant(source, nil)
-              ast_silent_script_block(source, body) || raise(ArgumentError, "Could not build Ruby block from Haml script: #{source.inspect}")
+              ast_silent_script_block(source, body) || raise_ruby_parse_error(source, line_no: line_no, context: "Could not build Ruby block from Haml script")
             end
 
             def silent_script(source)
@@ -469,6 +481,13 @@ module Klenod
 
             def line_rewritten_source(source, line_no)
               rewrite_line_constant(source, line_no)
+            end
+
+            def block_script?(source)
+              fixed_source = fix_syntax_by_adding_missing_pairs(source)
+              node = parse_expression(fixed_source)
+
+              node.is_a?(SyntaxTree::MethodAddBlock)
             end
 
             private
@@ -672,33 +691,24 @@ module Klenod
             end
 
             def block_script_node(source, body)
-              match = source.match(/\A(?<call>.+?)\s+do(?:\s*\|(?<parameters>[^|]*)\|)?\s*\z/)
-              return nil unless match
-
-              call_node = parse_expression(match[:call])
-              return nil unless call_node
+              node = parse_expression(fix_syntax_by_adding_missing_pairs(source))
+              return nil unless node.is_a?(SyntaxTree::MethodAddBlock)
 
               MethodAddBlock(
-                call_node,
-                BlockNode(
-                  Kw("do"),
-                  block_parameters(match[:parameters]),
-                  body_statement(body)
+                node.call,
+                SyntaxTree::BlockNode.new(
+                  opening: node.block.opening,
+                  block_var: node.block.block_var,
+                  bodystmt: block_body_for(node.block, body),
+                  location: node.block.location
                 )
               )
             end
 
-            def block_parameters(source)
-              return nil if source.nil?
+            def block_body_for(block, body)
+              statements = Statements(Array(body).flat_map { |statement| statement_body_for(statement) })
 
-              parameters =
-                source
-                  .split(",")
-                  .map(&:strip)
-                  .reject(&:empty?)
-                  .map { |parameter| Ident(parameter) }
-
-              BlockVar(Params(parameters, [], nil, [], [], nil, nil), [])
+              block.opening.is_a?(SyntaxTree::LBrace) ? statements : body_statement(body)
             end
 
             def ast_keyword_props(props, mark:)
@@ -849,6 +859,26 @@ module Klenod
             rescue SyntaxTree::Parser::ParseError
               nil
             end
+
+            def fix_syntax_by_adding_missing_pairs(source)
+              left_right = SyntaxSuggest::LeftRightLexCount.new
+              SyntaxSuggest::LexAll.new(source: source).each { |lex| left_right.count_lex(lex) }
+
+              [source, *left_right.missing].join("\n")
+            end
+
+            def raise_ruby_parse_error(source, line_no:, context:)
+              explain =
+                SyntaxSuggest::ExplainSyntax.new(
+                  code_lines: SyntaxSuggest::CodeLine.from_source(source)
+                ).call
+
+              message = ["#{context}: #{source.inspect}"]
+              message << "Errors:\n  #{explain.errors.join("\n  ")}" unless explain.errors.empty?
+              message << "Missing:\n  #{explain.missing.map { |item| explain.why(item) }.join("\n  ")}" unless explain.missing.empty?
+
+              raise RubyParseError.new(message.join("\n\n"), line: line_no)
+            end
           end
 
           def call(
@@ -879,6 +909,8 @@ module Klenod
               source: source,
               metadata: {source: source, module_id: module_id}
             )
+          rescue RubyParseError => error
+            raise ParseError.new(error, source: source, module_id: module_id)
           end
 
           private
@@ -976,7 +1008,7 @@ module Klenod
             source = script_source(node, builder: builder)
             return builder.parenthesized_expression(source) if node.children.empty?
 
-            builder.script_block(source, compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder))
+            builder.script_block(source, compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder), line_no: node.line)
           end
 
           def compile_script_branch(node, factory:, builder:, styleable: false)
@@ -986,10 +1018,11 @@ module Klenod
           def compile_silent_script(node, factory:, builder:, styleable: false)
             source = script_source(node, builder: builder)
             return builder.silent_script(source) if node.children.empty?
-            if block_script?(source)
+            if builder.block_script?(source)
               return builder.silent_script_block(
                 source,
-                compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder)
+                compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder),
+                line_no: node.line
               )
             end
 
@@ -1044,10 +1077,6 @@ module Klenod
 
           def branch_start?(node)
             node.type == :script && %w[if unless case begin].include?(node.value.fetch(:keyword))
-          end
-
-          def block_script?(source)
-            source.match?(/\s+do(?:\s*\|[^|]*\|)?\s*\z/)
           end
 
           def compile_tag(node, factory:, builder:, styleable: false)

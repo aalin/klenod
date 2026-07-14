@@ -480,10 +480,33 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_equal("items.map { |item| H[:li, item] }", fragment.source)
   end
 
+  def test_ruby_builder_builds_brace_script_blocks_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    body = builder.expression("H[:li, item]")
+    fragment = builder.script_block("items.map { |item|", body)
+
+    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
+    assert_equal("items.map { |item| H[:li, item] }", fragment.source)
+  end
+
   def test_ruby_builder_builds_silent_script_blocks_with_nil_result
     builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
     body = builder.expression("H[:li, item]")
     fragment = builder.silent_script_block("items.each do |item|", body)
+
+    assert_kind_of(SyntaxTree::Begin, fragment.node)
+    assert_equal(<<~RUBY.chomp, fragment.source)
+      begin
+        items.each { |item| H[:li, item] }
+        nil
+      end
+    RUBY
+  end
+
+  def test_ruby_builder_builds_silent_brace_script_blocks_with_nil_result
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    body = builder.expression("H[:li, item]")
+    fragment = builder.silent_script_block("items.each { |item|", body)
 
     assert_kind_of(SyntaxTree::Begin, fragment.node)
     assert_equal(<<~RUBY.chomp, fragment.source)
@@ -511,6 +534,19 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
     assert_includes(fragment.source, "# SourceMapMark:2:")
     assert_includes(fragment.source, "items.map do |item|")
+  end
+
+  def test_ruby_builder_reports_helpful_script_block_parse_errors
+    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    body = builder.expression("H[:li, item]")
+    error =
+      assert_raises(Klenod::Build::Plugins::HamlPlugin::RubyParseError) do
+        builder.script_block("items.map { |item| )", body, line_no: 12)
+      end
+
+    assert_equal(12, error.line)
+    assert_includes(error.message, "Could not build Ruby block from Haml script")
+    assert_match(/Errors:|Missing:/, error.message)
   end
 
   def test_ruby_builder_builds_if_branches_from_syntax_tree_nodes
@@ -1195,6 +1231,38 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_default_haml_transformer_supports_brace_script_blocks_with_children
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/list.haml",
+        <<~HAML
+          :ruby
+            Item = Data.define(:name)
+
+            def initialize
+              @items = [Item.new("A"), Item.new("B")]
+            end
+
+          %ul
+            = @items.map { |item|
+              %li= item.name
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.evaluate("pages/list.haml")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal([:ul, [[:li, "A"], [:li, "B"]]], exports::Default.new.render)
+      assert_match(/SourceMapMark:8:/, record.transformed_source)
+      assert_match(/SourceMapMark:9:/, record.transformed_source)
+    end
+  end
+
   def test_default_haml_transformer_supports_silent_script_blocks_with_children
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -1215,6 +1283,45 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
           %ul
             - @items.each do |item|
+              - @seen << item.name
+              %li= item.name
+        HAML
+      )
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.evaluate("pages/list.haml")
+      component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default.new
+
+      assert_equal([:ul, nil], component.render)
+      assert_equal(["A", "B"], component.seen)
+      assert_match(/SourceMapMark:12:/, record.transformed_source)
+      assert_match(/SourceMapMark:13:/, record.transformed_source)
+    end
+  end
+
+  def test_default_haml_transformer_supports_silent_brace_script_blocks_with_children
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/list.haml",
+        <<~HAML
+          :ruby
+            Item = Data.define(:name)
+
+            def initialize
+              @items = [Item.new("A"), Item.new("B")]
+              @seen = []
+            end
+
+            def seen
+              @seen
+            end
+
+          %ul
+            - @items.each { |item|
               - @seen << item.name
               %li= item.name
         HAML
