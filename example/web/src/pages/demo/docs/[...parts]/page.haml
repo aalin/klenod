@@ -1,8 +1,14 @@
 :ruby
+  PageHeader = import("/components/PageHeader.haml")
+
   def initialize(...)
     @parts = request.params.fetch(:parts)
   end
 
 %article
-  %h1 Docs catch-all
+  %PageHeader{
+    kicker: "Catch-all route",
+    title: "Docs catch-all",
+    summary: "Nested documentation paths are collected into a route parameter."
+  }
   %p= "Path parts: #{@parts.join(" / ")}"

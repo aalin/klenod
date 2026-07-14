@@ -1,10 +1,16 @@
 :ruby
+  PageHeader = import("/components/PageHeader.haml")
+
   def initialize(...)
     @filters = request.params.fetch(:filters)
   end
 
 %article
-  %h1 Shop optional catch-all
+  %PageHeader{
+    kicker: "Optional catch-all route",
+    title: "Shop filters",
+    summary: "Optional catch-all segments can match the base route or any number of nested filter parts."
+  }
   = if @filters.empty?
     %p No filters selected
   = else

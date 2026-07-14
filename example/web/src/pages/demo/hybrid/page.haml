@@ -1,7 +1,12 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+
 %section
-  %p TOML CONTENT
-  %h1 Hybrid page and route handler
-  %p This URL renders HTML for browser requests and JSON for API-style requests.
+  %PageHeader{
+    kicker: "Hybrid route",
+    title: "Hybrid page and route handler",
+    summary: "This URL renders HTML for browser requests and JSON for API-style requests."
+  }
   %dl
     %dt Request path
     %dd= request.path

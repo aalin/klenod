@@ -1,3 +1,9 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+
 %article
-  %h1 Photo intercept
-  %p This route uses the (.) intercepted segment form.
+  %PageHeader{
+    kicker: "Intercepted route",
+    title: "Photo intercept",
+    summary: "This route uses the (.) intercepted segment form."
+  }
