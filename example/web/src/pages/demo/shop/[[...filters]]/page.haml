@@ -1,8 +1,32 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+  Filters = [
+    { slug: "sale", label: "Sale" },
+    { slug: "red", label: "Red" },
+    { slug: "sailing", label: "Sailing" },
+    { slug: "coffee", label: "Coffee" }
+  ]
 
   def initialize(...)
     @filters = request.params.fetch(:filters)
+  end
+
+  def enabled?(filter)
+    @filters.include?(filter.fetch(:slug))
+  end
+
+  def href_for(filter)
+    slug = filter.fetch(:slug)
+    selected =
+      if enabled?(filter)
+        @filters - [slug]
+      else
+        @filters + [slug]
+      end
+    next_filters = Filters.map { it.fetch(:slug) } & selected
+
+    ["/demo/shop", *next_filters].join("/")
   end
 
 %article
@@ -11,7 +35,16 @@
     title: "Shop filters",
     summary: "Optional catch-all segments can match the base route or any number of nested filter parts."
   }
-  = if @filters.empty?
-    %p No filters selected
-  = else
-    %p= "Filters: #{@filters.join(", ")}"
+  %Panel{ title: "Available filters" }
+    %nav{ class: Styles[:filters], aria: { label: "Shop filters" } }
+      = Filters.map do |filter|
+        %a{
+          class: [Styles[:filter], enabled?(filter) ? Styles[:enabled] : nil],
+          href: href_for(filter),
+          aria: { pressed: enabled?(filter).to_s }
+        }= filter.fetch(:label)
+    %p{ class: Styles[:summary] }
+      = if @filters.empty?
+        No filters selected
+      = else
+        = "Filters: #{@filters.join(", ")}"
