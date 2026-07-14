@@ -777,6 +777,31 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_includes(error.message, "> 2 | %*")
   end
 
+  def test_default_haml_transformer_reports_ruby_script_parse_errors_on_source_line
+    transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
+    source = <<~HAML
+      %table
+        = @columns.map { |column| )
+          %th= column
+    HAML
+    error =
+      assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
+        transformer.call(
+          source: source,
+          module_id: ModuleId.new("components/DataTable.haml", nil),
+          component_class_name: "DataTable",
+          component_base_class: "Object",
+          factory: "#{self.class.name}::FakeFramework::H",
+          styles_source: "{}.freeze",
+          translations_source: "{}.freeze"
+        )
+      end
+
+    assert_equal(2, error.line)
+    assert_includes(error.message, "components/DataTable.haml:2: Haml parse error")
+    assert_includes(error.message, "> 2 |   = @columns.map { |column| )")
+  end
+
   def test_haml_plugin_wraps_inline_css_parse_errors_with_source_context
     plugin = Klenod::Build::Plugins::HamlPlugin.new
     module_id = ModuleId.new("pages/page.haml", nil)

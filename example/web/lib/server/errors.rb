@@ -5,6 +5,8 @@ module Example
     module_function
 
     def format_exception(error, context)
+      return format_parse_update_error(error) if error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError)
+
       mods =
         context.graph.mods.each_with_object({}) do |(module_id, mod), index|
           index[module_id.to_s] = mod
@@ -28,7 +30,7 @@ module Example
       reset = "\e[0;48;5;52m"
       lines = error.message.lines
       title = lines.shift&.chomp || "#{error.class}: #{error.message}"
-      body = lines.join
+      body = strip_ansi(lines.join)
 
       [
         "\e[1;31;47m ERROR \e[3;31;47m #{title} #{reset}",
@@ -42,6 +44,10 @@ module Example
         .sub(/\A\n+/, "")
         .sub(/\A(.+?)(\n\n|\z)/m) { "\e[1;31m#{$1}\e[0;48;5;52m#{$2}" }
         .sub(/^Source:/, "\e[1;34mSource:\e[0;48;5;52m")
+    end
+
+    def strip_ansi(value)
+      value.gsub(/\e\[[0-9;]*m/, "")
     end
 
     def source_context_for_update_error(module_id, error, context)

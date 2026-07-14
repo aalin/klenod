@@ -8,6 +8,7 @@ require "tmpdir"
 
 require_relative "../../lib/klenod"
 require_relative "lib/framework"
+require_relative "lib/server/errors"
 
 class Klenod::ExampleTest < Minitest::Test
   Request = Data.define(:method, :path)
@@ -237,6 +238,19 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(stderr, "pages/demo/error/page.haml")
     assert(paths.any? { |path| path.include?("pages_layout_css") })
     refute(paths.any? { |path| path.include?("pages_demo_layout_css") })
+  end
+
+  def test_example_server_formats_haml_parse_errors_without_backtrace
+    error = Klenod::Build::Plugins::HamlPlugin::ParseError.new(
+      Klenod::Build::Plugins::HamlPlugin::RubyParseError.new("Could not build Ruby block", line: 2),
+      source: "%table\n  = @columns.map { |column| )\n    %th= column\n",
+      module_id: Klenod::Build::ModuleId.new("components/DataTable.haml", nil)
+    )
+    formatted = Example::ServerErrors.format_exception(error, nil)
+
+    assert_includes(formatted, "components/DataTable.haml:2: Haml parse error")
+    assert_includes(formatted, "> 2 |   = @columns.map { |column| )")
+    refute_includes(formatted, "Backtrace:")
   end
 
   def test_example_app_renders_route_handler_response

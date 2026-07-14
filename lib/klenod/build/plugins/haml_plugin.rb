@@ -52,7 +52,7 @@ module Klenod
           end
 
           def error_line_zero_based?(error)
-            error.respond_to?(:line) && error.line.is_a?(Integer)
+            error.respond_to?(:line) && error.line.is_a?(Integer) && !error.is_a?(RubyParseError)
           end
 
           def message_for(error)
@@ -872,10 +872,12 @@ module Klenod
                 SyntaxSuggest::ExplainSyntax.new(
                   code_lines: SyntaxSuggest::CodeLine.from_source(source)
                 ).call
+              errors = explain.errors
+              missing = explain.missing.map { |item| explain.why(item) } - errors
 
               message = ["#{context}: #{source.inspect}"]
-              message << "Errors:\n  #{explain.errors.join("\n  ")}" unless explain.errors.empty?
-              message << "Missing:\n  #{explain.missing.map { |item| explain.why(item) }.join("\n  ")}" unless explain.missing.empty?
+              message << "Errors:\n  #{errors.join("\n  ")}" unless errors.empty?
+              message << "Missing:\n  #{missing.join("\n  ")}" unless missing.empty?
 
               raise RubyParseError.new(message.join("\n\n"), line: line_no)
             end
