@@ -4,7 +4,7 @@ require "async"
 require "async/http"
 require "protocol/http/response"
 
-require_relative "../../../lib/klenod"
+require_relative "../../../../lib/klenod"
 require_relative "../dev/update_logger"
 require_relative "errors"
 require_relative "formatting"

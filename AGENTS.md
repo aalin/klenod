@@ -238,7 +238,7 @@ Development asset serving is framework responsibility. Klenod provides assets an
 
 The example app is both a smoke test and documentation. Keep it realistic but not too clever.
 
-Current framework pieces live in `example/web/framework.rb`:
+Current framework pieces live under `example/web/lib/framework.rb` and `example/web/lib/framework/`:
 
 - `Example::Request`
 - `Example::Response`

@@ -7,7 +7,7 @@ require "rbconfig"
 require "tmpdir"
 
 require_relative "../../lib/klenod"
-require_relative "framework"
+require_relative "lib/framework"
 
 class Klenod::ExampleTest < Minitest::Test
   Request = Data.define(:method, :path)

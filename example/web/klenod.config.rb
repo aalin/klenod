@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "framework"
+require_relative "lib/framework"
 require_relative "../../lib/klenod"
 
 source_dir "src"
