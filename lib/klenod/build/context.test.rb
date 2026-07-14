@@ -7,6 +7,7 @@ require "rbconfig"
 require "tmpdir"
 
 require_relative "../runtime"
+require_relative "asset"
 require_relative "context"
 
 class Klenod::Build::Context::Test < Minitest::Test

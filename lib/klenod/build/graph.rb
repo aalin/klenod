@@ -185,7 +185,8 @@ module Klenod
         changed_module_ids = module_ids_for_paths(changed_paths)
         removed_module_ids = module_ids_for_paths(removed_paths)
         pattern_owner_ids = module_ids_for_watched_paths(changed_paths + removed_paths)
-        reload_module_ids = (changed_module_ids + pattern_owner_ids).uniq
+        plugin_owner_ids = plugin_invalidated_module_ids(changed_paths + removed_paths)
+        reload_module_ids = (changed_module_ids + pattern_owner_ids + plugin_owner_ids).uniq
         affected_dependents = dependent_closure(reload_module_ids + removed_module_ids)
         errors = []
 
@@ -577,6 +578,19 @@ module Klenod
 
         @records.filter_map do |module_id, record|
           module_id if relative_paths.any? { |path| record.watched_patterns.any? { |pattern| pattern.match?(path) } }
+        end
+      end
+
+      def plugin_invalidated_module_ids(paths)
+        @plugins
+          .flat_map { |plugin| plugin.invalidate_module_ids(paths, self) }
+          .uniq
+          .select { |module_id| graph_relevant_module_id?(module_id) }
+      end
+
+      def graph_relevant_module_id?(module_id)
+        @records.key?(module_id) || @records.any? do |_candidate_id, record|
+          record.resolved_dependencies.any? { |dependency| dependency.module_id == module_id }
         end
       end
 

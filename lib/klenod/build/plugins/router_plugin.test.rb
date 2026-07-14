@@ -560,6 +560,38 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
+  def test_companion_css_change_collects_lazy_router_page
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/blog/[slug]")
+      css_path = "#{dir}/pages/blog/[slug]/page.css"
+      File.write("#{dir}/pages/blog/[slug]/page.haml", "%h1 Blog\n")
+
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          mode: :development,
+          plugins: [
+            RouterPlugin.new(route_base_class: "#{self.class.name}::RouteBase"),
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::HamlPlugin.new,
+            Klenod::Build::Plugins::CssPlugin.new
+          ]
+        )
+      router_record = context.evaluate("virtual:router")
+
+      assert_equal(["virtual:router.rb"], context.graph.records.keys.map(&:to_s))
+
+      File.write(css_path, "h1 { color: red; }\n")
+      result = context.invalidate_paths([css_path])
+      css_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("pages/blog/[slug]/page.css", nil))
+
+      assert_equal(["pages/blog/[slug]/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["virtual:router.rb"], result.reevaluated_module_ids.map(&:to_s))
+      assert_match(%r{\A/assets/pages_blog_slug_page_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
+      assert_includes(context.graph.records.fetch(router_record.id).resolved_dependencies.map(&:module_id), Klenod::Build::ModuleId.new("pages/blog/[slug]/page.haml", nil))
+    end
+  end
+
   def test_build_mode_router_keeps_route_imports_lazy
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/about")

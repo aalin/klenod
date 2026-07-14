@@ -1307,6 +1307,12 @@ module Klenod
           super
         end
 
+        def invalidate_module_ids(paths, context)
+          paths
+            .filter_map { |path| companion_owner_module_id(path, context) }
+            .uniq
+        end
+
         private
 
         def translations_for(context, module_id)
@@ -1359,6 +1365,22 @@ module Klenod
 
         def companion_path(module_id, extname)
           ModuleId.new(module_id.path.delete_suffix(".haml") + extname, nil)
+        end
+
+        def companion_owner_module_id(path, context)
+          relative_path = Pathname.new(path).expand_path.relative_path_from(context.source_dir).to_s
+          owner_path =
+            if relative_path.end_with?(".css")
+              relative_path.delete_suffix(".css") + ".haml"
+            elsif relative_path.match?(/\.intl\.[^\/]+\.toml\z/)
+              relative_path.sub(/\.intl\.[^\/]+\.toml\z/, ".haml")
+            end
+          return nil unless owner_path
+
+          owner_id = ModuleId.new(owner_path, nil)
+          owner_id if context.absolute_path(owner_id).file?
+        rescue ArgumentError
+          nil
         end
       end
     end

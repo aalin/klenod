@@ -1684,6 +1684,43 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_adding_companion_css_collects_lazy_haml_owner
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      css_path = "#{dir}/pages/page.css"
+      File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Page = lazy_import("pages/page.haml")
+
+          def self.page
+            Page.call
+          end
+        RUBY
+      )
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      context.evaluate("entry")
+
+      refute(context.graph.records.key?(ModuleId.new("pages/page.haml", nil)))
+
+      File.write(css_path, ".title { color: red; }\n")
+      result = context.invalidate_paths([css_path])
+      haml_record = context.graph.records.fetch(ModuleId.new("pages/page.haml", nil))
+      css_record = context.graph.records.fetch(ModuleId.new("pages/page.css", nil))
+
+      assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      assert_equal([ModuleId.new("pages/page.css", nil)], haml_record.resolved_dependencies.map(&:module_id))
+      assert_match(%r{\A/assets/pages_page_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
+    end
+  end
+
   def test_haml_css_filter_loads_as_virtual_css_module
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
