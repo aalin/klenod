@@ -3,4 +3,5 @@
 ruby_version: 4.0
 ignore:
   - example/**/dist/**/*
-  - lib/klenod/build/plugins/__test__/haml/*.rb
+  - example/**/vendor/**/*
+  - gems/klenod-build/lib/klenod/build/plugins/__test__/haml/*.rb
