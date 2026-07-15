@@ -9,7 +9,7 @@ ensure
 end
 
 require_relative "../context"
-require "klenod/version"
+require_relative "../version"
 
 module Klenod
   module Build
@@ -76,7 +76,7 @@ module Klenod
 
         def call
           if @options[:version]
-            output.puts Klenod::VERSION
+            output.puts Klenod::Build::VERSION
           elsif @options[:help] || !@command
             print_usage
           else

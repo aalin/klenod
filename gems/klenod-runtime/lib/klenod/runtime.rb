@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "runtime/version"
 require_relative "runtime/source_map"
 require_relative "runtime/backtrace_rewriter"
 require_relative "runtime/mod"

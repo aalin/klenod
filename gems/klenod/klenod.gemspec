@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 root = File.expand_path(__dir__)
-require File.expand_path("../klenod-runtime/lib/klenod/version", __dir__)
+version = File.read(File.expand_path("../../VERSION", __dir__)).strip
 
 Gem::Specification.new do |spec|
   spec.name = "klenod"
-  spec.version = Klenod::VERSION
+  spec.version = version
   spec.authors = ["Andrés Alin"]
   spec.email = ["andreas.alin@gmail.com"]
 
@@ -23,6 +23,6 @@ Gem::Specification.new do |spec|
   spec.executables = ["klenod"]
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "klenod-build", "= #{Klenod::VERSION}"
-  spec.add_dependency "klenod-rack", "= #{Klenod::VERSION}"
+  spec.add_dependency "klenod-build", "= #{version}"
+  spec.add_dependency "klenod-rack", "= #{version}"
 end

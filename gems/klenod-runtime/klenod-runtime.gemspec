@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 root = File.expand_path(__dir__)
-require File.join(root, "lib/klenod/version")
+version = File.read(File.expand_path("../../VERSION", __dir__)).strip
 
 Gem::Specification.new do |spec|
   spec.name = "klenod-runtime"
-  spec.version = Klenod::VERSION
+  spec.version = version
   spec.authors = ["Andrés Alin"]
   spec.email = ["andreas.alin@gmail.com"]
 

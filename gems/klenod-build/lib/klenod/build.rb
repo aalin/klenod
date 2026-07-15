@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "klenod/version"
+require_relative "build/version"
 require "klenod/runtime"
 require_relative "build/context"
 

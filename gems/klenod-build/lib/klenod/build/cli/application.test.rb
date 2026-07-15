@@ -140,6 +140,6 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
 
     command.call
 
-    assert_equal("#{Klenod::VERSION}\n", stdout.string)
+    assert_equal("#{Klenod::Build::VERSION}\n", stdout.string)
   end
 end
