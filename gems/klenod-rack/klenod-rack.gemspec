@@ -13,7 +13,7 @@ Gem::Specification.new do |spec|
   spec.description = "Klenod Rack serves content-hashed runtime bundle assets from Rack-compatible applications."
   spec.homepage = "https://github.com/aalin/klenod"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.2.0"
+  spec.required_ruby_version = ">= 4.0.6"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/aalin/klenod"
