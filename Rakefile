@@ -5,7 +5,7 @@ require "rbconfig"
 
 ENV["RUBOCOP_CACHE_ROOT"] ||= File.expand_path("tmp/rubocop_cache", __dir__)
 
-ROOT_VERSION = File.expand_path("VERSION", __dir__)
+KLENOD_VERSION = File.expand_path("KLENOD_VERSION", __dir__)
 VERSION_FILES = {
   "gems/klenod/lib/klenod/version.rb" => ["Klenod", "VERSION"],
   "gems/klenod-build/lib/klenod/build/version.rb" => ["Klenod", "Build", "VERSION"],
@@ -42,7 +42,7 @@ def bundle_command
 end
 
 def root_version
-  File.read(ROOT_VERSION).strip
+  File.read(KLENOD_VERSION).strip
 end
 
 def version_file_source(namespace, version)
@@ -91,7 +91,7 @@ namespace :test do
 end
 
 namespace :version do
-  desc "Update generated gem version constants from VERSION"
+  desc "Update generated gem version constants from KLENOD_VERSION"
   task :sync do
     version = root_version
 
@@ -100,7 +100,7 @@ namespace :version do
     end
   end
 
-  desc "Verify generated gem version constants match VERSION"
+  desc "Verify generated gem version constants match KLENOD_VERSION"
   task :check do
     version = root_version
     mismatches =

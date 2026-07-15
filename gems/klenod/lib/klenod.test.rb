@@ -6,7 +6,7 @@ require_relative "klenod"
 
 class Klenod::MetaGemTest < Minitest::Test
   def test_require_klenod_loads_public_package_surface
-    assert_equal(File.read(File.expand_path("../../../VERSION", __dir__)).strip, Klenod::VERSION)
+    assert_equal(File.read(File.expand_path("../../../KLENOD_VERSION", __dir__)).strip, Klenod::VERSION)
     assert_equal(Klenod::VERSION, Klenod::Runtime::VERSION)
     assert_equal(Klenod::VERSION, Klenod::Build::VERSION)
     assert_equal(Klenod::VERSION, Klenod::Rack::VERSION)
@@ -35,7 +35,8 @@ class Klenod::MetaGemTest < Minitest::Test
   end
 
   def test_split_gem_versions_match_root_version
-    root_version = File.read(File.expand_path("../../../VERSION", __dir__)).strip
+    root_version = File.read(File.expand_path("../../../KLENOD_VERSION", __dir__)).strip
+    ruby_version = File.read(File.expand_path("../../../.ruby-version", __dir__)).strip
     specs = [
       Gem::Specification.load(File.expand_path("../klenod.gemspec", __dir__)),
       Gem::Specification.load(File.expand_path("../../klenod-build/klenod-build.gemspec", __dir__)),
@@ -48,6 +49,7 @@ class Klenod::MetaGemTest < Minitest::Test
     assert_equal(root_version, Klenod::Rack::VERSION)
     assert_equal(root_version, Klenod::Runtime::VERSION)
     assert_equal([root_version], specs.map { |spec| spec.version.to_s }.uniq)
+    assert_equal([">= #{ruby_version}"], specs.map { |spec| spec.required_ruby_version.to_s }.uniq)
 
     specs.flat_map(&:dependencies).each do |dependency|
       next unless dependency.name.start_with?("klenod")
