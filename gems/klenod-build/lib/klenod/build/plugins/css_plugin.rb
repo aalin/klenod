@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require "digest"
 require "mayu/css"
 require "uri"
 
 require_relative "../asset"
 require_relative "../dependency"
-require_relative "../plugin"
 require_relative "../errors"
+require_relative "../hashing"
+require_relative "../plugin"
 require_relative "../transform_result"
 
 module Klenod
@@ -49,7 +49,7 @@ module Klenod
             dependency_records,
             result.metadata.fetch(:external_dependencies)
           )
-          hash = Digest::SHA256.hexdigest(css)[0, 16]
+          hash = Hashing.short(css)
           output_path = "/assets/#{asset_name(module_id)}.#{hash}.css"
           asset =
             Asset.new(

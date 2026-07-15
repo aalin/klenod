@@ -315,6 +315,6 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
   end
 
   def cache_entry_path(cache_path, url)
-    File.join(cache_path, "#{Digest::SHA256.hexdigest(url)}.css")
+    File.join(cache_path, "#{Klenod::Build::Hashing.hexdigest(url)}.css")
   end
 end

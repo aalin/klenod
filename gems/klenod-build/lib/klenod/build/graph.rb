@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "digest"
 require "tsort"
 require "async"
 
@@ -8,6 +7,7 @@ require "klenod/runtime/mod"
 require "klenod/runtime/bundle"
 require_relative "asset_generation_queue"
 require_relative "errors"
+require_relative "hashing"
 require_relative "invalidation_result"
 require_relative "module_id"
 require_relative "module_record"
@@ -287,7 +287,7 @@ module Klenod
       def load_module_now(module_id, force: false, reevaluate: false)
         with_loading_stack(module_id) do
           source = read_module_source(module_id)
-          source_hash = Digest::SHA256.hexdigest(source)
+          source_hash = Hashing.hexdigest(source)
           cached = @records[module_id]
 
           raise_failed_module!(cached)
@@ -302,7 +302,7 @@ module Klenod
           dependency_records = load_eager_dependency_records(resolved_dependencies)
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
           assert_supported_transform!(module_id, source, transform)
-          transformed_hash = Digest::SHA256.hexdigest(transform.code)
+          transformed_hash = Hashing.hexdigest(transform.code)
           mod = instantiate_module(module_id, transform, resolved_dependencies, dependency_records, cached)
           record = build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, mod)
 
@@ -335,7 +335,7 @@ module Klenod
       def collect_module_now(module_id, force: false)
         with_loading_stack(module_id) do
           source = read_module_source(module_id)
-          source_hash = Digest::SHA256.hexdigest(source)
+          source_hash = Hashing.hexdigest(source)
           cached = @records[module_id]
 
           raise_failed_module!(cached)
@@ -347,7 +347,7 @@ module Klenod
           dependency_records = collect_eager_dependency_records(resolved_dependencies)
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
           assert_supported_transform!(module_id, source, transform)
-          transformed_hash = Digest::SHA256.hexdigest(transform.code)
+          transformed_hash = Hashing.hexdigest(transform.code)
           record = build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, cached)
 
           @records[module_id] = record
@@ -722,7 +722,7 @@ module Klenod
           rescue
             cached&.source || ""
           end
-        source_hash = Digest::SHA256.hexdigest(source)
+        source_hash = Hashing.hexdigest(source)
         version = cached ? cached.version + 1 : 0
 
         @records[module_id] =

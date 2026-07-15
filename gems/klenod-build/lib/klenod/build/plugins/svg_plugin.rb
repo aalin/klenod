@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
-require "digest"
-
 require_relative "../asset"
 require_relative "../dependency"
 require_relative "../errors"
+require_relative "../hashing"
 require_relative "../module_id"
 require_relative "../plugin"
 require_relative "../transform_result"
@@ -35,7 +34,7 @@ module Klenod
           raise UnsupportedFileError, "SVG imports do not support query options: #{module_id}" if module_id.query
 
           dimensions = svg_dimensions(code)
-          hash = Digest::SHA256.hexdigest(code)[0, 16]
+          hash = Hashing.short(code)
           output_path = "/assets/#{asset_name(module_id)}.#{hash}.svg"
           asset =
             Asset.new(

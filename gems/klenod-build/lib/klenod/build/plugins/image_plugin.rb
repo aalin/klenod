@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require "digest"
 require "image_size"
 require "rmagick"
 require "uri"
 
 require_relative "../asset"
+require_relative "../hashing"
 require_relative "../plugin"
 require_relative "../transform_result"
 
@@ -41,7 +41,7 @@ module Klenod
           return super unless EXTENSIONS.include?(module_id.extname)
 
           dimensions = image_dimensions(code)
-          hash = Digest::SHA256.hexdigest(code)[0, 16]
+          hash = Hashing.short(code)
           output_path = "/assets/#{asset_name(module_id)}.#{hash}#{module_id.extname}"
           logical_name = module_id.path
           asset =
@@ -109,7 +109,7 @@ module Klenod
           variant_options = variant_options_for(module_id)
           return [] if variant_options.widths.empty?
 
-          source_hash = Digest::SHA256.hexdigest(bytes)
+          source_hash = Hashing.hexdigest(bytes)
 
           variant_options.formats.flat_map do |format|
             variant_options.widths.filter_map do |width|
@@ -199,7 +199,7 @@ module Klenod
           format = format.downcase
           extname = ".#{format}"
           descriptor = "#{width}w"
-          hash = Digest::SHA256.hexdigest("#{source_hash}:#{width}:#{format}")[0, 16]
+          hash = Hashing.short("#{source_hash}:#{width}:#{format}")
           output_path = "/assets/#{asset_name(module_id)}.#{width}w.#{hash}#{extname}"
           metadata = {
             type: :image_variant,

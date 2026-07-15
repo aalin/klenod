@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "digest"
 require "async"
 require "async/http/internet"
 require "fileutils"
@@ -9,6 +8,7 @@ require "uri"
 require_relative "../asset"
 require_relative "../dependency"
 require_relative "../errors"
+require_relative "../hashing"
 require_relative "../module_id"
 require_relative "../plugin"
 require_relative "../transform_result"
@@ -55,7 +55,7 @@ module Klenod
           private
 
           def entry_path(url)
-            hash = Digest::SHA256.hexdigest(url)
+            hash = Hashing.hexdigest(url)
             File.join(@path, "#{hash}.css")
           end
         end
@@ -140,7 +140,7 @@ module Klenod
           return nil unless dependency.kind == :css_import
           return nil unless google_fonts_url?(dependency.specifier)
 
-          hash = Digest::SHA256.hexdigest(dependency.specifier)[0, 16]
+          hash = Hashing.short(dependency.specifier)
           module_id =
             ModuleId.new(
               "#{GOOGLE_FONTS_MODULE_PREFIX}/#{hash}.rb",
@@ -231,7 +231,7 @@ module Klenod
         end
 
         def css_asset(module_id, url, css)
-          hash = Digest::SHA256.hexdigest(css)[0, 16]
+          hash = Hashing.short(css)
           output_path = "/assets/#{google_fonts_asset_name(url)}.#{hash}.css"
 
           Asset.new(
@@ -246,7 +246,7 @@ module Klenod
         end
 
         def font_asset(url, font_face, context)
-          hash = Digest::SHA256.hexdigest(url)[0, 16]
+          hash = Hashing.short(url)
           uri = URI.parse(url)
           extname = File.extname(uri.path)
           output_path = "/assets/#{font_asset_name(uri, font_face)}.#{hash}#{extname}"
