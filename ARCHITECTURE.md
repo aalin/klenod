@@ -317,6 +317,6 @@ The main areas still evolving:
 
 - External import schemes such as `plugin:` and `gem:`.
 - More precise route visualization and route ordering tools.
-- Async rendering and context propagation beyond `Thread.current`.
+- Broader async rendering semantics beyond the example framework's fiber-local request context.
 - A future `klenod dev` command or TUI, if it can remain framework-neutral.
 - Splitting build/dev/runtime into separate gems after the boundaries settle.

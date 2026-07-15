@@ -255,7 +255,7 @@ Current framework pieces live under `example/web/lib/framework.rb` and `example/
 - `Example::Request`
 - `Example::Response`
 - encrypted cookie-backed sessions using `rbnacl`
-- `Example::Context` stored in `Thread.current`
+- `Example::Context` stored with `Fiber[...]` for request-local state
 - `Example::Component`
 - `Example::Form`
 - `Example::H`
@@ -312,4 +312,4 @@ From `PLAN.md` and recent work:
 - Continue scheme-aware imports for future `plugin:` and `gem:` modules.
 - Keep replacing ad hoc app/virtual checks with scheme-aware helpers where useful.
 - Add `klenod dev` only after API shape is clearer; frameworks may own dev commands.
-- Eventually revisit async rendering/context propagation. Current example context uses `Thread.current` and assumes synchronous rendering.
+- Eventually revisit broader async rendering semantics. The current example context uses `Fiber[...]` for request-local state, but rendering itself is still synchronous.
