@@ -8,3 +8,7 @@ gem "klenod-build", path: "../../gems/klenod-build"
 gem "klenod-rack", path: "../../gems/klenod-rack"
 gem "minitest", "~> 6.0"
 gem "rbnacl", "~> 7.1"
+
+group :development do
+  gem "vernier"
+end

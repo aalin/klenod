@@ -138,6 +138,7 @@ GEM
       racc (~> 1.7)
     traces (0.18.2)
     tsort (0.2.0)
+    vernier (1.10.1)
 
 PLATFORMS
   aarch64-linux
@@ -161,6 +162,7 @@ DEPENDENCIES
   klenod-rack!
   klenod-runtime!
   rbnacl (~> 7.1)
+  vernier
 
 CHECKSUMS
   async (2.42.0) sha256=536078293b8c95d5b5679fa01bf7d2458bcc65cd46dec2c4cb3580feaeb965c6
@@ -226,6 +228,7 @@ CHECKSUMS
   toml-rb (4.2.0) sha256=10a48c91613e20cf63483a7a776767dfb3cd7d70e9327c0237443da601e13776
   traces (0.18.2) sha256=80f1649cb4daace1d7174b81f3b3b7427af0b93047759ba349960cb8f315e214
   tsort (0.2.0) sha256=9650a793f6859a43b6641671278f79cfead60ac714148aabe4e3f0060480089f
+  vernier (1.10.1) sha256=f2ab2e163b75ac3ef4e3173262d27d27da6219cf04b1b4a7171e4798114275ce
 
 BUNDLED WITH
   4.0.10

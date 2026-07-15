@@ -24,6 +24,15 @@ cd example/web
 bundle exec klenod build
 ```
 
+To profile a build with Vernier:
+
+```sh
+cd example/web
+bundle exec vernier run -- bin/build
+```
+
+Vernier writes a profile file in the current directory. Use `bundle exec vernier view -- <profile>` for a terminal summary, or open the generated profile in a compatible profile viewer.
+
 `bin/routes` prints a Rails-style route table with the HTTP method, server path, route type, and source file for each discovered `page.haml` and `route.rb`.
 
 `bin/server` starts a small `async-http` server on `http://localhost:9292`. It watches the source tree, matches each request through the router plugin, and serves emitted CSS/image assets from the build context.
