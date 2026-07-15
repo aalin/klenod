@@ -87,13 +87,15 @@ Eager cycles are errors. Lazy imports are the intended way to defer cyclic or ex
 Plugins can participate in several phases:
 
 - `resolve(dependency, context)`: map a dependency to a module id.
-- `load(module_id, context)`: provide source for virtual or custom modules.
+- `load(module_id, context)`: provide source for virtual/custom modules, or a structured load result with a precomputed source hash and transform result.
 - `transform(module_id, code, context)`: rewrite source and emit dependencies/assets/metadata.
 - `finalize(module_id, result, resolved_dependencies, dependency_records, context)`: adjust transform output after dependencies are collected.
 - `import_value(resolved_dependency, record, context)`: provide development/evaluation import values.
 - `runtime_import_value(resolved_dependency, record, context)`: provide serialized bundle import values.
 
 Collection hooks must not depend on evaluated app exports. Runtime import values must be serializable and must not require build-only dependencies.
+
+Most modules flow through `load` as source strings and then through `transform`. Plugins that can do better than byte-backed source loading may return a `LoadResult`. Raster image imports use this path: the image plugin hashes the source file with a streaming file digest, reads dimensions from the path, and returns a completed transform result without asking the graph to `binread` the image into module source.
 
 Sibling dependency loading can overlap. Plugins should avoid unguarded shared mutable state in `load` and `transform`.
 
@@ -130,7 +132,11 @@ import("images/hero.png?width=640")
 
 Generated variants should dedupe overlapping work.
 
-Build assets can hold or generate bytes. Generated assets use `queue_kind` to classify work. `:cpu` is the default and is used explicitly by image variants. `:io` is used by downloaded assets such as Google font files. `AssetGenerationQueue` keeps separate CPU and IO semaphores so IO-bound downloads can overlap with CPU-bound image resizing without allowing unbounded work.
+Build assets can hold bytes, generate bytes, or point at a source path. Source-path assets are used for original raster images so graph collection and module records do not retain image file contents. Writing such an asset copies from the source path to the output path; reading `asset.bytes` still works by reading from the source path or mirrored disk path when needed.
+
+Generated assets use `queue_kind` to classify work. `:cpu` is the default and is used explicitly by image variants. `:io` is used by downloaded assets such as Google font files. `AssetGenerationQueue` keeps separate CPU and IO semaphores so IO-bound downloads can overlap with CPU-bound image resizing without allowing unbounded work.
+
+Image variants remain generated CPU work. The image plugin passes RMagick an input source path when materializing a variant, so image decoding/resizing happens only when the variant is generated. RMagick still decodes pixel data in memory for resizing, but Klenod no longer stores the original image blob in the graph or closes over it in generated variant assets.
 
 Runtime asset specs keep metadata only. Development servers/frameworks can serve assets from `context.asset(path).bytes` or `context.asset_bytes(path, assets_dir:)`.
 
