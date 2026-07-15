@@ -146,7 +146,7 @@ class Example::UpdateLogger::Test < Minitest::Test
   end
 
   def event(result:, changed_paths: [], removed_paths: [])
-    Klenod::Dev::UpdateEvent.new(changed_paths, removed_paths, 4, result)
+    Klenod::Build::UpdateEvent.new(changed_paths, removed_paths, 4, result)
   end
 
   def result(reloaded: [], reevaluated: [], removed: [], added_assets: [], changed_assets: [], removed_assets: [], errors: [])

@@ -13,10 +13,9 @@ The design goal is close to Vite/Rollup/Parcel for graph and plugin behavior, wi
 - plugin transforms
 - graph collection
 - invalidation
+- development watching and update events
 - asset generation
 - runtime bundle serialization
-
-`Klenod::Dev` owns watching and update events. It observes source changes and asks the build graph to invalidate and reload affected records.
 
 `klenod-runtime` / `Klenod::Runtime` owns production loading:
 
@@ -247,7 +246,7 @@ The router should stay request-agnostic. Request dispatch belongs in the framewo
 
 ## Development Updates
 
-`Klenod::Dev::Watcher` watches source files and asks the build graph to invalidate affected modules.
+`Klenod::Build::Watcher` watches source files and asks the build graph to invalidate affected modules.
 
 Invalidation considers:
 

@@ -7,17 +7,18 @@ require "rbconfig"
 require "stringio"
 require "tmpdir"
 
-require_relative "../runtime"
+require_relative "../../runtime"
 require_relative "application"
 
-class Klenod::CLI::Application::Test < Minitest::Test
+class Klenod::Build::CLI::Application::Test < Minitest::Test
   def test_build_gemspec_owns_build_cli_and_plugin_files
-    spec = Gem::Specification.load(File.expand_path("../../../gems/klenod-build/klenod-build.gemspec", __dir__))
+    spec = Gem::Specification.load(File.expand_path("../../../../gems/klenod-build/klenod-build.gemspec", __dir__))
 
     assert_includes(spec.files, "lib/klenod/build.rb")
     assert_includes(spec.files, "lib/klenod/build/context.rb")
     assert_includes(spec.files, "lib/klenod/build/plugins/haml_plugin.rb")
-    assert_includes(spec.files, "lib/klenod/cli/application.rb")
+    assert_includes(spec.files, "lib/klenod/build/cli/application.rb")
+    assert_includes(spec.files, "lib/klenod/build/watcher.rb")
     assert_includes(spec.files, "exe/klenod")
     refute_includes(spec.files, "lib/klenod.rb")
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })
@@ -47,7 +48,7 @@ class Klenod::CLI::Application::Test < Minitest::Test
       stdout = StringIO.new
       bundle = nil
       Dir.chdir(dir) do
-        command = Klenod::CLI::Application.new(["build"], output: stdout)
+        command = Klenod::Build::CLI::Application.new(["build"], output: stdout)
         bundle = command.call
       end
       loaded = Klenod::Runtime.load_bundle(output)
@@ -80,7 +81,7 @@ class Klenod::CLI::Application::Test < Minitest::Test
 
       stdout = StringIO.new
       Dir.chdir(nested) do
-        command = Klenod::CLI::Application.new(["build"], output: stdout)
+        command = Klenod::Build::CLI::Application.new(["build"], output: stdout)
         command.call
       end
       loaded = Klenod::Runtime.load_bundle(output)
@@ -112,14 +113,14 @@ class Klenod::CLI::Application::Test < Minitest::Test
       stdout = StringIO.new
       bundle = nil
       Dir.chdir(dir) do
-        command = Klenod::CLI::Application.new(["build", "--executable"], output: stdout)
+        command = Klenod::Build::CLI::Application.new(["build", "--executable"], output: stdout)
         bundle = command.call
       end
       loaded = Klenod::Runtime.load_executable_bundle(output)
       ruby_stdout, ruby_stderr, status =
         Open3.capture3(
           RbConfig.ruby,
-          "-I#{File.expand_path("..", __dir__)}",
+          "-I#{File.expand_path("../../..", __dir__)}",
           output
         )
 
@@ -134,7 +135,7 @@ class Klenod::CLI::Application::Test < Minitest::Test
 
   def test_version_option_prints_version
     stdout = StringIO.new
-    command = Klenod::CLI::Application.new(["--version"], output: stdout)
+    command = Klenod::Build::CLI::Application.new(["--version"], output: stdout)
 
     command.call
 

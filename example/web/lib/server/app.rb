@@ -64,7 +64,7 @@ module Example
 
     def watcher
       @watcher ||= begin
-        watcher = Klenod::Dev::Watcher.new(source_dir: source_dir, context: context)
+        watcher = Klenod::Build::Watcher.new(source_dir: source_dir, context: context)
         install_update_handler
         watcher
       end
@@ -73,7 +73,7 @@ module Example
     def asset_app
       @asset_app ||= begin
         context.write_assets(assets_dir) if assets_dir
-        Klenod::HTTP::AssetApp.new(context, assets_dir: assets_dir)
+        Klenod::Rack::AssetApp.new(context, assets_dir: assets_dir)
       end
     end
 

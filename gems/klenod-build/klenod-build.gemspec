@@ -22,11 +22,10 @@ Gem::Specification.new do |spec|
     Dir.chdir(root) do
       [
         "lib/klenod/build.rb",
-        "lib/klenod/cli.rb",
-        "lib/klenod/dev/watcher.rb",
+        "lib/klenod/build/cli.rb",
+        "lib/klenod/build/watcher.rb",
         "exe/klenod",
-        *Dir["lib/klenod/build/**/*.rb"],
-        *Dir["lib/klenod/cli/**/*.rb"]
+        *Dir["lib/klenod/build/**/*.rb"]
       ].select { |path| File.file?(path) && !path.end_with?(".test.rb") }
     end
   spec.bindir = "exe"

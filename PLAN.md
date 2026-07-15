@@ -6,7 +6,7 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 
 - [x] Create separate architecture boundaries:
   - [x] `lib/klenod/build/` for graph construction, resolving, bundling, and plugins.
-  - [x] `lib/klenod/dev/` for watch mode and reload events.
+  - [x] `lib/klenod/build/watcher.rb` for watch mode and reload events.
   - [x] `lib/klenod/runtime/` for production-safe loading and bundle hydration.
 - [x] Add co-located `*.test.rb` tests and update Rake discovery.
 - [x] Implement runtime `Mod` with stable generated constants.

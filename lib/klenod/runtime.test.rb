@@ -27,13 +27,12 @@ class Klenod::RuntimeBoundaryTest
     assert_nil(Klenod::Runtime.class_names(nil, false, []))
   end
 
-  def test_runtime_require_does_not_load_build_dev_or_plugin_dependencies
+  def test_runtime_require_does_not_load_build_or_plugin_dependencies
     script = <<~RUBY
       require "klenod/runtime"
 
       forbidden = {
         "Klenod::Build" => defined?(Klenod::Build),
-        "Klenod::Dev" => defined?(Klenod::Dev),
         "Listen" => defined?(Listen),
         "SyntaxTree" => defined?(SyntaxTree),
         "Mayu::CSS" => defined?(Mayu::CSS),
@@ -90,7 +89,7 @@ class Klenod::RuntimeBoundaryTest
     assert_includes(spec.files, "lib/klenod/runtime/source_map.rb")
     assert_includes(spec.files, "lib/klenod/runtime/backtrace_rewriter.rb")
     refute(spec.files.any? { |path| path.start_with?("lib/klenod/build/") })
-    refute(spec.files.any? { |path| path.start_with?("lib/klenod/dev/") })
+    refute(spec.files.any? { |path| path.start_with?("lib/klenod/rack/") })
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })
     refute(spec.dependencies.any? { |dependency| dependency.name == "rmagick" })
     refute(spec.dependencies.any? { |dependency| dependency.name == "syntax_tree-haml" })

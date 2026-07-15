@@ -833,7 +833,6 @@ class Klenod::Build::Context::Test < Minitest::Test
 
         forbidden = {
           "Klenod::Build" => defined?(Klenod::Build),
-          "Klenod::Dev" => defined?(Klenod::Dev),
           "Magick" => defined?(Magick),
           "ImageSize" => defined?(ImageSize),
           "SyntaxTree" => defined?(SyntaxTree),

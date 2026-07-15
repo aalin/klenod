@@ -8,8 +8,7 @@ The project is still early, but the core shape is in place:
 - `klenod-build` owns graph construction, build plugins, the CLI, and development watching.
 - `klenod-rack` owns Rack-compatible asset serving helpers.
 - `klenod` is a compatibility gem that depends on build and rack.
-- `Klenod::Build` owns resolving, transforms, plugins, graph construction, bundling, and emitted assets.
-- `Klenod::Dev` owns source watching and graph update events.
+- `Klenod::Build` owns resolving, transforms, plugins, graph construction, bundling, emitted assets, and development watching.
 - `Klenod::Runtime` owns production bundle loading without depending on build plugins.
 
 ## Basic Usage
@@ -145,7 +144,7 @@ LargeHero = import("images/hero.png?width=640&format=png")
 ResponsiveHero = import("images/hero.png?width=320,640&format=png")
 ```
 
-In development, frameworks using Klenod are expected to serve `context.asset(path).bytes` for requested asset paths and listen to update events from `Klenod::Dev::Watcher`.
+In development, frameworks using Klenod are expected to serve `context.asset(path).bytes` for requested asset paths and listen to update events from `Klenod::Build::Watcher`.
 
 ## Router Plugin
 

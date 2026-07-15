@@ -9,10 +9,8 @@ Klenod is an experimental Ruby module bundler inspired by Vite, Rollup, Parcel, 
 Keep these boundaries intact:
 
 - `lib/klenod/build/`: graph collection, resolving, plugins, transforms, asset generation, bundle writing.
-- `lib/klenod/dev/`: watching and development update events.
 - `lib/klenod/runtime/`: runtime bundle loading, module evaluation, source maps, and backtrace rewriting. Runtime must not require build plugins or heavyweight build dependencies.
 - `lib/klenod/rack/`: Rack-compatible serving helpers, not framework policy.
-- `lib/klenod/http/`: compatibility shims for old serving helper paths.
 - `gems/`: gemspecs for `klenod-runtime`, `klenod-build`, `klenod-rack`, and the compatibility `klenod` meta gem.
 - `example/web/`: framework-style example app using router, Haml, CSS, assets, sessions, forms, route handlers, and `async-http`.
 - `example/standalone/`: non-web example for executable bundles and data imports.

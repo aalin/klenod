@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
 
-require "klenod/cli"
+require "klenod/build/cli"
 
-Klenod::CLI::Application.call
+Klenod::Build::CLI::Application.call

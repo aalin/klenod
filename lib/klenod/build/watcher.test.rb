@@ -4,12 +4,12 @@ require "minitest/autorun"
 require "fileutils"
 require "tmpdir"
 
-require_relative "../build/asset"
-require_relative "../build/context"
-require_relative "../build/invalidation_result"
+require_relative "asset"
+require_relative "context"
+require_relative "invalidation_result"
 require_relative "watcher"
 
-class Klenod::Dev::Watcher::Test < Minitest::Test
+class Klenod::Build::Watcher::Test < Minitest::Test
   def test_update_event_carries_invalidation_result
     new_asset =
       Klenod::Build::Asset.new(
@@ -47,7 +47,7 @@ class Klenod::Dev::Watcher::Test < Minitest::Test
         asset_updates,
         []
       )
-    event = Klenod::Dev::UpdateEvent.new(["a.rb"], ["b.rb"], 1, result)
+    event = Klenod::Build::UpdateEvent.new(["a.rb"], ["b.rb"], 1, result)
 
     assert_equal(["a.rb"], event.changed_paths)
     assert_equal(["b.rb"], event.removed_paths)
@@ -145,7 +145,7 @@ class Klenod::Dev::Watcher::Test < Minitest::Test
 
   def emit_update(context, changed_paths, removed_paths, graph_version)
     result = context.invalidate_paths(changed_paths, removed_paths: removed_paths)
-    event = Klenod::Dev::UpdateEvent.new(changed_paths.freeze, removed_paths.freeze, graph_version, result)
+    event = Klenod::Build::UpdateEvent.new(changed_paths.freeze, removed_paths.freeze, graph_version, result)
 
     context.emit_update(event)
     event

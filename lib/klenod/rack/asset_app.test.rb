@@ -9,7 +9,7 @@ require_relative "../runtime/bundle"
 require_relative "../rack"
 require_relative "asset_app"
 
-class Klenod::HTTP::AssetApp::Test < Minitest::Test
+class Klenod::Rack::AssetApp::Test < Minitest::Test
   AssetSource = Data.define(:record, :bytes) do
     def asset(output_path)
       raise KeyError, output_path unless record && output_path == record.output_path
@@ -39,7 +39,7 @@ class Klenod::HTTP::AssetApp::Test < Minitest::Test
         "text/css",
         {type: :css}
       )
-    app = Klenod::HTTP::AssetApp.new(AssetSource.new(asset, "body {}"))
+    app = Klenod::Rack::AssetApp.new(AssetSource.new(asset, "body {}"))
 
     response = app.response_for("/assets/home.abc123.css")
 
@@ -55,20 +55,15 @@ class Klenod::HTTP::AssetApp::Test < Minitest::Test
 
     assert_includes(spec.files, "lib/klenod/rack.rb")
     assert_includes(spec.files, "lib/klenod/rack/asset_app.rb")
-    assert_includes(spec.files, "lib/klenod/http/asset_app.rb")
+    refute(spec.files.any? { |path| path.start_with?(File.join("lib", "klenod", "http")) })
     refute(spec.files.any? { |path| path.start_with?("lib/klenod/build/") })
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })
     assert(spec.dependencies.any? { |dependency| dependency.name == "klenod-runtime" })
   end
 
-  def test_old_http_constant_aliases_rack_asset_app
-    assert_same(Klenod::Rack::AssetApp, Klenod::HTTP::AssetApp)
-    assert_same(Klenod::Rack::Response, Klenod::HTTP::Response)
-  end
-
   def test_rack_call_passes_non_asset_paths_to_wrapped_app
     fallback = ->(env) { [201, {"x-path" => env.fetch("PATH_INFO")}, ["fallback"]] }
-    app = Klenod::HTTP::AssetApp.new(AssetSource.new(nil, nil), app: fallback)
+    app = Klenod::Rack::AssetApp.new(AssetSource.new(nil, nil), app: fallback)
 
     assert_equal(
       [201, {"x-path" => "/page"}, ["fallback"]],
@@ -77,7 +72,7 @@ class Klenod::HTTP::AssetApp::Test < Minitest::Test
   end
 
   def test_rack_call_returns_not_found_for_missing_assets
-    app = Klenod::HTTP::AssetApp.new(AssetSource.new(nil, nil))
+    app = Klenod::Rack::AssetApp.new(AssetSource.new(nil, nil))
 
     status, headers, body = app.call({"PATH_INFO" => "/assets/missing.css"})
 
@@ -100,7 +95,7 @@ class Klenod::HTTP::AssetApp::Test < Minitest::Test
           {type: :css}
         )
       bundle = Klenod::Runtime::Bundle.new({}, {}, {asset.output_path => asset})
-      app = Klenod::HTTP::AssetApp.new(bundle, assets_dir: assets_dir)
+      app = Klenod::Rack::AssetApp.new(bundle, assets_dir: assets_dir)
 
       response = app.response_for("/assets/home.abc123.css")
 
