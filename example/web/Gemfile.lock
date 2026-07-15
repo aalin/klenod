@@ -1,13 +1,13 @@
 PATH
   remote: ../../gems/klenod-build
   specs:
-    klenod-build (0.1.0)
+    klenod-build (0.0.1)
       async (~> 2.42)
       async-http (~> 0.95.1)
       image_size (~> 3.6)
       listen (~> 3.10)
       mayu-css (~> 0.1.5)
-      klenod-runtime (= 0.1.0)
+      klenod-runtime (= 0.0.1)
       rmagick (~> 7.0)
       samovar (~> 2.5)
       syntax_tree (~> 6.3)
@@ -18,20 +18,20 @@ PATH
 PATH
   remote: ../../gems/klenod-rack
   specs:
-    klenod-rack (0.1.0)
-      klenod-runtime (= 0.1.0)
+    klenod-rack (0.0.1)
+      klenod-runtime (= 0.0.1)
 
 PATH
   remote: ../../gems/klenod-runtime
   specs:
-    klenod-runtime (0.1.0)
+    klenod-runtime (0.0.1)
 
 PATH
   remote: ../../gems/klenod
   specs:
-    klenod (0.1.0)
-      klenod-build (= 0.1.0)
-      klenod-rack (= 0.1.0)
+    klenod (0.0.1)
+      klenod-build (= 0.0.1)
+      klenod-rack (= 0.0.1)
 
 GEM
   remote: https://rubygems.org/
@@ -60,6 +60,7 @@ GEM
       fiber-annotation
       fiber-local (~> 1.1)
       json
+    drb (2.2.3)
     ffi (1.17.4)
     ffi (1.17.4-aarch64-linux-gnu)
     ffi (1.17.4-aarch64-linux-musl)
@@ -96,10 +97,14 @@ GEM
     mayu-css (0.1.5-x86_64-darwin)
     mayu-css (0.1.5-x86_64-linux)
     metrics (0.15.0)
+    minitest (6.0.6)
+      drb (~> 2.0)
+      prism (~> 1.5)
     observer (0.1.2)
     openssl (4.0.2)
     pkg-config (1.6.5)
     prettier_print (1.2.1)
+    prism (1.9.0)
     protocol-hpack (1.5.1)
     protocol-http (0.63.0)
     protocol-http1 (0.39.0)
@@ -150,6 +155,7 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
+  minitest (~> 6.0)
   klenod!
   klenod-build!
   klenod-rack!
@@ -162,6 +168,7 @@ CHECKSUMS
   async-pool (0.11.2) sha256=0a43a17b02b04d9c451b7d12fafa9a50e55dc6dd00d4369aca00433f16a7e3ed
   citrus (3.0.2) sha256=4ec2412fc389ad186735f4baee1460f7900a8e130ffe3f216b30d4f9c684f650
   console (1.37.0) sha256=8093b286c2595a063849c098594fee5155ecc7967d36f3aa8cbe7569c8f3efd7
+  drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
   ffi (1.17.4) sha256=bcd1642e06f0d16fc9e09ac6d49c3a7298b9789bcb58127302f934e437d60acf
   ffi (1.17.4-aarch64-linux-gnu) sha256=b208f06f91ffd8f5e1193da3cae3d2ccfc27fc36fba577baf698d26d91c080df
   ffi (1.17.4-aarch64-linux-musl) sha256=9286b7a615f2676245283aef0a0a3b475ae3aae2bb5448baace630bb77b91f39
@@ -190,14 +197,16 @@ CHECKSUMS
   mayu-css (0.1.5-x86_64-darwin) sha256=fe394dd9e34841932a28ff29afa696814c4dba04c27cea3e087328f9418bb0f0
   mayu-css (0.1.5-x86_64-linux) sha256=ed3bb215e50b039de766b2b72a02493b56083a85e1aa76fa8424d7798d7e5b8e
   metrics (0.15.0) sha256=61ded5bac95118e995b1bc9ed4a5f19bc9814928a312a85b200abbdac9039072
-  klenod (0.1.0)
-  klenod-build (0.1.0)
-  klenod-rack (0.1.0)
-  klenod-runtime (0.1.0)
+  minitest (6.0.6) sha256=153ea36d1d987a62942382b61075745042a2b3123b1cd48f4c3675af9cc7d6f1
+  klenod (0.0.1)
+  klenod-build (0.0.1)
+  klenod-rack (0.0.1)
+  klenod-runtime (0.0.1)
   observer (0.1.2) sha256=d8a3107131ba661138d748e7be3dbafc0d82e732fffba9fccb3d7829880950ac
   openssl (4.0.2) sha256=1037ad2868ae58df9ad917891c0c0f9815a1172f6846d4bcdd508e4c2ee747c2
   pkg-config (1.6.5) sha256=33f9f81c5322983d22b439b8b672f27777b406fea23bfec74ff14bbeb42ec733
   prettier_print (1.2.1) sha256=a72838b5f23facff21f90a5423cdcdda19e4271092b41f4ea7f50b83929e6ff9
+  prism (1.9.0) sha256=7b530c6a9f92c24300014919c9dcbc055bf4cdf51ec30aed099b06cd6674ef85
   protocol-hpack (1.5.1) sha256=6feca238b8078da1cd295677d6f306c6001af92d75fe0643d33e6956cbc3ad91
   protocol-http (0.63.0) sha256=7e94958cbdc20e9d9b4ecb1959e1e7824a35f36e082d3d2cd5bd844da643a8e4
   protocol-http1 (0.39.0) sha256=e49b3f4cda6f5d94c76a323d2b7f6977cba3ebd082d2da437039594da77ad8eb

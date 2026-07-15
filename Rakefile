@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/test_task"
+require "rbconfig"
 
 ENV["RUBOCOP_CACHE_ROOT"] ||= File.expand_path("tmp/rubocop_cache", __dir__)
 
@@ -28,6 +29,18 @@ def minitest_task(name, description, globs)
   Rake::Task[name].comment = description
 end
 
+def with_unbundled_env(&)
+  if defined?(Bundler)
+    Bundler.with_unbundled_env(&)
+  else
+    yield
+  end
+end
+
+def bundle_command
+  [RbConfig.ruby, "-S", "bundle"]
+end
+
 def root_version
   File.read(ROOT_VERSION).strip
 end
@@ -53,17 +66,28 @@ def version_file_source(namespace, version)
   "#{lines.join("\n")}\n"
 end
 
-minitest_task(:test, "Run all gem and example tests", ["gems/*/lib/**/*.test.rb", "example/**/*.test.rb"])
-
 namespace :test do
   minitest_task(:runtime, "Run klenod-runtime tests", ["gems/klenod-runtime/lib/**/*.test.rb"])
   minitest_task(:build, "Run klenod-build tests", ["gems/klenod-build/lib/**/*.test.rb"])
   minitest_task(:rack, "Run klenod-rack tests", ["gems/klenod-rack/lib/**/*.test.rb"])
   minitest_task(:meta, "Run klenod meta gem tests", ["gems/klenod/lib/**/*.test.rb"])
-  minitest_task(:examples, "Run example app tests", ["example/**/*.test.rb"])
+  minitest_task(:standalone, "Run standalone example tests", ["example/standalone/**/*.test.rb"])
+
+  desc "Run web example tests with the example/web bundle"
+  task :web do
+    with_unbundled_env do
+      Dir.chdir("example/web") do
+        sh(*bundle_command, "check")
+        sh(*bundle_command, "exec", "ruby", "example.test.rb")
+      end
+    end
+  end
 
   desc "Run all packaged gem tests"
   task gems: %i[runtime build rack meta]
+
+  desc "Run all example app tests"
+  task examples: %i[standalone web]
 end
 
 namespace :version do
@@ -96,5 +120,6 @@ end
 
 require "standard/rake"
 
-task test: ["version:check"]
+desc "Run all gem and example tests"
+task test: ["version:check", "test:gems", "test:examples"]
 task default: %i[test standard]
