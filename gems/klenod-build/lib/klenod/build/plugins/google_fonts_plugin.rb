@@ -3,6 +3,7 @@
 require "digest"
 require "async"
 require "async/http/internet"
+require "fileutils"
 require "uri"
 
 require_relative "../asset"
@@ -23,6 +24,41 @@ module Klenod
 
         Error = Class.new(StandardError)
         FontFace = Data.define(:family, :style, :weight)
+
+        class CssCache
+          def initialize(path)
+            @path = path
+          end
+
+          def read(url)
+            path = entry_path(url)
+            return nil unless File.file?(path)
+
+            css = File.binread(path)
+            css.empty? ? nil : css
+          rescue SystemCallError
+            nil
+          end
+
+          def write(url, css)
+            path = entry_path(url)
+            temp_path = "#{path}.tmp.#{$$}.#{object_id}"
+            FileUtils.mkdir_p(File.dirname(path))
+            File.binwrite(temp_path, css)
+            File.rename(temp_path, path)
+            css
+          rescue
+            FileUtils.rm_f(temp_path) if temp_path
+            raise
+          end
+
+          private
+
+          def entry_path(url)
+            hash = Digest::SHA256.hexdigest(url)
+            File.join(@path, "#{hash}.css")
+          end
+        end
 
         class DefaultFetcher
           def initialize(internet: Async::HTTP::Internet.new)
@@ -93,8 +129,10 @@ module Klenod
           end
         end
 
-        def initialize(fetcher: nil)
+        def initialize(fetcher: nil, cache_path: nil, refresh_cache: false)
           @fetcher = fetcher || DefaultFetcher.new
+          @css_cache = cache_path && CssCache.new(cache_path)
+          @refresh_cache = refresh_cache
           @assets_by_module_id = {}
         end
 
@@ -116,7 +154,7 @@ module Klenod
           return nil unless google_fonts_module?(module_id)
 
           url = google_fonts_url_for(module_id)
-          css = fetch(url)
+          css = fetch_css(url)
           font_faces = FontFaceParser.new(css).font_faces_by_url
           font_assets = {}
           rewritten_css =
@@ -169,6 +207,17 @@ module Klenod
           @fetcher.call(url).b
         rescue => error
           raise Error, "Could not download Google Fonts asset #{url.inspect}: #{error.message}"
+        end
+
+        def fetch_css(url)
+          if @css_cache && !@refresh_cache
+            css = @css_cache.read(url)
+            return css if css
+          end
+
+          css = fetch(url)
+          @css_cache&.write(url, css)
+          css
         end
 
         def write_fetch(url, io)

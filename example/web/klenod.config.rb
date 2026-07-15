@@ -26,6 +26,7 @@ google_fonts_fetcher =
       end
     end
   end
+google_fonts_cache_path = File.expand_path("tmp/cache/google_fonts", __dir__) unless google_fonts_fetcher
 
 plugins [
   Klenod::Build::Plugins::RouterPlugin.new(
@@ -37,7 +38,10 @@ plugins [
     component_base_class: "Example::Component",
     factory: "Example::H"
   ),
-  Klenod::Build::Plugins::GoogleFontsPlugin.new(fetcher: google_fonts_fetcher),
+  Klenod::Build::Plugins::GoogleFontsPlugin.new(
+    fetcher: google_fonts_fetcher,
+    cache_path: google_fonts_cache_path
+  ),
   Klenod::Build::Plugins::CssPlugin.new,
   Klenod::Build::Plugins::SvgPlugin.new,
   Klenod::Build::Plugins::ImagePlugin.new(

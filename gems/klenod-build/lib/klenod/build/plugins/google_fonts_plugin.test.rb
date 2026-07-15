@@ -103,6 +103,108 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
     end
   end
 
+  def test_google_fonts_css_cache_miss_fetches_and_writes_raw_css
+    Dir.mktmpdir do |dir|
+      cache_path = "#{dir}/cache"
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
+      css = %(@font-face { src: url("#{FONT_URL}") format("woff2"); })
+      fetched = []
+      plugin =
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
+          cache_path: cache_path,
+          fetcher: lambda do |url|
+            fetched << url
+            {GOOGLE_CSS_URL => css, FONT_URL => "font bytes"}.fetch(url)
+          end
+        )
+
+      context_with(dir, plugin).evaluate("styles/home.css")
+
+      assert_equal([GOOGLE_CSS_URL], fetched)
+      assert_equal(css, File.binread(cache_entry_path(cache_path, GOOGLE_CSS_URL)))
+    end
+  end
+
+  def test_google_fonts_css_cache_hit_does_not_fetch_css
+    Dir.mktmpdir do |dir|
+      cache_path = "#{dir}/cache"
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
+      cached_css = <<~CSS
+        @font-face {
+          font-family: "Source Sans 3";
+          font-style: normal;
+          font-weight: 400;
+          src: url("#{FONT_URL}") format("woff2");
+        }
+      CSS
+      write_cache_entry(cache_path, GOOGLE_CSS_URL, cached_css)
+      plugin =
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
+          cache_path: cache_path,
+          fetcher: ->(url) { raise "unexpected fetch #{url}" }
+        )
+
+      context = context_with(dir, plugin)
+      context.evaluate("styles/home.css")
+      google_css_asset = context.assets.values.find { |asset| asset.metadata[:google_fonts] && asset.metadata[:type] == :css }
+      font_asset = context.assets.values.find { |asset| asset.metadata[:google_fonts] && asset.metadata[:type] == :font }
+
+      assert_includes(google_css_asset.bytes, font_asset.output_path)
+      assert_match(%r{\A/assets/google_font_source_sans_3_normal_400\.[a-f0-9]{16}\.woff2\z}, font_asset.output_path)
+    end
+  end
+
+  def test_google_fonts_css_cache_refresh_fetches_even_when_cached
+    Dir.mktmpdir do |dir|
+      cache_path = "#{dir}/cache"
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
+      write_cache_entry(cache_path, GOOGLE_CSS_URL, "stale css")
+      fresh_css = %(@font-face { src: url("#{FONT_URL}") format("woff2"); })
+      fetched = []
+      plugin =
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
+          cache_path: cache_path,
+          refresh_cache: true,
+          fetcher: lambda do |url|
+            fetched << url
+            {GOOGLE_CSS_URL => fresh_css, FONT_URL => "font bytes"}.fetch(url)
+          end
+        )
+
+      context_with(dir, plugin).evaluate("styles/home.css")
+
+      assert_equal([GOOGLE_CSS_URL], fetched)
+      assert_equal(fresh_css, File.binread(cache_entry_path(cache_path, GOOGLE_CSS_URL)))
+    end
+  end
+
+  def test_google_fonts_css_cache_ignores_empty_entries
+    Dir.mktmpdir do |dir|
+      cache_path = "#{dir}/cache"
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
+      write_cache_entry(cache_path, GOOGLE_CSS_URL, "")
+      css = %(@font-face { src: url("#{FONT_URL}") format("woff2"); })
+      fetched = []
+      plugin =
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
+          cache_path: cache_path,
+          fetcher: lambda do |url|
+            fetched << url
+            {GOOGLE_CSS_URL => css, FONT_URL => "font bytes"}.fetch(url)
+          end
+        )
+
+      context_with(dir, plugin).evaluate("styles/home.css")
+
+      assert_equal([GOOGLE_CSS_URL], fetched)
+      assert_equal(css, File.binread(cache_entry_path(cache_path, GOOGLE_CSS_URL)))
+    end
+  end
+
   def test_google_fonts_download_failures_are_clear
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
@@ -204,5 +306,15 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
     Klenod::Build::Plugins::GoogleFontsPlugin.new(
       fetcher: ->(url) { responses.fetch(url) }
     )
+  end
+
+  def write_cache_entry(cache_path, url, css)
+    path = cache_entry_path(cache_path, url)
+    FileUtils.mkdir_p(File.dirname(path))
+    File.binwrite(path, css)
+  end
+
+  def cache_entry_path(cache_path, url)
+    File.join(cache_path, "#{Digest::SHA256.hexdigest(url)}.css")
   end
 end
