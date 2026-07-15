@@ -27,5 +27,8 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+      - name: Install example web bundle
+        working-directory: example/web
+        run: bundle install
       - name: Run the default task
         run: bundle exec rake
