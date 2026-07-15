@@ -80,7 +80,7 @@ def self.page_instance(page, props)
 end
 
 def self.format_render_error(error, context)
-  if defined?(Klenod::BacktraceRewriter)
+  if defined?(Klenod::Runtime::BacktraceRewriter)
     mods =
       if context.respond_to?(:graph)
         context.graph.mods.each_with_object({}) do |(module_id, mod), index|
@@ -91,7 +91,7 @@ def self.format_render_error(error, context)
         context.modules
       end
 
-    return Klenod::BacktraceRewriter.new(mods || {}).format_exception(error)
+    return Klenod::Runtime::BacktraceRewriter.new(mods || {}).format_exception(error)
   end
 
   error.full_message

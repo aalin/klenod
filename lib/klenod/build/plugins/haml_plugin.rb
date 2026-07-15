@@ -114,7 +114,7 @@ module Klenod
           def self.from_ast(ast, source:, metadata:)
             new(
               ast.source,
-              SourceMap::SourceMap.parse(source, ast.source),
+              Runtime::SourceMap::SourceMap.parse(source, ast.source),
               metadata,
               ast
             )
@@ -270,7 +270,7 @@ module Klenod
               source = rewrite_line_constant(source, line_no)
               node = parse_expression(source)
               formatted_source =
-                if node && !source.include?(SourceMap::MARK_PREFIX)
+                if node && !source.include?(Runtime::SourceMap::MARK_PREFIX)
                   format_node(node)
                 else
                   source
@@ -429,7 +429,7 @@ module Klenod
             end
 
             def source_mark(line_no, source)
-              "# #{SourceMap::Mark.new(line_no, source)}"
+              "# #{Runtime::SourceMap::Mark.new(line_no, source)}"
             end
 
             def marked_expression(mark, expression)

@@ -5,19 +5,23 @@ require "minitest/autorun"
 require_relative "source_map"
 
 class Klenod::SourceMap::Test < Minitest::Test
-  def test_mark_round_trips_through_comment_text
-    mark = Klenod::SourceMap::Mark.new(7, "hello")
+  def test_old_constant_aliases_runtime_source_map
+    assert_same(Klenod::Runtime::SourceMap, Klenod::SourceMap)
+  end
 
-    assert_equal(mark, Klenod::SourceMap::Mark.parse(mark.to_s))
+  def test_mark_round_trips_through_comment_text
+    mark = Klenod::Runtime::SourceMap::Mark.new(7, "hello")
+
+    assert_equal(mark, Klenod::Runtime::SourceMap::Mark.parse(mark.to_s))
   end
 
   def test_maps_generated_lines_to_nearest_prior_mark
     source_map =
-      Klenod::SourceMap::SourceMap.parse(
+      Klenod::Runtime::SourceMap::SourceMap.parse(
         "one\ntwo\nthree\n",
         <<~RUBY
           class Example
-            # #{Klenod::SourceMap::Mark.new(2, "two")}
+            # #{Klenod::Runtime::SourceMap::Mark.new(2, "two")}
             def call
               :ok
             end
@@ -30,16 +34,16 @@ class Klenod::SourceMap::Test < Minitest::Test
 
   def test_later_marks_do_not_affect_earlier_generated_lines
     source_map =
-      Klenod::SourceMap::SourceMap.parse(
+      Klenod::Runtime::SourceMap::SourceMap.parse(
         "one\ntwo\nthree\n",
         <<~RUBY
           class Example
-            # #{Klenod::SourceMap::Mark.new(1, "one")}
+            # #{Klenod::Runtime::SourceMap::Mark.new(1, "one")}
             def first
               :ok
             end
 
-            # #{Klenod::SourceMap::Mark.new(3, "three")}
+            # #{Klenod::Runtime::SourceMap::Mark.new(3, "three")}
             def second
               :ok
             end

@@ -134,7 +134,7 @@ module Klenod
           TransformResult.new(
             wrapped,
             [],
-            Klenod::SourceMap::SourceMap.parse(code, wrapped),
+            Klenod::Runtime::SourceMap::SourceMap.parse(code, wrapped),
             [],
             [],
             {router_route_handler: true}
@@ -892,7 +892,7 @@ module Klenod
             elsif line.strip.empty?
               line
             else
-              "  # #{Klenod::SourceMap::Mark.new(line_no, line.chomp)}\n  #{line}"
+              "  # #{Klenod::Runtime::SourceMap::Mark.new(line_no, line.chomp)}\n  #{line}"
             end
           end.join
         end

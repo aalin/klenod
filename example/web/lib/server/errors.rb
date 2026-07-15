@@ -13,7 +13,7 @@ module Example
           index[module_id.path] = mod
         end
 
-      Klenod::BacktraceRewriter.new(mods).format_exception(error)
+      Klenod::Runtime::BacktraceRewriter.new(mods).format_exception(error)
     end
 
     def format_update_error(module_id, error, context)

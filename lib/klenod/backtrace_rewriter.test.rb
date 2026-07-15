@@ -10,10 +10,14 @@ require_relative "backtrace_rewriter"
 require_relative "source_map"
 
 class Klenod::BacktraceRewriter::Test < Minitest::Test
-  BacktraceRewriter = Klenod::BacktraceRewriter
-  SourceMap = Klenod::SourceMap
+  BacktraceRewriter = Klenod::Runtime::BacktraceRewriter
+  SourceMap = Klenod::Runtime::SourceMap
 
   FakeMod = Data.define(:source_map)
+
+  def test_old_constant_aliases_runtime_backtrace_rewriter
+    assert_same(Klenod::Runtime::BacktraceRewriter, Klenod::BacktraceRewriter)
+  end
 
   def test_rewrite_exception
     source_map = SourceMap::SourceMap.parse(<<~INPUT, <<~OUTPUT)
