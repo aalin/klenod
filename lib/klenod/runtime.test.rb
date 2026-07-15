@@ -69,6 +69,7 @@ class Klenod::RuntimeBoundaryTest
 
       abort "bad module" unless bundle.load("entry").const_get(:Exports)::VALUE == 1
       abort "bad asset" unless bundle.asset(asset.output_path).content_type == "text/css"
+      abort "missing backtrace rewriter" unless defined?(Klenod::BacktraceRewriter)
     RUBY
 
     stdout, stderr, status =
@@ -80,5 +81,18 @@ class Klenod::RuntimeBoundaryTest
       )
 
     assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
+  end
+
+  def test_runtime_gemspec_excludes_build_plugin_and_dev_files
+    spec = Gem::Specification.load(File.expand_path("../../gems/klenod-runtime/klenod-runtime.gemspec", __dir__))
+
+    assert_includes(spec.files, "lib/klenod/runtime.rb")
+    assert_includes(spec.files, "lib/klenod/runtime/source_map.rb")
+    assert_includes(spec.files, "lib/klenod/runtime/backtrace_rewriter.rb")
+    refute(spec.files.any? { |path| path.start_with?("lib/klenod/build/") })
+    refute(spec.files.any? { |path| path.start_with?("lib/klenod/dev/") })
+    refute(spec.files.any? { |path| path.end_with?(".test.rb") })
+    refute(spec.dependencies.any? { |dependency| dependency.name == "rmagick" })
+    refute(spec.dependencies.any? { |dependency| dependency.name == "syntax_tree-haml" })
   end
 end

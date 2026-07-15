@@ -4,6 +4,10 @@ Klenod is an experimental Ruby module bundler inspired by Vite, Rollup, Parcel, 
 
 The project is still early, but the core shape is in place:
 
+- `klenod-runtime` owns production bundle loading, source maps, and backtrace rewriting.
+- `klenod-build` owns graph construction, build plugins, the CLI, and development watching.
+- `klenod-rack` owns Rack-compatible asset serving helpers.
+- `klenod` is a compatibility gem that depends on build and rack.
 - `Klenod::Build` owns resolving, transforms, plugins, graph construction, bundling, and emitted assets.
 - `Klenod::Dev` owns source watching and graph update events.
 - `Klenod::Runtime` owns production bundle loading without depending on build plugins.
@@ -101,9 +105,13 @@ plugins [
 The runtime side can load the bundle without build plugins:
 
 ```ruby
+require "klenod/runtime"
+
 bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
 page = bundle.exports("pages/server")
 ```
+
+Production deployments that only load prebuilt bundles should depend on `klenod-runtime`; they do not need build dependencies such as Haml, CSS, or image transformers.
 
 ## Asset Conventions
 

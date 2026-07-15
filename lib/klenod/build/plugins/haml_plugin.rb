@@ -7,7 +7,7 @@ require "syntax_tree/haml"
 require "syntax_suggest/api"
 require "syntax_suggest/explain_syntax"
 
-require_relative "../../source_map"
+require "klenod/runtime/source_map"
 require_relative "../plugin"
 require_relative "../dependency"
 require_relative "../module_id"

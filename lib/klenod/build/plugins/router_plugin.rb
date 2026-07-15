@@ -4,7 +4,7 @@ require_relative "../dependency"
 require_relative "../errors"
 require_relative "../module_id"
 require_relative "../plugin"
-require_relative "../../source_map"
+require "klenod/runtime/source_map"
 require_relative "../transform_result"
 require_relative "../watched_pattern"
 

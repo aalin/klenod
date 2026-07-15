@@ -1,19 +1,37 @@
 PATH
-  remote: ../..
+  remote: ../../gems/klenod-build
   specs:
-    klenod (0.1.0)
+    klenod-build (0.1.0)
       async (~> 2.42)
       async-http (~> 0.95.1)
       image_size (~> 3.6)
       listen (~> 3.10)
       mayu-css (~> 0.1.5)
-      rbnacl (~> 7.1)
+      klenod-runtime (= 0.1.0)
       rmagick (~> 7.0)
       samovar (~> 2.5)
       syntax_tree (~> 6.3)
       syntax_tree-haml (~> 4.0)
       toml-rb (~> 4.2)
       tsort (~> 0.2.0)
+
+PATH
+  remote: ../../gems/klenod-rack
+  specs:
+    klenod-rack (0.1.0)
+      klenod-runtime (= 0.1.0)
+
+PATH
+  remote: ../../gems/klenod-runtime
+  specs:
+    klenod-runtime (0.1.0)
+
+PATH
+  remote: ../..
+  specs:
+    klenod (0.1.0)
+      klenod-build (= 0.1.0)
+      klenod-rack (= 0.1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -133,6 +151,10 @@ PLATFORMS
 
 DEPENDENCIES
   klenod!
+  klenod-build!
+  klenod-rack!
+  klenod-runtime!
+  rbnacl (~> 7.1)
 
 CHECKSUMS
   async (2.42.0) sha256=536078293b8c95d5b5679fa01bf7d2458bcc65cd46dec2c4cb3580feaeb965c6
@@ -169,6 +191,9 @@ CHECKSUMS
   mayu-css (0.1.5-x86_64-linux) sha256=ed3bb215e50b039de766b2b72a02493b56083a85e1aa76fa8424d7798d7e5b8e
   metrics (0.15.0) sha256=61ded5bac95118e995b1bc9ed4a5f19bc9814928a312a85b200abbdac9039072
   klenod (0.1.0)
+  klenod-build (0.1.0)
+  klenod-rack (0.1.0)
+  klenod-runtime (0.1.0)
   observer (0.1.2) sha256=d8a3107131ba661138d748e7be3dbafc0d82e732fffba9fccb3d7829880950ac
   openssl (4.0.2) sha256=1037ad2868ae58df9ad917891c0c0f9815a1172f6846d4bcdd508e4c2ee747c2
   pkg-config (1.6.5) sha256=33f9f81c5322983d22b439b8b672f27777b406fea23bfec74ff14bbeb42ec733

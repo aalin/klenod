@@ -9,7 +9,7 @@ ensure
 end
 
 require_relative "../build/context"
-require_relative "../version"
+require "klenod/version"
 
 module Klenod
   module CLI

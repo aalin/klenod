@@ -11,6 +11,21 @@ require_relative "../runtime"
 require_relative "application"
 
 class Klenod::CLI::Application::Test < Minitest::Test
+  def test_build_gemspec_owns_build_cli_and_plugin_files
+    spec = Gem::Specification.load(File.expand_path("../../../gems/klenod-build/klenod-build.gemspec", __dir__))
+
+    assert_includes(spec.files, "lib/klenod/build.rb")
+    assert_includes(spec.files, "lib/klenod/build/context.rb")
+    assert_includes(spec.files, "lib/klenod/build/plugins/haml_plugin.rb")
+    assert_includes(spec.files, "lib/klenod/cli/application.rb")
+    assert_includes(spec.files, "exe/klenod")
+    refute_includes(spec.files, "lib/klenod.rb")
+    refute(spec.files.any? { |path| path.end_with?(".test.rb") })
+    assert(spec.dependencies.any? { |dependency| dependency.name == "klenod-runtime" })
+    assert(spec.dependencies.any? { |dependency| dependency.name == "rmagick" })
+    assert(spec.dependencies.any? { |dependency| dependency.name == "syntax_tree-haml" })
+  end
+
   def test_build_command_writes_runtime_bundle
     Dir.mktmpdir do |dir|
       source_dir = "#{dir}/src"

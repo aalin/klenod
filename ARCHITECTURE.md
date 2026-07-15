@@ -18,17 +18,23 @@ The design goal is close to Vite/Rollup/Parcel for graph and plugin behavior, wi
 
 `Klenod::Dev` owns watching and update events. It observes source changes and asks the build graph to invalidate and reload affected records.
 
-`Klenod::Runtime` owns production loading:
+`klenod-runtime` / `Klenod::Runtime` owns production loading:
 
 - `Klenod::Runtime::Bundle`
 - `Klenod::Runtime::Mod`
 - serialized module specs
 - runtime import values
 - runtime asset specs
+- source maps
+- backtrace rewriting
 
 Runtime must not require build plugins or plugin-only dependencies such as RMagick, `image_size`, Haml parsers, or CSS transformers.
 
-Optional integrations, such as HTTP asset serving, live outside the core graph/runtime boundary.
+`klenod-build` owns graph construction, plugins, the CLI, and development watching. It depends on `klenod-runtime`.
+
+`klenod-rack` owns Rack-compatible asset serving helpers and depends only on `klenod-runtime`.
+
+Optional integrations live outside the core graph/runtime boundary.
 
 ## Module Lifecycle
 
@@ -100,7 +106,7 @@ Runtime modules get stable generated constant names so instances can be marshale
 
 Ruby and Haml modules generally assign `Default` for the default export. Importing a Haml file from Haml/Ruby returns the component class.
 
-`__FILE__` is rewritten through runtime source-root handling so bundles can be built in one path and loaded in another. Source maps and backtrace rewriting handle transformed sources such as Haml.
+`__FILE__` is rewritten through runtime source-root handling so bundles can be built in one path and loaded in another. Source maps and backtrace rewriting handle transformed sources such as Haml. They are runtime-owned because production error pages need them without loading build plugins.
 
 ## Assets
 

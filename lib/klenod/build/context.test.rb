@@ -4,6 +4,7 @@ require "fileutils"
 require "minitest/autorun"
 require "open3"
 require "rbconfig"
+require "rmagick"
 require "tmpdir"
 
 require_relative "../runtime"

@@ -6,6 +6,7 @@ require "tmpdir"
 
 require_relative "../build/asset"
 require_relative "../runtime/bundle"
+require_relative "../rack"
 require_relative "asset_app"
 
 class Klenod::HTTP::AssetApp::Test < Minitest::Test
@@ -47,6 +48,22 @@ class Klenod::HTTP::AssetApp::Test < Minitest::Test
     assert_equal("7", response.headers.fetch("content-length"))
     assert_equal("public, max-age=31536000, immutable", response.headers.fetch("cache-control"))
     assert_equal("body {}", response.body)
+  end
+
+  def test_rack_gemspec_owns_rack_asset_app
+    spec = Gem::Specification.load(File.expand_path("../../../gems/klenod-rack/klenod-rack.gemspec", __dir__))
+
+    assert_includes(spec.files, "lib/klenod/rack.rb")
+    assert_includes(spec.files, "lib/klenod/rack/asset_app.rb")
+    assert_includes(spec.files, "lib/klenod/http/asset_app.rb")
+    refute(spec.files.any? { |path| path.start_with?("lib/klenod/build/") })
+    refute(spec.files.any? { |path| path.end_with?(".test.rb") })
+    assert(spec.dependencies.any? { |dependency| dependency.name == "klenod-runtime" })
+  end
+
+  def test_old_http_constant_aliases_rack_asset_app
+    assert_same(Klenod::Rack::AssetApp, Klenod::HTTP::AssetApp)
+    assert_same(Klenod::Rack::Response, Klenod::HTTP::Response)
   end
 
   def test_rack_call_passes_non_asset_paths_to_wrapped_app
