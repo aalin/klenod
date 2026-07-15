@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-root = File.expand_path("../..", __dir__)
-require File.join(root, "lib/klenod/version")
+root = File.expand_path(__dir__)
+require File.expand_path("../klenod-runtime/lib/klenod/version", __dir__)
 
 Gem::Specification.new do |spec|
   spec.name = "klenod-rack"
@@ -20,10 +20,7 @@ Gem::Specification.new do |spec|
 
   spec.files =
     Dir.chdir(root) do
-      [
-        "lib/klenod/rack.rb",
-        *Dir["lib/klenod/rack/**/*.rb"]
-      ].select { |path| File.file?(path) && !path.end_with?(".test.rb") }
+      Dir["lib/**/*.rb"].select { |path| File.file?(path) && !path.end_with?(".test.rb") }
     end
   spec.require_paths = ["lib"]
 

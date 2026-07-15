@@ -84,7 +84,7 @@ bundle = context.build(
 The same build path is available through the CLI. It finds the nearest `klenod.config.rb` by checking the current directory and then walking up parent directories. The CLI changes into the config directory before building:
 
 ```sh
-bundle exec exe/klenod build
+bundle exec klenod build
 ```
 
 The config file is Ruby, so applications can configure plugins directly:

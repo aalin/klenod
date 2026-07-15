@@ -7,19 +7,19 @@ require "rbconfig"
 require "stringio"
 require "tmpdir"
 
-require_relative "../../runtime"
+require "klenod/runtime"
 require_relative "application"
 
 class Klenod::Build::CLI::Application::Test < Minitest::Test
   def test_build_gemspec_owns_build_cli_and_plugin_files
-    spec = Gem::Specification.load(File.expand_path("../../../../gems/klenod-build/klenod-build.gemspec", __dir__))
+    spec = Gem::Specification.load(File.expand_path("../../../../klenod-build.gemspec", __dir__))
 
     assert_includes(spec.files, "lib/klenod/build.rb")
     assert_includes(spec.files, "lib/klenod/build/context.rb")
     assert_includes(spec.files, "lib/klenod/build/plugins/haml_plugin.rb")
     assert_includes(spec.files, "lib/klenod/build/cli/application.rb")
     assert_includes(spec.files, "lib/klenod/build/watcher.rb")
-    assert_includes(spec.files, "exe/klenod")
+    refute_includes(spec.files, "exe/klenod")
     refute_includes(spec.files, "lib/klenod.rb")
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })
     assert(spec.dependencies.any? { |dependency| dependency.name == "klenod-runtime" })
@@ -121,6 +121,7 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
         Open3.capture3(
           RbConfig.ruby,
           "-I#{File.expand_path("../../..", __dir__)}",
+          "-I#{File.expand_path("../../../../../klenod-runtime/lib", __dir__)}",
           output
         )
 

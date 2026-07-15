@@ -4,8 +4,8 @@ require "fileutils"
 require "minitest/autorun"
 require "tmpdir"
 
-require_relative "../build/asset"
-require_relative "../runtime/bundle"
+require "klenod/build/asset"
+require "klenod/runtime/bundle"
 require_relative "../rack"
 require_relative "asset_app"
 
@@ -51,7 +51,7 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
   end
 
   def test_rack_gemspec_owns_rack_asset_app
-    spec = Gem::Specification.load(File.expand_path("../../../gems/klenod-rack/klenod-rack.gemspec", __dir__))
+    spec = Gem::Specification.load(File.expand_path("../../../klenod-rack.gemspec", __dir__))
 
     assert_includes(spec.files, "lib/klenod/rack.rb")
     assert_includes(spec.files, "lib/klenod/rack/asset_app.rb")

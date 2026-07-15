@@ -5,7 +5,7 @@ require "minitest/autorun"
 require "tmpdir"
 
 require_relative "../context"
-require_relative "../../runtime"
+require "klenod/runtime"
 
 class Klenod::Build::Plugins::DataPlugin::Test < Minitest::Test
   def test_imports_json_yaml_toml_and_text_files
@@ -43,7 +43,7 @@ class Klenod::Build::Plugins::DataPlugin::Test < Minitest::Test
       File.write("#{dir}/config.json", JSON.dump({"name" => "Klenod"}))
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      record = context.evaluate("config")
+      record = context.evaluate("config.json")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal({"name" => "Klenod"}, exports::Default)

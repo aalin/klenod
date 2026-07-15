@@ -4,7 +4,8 @@ require "minitest/autorun"
 require "stringio"
 require "tmpdir"
 
-require_relative "../../../../lib/klenod"
+require "bundler/setup"
+require "klenod"
 require_relative "update_logger"
 
 class Example::UpdateLogger::Test < Minitest::Test

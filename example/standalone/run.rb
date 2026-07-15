@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-require_relative "../../lib/klenod"
+require "bundler/setup"
+require "klenod"
 
 config = Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
 context = config.context

@@ -2,7 +2,7 @@
 
 source "https://rubygems.org"
 
-gemspec
+gemspec path: "gems/klenod"
 gemspec path: "gems/klenod-runtime"
 gemspec path: "gems/klenod-build"
 gemspec path: "gems/klenod-rack"

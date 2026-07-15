@@ -4,7 +4,7 @@ require "fileutils"
 require "minitest/autorun"
 require "tmpdir"
 
-require_relative "../../runtime"
+require "klenod/runtime"
 require_relative "../context"
 
 class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test

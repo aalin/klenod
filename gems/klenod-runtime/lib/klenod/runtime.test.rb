@@ -83,7 +83,7 @@ class Klenod::RuntimeBoundaryTest
   end
 
   def test_runtime_gemspec_excludes_build_plugin_and_dev_files
-    spec = Gem::Specification.load(File.expand_path("../../gems/klenod-runtime/klenod-runtime.gemspec", __dir__))
+    spec = Gem::Specification.load(File.expand_path("../../klenod-runtime.gemspec", __dir__))
 
     assert_includes(spec.files, "lib/klenod/runtime.rb")
     assert_includes(spec.files, "lib/klenod/runtime/source_map.rb")

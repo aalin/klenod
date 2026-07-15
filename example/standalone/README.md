@@ -12,7 +12,7 @@ Build and run it as an executable bundle:
 
 ```sh
 cd example/standalone
-bundle exec ../../exe/klenod build --executable
+bundle exec klenod build --executable
 ruby -I../../lib dist/release_report
 ```
 

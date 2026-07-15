@@ -5,7 +5,8 @@ require "open3"
 require "rbconfig"
 require "tmpdir"
 
-require_relative "../../lib/klenod"
+require "bundler/setup"
+require "klenod"
 
 class Klenod::StandaloneExampleTest < Minitest::Test
   def test_standalone_example_generates_report

@@ -1,11 +1,4 @@
 PATH
-  remote: .
-  specs:
-    klenod (0.1.0)
-      klenod-build (= 0.1.0)
-      klenod-rack (= 0.1.0)
-
-PATH
   remote: gems/klenod-build
   specs:
     klenod-build (0.1.0)
@@ -32,6 +25,13 @@ PATH
   remote: gems/klenod-runtime
   specs:
     klenod-runtime (0.1.0)
+
+PATH
+  remote: gems/klenod
+  specs:
+    klenod (0.1.0)
+      klenod-build (= 0.1.0)
+      klenod-rack (= 0.1.0)
 
 GEM
   remote: https://rubygems.org/

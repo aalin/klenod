@@ -2,10 +2,10 @@
 
 require "async"
 require "async/http"
-require "cgi"
+require "cgi/escape"
 require "protocol/http/response"
 
-require_relative "../../../../lib/klenod"
+require "klenod"
 require_relative "../dev/update_logger"
 require_relative "errors"
 require_relative "formatting"

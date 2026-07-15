@@ -8,9 +8,9 @@ Klenod is an experimental Ruby module bundler inspired by Vite, Rollup, Parcel, 
 
 Keep these boundaries intact:
 
-- `lib/klenod/build/`: graph collection, resolving, plugins, transforms, asset generation, bundle writing.
-- `lib/klenod/runtime/`: runtime bundle loading, module evaluation, source maps, and backtrace rewriting. Runtime must not require build plugins or heavyweight build dependencies.
-- `lib/klenod/rack/`: Rack-compatible serving helpers, not framework policy.
+- `gems/klenod-build/lib/klenod/build/`: graph collection, resolving, plugins, transforms, asset generation, bundle writing.
+- `gems/klenod-runtime/lib/klenod/runtime/`: runtime bundle loading, module evaluation, source maps, and backtrace rewriting. Runtime must not require build plugins or heavyweight build dependencies.
+- `gems/klenod-rack/lib/klenod/rack/`: Rack-compatible serving helpers, not framework policy.
 - `gems/`: gemspecs for `klenod-runtime`, `klenod-build`, `klenod-rack`, and the compatibility `klenod` meta gem.
 - `example/web/`: framework-style example app using router, Haml, CSS, assets, sessions, forms, route handlers, and `async-http`.
 - `example/standalone/`: non-web example for executable bundles and data imports.
@@ -29,15 +29,15 @@ Use co-located tests:
 
 - Test files use `*.test.rb`.
 - Fixtures live in a sibling `__test__/` directory near the implementation.
-- Haml transform golden tests live under `lib/klenod/build/plugins/__test__/haml`.
+- Haml transform golden tests live under `gems/klenod-build/lib/klenod/build/plugins/__test__/haml`.
 
 Useful focused commands:
 
 ```sh
-bundle exec ruby lib/klenod/build/context.test.rb
-bundle exec ruby lib/klenod/build/plugins/router_plugin.test.rb
-bundle exec ruby lib/klenod/build/plugins/haml_plugin.test.rb
-bundle exec ruby lib/klenod/runtime/mod.test.rb
+bundle exec ruby gems/klenod-build/lib/klenod/build/context.test.rb
+bundle exec ruby gems/klenod-build/lib/klenod/build/plugins/router_plugin.test.rb
+bundle exec ruby gems/klenod-build/lib/klenod/build/plugins/haml_plugin.test.rb
+bundle exec ruby gems/klenod-runtime/lib/klenod/runtime/mod.test.rb
 bundle exec ruby example/web/example.test.rb
 bundle exec ruby example/standalone/example.test.rb
 ```
@@ -63,7 +63,7 @@ CLI build from config:
 
 ```sh
 cd example/web
-bundle exec ../../exe/klenod build
+bundle exec klenod build
 ```
 
 ## Core Architecture Rules
@@ -278,7 +278,7 @@ The example server uses `async-http`. It logs requests and update events with AN
 Prefer focused tests while iterating, then broaden:
 
 ```sh
-bundle exec ruby lib/klenod/build/plugins/router_plugin.test.rb
+bundle exec ruby gems/klenod-build/lib/klenod/build/plugins/router_plugin.test.rb
 bundle exec ruby example/web/example.test.rb
 ```
 

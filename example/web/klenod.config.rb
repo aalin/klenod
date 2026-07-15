@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "lib/framework"
-require_relative "../../lib/klenod"
+require "klenod"
 
 source_dir "src"
 entrypoint "pages/server"

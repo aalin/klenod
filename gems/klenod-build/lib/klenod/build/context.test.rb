@@ -7,7 +7,7 @@ require "rbconfig"
 require "rmagick"
 require "tmpdir"
 
-require_relative "../runtime"
+require "klenod/runtime"
 require_relative "asset"
 require_relative "context"
 
@@ -856,6 +856,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Open3.capture3(
           RbConfig.ruby,
           "-I#{File.expand_path("../..", __dir__)}",
+          "-I#{File.expand_path("../../../../klenod-runtime/lib", __dir__)}",
           "-e",
           script
         )
@@ -935,6 +936,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Open3.capture3(
           RbConfig.ruby,
           "-I#{File.expand_path("../..", __dir__)}",
+          "-I#{File.expand_path("../../../../klenod-runtime/lib", __dir__)}",
           "-e",
           script
         )
@@ -1062,6 +1064,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Open3.capture3(
           RbConfig.ruby,
           "-I#{File.expand_path("..", __dir__)}",
+          "-I#{File.expand_path("../../../../klenod-runtime/lib", __dir__)}",
           output
         )
 
@@ -1088,6 +1091,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Open3.capture3(
           RbConfig.ruby,
           "-I#{File.expand_path("..", __dir__)}",
+          "-I#{File.expand_path("../../../../klenod-runtime/lib", __dir__)}",
           output
         )
 

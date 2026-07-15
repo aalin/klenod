@@ -21,7 +21,7 @@ The same build can be run through the CLI using the example Ruby config:
 
 ```sh
 cd example/web
-bundle exec ../../exe/klenod build
+bundle exec klenod build
 ```
 
 `bin/routes` prints a Rails-style route table with the HTTP method, server path, route type, and source file for each discovered `page.haml` and `route.rb`.

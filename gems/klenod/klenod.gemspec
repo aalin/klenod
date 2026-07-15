@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-root = File.expand_path("../..", __dir__)
-require File.join(root, "lib/klenod/version")
+root = File.expand_path(__dir__)
+require File.expand_path("../klenod-runtime/lib/klenod/version", __dir__)
 
 Gem::Specification.new do |spec|
   spec.name = "klenod"
@@ -18,7 +18,9 @@ Gem::Specification.new do |spec|
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/aalin/klenod"
 
-  spec.files = ["lib/klenod.rb"]
+  spec.files = Dir.chdir(root) { Dir["lib/**/*.rb"] + ["exe/klenod"] }
+  spec.bindir = "exe"
+  spec.executables = ["klenod"]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "klenod-build", "= #{Klenod::VERSION}"

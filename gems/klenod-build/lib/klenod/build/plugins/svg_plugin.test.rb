@@ -5,7 +5,7 @@ require "minitest/autorun"
 require "tmpdir"
 
 require_relative "../context"
-require_relative "../../runtime"
+require "klenod/runtime"
 require_relative "css_plugin"
 require_relative "ruby_plugin"
 

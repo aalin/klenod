@@ -27,7 +27,7 @@ PATH
     klenod-runtime (0.1.0)
 
 PATH
-  remote: ../..
+  remote: ../../gems/klenod
   specs:
     klenod (0.1.0)
       klenod-build (= 0.1.0)
