@@ -130,7 +130,7 @@ module Klenod
           raise ParseError.new(error, source: source, module_id: module_id)
         end
 
-        class DefaultTransformer
+        class Transformer
           VALID_CONST_PATH = /\A[A-Z]\w*(?:::[A-Z]\w*)*\z/
 
           ConstPath = Data.define(:value) do
@@ -1255,12 +1255,11 @@ module Klenod
 
         def initialize(
           component_base_class: DEFAULT_COMPONENT_BASE_CLASS,
-          factory: DEFAULT_FACTORY,
-          transformer: DefaultTransformer.new
+          factory: DEFAULT_FACTORY
         )
           @component_base_class = component_base_class
           @factory = factory
-          @transformer = transformer
+          @transformer = Transformer.new
         end
 
         def transform(module_id, code, context)
@@ -1269,7 +1268,7 @@ module Klenod
           companion_css = companion_path(module_id, ".css")
           dependencies = []
           style_dependencies = []
-          builder = DefaultTransformer::RubyBuilder.new
+          builder = Transformer::RubyBuilder.new
           context.unregister_virtual_modules(module_id)
 
           if context.absolute_path(companion_css).file?

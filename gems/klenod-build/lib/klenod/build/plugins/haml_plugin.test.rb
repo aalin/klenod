@@ -44,41 +44,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  class CapturingTransformer
-    attr_reader :calls
-
-    def initialize
-      @calls = []
-    end
-
-    def call(**kwargs)
-      @calls << kwargs
-
-      Klenod::Build::Plugins::HamlPlugin::HamlTransformResult.new(
-        <<~RUBY,
-          class #{kwargs.fetch(:component_class_name)} < #{kwargs.fetch(:component_base_class)}
-            H = #{kwargs.fetch(:factory)}
-            Translations = #{kwargs.fetch(:translations_source)}
-
-            def render
-              [:custom, H]
-            end
-          end
-
-          Default = #{kwargs.fetch(:component_class_name)}
-          Styles = #{kwargs.fetch(:styles_source)}
-          Default.const_set(:Styles, Styles)
-          Translations = Default::Translations
-        RUBY
-        :source_map,
-        {custom: true},
-        nil
-      )
-    end
-  end
-
   def test_ruby_builder_builds_unmarked_factory_calls_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.factory_call(
         factory: "#{self.class.name}::FakeFramework::H",
@@ -87,7 +54,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         props: {class: "\"intro\""}
       )
 
-    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
     assert_kind_of(SyntaxTree::ARef, fragment.node)
     assert_includes(fragment.source, "#{self.class.name}::FakeFramework::H[")
     assert_includes(fragment.source, ":p")
@@ -96,7 +63,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_preserves_source_map_marks_when_composing_factory_calls
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     child = builder.marked_expression(builder.source_mark(2, "Hello"), builder.expression("\"Hello\""))
     fragment =
       builder.factory_call(
@@ -107,7 +74,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         mark: builder.source_mark(1, "p")
       )
 
-    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
     assert_kind_of(SyntaxTree::ARef, fragment.node)
     assert_includes(fragment.source, "# SourceMapMark:1:")
     assert_includes(fragment.source, "# SourceMapMark:2:")
@@ -117,7 +84,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_fragments_keep_parsed_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     unmarked = builder.expression('H[:p, **{:class => "intro"}]')
 
     assert_kind_of(SyntaxTree::ARef, unmarked.node)
@@ -125,7 +92,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_program_fragments_keep_parsed_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     program = builder.program("class Page\nend\n")
 
     assert_kind_of(SyntaxTree::Program, program.node)
@@ -133,7 +100,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_composes_programs_from_statement_fragments
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     program =
       builder.program_from_fragments(
         builder.statements("# frozen_string_literal: true\n\nKlenodImport = nil\n"),
@@ -152,7 +119,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_literals_and_symbols_keep_parsed_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     literal = builder.literal("Hello")
     escaped_literal = builder.literal("\#{title}")
     integer = builder.literal(123)
@@ -175,7 +142,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_frozen_literals_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     literal =
       builder.frozen_literal(
         {
@@ -194,7 +161,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_import_calls_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.import_call("pages/page.haml:companion_style")
 
     assert_kind_of(SyntaxTree::CallNode, fragment.node)
@@ -202,7 +169,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_constant_assignments_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.constant_assignment("Default", "Page")
 
     assert_kind_of(SyntaxTree::Assign, fragment.node)
@@ -210,7 +177,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_method_calls_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     bare_call = builder.call(receiver: nil, name: "method", arguments: [builder.symbol("__klenod_import__")])
     receiver_call = builder.call(receiver: "Default", name: "const_set", arguments: [builder.symbol("Styles"), "Styles"])
 
@@ -221,7 +188,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_method_definitions_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.method_definition("title", body: builder.literal("Hello"))
 
     assert_kind_of(SyntaxTree::DefNode, fragment.node)
@@ -233,7 +200,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_public_method_definitions_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.marked_expression(builder.source_mark(3, "title"), builder.expression("title"))
     fragment = builder.public_method_definition("render", body: body)
 
@@ -244,7 +211,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_wraps_existing_syntax_tree_nodes_as_fragments
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     node = SyntaxTree.parse("title.upcase").statements.body.first
     fragment = builder.fragment(node)
 
@@ -255,7 +222,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_statement_fragments_expose_statement_body
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.statements("first\nsecond\n")
 
     assert_kind_of(SyntaxTree::Statements, fragment.node)
@@ -263,33 +230,33 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_normalizes_values_into_expression_fragments
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     existing = builder.expression("Page")
 
     assert_same(existing, builder.expression_fragment(existing))
 
     fragment = builder.expression_fragment("Object")
 
-    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
     assert_kind_of(SyntaxTree::VarRef, fragment.node)
     assert_equal("Object", fragment.source)
   end
 
   def test_ruby_builder_normalizes_values_into_statement_fragments
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     existing = builder.statements("def title\n  \"Hello\"\nend\n")
 
     assert_same(existing, builder.statements_fragment(existing))
 
     fragment = builder.statements_fragment("first\nsecond\n")
 
-    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
     assert_kind_of(SyntaxTree::Statements, fragment.node)
     assert_equal(2, fragment.statement_body.length)
   end
 
   def test_ruby_builder_builds_parenthesized_expressions_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.parenthesized_expression("title.upcase")
 
     assert_kind_of(SyntaxTree::Paren, fragment.node)
@@ -297,7 +264,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_hash_expressions_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.hash_expression("{ title: title.upcase }")
 
     assert_kind_of(SyntaxTree::HashLiteral, fragment.node)
@@ -305,7 +272,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_constant_paths_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
 
     assert_kind_of(SyntaxTree::ConstRef, builder.constant_path("Page", declaration: true))
     assert_kind_of(SyntaxTree::VarRef, builder.constant_path("Object"))
@@ -313,7 +280,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_class_skeletons_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.class_skeleton_fragment("Page", "Framework::Component::Base")
 
     assert_kind_of(SyntaxTree::ClassDeclaration, fragment.node)
@@ -321,7 +288,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_component_program_formats_from_syntax_tree_program
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     program =
       builder.component_program(
         component_class_name: "Page",
@@ -339,7 +306,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_component_class_fragments
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.component_class_fragment(
         component_class_name: builder.expression_fragment("Page"),
@@ -358,7 +325,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_component_source_returns_component_program_source
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     kwargs = {
       component_class_name: "Page",
       component_base_class: "Object",
@@ -372,7 +339,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_haml_transform_result_can_be_built_from_ast
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     ast = builder.program("class Page\nend\n")
     result =
       Klenod::Build::Plugins::HamlPlugin::HamlTransformResult.from_ast(
@@ -388,7 +355,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_marked_expressions_preserve_wrapped_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     child = builder.expression('"Hello"')
     marked = builder.marked_expression(builder.source_mark(1, "Hello"), child)
 
@@ -400,7 +367,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_empty_expression_lists_from_nil_node
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.expressions([])
 
     assert_kind_of(SyntaxTree::VarRef, fragment.node)
@@ -408,7 +375,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_nil_expression_from_syntax_tree_node
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.nil_expression
 
     assert_kind_of(SyntaxTree::VarRef, fragment.node)
@@ -416,14 +383,14 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_reuses_single_expression_list_fragment
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     child = builder.expression('"Hello"')
 
     assert_same(child, builder.expressions([child]))
   end
 
   def test_ruby_builder_builds_unmarked_expression_lists_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.expressions([
         builder.expression('H[:p, "Hello"]'),
@@ -435,7 +402,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_preserves_source_map_marks_when_composing_expression_lists
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     child = builder.marked_expression(builder.source_mark(1, "Hello"), builder.expression('"Hello"'))
     fragment = builder.expressions([child, builder.expression('"World"')])
 
@@ -445,7 +412,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_silent_scripts_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.silent_script("@visible = true")
 
     assert_kind_of(SyntaxTree::Begin, fragment.node)
@@ -458,7 +425,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_ruby_filters_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.ruby_filters([
         "#{builder.source_mark(2, "def title")}\ndef title\n  \"Hello\"\nend"
@@ -471,7 +438,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_script_blocks_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.expression("H[:li, item]")
     fragment = builder.script_block("items.map do |item|", body)
 
@@ -480,7 +447,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_brace_script_blocks_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.expression("H[:li, item]")
     fragment = builder.script_block("items.map { |item|", body)
 
@@ -489,7 +456,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_silent_script_blocks_with_nil_result
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.expression("H[:li, item]")
     fragment = builder.silent_script_block("items.each do |item|", body)
 
@@ -503,7 +470,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_silent_brace_script_blocks_with_nil_result
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.expression("H[:li, item]")
     fragment = builder.silent_script_block("items.each { |item|", body)
 
@@ -517,7 +484,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_script_block_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     node = builder.send(:block_script_node, "items.map do |item|", builder.expression("item").node)
 
     assert_kind_of(SyntaxTree::MethodAddBlock, node)
@@ -526,7 +493,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_preserves_source_map_marks_when_composing_script_blocks
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.marked_expression(builder.source_mark(2, "item"), builder.expression("item"))
     fragment = builder.script_block("items.map do |item|", body)
 
@@ -536,7 +503,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_reports_helpful_script_block_parse_errors
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.expression("H[:li, item]")
     error =
       assert_raises(Klenod::Build::Plugins::HamlPlugin::RubyParseError) do
@@ -549,7 +516,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_if_branches_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.branches([
         ["if show", builder.expression("H[:p]")],
@@ -563,7 +530,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_branch_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     node =
       builder.send(
         :branch_node,
@@ -578,7 +545,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_silent_branches_with_nil_result
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.silent_branches([
         ["if show", builder.expression("H[:p]")],
@@ -595,7 +562,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_preserves_returns_inside_silent_branches
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.silent_branches([
         ["if show", builder.silent_script("return")]
@@ -607,7 +574,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_builds_case_branches_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.branches([
         ["case value", builder.expression("nil")],
@@ -624,7 +591,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_ruby_builder_preserves_source_map_marks_when_composing_branches
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.marked_expression(builder.source_mark(2, "Visible"), builder.expression("H[:p]"))
     fragment =
       builder.branches([
@@ -679,8 +646,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_result_exposes_component_program_ast
-    transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
+  def test_haml_transformer_result_exposes_component_program_ast
+    transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     result =
       transformer.call(
         source: "%h1 Hello\n",
@@ -692,14 +659,14 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         translations_source: "{}.freeze"
       )
 
-    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, result.ast)
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, result.ast)
     assert_kind_of(SyntaxTree::Program, result.ast.node)
     assert_equal(result.code, result.ast.source)
   end
 
-  def test_default_haml_transformer_compiles_template_to_fragments
-    transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+  def test_haml_transformer_compiles_template_to_fragments
+    transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     template =
       transformer.send(
         :compile_template,
@@ -715,14 +682,14 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         builder: builder
       )
 
-    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, template.ruby)
-    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, template.render)
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, template.ruby)
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, template.render)
     assert_kind_of(SyntaxTree::Statements, template.ruby.node)
     assert_kind_of(SyntaxTree::Node, template.render.node)
   end
 
-  def test_default_haml_transformer_wraps_parse_errors_with_source_context
-    transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
+  def test_haml_transformer_wraps_parse_errors_with_source_context
+    transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     source = <<~HAML
       %p Before
       %time(datetime=post.fetch("date"))= post.fetch("date")
@@ -749,8 +716,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_kind_of(Haml::SyntaxError, error.cause)
   end
 
-  def test_default_haml_transformer_wraps_invalid_tag_parse_errors_with_source_context
-    transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
+  def test_haml_transformer_wraps_invalid_tag_parse_errors_with_source_context
+    transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     source = <<~HAML
       %p Before
       %*
@@ -776,8 +743,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     assert_includes(error.message, "> 2 | %*")
   end
 
-  def test_default_haml_transformer_reports_ruby_script_parse_errors_on_source_line
-    transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
+  def test_haml_transformer_reports_ruby_script_parse_errors_on_source_line
+    transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     source = <<~HAML
       %table
         = @columns.map { |column| )
@@ -828,7 +795,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
         "{}.freeze"
       end
 
-    Klenod::Build::Plugins::HamlPlugin::DefaultTransformer
+    Klenod::Build::Plugins::HamlPlugin::Transformer
       .new
       .call(
         source: File.read(path),
@@ -849,9 +816,9 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_compiles_ruby_filter_to_statement_fragment
-    transformer = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer.new
-    builder = Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder.new
+  def test_haml_transformer_compiles_ruby_filter_to_statement_fragment
+    transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     parsed = SyntaxTree::Haml.parse(<<~HAML)
       :ruby
         def title
@@ -860,13 +827,13 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     HAML
     fragment = transformer.send(:compile_ruby_filter, parsed.children.fetch(0), builder: builder)
 
-    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::DefaultTransformer::RubyBuilder::Fragment, fragment)
+    assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
     assert_kind_of(SyntaxTree::Statements, fragment.node)
     assert_kind_of(SyntaxTree::Comment, fragment.node.body.first)
     assert_includes(fragment.source, "SourceMapMark:2:")
   end
 
-  def test_default_haml_transformer_renders_with_configured_factory
+  def test_haml_transformer_renders_with_configured_factory
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -891,7 +858,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_supports_dynamic_attribute_fragments
+  def test_haml_transformer_supports_dynamic_attribute_fragments
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -919,7 +886,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_maps_object_reference_to_key_prop
+  def test_haml_transformer_maps_object_reference_to_key_prop
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -949,7 +916,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_maps_component_object_reference_to_key_prop
+  def test_haml_transformer_maps_component_object_reference_to_key_prop
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/components")
       File.write(
@@ -994,7 +961,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_supports_parsed_inline_tag_values
+  def test_haml_transformer_supports_parsed_inline_tag_values
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1021,7 +988,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_maps_inner_whitespace_marker_to_left_space
+  def test_haml_transformer_maps_inner_whitespace_marker_to_left_space
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1045,7 +1012,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_does_not_add_space_before_nested_script_tag
+  def test_haml_transformer_does_not_add_space_before_nested_script_tag
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1073,7 +1040,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_adds_space_before_nested_script_tag_with_inner_whitespace_marker
+  def test_haml_transformer_adds_space_before_nested_script_tag_with_inner_whitespace_marker
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1102,7 +1069,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_does_not_add_edge_space_for_isolated_whitespace_marker
+  def test_haml_transformer_does_not_add_edge_space_for_isolated_whitespace_marker
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write("#{dir}/pages/page.haml", "%a{ href: \"#\" }< link\n")
@@ -1119,7 +1086,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_maps_outer_whitespace_marker_to_right_space
+  def test_haml_transformer_maps_outer_whitespace_marker_to_right_space
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1143,7 +1110,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_maps_both_whitespace_markers
+  def test_haml_transformer_maps_both_whitespace_markers
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1168,7 +1135,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_maps_whitespace_markers_around_nested_tag
+  def test_haml_transformer_maps_whitespace_markers_around_nested_tag
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1193,7 +1160,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_supports_ruby_filter_and_attributes
+  def test_haml_transformer_supports_ruby_filter_and_attributes
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1223,7 +1190,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_supports_script_blocks_with_children
+  def test_haml_transformer_supports_script_blocks_with_children
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1255,7 +1222,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_supports_brace_script_blocks_with_children
+  def test_haml_transformer_supports_brace_script_blocks_with_children
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1287,7 +1254,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_supports_silent_script_blocks_with_children
+  def test_haml_transformer_supports_silent_script_blocks_with_children
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1326,7 +1293,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_supports_silent_brace_script_blocks_with_children
+  def test_haml_transformer_supports_silent_brace_script_blocks_with_children
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1365,7 +1332,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_supports_silent_control_flow
+  def test_haml_transformer_supports_silent_control_flow
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1397,7 +1364,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_supports_output_control_flow
+  def test_haml_transformer_supports_output_control_flow
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1430,7 +1397,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_supports_output_control_flow_without_else
+  def test_haml_transformer_supports_output_control_flow_without_else
     plugin =
       Klenod::Build::Plugins::HamlPlugin.new(
         factory: "#{self.class.name}::FakeFramework::H"
@@ -1492,7 +1459,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_rewrites_error_backtraces_to_haml_lines
+  def test_haml_transformer_rewrites_error_backtraces_to_haml_lines
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1520,7 +1487,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_rewrites_ruby_filter_errors_to_haml_lines
+  def test_haml_transformer_rewrites_ruby_filter_errors_to_haml_lines
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1552,7 +1519,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_rewrites_nested_script_errors_to_haml_lines
+  def test_haml_transformer_rewrites_nested_script_errors_to_haml_lines
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1585,7 +1552,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_rewrites_dynamic_attribute_errors_to_haml_lines
+  def test_haml_transformer_rewrites_dynamic_attribute_errors_to_haml_lines
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1612,7 +1579,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_rewrites_ruby_filter_method_called_from_markup
+  def test_haml_transformer_rewrites_ruby_filter_method_called_from_markup
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1644,7 +1611,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_rewrites_imported_component_render_errors_to_component_haml
+  def test_haml_transformer_rewrites_imported_component_render_errors_to_component_haml
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/components")
       File.write(
@@ -1694,7 +1661,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_haml_transformer_rewrites_line_constants_to_haml_lines
+  def test_haml_transformer_rewrites_line_constants_to_haml_lines
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write(
@@ -1723,35 +1690,6 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       exports = context.exports(record)
 
       assert_equal([:main, 7, 3, "__LINE__", [:span, 10], [:section, {key: 11}], {data_line: 6}], exports::Default.new.render)
-    end
-  end
-
-  def test_haml_uses_custom_transformer_contract
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write("#{dir}/pages/custom.haml", "%h1 Custom\n")
-
-      transformer = CapturingTransformer.new
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
-          factory: "#{self.class.name}::FakeFramework::H",
-          transformer: transformer
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.evaluate("pages/custom.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-      call = transformer.calls.fetch(0)
-
-      assert_equal("%h1 Custom\n", call.fetch(:source))
-      assert_equal(ModuleId.new("pages/custom.haml", nil), call.fetch(:module_id))
-      assert_equal("Custom", call.fetch(:component_class_name))
-      assert_equal("#{self.class.name}::FakeFramework::ComponentBase", call.fetch(:component_base_class))
-      assert_equal("#{self.class.name}::FakeFramework::H", call.fetch(:factory))
-      assert_equal("{}.freeze", call.fetch(:styles_source))
-      assert_equal("{}.freeze", call.fetch(:translations_source))
-      assert_equal([:custom, FakeFramework::H], exports::Default.new.render)
-      assert_equal(:source_map, record.source_map)
     end
   end
 
