@@ -10,6 +10,8 @@ assets_dir "dist/public"
 
 google_fonts_fetcher =
   if ENV["KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS"]
+    # Keep example tests offline and deterministic. Normal builds use the default
+    # Google Fonts fetcher and cache the raw CSS response below.
     lambda do |url|
       case url
       when %r{\Ahttps://fonts\.googleapis\.com/css2}
