@@ -21,6 +21,7 @@ Gem::Specification.new do |spec|
   spec.files =
     Dir.chdir(root) do
       [
+        "README.md",
         "lib/klenod/build.rb",
         "lib/klenod/build/cli.rb",
         "lib/klenod/build/watcher.rb",

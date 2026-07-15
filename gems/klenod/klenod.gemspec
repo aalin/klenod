@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/aalin/klenod"
 
-  spec.files = Dir.chdir(root) { Dir["lib/**/*.rb"].reject { |path| path.end_with?(".test.rb") } + ["exe/klenod"] }
+  spec.files = Dir.chdir(root) { ["README.md", *Dir["lib/**/*.rb"].reject { |path| path.end_with?(".test.rb") }, "exe/klenod"] }
   spec.bindir = "exe"
   spec.executables = ["klenod"]
   spec.require_paths = ["lib"]
