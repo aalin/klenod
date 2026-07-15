@@ -38,6 +38,20 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     end
   end
 
+  def test_image_import_does_not_read_full_source_with_file_binread
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      image_path = "#{dir}/images/logo.png"
+      File.binwrite(image_path, png_bytes(width: 2, height: 3))
+      File.write("#{dir}/entry.rb", "Logo = import(\"images/logo.png\")\n")
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      without_file_binread(image_path) do
+        context.evaluate("entry")
+      end
+    end
+  end
+
   def test_ruby_import_of_image_returns_default_export
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")
@@ -373,5 +387,25 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     iend = [0].pack("N") + "IEND" + [0].pack("N")
 
     signature + ihdr + iend
+  end
+
+  def without_file_binread(disallowed_path)
+    singleton = class << File; self; end
+    original = File.method(:binread)
+    previous_verbose = $VERBOSE
+    $VERBOSE = nil
+    singleton.define_method(:binread) do |path, *args, **kwargs, &block|
+      raise "File.binread should not be used for #{disallowed_path}" if path.to_s == disallowed_path
+
+      original.call(path, *args, **kwargs, &block)
+    end
+    $VERBOSE = previous_verbose
+    yield
+  ensure
+    $VERBOSE = nil
+    singleton.define_method(:binread) do |*args, **kwargs, &block|
+      original.call(*args, **kwargs, &block)
+    end
+    $VERBOSE = previous_verbose
   end
 end

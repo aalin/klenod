@@ -9,6 +9,7 @@ require_relative "asset_generation_queue"
 require_relative "errors"
 require_relative "hashing"
 require_relative "invalidation_result"
+require_relative "load_result"
 require_relative "module_id"
 require_relative "module_record"
 require_relative "resolver"
@@ -286,8 +287,9 @@ module Klenod
 
       def load_module_now(module_id, force: false, reevaluate: false)
         with_loading_stack(module_id) do
-          source = read_module_source(module_id)
-          source_hash = Hashing.hexdigest(source)
+          loaded_source = read_module_source(module_id)
+          source = loaded_source.source
+          source_hash = loaded_source.source_hash || Hashing.hexdigest(source)
           cached = @records[module_id]
 
           raise_failed_module!(cached)
@@ -297,7 +299,7 @@ module Klenod
             return cached
           end
 
-          transform = transform_module_source(module_id, source)
+          transform = loaded_source.transform || transform_module_source(module_id, source)
           resolved_dependencies = resolve_transform_dependencies(transform)
           dependency_records = load_eager_dependency_records(resolved_dependencies)
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
@@ -334,15 +336,16 @@ module Klenod
 
       def collect_module_now(module_id, force: false)
         with_loading_stack(module_id) do
-          source = read_module_source(module_id)
-          source_hash = Hashing.hexdigest(source)
+          loaded_source = read_module_source(module_id)
+          source = loaded_source.source
+          source_hash = loaded_source.source_hash || Hashing.hexdigest(source)
           cached = @records[module_id]
 
           raise_failed_module!(cached)
 
           return cached if cached&.source_hash == source_hash && !force
 
-          transform = transform_module_source(module_id, source)
+          transform = loaded_source.transform || transform_module_source(module_id, source)
           resolved_dependencies = resolve_transform_dependencies(transform)
           dependency_records = collect_eager_dependency_records(resolved_dependencies)
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
@@ -482,7 +485,10 @@ module Klenod
       end
 
       def read_module_source(module_id)
-        load_source(module_id, @resolver.absolute_path(module_id))
+        loaded = load_source(module_id, @resolver.absolute_path(module_id))
+        return loaded if loaded.is_a?(LoadResult)
+
+        LoadResult.new(loaded, nil, nil)
       end
 
       def transform_module_source(module_id, source)
@@ -716,13 +722,14 @@ module Klenod
 
       def mark_module_failed(module_id, error)
         cached = @records[module_id]
-        source =
+        loaded_source =
           begin
             read_module_source(module_id)
           rescue
-            cached&.source || ""
+            LoadResult.new(cached&.source || "", nil, nil)
           end
-        source_hash = Hashing.hexdigest(source)
+        source = loaded_source.source
+        source_hash = loaded_source.source_hash || Hashing.hexdigest(source)
         version = cached ? cached.version + 1 : 0
 
         @records[module_id] =

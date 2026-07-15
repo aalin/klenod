@@ -24,7 +24,7 @@ module Klenod
         @disk_path = nil
         @task = nil
         @mutex = Mutex.new
-        @state = bytes.nil? ? :pending : :ready
+        @state = (bytes || (source_path && !generator && !writer)) ? :ready : :pending
         @error = nil
       end
 
@@ -34,7 +34,7 @@ module Klenod
 
       def bytes
         wait
-        @bytes || File.binread(@disk_path)
+        @bytes || File.binread(@disk_path || @source_path)
       end
 
       def wait
@@ -146,13 +146,7 @@ module Klenod
         FileUtils.mkdir_p(File.dirname(path))
         block&.call(generated? ? :generate_start : :write_start, self, path)
 
-        File.open(temp_path, "wb") do |file|
-          if @writer
-            @writer.call(file)
-          else
-            file.write(@bytes || generate_bytes)
-          end
-        end
+        write_bytes_to(temp_path)
 
         File.rename(temp_path, path)
         mark_disk_ready(path)
@@ -216,8 +210,21 @@ module Klenod
         write_now(path, &block)
       end
 
+      def write_bytes_to(path)
+        return FileUtils.copy_file(@source_path, path) if static? && @bytes.nil? && @source_path
+
+        File.open(path, "wb") do |file|
+          if @writer
+            @writer.call(file)
+          else
+            file.write(@bytes || generate_bytes)
+          end
+        end
+      end
+
       def generate_bytes
         return @generator.call if @generator
+        return File.binread(@source_path) unless @writer
 
         io = StringIO.new("".b)
         @writer.call(io)

@@ -5,7 +5,9 @@ require "rmagick"
 require "uri"
 
 require_relative "../asset"
+require_relative "../dependency"
 require_relative "../hashing"
+require_relative "../load_result"
 require_relative "../plugin"
 require_relative "../transform_result"
 
@@ -31,17 +33,14 @@ module Klenod
           ResolvedDependency.new(dependency, IMAGE_RUNTIME_MODULE_ID, {virtual: true})
         end
 
-        def load(module_id, _context)
-          return nil unless module_id.scheme == :virtual && module_id == IMAGE_RUNTIME_MODULE_ID
+        def load(module_id, context)
+          return image_runtime_source if module_id.scheme == :virtual && module_id == IMAGE_RUNTIME_MODULE_ID
+          return nil unless EXTENSIONS.include?(module_id.extname)
 
-          image_runtime_source
-        end
-
-        def transform(module_id, code, context)
-          return super unless EXTENSIONS.include?(module_id.extname)
-
-          dimensions = image_dimensions(code)
-          hash = Hashing.short(code)
+          source_path = context.absolute_path(module_id)
+          source_hash = Hashing.file_hexdigest(source_path)
+          hash = source_hash[0, 16]
+          dimensions = image_dimensions(source_path)
           output_path = "/assets/#{asset_name(module_id)}.#{hash}#{module_id.extname}"
           logical_name = module_id.path
           asset =
@@ -49,8 +48,8 @@ module Klenod
               logical_name,
               hash,
               output_path,
+              source_path,
               nil,
-              code,
               content_type(module_id.extname),
               {
                 type: :image,
@@ -59,7 +58,7 @@ module Klenod
                 format: dimensions.format
               }
             )
-          variant_assets = generate_variant_assets(module_id, code, dimensions, context.asset_generation_queue)
+          variant_assets = generate_variant_assets(module_id, source_path, source_hash, dimensions, context.asset_generation_queue)
           assets = [asset, *variant_assets]
           image_runtime_dependency =
             Dependency
@@ -70,13 +69,19 @@ module Klenod
               )
               .with(id: "#{module_id}:image_runtime")
 
-          TransformResult.new(
-            image_module_source(module_id, assets, image_runtime_dependency),
-            [image_runtime_dependency],
-            nil,
-            assets,
-            [],
-            {asset_bytes: code}
+          transform =
+            TransformResult.new(
+              image_module_source(module_id, assets, image_runtime_dependency),
+              [image_runtime_dependency],
+              nil,
+              assets,
+              [],
+              {}
+            )
+          LoadResult.new(
+            image_source(module_id),
+            source_hash,
+            transform
           )
         end
 
@@ -96,27 +101,25 @@ module Klenod
 
         Dimensions = Data.define(:width, :height, :format)
 
-        def image_dimensions(bytes)
-          size = ImageSize.new(bytes)
+        def image_dimensions(path)
+          size = ImageSize.path(path)
           Dimensions.new(size.width, size.height, size.format)
         rescue ImageSize::FormatError
           Dimensions.new(nil, nil, nil)
         end
 
-        def generate_variant_assets(module_id, bytes, dimensions, queue)
+        def generate_variant_assets(module_id, source_path, source_hash, dimensions, queue)
           return [] if dimensions.width.nil? || dimensions.height.nil?
 
           variant_options = variant_options_for(module_id)
           return [] if variant_options.widths.empty?
-
-          source_hash = Hashing.hexdigest(bytes)
 
           variant_options.formats.flat_map do |format|
             variant_options.widths.filter_map do |width|
               next if width <= 0
 
               key = ImageVariantKey.new(module_id.path, source_hash, width, format.downcase)
-              @variant_cache[key] ||= variant_asset(module_id, bytes, dimensions, source_hash, width, format, queue)
+              @variant_cache[key] ||= variant_asset(module_id, source_path, dimensions, source_hash, width, format, queue)
             end
           end
         end
@@ -143,6 +146,10 @@ module Klenod
 
             ImageVariant = Data.define(:src, :width, :height, :format, :descriptor, :metadata)
           RUBY
+        end
+
+        def image_source(module_id)
+          "# image asset: #{module_id}\n"
         end
 
         def image_module_source(module_id, assets, image_runtime_dependency)
@@ -195,7 +202,7 @@ module Klenod
           VariantOptions.new(widths.uniq, formats.map(&:downcase).uniq)
         end
 
-        def variant_asset(module_id, bytes, dimensions, source_hash, width, format, queue)
+        def variant_asset(module_id, source_path, dimensions, source_hash, width, format, queue)
           format = format.downcase
           extname = ".#{format}"
           descriptor = "#{width}w"
@@ -214,19 +221,19 @@ module Klenod
             module_id.path,
             hash,
             output_path,
-            nil,
+            source_path,
             content_type(extname),
             metadata,
-            writer: ->(io) { write_variant_bytes(bytes, width, format, io) },
+            writer: ->(io) { write_variant_bytes(source_path, width, format, io) },
             queue: queue,
             queue_kind: :cpu
           ) do
-            generate_variant_bytes(bytes, width, format)
+            generate_variant_bytes(source_path, width, format)
           end
         end
 
-        def generate_variant_bytes(bytes, width, format)
-          image = Magick::Image.from_blob(bytes).first
+        def generate_variant_bytes(source_path, width, format)
+          image = Magick::Image.read(source_path.to_s).first
           variant_image = image.resize_to_fit(width)
           variant_bytes = variant_image.to_blob { |info| info.format = format.upcase }
           variant_bytes
@@ -235,8 +242,8 @@ module Klenod
           image&.destroy!
         end
 
-        def write_variant_bytes(bytes, width, format, io)
-          io.write(generate_variant_bytes(bytes, width, format))
+        def write_variant_bytes(source_path, width, format, io)
+          io.write(generate_variant_bytes(source_path, width, format))
         end
 
         def scaled_height(dimensions, width)

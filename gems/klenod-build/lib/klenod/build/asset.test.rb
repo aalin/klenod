@@ -29,6 +29,30 @@ class Klenod::Build::Asset::Test < Minitest::Test
     assert_equal("body {}", asset.bytes)
   end
 
+  def test_static_source_path_asset_copies_and_reads_from_disk
+    Dir.mktmpdir do |dir|
+      source_path = "#{dir}/source.png"
+      output_path = "#{dir}/assets/source.png"
+      File.binwrite(source_path, "source bytes")
+      asset =
+        Klenod::Build::Asset.new(
+          "images/source.png",
+          "abc",
+          "/assets/source.png",
+          source_path,
+          nil,
+          "image/png",
+          {}
+        )
+
+      assert(asset.ready?)
+      assert(asset.static?)
+      assert_equal("source bytes", asset.bytes)
+      assert_equal(:written, asset.write_to(output_path))
+      assert_equal("source bytes", File.binread(output_path))
+    end
+  end
+
   def test_generated_asset_runs_generator_once_for_concurrent_waiters
     calls = 0
     asset =
