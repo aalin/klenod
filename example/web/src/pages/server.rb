@@ -67,7 +67,7 @@ def self.render_page_response(match, request, context, status: 200, props: {})
         </html>
       HTML
       status: status,
-      headers: {}
+      headers: {"vary" => "Accept-Language"}
     ),
     request
   ).to_a

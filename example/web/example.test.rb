@@ -121,6 +121,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/demo/blog/assets", "Generated assets as imports")
     assert_route_includes(entry, context, "/demo/data", "Imported from a plain text file.")
     assert_route_includes(entry, context, "/demo/hybrid", "Hybrid page and route handler")
+    assert_route_includes(entry, context, "/demo/translations", "Render localized component text")
     assert_route_includes(entry, context, "/demo/docs/guides/routing", "Path parts: guides / routing")
     assert_route_includes(entry, context, "/demo/shop", "No filters selected")
     assert_route_includes(entry, context, "/demo/shop/sale/red", "Filters: sale, red")
@@ -137,6 +138,43 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/demo/feed/photo", "Photo intercept")
     assert_route_includes(entry, context, "/profile", "Profile intercept")
     assert_route_includes(entry, context, "/login", "Login intercept")
+  end
+
+  def test_example_app_resolves_translations_from_accept_language
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, headers, body =
+      entry.call(
+        HeaderRequest["GET", "/demo/translations", HeaderList.new([["Accept-Language", "sv-SE,sv;q=0.9,en-US;q=0.8"]])],
+        context
+      )
+    html = body.join
+
+    assert_equal(200, status)
+    assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert_equal("Accept-Language", headers.fetch("vary"))
+    assert_includes(html, "Rendera lokaliserad komponenttext")
+    assert_includes(html, "Vald locale")
+    assert_includes(html, "sv-SE")
+    refute_includes(html, "Render localized component text")
+  end
+
+  def test_example_app_falls_back_to_default_translation_locale
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, _headers, body =
+      entry.call(
+        HeaderRequest["GET", "/demo/translations", HeaderList.new([["Accept-Language", "fr-FR,fr;q=0.9"]])],
+        context
+      )
+    html = body.join
+
+    assert_equal(200, status)
+    assert_includes(html, "Render localized component text")
+    assert_includes(html, "Resolved locale")
+    assert_includes(html, "en-US")
   end
 
   def test_example_routes_utility_prints_route_table
@@ -448,6 +486,26 @@ class Klenod::ExampleTest < Minitest::Test
       },
       request.form
     )
+  end
+
+  def test_example_i18n_uses_fiber_local_request_context
+    translations = {
+      "en-US" => {"title" => "Hello"},
+      "sv-SE" => {"title" => "Hej"}
+    }
+    english = Example::Request.from(HeaderRequest["GET", "/", HeaderList.new([["Accept-Language", "en-US"]])])
+    swedish = Example::Request.from(HeaderRequest["GET", "/", HeaderList.new([["Accept-Language", "sv-SE"]])])
+
+    Example::Context.with(request: english) do
+      other = Fiber.new do
+        Example::Context.with(request: swedish) do
+          Example::I18n.t(translations, "title")
+        end
+      end
+
+      assert_equal("Hej", other.resume)
+      assert_equal("Hello", Example::I18n.t(translations, "title"))
+    end
   end
 
   def test_example_app_stores_form_values_in_encrypted_session_cookie

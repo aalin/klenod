@@ -1,0 +1,18 @@
+[header]
+kicker = "Translations"
+title = "Render localized component text"
+summary = "This page reads Accept-Language and resolves strings from Haml companion TOML files without sharing request state between concurrent fibers."
+
+[current]
+title = "Current request"
+requested = "Accept-Language"
+resolved = "Resolved locale"
+none = "not provided"
+
+[usage]
+title = "Component API"
+body = "Haml components can call t(\"key\") to read from their own companion translation files."
+code = "title: t(\"header.title\")"
+
+[examples]
+title = "Try request headers"

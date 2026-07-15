@@ -1,0 +1,38 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+
+  Examples = [
+    ["sv-SE,sv;q=0.9,en-US;q=0.8", "Swedish"],
+    ["en-US,en;q=0.9,sv-SE;q=0.8", "English"],
+    ["fr-FR,fr;q=0.9,en-US;q=0.8", "Fallback"]
+  ]
+
+%article
+  %PageHeader{
+    kicker: t("header.kicker"),
+    title: t("header.title"),
+    summary: t("header.summary")
+  }
+
+  %section
+    %Panel{ title: t("current.title") }
+      %dl
+        %div
+          %dt= t("current.requested")
+          %dd= request.headers.fetch("accept-language", t("current.none"))
+        %div
+          %dt= t("current.resolved")
+          %dd= I18n.resolve_locale(Translations)
+
+    %Panel{ title: t("usage.title") }
+      %p= t("usage.body")
+      %pre
+        %code= t("usage.code")
+
+    %Panel{ title: t("examples.title") }
+      %ul
+        = Examples.map do |header, label|
+          %li
+            %span= label
+            %code= header
