@@ -23,9 +23,6 @@ Gem::Specification.new do |spec|
       [
         "lib/klenod/version.rb",
         "lib/klenod/runtime.rb",
-        "lib/klenod/mod.rb",
-        "lib/klenod/source_map.rb",
-        "lib/klenod/backtrace_rewriter.rb",
         *Dir["lib/klenod/runtime/**/*.rb"]
       ].select { |path| File.file?(path) && !path.end_with?(".test.rb") }
     end

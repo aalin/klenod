@@ -171,6 +171,4 @@ module Klenod
       end
     end
   end
-
-  BacktraceRewriter = Runtime::BacktraceRewriter unless const_defined?(:BacktraceRewriter, false)
 end

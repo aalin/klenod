@@ -4,7 +4,6 @@ require "fileutils"
 require "minitest/autorun"
 require "tmpdir"
 
-require_relative "../../backtrace_rewriter"
 require_relative "../../runtime"
 require_relative "../context"
 
@@ -384,7 +383,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
     assert_equal(ast.source, result.code)
     assert_same(ast, result.ast)
-    assert_kind_of(Klenod::SourceMap::SourceMap, result.source_map)
+    assert_kind_of(Klenod::Runtime::SourceMap::SourceMap, result.source_map)
     assert_equal({custom: true}, result.metadata)
   end
 
@@ -888,7 +887,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
       assert_equal([:main, [:h1, "Hello"], [:p, "From Ruby"], {class: "SHELL"}], exports::Default.new.render)
-      assert_kind_of(Klenod::SourceMap::SourceMap, record.source_map)
+      assert_kind_of(Klenod::Runtime::SourceMap::SourceMap, record.source_map)
     end
   end
 
@@ -1515,7 +1514,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       exports = mod.const_get(:Exports)
 
       error = assert_raises(RuntimeError) { exports::Default.new.render }
-      Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
+      Klenod::Runtime::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
 
       assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:3:in /, error.backtrace.fetch(0))
     end
@@ -1547,7 +1546,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       exports = mod.const_get(:Exports)
 
       error = assert_raises(RuntimeError) { exports::Default.new.render }
-      Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
+      Klenod::Runtime::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
 
       assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:3:in /, error.backtrace.fetch(0))
     end
@@ -1580,7 +1579,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       exports = mod.const_get(:Exports)
 
       error = assert_raises(RuntimeError) { exports::Default.new.render }
-      Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
+      Klenod::Runtime::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
 
       assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:8:in /, error.backtrace.fetch(0))
     end
@@ -1607,7 +1606,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       exports = mod.const_get(:Exports)
 
       error = assert_raises(RuntimeError) { exports::Default.new.render }
-      Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
+      Klenod::Runtime::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
 
       assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:1:in /, error.backtrace.fetch(0))
     end
@@ -1639,7 +1638,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       exports = mod.const_get(:Exports)
 
       error = assert_raises(RuntimeError) { exports::Default.new.render }
-      Klenod::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
+      Klenod::Runtime::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
 
       assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:3:in /, error.backtrace.fetch(0))
     end
@@ -1682,7 +1681,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
       exports = page_mod.const_get(:Exports)
 
       error = assert_raises(RuntimeError) { exports::Default.new.render }
-      Klenod::BacktraceRewriter
+      Klenod::Runtime::BacktraceRewriter
         .new(
           {
             "page.haml" => page_mod,

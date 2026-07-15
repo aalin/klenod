@@ -4,11 +4,7 @@ require "minitest/autorun"
 
 require_relative "source_map"
 
-class Klenod::SourceMap::Test < Minitest::Test
-  def test_old_constant_aliases_runtime_source_map
-    assert_same(Klenod::Runtime::SourceMap, Klenod::SourceMap)
-  end
-
+class Klenod::Runtime::SourceMap::Test < Minitest::Test
   def test_mark_round_trips_through_comment_text
     mark = Klenod::Runtime::SourceMap::Mark.new(7, "hello")
 

@@ -45,6 +45,4 @@ module Klenod
       end
     end
   end
-
-  SourceMap = Runtime::SourceMap unless const_defined?(:SourceMap, false)
 end
