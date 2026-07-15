@@ -34,6 +34,10 @@ Use co-located tests:
 Useful focused commands:
 
 ```sh
+bundle exec rake test:runtime
+bundle exec rake test:build
+bundle exec rake test:rack
+bundle exec rake test:gems
 bundle exec ruby gems/klenod-build/lib/klenod/build/context.test.rb
 bundle exec ruby gems/klenod-build/lib/klenod/build/plugins/router_plugin.test.rb
 bundle exec ruby gems/klenod-build/lib/klenod/build/plugins/haml_plugin.test.rb
