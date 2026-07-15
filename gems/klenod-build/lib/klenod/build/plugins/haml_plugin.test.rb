@@ -816,6 +816,49 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
     end
   end
 
+  def haml_plugin(**options)
+    Klenod::Build::Plugins::HamlPlugin.new(
+      factory: "#{self.class.name}::FakeFramework::H", **options
+    )
+  end
+
+  def with_files(files)
+    Dir.mktmpdir do |dir|
+      files.each do |path, source|
+        full_path = File.join(dir, path)
+        FileUtils.mkdir_p(File.dirname(full_path))
+        File.write(full_path, source)
+      end
+
+      yield dir
+    end
+  end
+
+  def with_haml_context(files, plugin: nil, plugins: nil)
+    plugin ||= haml_plugin
+
+    with_files(files) do |dir|
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: plugins || default_plugins_with(plugin)
+        )
+
+      yield dir, context, plugin
+    end
+  end
+
+  def evaluate_haml(files, entry: "pages/page.haml", plugin: nil, plugins: nil)
+    plugin ||= haml_plugin
+
+    with_haml_context(files, plugin: plugin, plugins: plugins) do |dir, context|
+      record = context.evaluate(entry)
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      yield dir, context, record, exports
+    end
+  end
+
   def test_haml_transformer_compiles_ruby_filter_to_statement_fragment
     transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
@@ -834,36 +877,24 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_haml_transformer_renders_with_configured_factory
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/page.haml",
-        <<~HAML
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
           %main{ class: "shell".upcase }
             %h1 Hello
             %p= "From Ruby"
         HAML
-      )
-
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      }
+    ) do |_dir, _context, record, exports|
       assert_equal([:main, [:h1, "Hello"], [:p, "From Ruby"], {class: "SHELL"}], exports::Default.new.render)
       assert_kind_of(Klenod::Runtime::SourceMap::SourceMap, record.source_map)
     end
   end
 
   def test_haml_transformer_supports_dynamic_attribute_fragments
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/page.haml",
-        <<~HAML
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
           :ruby
             def title
               "hello"
@@ -871,15 +902,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
           %p{ title: title.upcase } Hello
         HAML
-      )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      }
+    ) do |_dir, _context, record, exports|
       assert_equal([:p, "Hello", {title: "HELLO"}], exports::Default.new.render)
       assert_includes(record.transformed_source, "title:")
       assert_includes(record.transformed_source, "title.upcase")
@@ -887,11 +911,9 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_haml_transformer_maps_object_reference_to_key_prop
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/page.haml",
-        <<~HAML
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
           :ruby
             User = Data.define(:id)
 
@@ -901,15 +923,8 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
           %div[@user, :greeting] Hello
         HAML
-      )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      }
+    ) do |_dir, _context, record, exports|
       assert_equal([:div, "Hello", {key: [exports::Default::User.new(15), :greeting]}], exports::Default.new.render)
       assert_includes(record.transformed_source, "key:")
       assert_includes(record.transformed_source, "[@user, :greeting]")
@@ -917,11 +932,10 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_haml_transformer_maps_component_object_reference_to_key_prop
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/components")
-      File.write(
-        "#{dir}/components/card.haml",
-        <<~HAML
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "components/card.haml" => <<~HAML,
           :ruby
             def initialize(key:, children: nil)
               @key = key
@@ -932,10 +946,7 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
             = @key
             = @children
         HAML
-      )
-      File.write(
-        "#{dir}/page.haml",
-        <<~HAML
+        "page.haml" => <<~HAML
           :ruby
             Card = import("components/card.haml")
             User = Data.define(:id)
@@ -947,14 +958,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           %Card[@user]
             Hello
         HAML
-      )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin])
-      record = context.evaluate("page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+      },
+      entry: "page.haml",
+      plugin: plugin,
+      plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin]
+    ) do |_dir, _context, _record, exports|
       user = exports::Default::User.new(15)
 
       assert_equal([:article, user, ["Hello"]], exports::Default.new.render)
@@ -962,11 +970,9 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_haml_transformer_supports_parsed_inline_tag_values
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/page.haml",
-        <<~HAML
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
           :ruby
             def title
               "Hello"
@@ -974,50 +980,31 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
           %p= title
         HAML
-      )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      }
+    ) do |_dir, _context, record, exports|
       assert_equal([:p, "Hello"], exports::Default.new.render)
       assert_includes(record.transformed_source, "(title)")
     end
   end
 
   def test_haml_transformer_maps_inner_whitespace_marker_to_left_space
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/page.haml",
-        <<~HAML
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
           %p
             before
             %a{ href: "#" }< link
         HAML
-      )
-
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      }
+    ) do |_dir, _context, _record, exports|
       assert_equal([:p, "before", " ", [:a, "link", {href: "#"}]], exports::Default.new.render)
     end
   end
 
   def test_haml_transformer_does_not_add_space_before_nested_script_tag
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/page.haml",
-        <<~HAML
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
           :ruby
             def value
               "hello"
@@ -1026,26 +1013,16 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           %pre
             %code= value
         HAML
-      )
-
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      }
+    ) do |_dir, _context, _record, exports|
       assert_equal([:pre, [:code, "hello"]], exports::Default.new.render)
     end
   end
 
   def test_haml_transformer_adds_space_before_nested_script_tag_with_inner_whitespace_marker
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/page.haml",
-        <<~HAML
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
           :ruby
             def value
               "hello"
@@ -1055,117 +1032,66 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
             before
             %code<= value
         HAML
-      )
-
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      }
+    ) do |_dir, _context, _record, exports|
       assert_equal([:pre, "before", " ", [:code, "hello"]], exports::Default.new.render)
     end
   end
 
   def test_haml_transformer_does_not_add_edge_space_for_isolated_whitespace_marker
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write("#{dir}/pages/page.haml", "%a{ href: \"#\" }< link\n")
-
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+    evaluate_haml({"pages/page.haml" => "%a{ href: \"#\" }< link\n"}) do |_dir, _context, _record, exports|
       assert_equal([:a, "link", {href: "#"}], exports::Default.new.render)
     end
   end
 
   def test_haml_transformer_maps_outer_whitespace_marker_to_right_space
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/page.haml",
-        <<~HAML
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
           %p
             %a{ href: "#" }> link
             after
         HAML
-      )
-
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      }
+    ) do |_dir, _context, _record, exports|
       assert_equal([:p, [:a, "link", {href: "#"}], " ", "after"], exports::Default.new.render)
     end
   end
 
   def test_haml_transformer_maps_both_whitespace_markers
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/page.haml",
-        <<~HAML
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
           %p
             before
             %a{ href: "#" }<> link
             after
         HAML
-      )
-
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      }
+    ) do |_dir, _context, _record, exports|
       assert_equal([:p, "before", " ", [:a, "link", {href: "#"}], " ", "after"], exports::Default.new.render)
     end
   end
 
   def test_haml_transformer_maps_whitespace_markers_around_nested_tag
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/page.haml",
-        <<~HAML
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
           %p
             before
             %a{ href: "#" }<> link
             after
         HAML
-      )
-
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/page.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      }
+    ) do |_dir, _context, _record, exports|
       assert_equal([:p, "before", " ", [:a, "link", {href: "#"}], " ", "after"], exports::Default.new.render)
     end
   end
 
   def test_haml_transformer_supports_ruby_filter_and_attributes
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/handlers.haml",
-        <<~HAML
+    evaluate_haml(
+      {
+        "pages/handlers.haml" => <<~HAML
           :ruby
             def handle_click
               :clicked
@@ -1173,16 +1099,10 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
 
           %button{ onclick: handle_click } Click me
         HAML
-      )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
-      record = context.evaluate("pages/handlers.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      },
+      entry: "pages/handlers.haml",
+      plugin: haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase")
+    ) do |_dir, _context, record, exports|
       assert_operator(exports::Default, :<, FakeFramework::ComponentBase)
       assert_equal([:button, "Click me", {onclick: :clicked}], exports::Default.new.render)
       assert_match(/SourceMapMark:2:/, record.transformed_source)
@@ -1191,11 +1111,10 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_haml_transformer_supports_script_blocks_with_children
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/list.haml",
-        <<~HAML
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/list.haml" => <<~HAML
           :ruby
             Item = Data.define(:name)
 
@@ -1207,15 +1126,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
             = @items.map do |item|
               %li= item.name
         HAML
-      )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.evaluate("pages/list.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      },
+      entry: "pages/list.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, _context, record, exports|
       assert_equal([:ul, [[:li, "A"], [:li, "B"]]], exports::Default.new.render)
       assert_match(/SourceMapMark:8:/, record.transformed_source)
       assert_match(/SourceMapMark:9:/, record.transformed_source)
@@ -1223,11 +1138,10 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_haml_transformer_supports_brace_script_blocks_with_children
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/list.haml",
-        <<~HAML
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/list.haml" => <<~HAML
           :ruby
             Item = Data.define(:name)
 
@@ -1239,15 +1153,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
             = @items.map { |item|
               %li= item.name
         HAML
-      )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.evaluate("pages/list.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      },
+      entry: "pages/list.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, _context, record, exports|
       assert_equal([:ul, [[:li, "A"], [:li, "B"]]], exports::Default.new.render)
       assert_match(/SourceMapMark:8:/, record.transformed_source)
       assert_match(/SourceMapMark:9:/, record.transformed_source)
@@ -1255,11 +1165,10 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_haml_transformer_supports_silent_script_blocks_with_children
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/list.haml",
-        <<~HAML
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/list.haml" => <<~HAML
           :ruby
             Item = Data.define(:name)
 
@@ -1277,13 +1186,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
               - @seen << item.name
               %li= item.name
         HAML
-      )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.evaluate("pages/list.haml")
+      },
+      entry: "pages/list.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, context, record, _exports|
       component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default.new
 
       assert_equal([:ul, nil], component.render)
@@ -1294,11 +1201,10 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_haml_transformer_supports_silent_brace_script_blocks_with_children
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/list.haml",
-        <<~HAML
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/list.haml" => <<~HAML
           :ruby
             Item = Data.define(:name)
 
@@ -1316,13 +1222,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
               - @seen << item.name
               %li= item.name
         HAML
-      )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.evaluate("pages/list.haml")
+      },
+      entry: "pages/list.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, context, record, _exports|
       component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default.new
 
       assert_equal([:ul, nil], component.render)
@@ -1333,11 +1237,10 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_haml_transformer_supports_silent_control_flow
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/conditional.haml",
-        <<~HAML
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/conditional.haml" => <<~HAML
           :ruby
             def initialize(show:)
               @show = show
@@ -1348,15 +1251,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
           - else
             %p Empty
         HAML
-      )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.evaluate("pages/conditional.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      },
+      entry: "pages/conditional.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, _context, record, exports|
       assert_nil(exports::Default.new(show: true).render)
       assert_nil(exports::Default.new(show: false).render)
       assert_match(/SourceMapMark:7:/, record.transformed_source)
@@ -1365,11 +1264,10 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
   end
 
   def test_haml_transformer_supports_output_control_flow
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write(
-        "#{dir}/pages/conditional.haml",
-        <<~HAML
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/conditional.haml" => <<~HAML
           :ruby
             def initialize(show:)
               @show = show
@@ -1381,15 +1279,11 @@ class Klenod::Build::Plugins::HamlPlugin::Test < Minitest::Test
             = else
               %p Empty
         HAML
-      )
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
-      record = context.evaluate("pages/conditional.haml")
-      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-
+      },
+      entry: "pages/conditional.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, _context, record, exports|
       assert_equal([:section, [:p, "Visible"]], exports::Default.new(show: true).render)
       assert_equal([:section, [:p, "Empty"]], exports::Default.new(show: false).render)
       assert_match(/SourceMapMark:8:/, record.transformed_source)
