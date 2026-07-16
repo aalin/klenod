@@ -153,7 +153,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(200, status)
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
-    assert_equal("Accept-Language", headers.fetch("vary"))
+    assert_equal("Accept-Language, Cookie", headers.fetch("vary"))
     assert_includes(html, "Rendera lokaliserad komponenttext")
     assert_includes(html, "Vald locale")
     assert_includes(html, "sv-SE")
@@ -175,6 +175,60 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Render localized component text")
     assert_includes(html, "Resolved locale")
     assert_includes(html, "en-US")
+  end
+
+  def test_example_app_locale_cookie_overrides_accept_language
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, headers, body =
+      entry.call(
+        HeaderRequest[
+          "GET",
+          "/demo/translations",
+          HeaderList.new([
+            ["Accept-Language", "en-US,en;q=0.9"],
+            ["Cookie", "#{Example::LOCALE_COOKIE}=sv-SE"]
+          ])
+        ],
+        context
+      )
+    html = body.join
+
+    assert_equal(200, status)
+    assert_equal("Accept-Language, Cookie", headers.fetch("vary"))
+    assert_includes(html, "Rendera lokaliserad komponenttext")
+    assert_includes(html, "Locale-cookie")
+    assert_includes(html, "sv-SE")
+  end
+
+  def test_example_app_sets_locale_cookie_from_form_post
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    _status, response_headers, body = entry.call(BodyRequest["GET", "/demo/translations", HeaderList.new([]), nil], context)
+    cookie = response_headers.fetch("set-cookie").split(";", 2).fetch(0)
+    csrf_token = csrf_token_from(body.join)
+    form = URI.encode_www_form("csrf_token" => csrf_token, "locale" => "sv-SE")
+    status, headers, body =
+      entry.call(
+        BodyRequest[
+          "POST",
+          "/demo/translations/locale",
+          HeaderList.new([
+            ["Content-Type", "application/x-www-form-urlencoded"],
+            ["Cookie", cookie],
+            ["Referer", "/demo/translations"]
+          ]),
+          form
+        ],
+        context
+      )
+
+    assert_equal(302, status)
+    assert_equal("/demo/translations", headers.fetch("location"))
+    assert_empty(body)
+    assert_includes(headers.fetch("set-cookie"), "#{Example::LOCALE_COOKIE}=sv-SE")
   end
 
   def test_example_routes_utility_prints_route_table
@@ -506,6 +560,24 @@ class Klenod::ExampleTest < Minitest::Test
       assert_equal("Hej", other.resume)
       assert_equal("Hello", Example::I18n.t(translations, "title"))
     end
+  end
+
+  def test_example_i18n_warns_once_for_missing_translations
+    translations = {
+      "en-US" => {"title" => "Hello"},
+      "sv-SE" => {}
+    }
+    request = Example::Request.from(HeaderRequest["GET", "/", HeaderList.new([["Accept-Language", "sv-SE"]])])
+
+    _stdout, stderr = capture_io do
+      Example::Context.with(request: request) do
+        assert_equal("Hello", Example::I18n.t(translations, "title", source: "components/Greeting.haml"))
+        assert_equal("Hello", Example::I18n.t(translations, "title", source: "components/Greeting.haml"))
+      end
+    end
+
+    assert_equal(1, stderr.scan("Missing translation").length)
+    assert_includes(stderr, "Missing translation \"title\" for sv-SE in components/Greeting.haml; falling back to en-US")
   end
 
   def test_example_app_stores_form_values_in_encrypted_session_cookie

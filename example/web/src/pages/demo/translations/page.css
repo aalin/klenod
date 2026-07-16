@@ -36,20 +36,19 @@ code {
   font-size: 0.9rem;
 }
 
-ul {
+form {
   display: grid;
   gap: var(--space-3);
-  padding: 0;
   margin: 0;
-  list-style: none;
 }
 
-li {
-  display: grid;
-  gap: var(--space-1);
+label {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
 }
 
-li span {
+label span {
   color: var(--color-accent);
   font-weight: 800;
 }

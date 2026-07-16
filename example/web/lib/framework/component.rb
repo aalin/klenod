@@ -18,7 +18,8 @@ module Example
           {}
         end
 
-      I18n.t(translations, key, default: default)
+      source = self.class.module_path if self.class.respond_to?(:module_path)
+      I18n.t(translations, key, default: default, source: source)
     end
 
     def initialize(...)

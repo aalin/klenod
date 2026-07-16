@@ -54,7 +54,7 @@ def self.render_page_response(match, request, context, status: 200, props: {})
     end
   css_asset_references = context.asset_references_for_module(css_module_ids_for(match), type: :css)
 
-  commit_session(
+  response = commit_session(
     Example::Response.html(
       <<~HTML,
         <!doctype html>
@@ -67,10 +67,11 @@ def self.render_page_response(match, request, context, status: 200, props: {})
         </html>
       HTML
       status: status,
-      headers: {"vary" => "Accept-Language"}
+      headers: {"vary" => "Accept-Language, Cookie"}
     ),
     request
-  ).to_a
+  )
+  response.to_a
 end
 
 def self.page_instance(page, props)

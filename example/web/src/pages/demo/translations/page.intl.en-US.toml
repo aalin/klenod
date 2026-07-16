@@ -7,6 +7,7 @@ summary = "This page reads Accept-Language and resolves strings from Haml compan
 title = "Current request"
 requested = "Accept-Language"
 resolved = "Resolved locale"
+cookie = "Locale cookie"
 none = "not provided"
 
 [usage]
@@ -15,4 +16,5 @@ body = "Haml components can call t(\"key\") to read from their own companion tra
 code = "title: t(\"header.title\")"
 
 [examples]
-title = "Try request headers"
+title = "Set a language cookie"
+submit = "Save language"

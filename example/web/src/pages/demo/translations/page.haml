@@ -1,11 +1,12 @@
 :ruby
+  Form = Example::Form
+  Button = import("/components/Button.haml")
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
 
-  Examples = [
-    ["sv-SE,sv;q=0.9,en-US;q=0.8", "Swedish"],
-    ["en-US,en;q=0.9,sv-SE;q=0.8", "English"],
-    ["fr-FR,fr;q=0.9,en-US;q=0.8", "Fallback"]
+  Locales = [
+    ["en-US", "English"],
+    ["sv-SE", "Svenska"]
   ]
 
 %article
@@ -24,6 +25,9 @@
         %div
           %dt= t("current.resolved")
           %dd= I18n.resolve_locale(Translations)
+        %div
+          %dt= t("current.cookie")
+          %dd= request.cookies.fetch(Example::LOCALE_COOKIE, t("current.none"))
 
     %Panel{ title: t("usage.title") }
       %p= t("usage.body")
@@ -31,8 +35,10 @@
         %code= t("usage.code")
 
     %Panel{ title: t("examples.title") }
-      %ul
-        = Examples.map do |header, label|
-          %li
+      %Form(method="post" action="/demo/translations/locale")
+        = Locales.map do |locale, label|
+          %label
+            %input{ type: "radio", name: "locale", value: locale, checked: I18n.resolve_locale(Translations) == locale }
             %span= label
-            %code= header
+            %code= locale
+        %Button(type="submit")= t("examples.submit")

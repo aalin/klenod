@@ -7,6 +7,7 @@ summary = "Den här sidan läser Accept-Language och väljer texter från Haml-k
 title = "Aktuell request"
 requested = "Accept-Language"
 resolved = "Vald locale"
+cookie = "Locale-cookie"
 none = "saknas"
 
 [usage]
@@ -15,4 +16,5 @@ body = "Haml-komponenter kan anropa t(\"key\") för att läsa från sina egna ö
 code = "title: t(\"header.title\")"
 
 [examples]
-title = "Testa request-headers"
+title = "Sätt en språk-cookie"
+submit = "Spara språk"
