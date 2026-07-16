@@ -16,14 +16,7 @@ module Klenod
       attr_reader :entrypoints, :modules, :assets, :source_root
 
       def self.load(source, source_root: nil)
-        bundle =
-          if source.respond_to?(:read)
-            Marshal.load(source)
-          else
-            Marshal.load(File.binread(source))
-          end
-        bundle.source_root = source_root if source_root
-        bundle
+        BundleFormat.load(source, source_root: source_root)
       end
 
       def self.load_file(path, source_root: nil)
@@ -251,3 +244,5 @@ module Klenod
     end
   end
 end
+
+require_relative "bundle_format"

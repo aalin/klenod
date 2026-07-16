@@ -35,5 +35,5 @@ if assets_dir
 end
 
 logger.step("Writing bundle")
-File.binwrite(output, Marshal.dump(bundle))
+File.binwrite(output, Klenod::Runtime::BundleFormat.dump(bundle))
 logger.written(output)

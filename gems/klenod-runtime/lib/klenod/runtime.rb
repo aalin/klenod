@@ -5,6 +5,7 @@ require_relative "runtime/source_map"
 require_relative "runtime/backtrace_rewriter"
 require_relative "runtime/mod"
 require_relative "runtime/bundle"
+require_relative "runtime/bundle_format"
 
 module Klenod
   module Runtime
@@ -20,9 +21,7 @@ module Klenod
       raise ArgumentError, "Missing __END__ marker in executable bundle: #{path}" unless marker_index
 
       payload = bytes.byteslice(marker_index + EXECUTABLE_BUNDLE_MARKER.bytesize, bytes.bytesize)
-      bundle = Marshal.load(payload)
-      bundle.source_root = source_root if source_root
-      bundle
+      BundleFormat.load_bytes(payload, source_root: source_root)
     end
   end
 end

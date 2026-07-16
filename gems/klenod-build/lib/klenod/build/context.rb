@@ -2,6 +2,7 @@
 
 require "async"
 require "fileutils"
+require "klenod/runtime/bundle_format"
 
 require_relative "graph"
 require_relative "loaded_module"
@@ -147,7 +148,7 @@ module Klenod
         bundle = @graph.bundle(entrypoints: entrypoints)
         assets_dir ? write_assets(assets_dir) : wait_for_assets
         FileUtils.mkdir_p(File.dirname(output))
-        File.binwrite(output, Marshal.dump(bundle))
+        File.binwrite(output, Runtime::BundleFormat.dump(bundle))
         bundle
       end
 
@@ -155,7 +156,7 @@ module Klenod
         bundle = @graph.bundle(entrypoints: entrypoints)
         assets_dir ? write_assets(assets_dir) : wait_for_assets
         FileUtils.mkdir_p(File.dirname(output))
-        File.binwrite(output, executable_bundle_source + Marshal.dump(bundle))
+        File.binwrite(output, executable_bundle_source + Runtime::BundleFormat.dump(bundle))
         FileUtils.chmod("+x", output)
         bundle
       end

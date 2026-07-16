@@ -59,7 +59,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_equal("/app/src/entry.rb", mod.const_get(:Exports)::FILE_PATH)
   end
 
-  def test_bundle_rebases_eval_paths_after_marshal_load
+  def test_bundle_rebases_eval_paths_after_format_load
     bundle =
       Klenod::Runtime::Bundle.new(
         {"entry" => "pages/page.rb"},
@@ -79,7 +79,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
         source_root: "/build/src"
       )
 
-    copy = Marshal.load(Marshal.dump(bundle))
+    copy = Klenod::Runtime.load_bundle(StringIO.new(Klenod::Runtime::BundleFormat.dump(bundle)))
     assert_equal("/build/src/pages/page.rb", copy.load("entry").const_get(:Exports)::FILE_PATH)
 
     copy.source_root = "/app/src"
@@ -182,9 +182,44 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
         {}
       )
 
-    loaded = Klenod::Runtime.load_bundle(StringIO.new(Marshal.dump(bundle)))
+    payload = Klenod::Runtime::BundleFormat.dump(bundle)
+    loaded = Klenod::Runtime.load_bundle(StringIO.new(payload))
 
     assert_equal(1, loaded.exports("entry")::VALUE)
+    assert(payload.start_with?(Klenod::Runtime::BundleFormat::MAGIC))
+  end
+
+  def test_runtime_load_bundle_rejects_invalid_format
+    error = assert_raises(Klenod::Runtime::BundleFormatError) do
+      Klenod::Runtime.load_bundle(StringIO.new("not a klenod bundle"))
+    end
+
+    assert_includes(error.message, "Invalid Klenod bundle header")
+  end
+
+  def test_runtime_load_bundle_rejects_invalid_json
+    error = assert_raises(Klenod::Runtime::BundleFormatError) do
+      Klenod::Runtime.load_bundle(StringIO.new("#{Klenod::Runtime::BundleFormat::MAGIC}{"))
+    end
+
+    assert_includes(error.message, "Invalid Klenod bundle JSON")
+  end
+
+  def test_runtime_load_bundle_rejects_unsupported_format_version
+    payload =
+      JSON.generate(
+        "format_version" => 999,
+        "runtime_version" => Klenod::Runtime::VERSION,
+        "entrypoints" => {},
+        "modules" => {},
+        "assets" => {}
+      )
+
+    error = assert_raises(Klenod::Runtime::BundleFormatError) do
+      Klenod::Runtime.load_bundle(StringIO.new("#{Klenod::Runtime::BundleFormat::MAGIC}#{payload}"))
+    end
+
+    assert_includes(error.message, "Unsupported Klenod bundle format version")
   end
 
   def test_bundle_load_entrypoints_evaluates_each_entrypoint_once
@@ -247,7 +282,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     Tempfile.create("klenod-executable") do |file|
       file.binmode
       file.write("# encoding: ASCII-8BIT\n__END__\n")
-      file.write(Marshal.dump(bundle))
+      file.write(Klenod::Runtime::BundleFormat.dump(bundle))
       file.close
 
       loaded = Klenod::Runtime.load_executable_bundle(file.path)
