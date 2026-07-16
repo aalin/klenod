@@ -646,6 +646,22 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("3 items", Example::I18n.t(translations, :items, count: 3))
   end
 
+  def test_example_i18n_warns_once_for_missing_interpolation_values
+    translations = {
+      "en-US" => {
+        "greeting" => "Hello %{name}"
+      }
+    }
+
+    _stdout, stderr = capture_io do
+      assert_equal("Hello %{name}", Example::I18n.t(translations, :greeting, source: "components/Greeting.haml"))
+      assert_equal("Hello %{name}", Example::I18n.t(translations, :greeting, source: "components/Greeting.haml"))
+    end
+
+    assert_equal(1, stderr.scan("Missing interpolation").length)
+    assert_includes(stderr, "Missing interpolation :name for \"greeting\" in en-US in components/Greeting.haml")
+  end
+
   def test_example_i18n_warns_once_for_missing_translations
     translations = {
       "en-US" => {"title" => "Hello"},

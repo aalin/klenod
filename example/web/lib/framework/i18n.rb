@@ -6,6 +6,7 @@ module Example
   class I18n
     DEFAULT_LOCALE = "en-US"
     @missing_keys = Set.new
+    @missing_interpolations = Set.new
     @default_locale = DEFAULT_LOCALE
 
     attr_reader :translations
@@ -38,19 +39,19 @@ module Example
       locale ||= resolve_locale(translations, default_locale: default_locale)
       value = lookup(translations.fetch(locale, {}), key)
       value = pluralize(value, values)
-      return interpolate(value, values) unless value.nil?
+      return interpolate(value, values, locale: locale, source: source, key: key) unless value.nil?
 
       fallback = key_fallback_locale(translations, locale, default_locale: default_locale)
       value = lookup(translations.fetch(fallback, {}), key) if fallback
       value = pluralize(value, values)
       unless value.nil?
         warn_missing(key, locale:, fallback:, source:)
-        return interpolate(value, values)
+        return interpolate(value, values, locale: fallback, source: source, key: key)
       end
 
       warn_missing(key, locale:, fallback:, source:)
       value = default || key.join(".")
-      interpolate(value, values)
+      interpolate(value, values, locale: locale, source: source, key: key)
     end
 
     def self.resolve_locale(translations, request: Context.current&.request, default_locale: self.default_locale)
@@ -101,12 +102,17 @@ module Example
       value.fetch(key, nil)
     end
 
-    def self.interpolate(value, values)
-      return value unless value.is_a?(String) && !values.empty?
+    def self.interpolate(value, values, locale:, source:, key:)
+      return value unless value.is_a?(String)
 
       value.gsub(/%\{([a-zA-Z_][a-zA-Z0-9_]*)\}/) do
         name = Regexp.last_match(1).to_sym
-        values.fetch(name) { "%{#{name}}" }.to_s
+        if values.key?(name)
+          values.fetch(name).to_s
+        else
+          warn_missing_interpolation(name, locale:, source:, key:)
+          "%{#{name}}"
+        end
       end
     end
 
@@ -139,6 +145,15 @@ module Example
       location = source ? " in #{source}" : ""
       fallback_text = fallback ? "; falling back to #{fallback}" : ""
       warn "Missing translation #{key.join(".").inspect} for #{locale}#{location}#{fallback_text}"
+    end
+
+    def self.warn_missing_interpolation(name, locale:, source:, key:)
+      warning = [source, locale, key, name]
+      return if @missing_interpolations.include?(warning)
+
+      @missing_interpolations << warning
+      location = source ? " in #{source}" : ""
+      warn "Missing interpolation #{name.inspect} for #{key.join(".").inspect} in #{locale}#{location}"
     end
 
     private
