@@ -3,6 +3,7 @@
 require "minitest/autorun"
 require "rbconfig"
 require "open3"
+require "stringio"
 
 require_relative "runtime"
 
@@ -77,6 +78,65 @@ class Klenod::RuntimeBoundaryTest
         "-I#{File.expand_path("..", __dir__)}",
         "-e",
         script
+      )
+
+    assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
+  end
+
+  def test_load_bundle_in_box_requires_ruby_box
+    skip "Ruby::Box is enabled for this process" if defined?(Ruby::Box) && Ruby::Box.enabled?
+
+    error = assert_raises(RuntimeError) do
+      Klenod::Runtime.load_bundle_in_box(StringIO.new("unused"))
+    end
+
+    assert_includes(error.message, "RUBY_BOX=1")
+  end
+
+  def test_load_bundle_in_box_evaluates_modules_inside_box
+    script = <<~RUBY
+      require "stringio"
+      require "klenod/runtime"
+
+      constant_name = Klenod::Runtime::Mod.constant_name_for("entry.rb")
+      bundle =
+        Klenod::Runtime::Bundle.new(
+          { "entry" => "entry.rb" },
+          {
+            "entry.rb" => Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              "VALUE = 42\\nBOX_ID = Ruby::Box.current.object_id",
+              {},
+              nil,
+              0,
+              constant_name
+            )
+          },
+          {}
+        )
+
+      payload = Klenod::Runtime::BundleFormat.dump(bundle)
+      loaded = Klenod::Runtime.load_bundle_in_box(StringIO.new(payload))
+      exports = loaded.exports("entry")
+
+      abort "bad value" unless exports::VALUE == 42
+      abort "module evaluated in main box" if exports::BOX_ID == Ruby::Box.current.object_id
+      abort "generated constant leaked into main runtime" if Klenod::Runtime::Generated.const_defined?(constant_name, false)
+    RUBY
+
+    stdout, stderr, status =
+      Open3.capture3(
+        {
+          "RUBY_BOX" => "1",
+          "HOME" => ENV.fetch("HOME", nil),
+          "PATH" => ENV.fetch("PATH", nil)
+        },
+        RbConfig.ruby,
+        "-I#{File.expand_path("..", __dir__)}",
+        "-e",
+        script,
+        unsetenv_others: true
       )
 
     assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
