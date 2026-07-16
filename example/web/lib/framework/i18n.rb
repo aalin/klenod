@@ -144,7 +144,7 @@ module Example
       @missing_keys << warning
       location = source ? " in #{source}" : ""
       fallback_text = fallback ? "; falling back to #{fallback}" : ""
-      warn "Missing translation #{key.join(".").inspect} for #{locale}#{location}#{fallback_text}"
+      warn format_warning("Missing translation #{key.join(".").inspect} for #{locale}#{location}#{fallback_text}")
     end
 
     def self.warn_missing_interpolation(name, locale:, source:, key:)
@@ -153,7 +153,13 @@ module Example
 
       @missing_interpolations << warning
       location = source ? " in #{source}" : ""
-      warn "Missing interpolation #{name.inspect} for #{key.join(".").inspect} in #{locale}#{location}"
+      warn format_warning("Missing interpolation #{name.inspect} for #{key.join(".").inspect} in #{locale}#{location}")
+    end
+
+    def self.format_warning(message)
+      return "WARNING #{message}" if ENV["NO_COLOR"]
+
+      "\e[1;30;43m WARNING \e[0m \e[1;33m#{message}\e[0m"
     end
 
     private

@@ -653,13 +653,25 @@ class Klenod::ExampleTest < Minitest::Test
       }
     }
 
-    _stdout, stderr = capture_io do
-      assert_equal("Hello %{name}", Example::I18n.t(translations, :greeting, source: "components/Greeting.haml"))
-      assert_equal("Hello %{name}", Example::I18n.t(translations, :greeting, source: "components/Greeting.haml"))
+    previous_no_color = ENV.delete("NO_COLOR")
+    begin
+      _stdout, stderr = capture_io do
+        assert_equal("Hello %{name}", Example::I18n.t(translations, :greeting, source: "components/Greeting.haml"))
+        assert_equal("Hello %{name}", Example::I18n.t(translations, :greeting, source: "components/Greeting.haml"))
+      end
+    ensure
+      ENV["NO_COLOR"] = previous_no_color if previous_no_color
     end
 
     assert_equal(1, stderr.scan("Missing interpolation").length)
     assert_includes(stderr, "Missing interpolation :name for \"greeting\" in en-US in components/Greeting.haml")
+    assert_includes(stderr, "\e[1;30;43m WARNING \e[0m")
+  end
+
+  def test_example_i18n_warning_format_respects_no_color
+    with_env("NO_COLOR" => "1") do
+      assert_equal("WARNING Missing interpolation :name", Example::I18n.format_warning("Missing interpolation :name"))
+    end
   end
 
   def test_example_i18n_warns_once_for_missing_translations
