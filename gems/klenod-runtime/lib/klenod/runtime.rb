@@ -21,9 +21,23 @@ module Klenod
       end
 
       bytes = source.respond_to?(:read) ? source.read : File.binread(source)
-      box ||= Ruby::Box.new
-      box.require(File.expand_path(__FILE__))
+      box = prepare_box(box)
       box::Klenod::Runtime::BundleFormat.load_bytes(bytes, source_root: source_root)
+    end
+
+    def self.prepare_box(box = nil)
+      unless defined?(Ruby::Box) && Ruby::Box.enabled?
+        raise "Ruby::Box is disabled. Set RUBY_BOX=1 environment variable to use Ruby::Box."
+      end
+
+      box ||= Ruby::Box.new
+      box.require(File.expand_path(__FILE__)) unless runtime_loaded_in_box?(box)
+      box
+    end
+
+    def self.runtime_loaded_in_box?(box)
+      box.const_defined?(:Klenod, false) &&
+        box::Klenod.const_defined?(:Runtime, false)
     end
 
     def self.load_executable_bundle(path, source_root: nil)

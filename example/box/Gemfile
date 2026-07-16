@@ -1,0 +1,6 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+gem "klenod-build", path: "../../gems/klenod-build"
+gem "klenod-runtime", path: "../../gems/klenod-runtime"

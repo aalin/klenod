@@ -142,6 +142,91 @@ class Klenod::RuntimeBoundaryTest
     assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
   end
 
+  def test_load_bundle_in_box_reuses_prepared_box
+    script = <<~RUBY
+      require "stringio"
+      require "klenod/runtime"
+
+      bundle =
+        Klenod::Runtime::Bundle.new(
+          { "entry" => "entry.rb" },
+          {
+            "entry.rb" => Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              "VALUE = 1",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("entry.rb")
+            )
+          },
+          {}
+        )
+
+      payload = Klenod::Runtime::BundleFormat.dump(bundle)
+      box = Ruby::Box.new
+      box.require(File.expand_path("runtime.rb", #{__dir__.inspect}))
+
+      def box.require(...)
+        raise "unexpected box require"
+      end
+
+      loaded = Klenod::Runtime.load_bundle_in_box(StringIO.new(payload), box: box)
+      abort "bad value" unless loaded.exports("entry")::VALUE == 1
+    RUBY
+
+    stdout, stderr, status =
+      Open3.capture3(
+        {
+          "RUBY_BOX" => "1",
+          "HOME" => ENV.fetch("HOME", nil),
+          "PATH" => ENV.fetch("PATH", nil)
+        },
+        RbConfig.ruby,
+        "-I#{File.expand_path("..", __dir__)}",
+        "-e",
+        script,
+        unsetenv_others: true
+      )
+
+    assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
+  end
+
+  def test_prepare_box_loads_runtime_once
+    script = <<~RUBY
+      require "klenod/runtime"
+
+      box = Ruby::Box.new
+      prepared = Klenod::Runtime.prepare_box(box)
+
+      abort "different box" unless prepared.equal?(box)
+      abort "runtime missing" unless box.eval("defined?(Klenod::Runtime)")
+
+      def box.require(...)
+        raise "unexpected box require"
+      end
+
+      Klenod::Runtime.prepare_box(box)
+    RUBY
+
+    stdout, stderr, status =
+      Open3.capture3(
+        {
+          "RUBY_BOX" => "1",
+          "HOME" => ENV.fetch("HOME", nil),
+          "PATH" => ENV.fetch("PATH", nil)
+        },
+        RbConfig.ruby,
+        "-I#{File.expand_path("..", __dir__)}",
+        "-e",
+        script,
+        unsetenv_others: true
+      )
+
+    assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
+  end
+
   def test_runtime_gemspec_excludes_build_plugin_and_dev_files
     spec = Gem::Specification.load(File.expand_path("../../klenod-runtime.gemspec", __dir__))
 

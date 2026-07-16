@@ -1,0 +1,167 @@
+PATH
+  remote: ../../gems/klenod-build
+  specs:
+    klenod-build (0.0.1)
+      async (~> 2.42)
+      async-http (~> 0.95.1)
+      image_size (~> 3.6)
+      listen (~> 3.10)
+      mayu-css (~> 0.1.5)
+      klenod-runtime (= 0.0.1)
+      rmagick (~> 7.0)
+      samovar (~> 2.5)
+      syntax_tree (~> 6.3)
+      syntax_tree-haml (~> 4.0)
+      toml-rb (~> 4.2)
+      tsort (~> 0.2.0)
+
+PATH
+  remote: ../../gems/klenod-runtime
+  specs:
+    klenod-runtime (0.0.1)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    async (2.42.0)
+      console (~> 1.29)
+      fiber-annotation
+      io-event (~> 1.11)
+      metrics (~> 0.12)
+      traces (~> 0.18)
+    async-http (0.95.1)
+      async (>= 2.10.2)
+      async-pool (~> 0.11)
+      io-endpoint (~> 0.14)
+      io-stream (~> 0.6)
+      metrics (~> 0.12)
+      protocol-http (~> 0.62)
+      protocol-http1 (~> 0.39)
+      protocol-http2 (~> 0.26)
+      protocol-url (~> 0.2)
+      traces (~> 0.10)
+    async-pool (0.11.2)
+      async (>= 2.0)
+    citrus (3.0.2)
+    console (1.37.0)
+      fiber-annotation
+      fiber-local (~> 1.1)
+      json
+    ffi (1.17.4-arm64-darwin)
+    ffi (1.17.4-x86_64-linux-gnu)
+    fiber-annotation (0.2.0)
+    fiber-local (1.1.0)
+      fiber-storage
+    fiber-storage (1.0.1)
+    haml (7.2.0)
+      temple (>= 0.8.2)
+      thor
+      tilt
+    image_size (3.6.0)
+    io-endpoint (0.17.2)
+    io-event (1.19.2)
+    io-stream (0.13.2)
+      openssl (>= 3.3)
+    json (2.21.1)
+    listen (3.10.0)
+      logger
+      rb-fsevent (~> 0.10, >= 0.10.3)
+      rb-inotify (~> 0.9, >= 0.9.10)
+    logger (1.7.0)
+    mayu-css (0.1.5-arm64-darwin)
+    mayu-css (0.1.5-x86_64-linux)
+    metrics (0.15.0)
+    observer (0.1.2)
+    openssl (4.0.2)
+    pkg-config (1.6.5)
+    prettier_print (1.2.1)
+    protocol-hpack (1.5.1)
+    protocol-http (0.63.0)
+    protocol-http1 (0.39.0)
+      protocol-http (~> 0.62)
+    protocol-http2 (0.26.0)
+      protocol-hpack (~> 1.4)
+      protocol-http (~> 0.62)
+    protocol-url (0.4.0)
+    racc (1.8.1)
+    rb-fsevent (0.11.2)
+    rb-inotify (0.11.1)
+      ffi (~> 1.0)
+    rmagick (7.0.5)
+      observer (~> 0.1)
+      pkg-config (~> 1.4)
+    samovar (2.5.1)
+      console (~> 1.0)
+    syntax_tree (6.3.0)
+      prettier_print (>= 1.2.0)
+    syntax_tree-haml (4.0.3)
+      haml (>= 5.2)
+      prettier_print (>= 1.2.1)
+      syntax_tree (>= 6.0.0)
+    temple (0.10.4)
+    thor (1.5.0)
+    tilt (2.8.0)
+    toml-rb (4.2.0)
+      citrus (~> 3.0, > 3.0)
+      racc (~> 1.7)
+    traces (0.18.2)
+    tsort (0.2.0)
+
+PLATFORMS
+  arm64-darwin
+  x86_64-linux
+  x86_64-linux-gnu
+
+DEPENDENCIES
+  klenod-build!
+  klenod-runtime!
+
+CHECKSUMS
+  async (2.42.0)
+  async-http (0.95.1)
+  async-pool (0.11.2)
+  citrus (3.0.2)
+  console (1.37.0)
+  ffi (1.17.4-arm64-darwin)
+  ffi (1.17.4-x86_64-linux-gnu)
+  fiber-annotation (0.2.0)
+  fiber-local (1.1.0)
+  fiber-storage (1.0.1)
+  haml (7.2.0)
+  image_size (3.6.0)
+  io-endpoint (0.17.2)
+  io-event (1.19.2)
+  io-stream (0.13.2)
+  json (2.21.1)
+  listen (3.10.0)
+  logger (1.7.0)
+  mayu-css (0.1.5-arm64-darwin)
+  mayu-css (0.1.5-x86_64-linux)
+  metrics (0.15.0)
+  klenod-build (0.0.1)
+  klenod-runtime (0.0.1)
+  observer (0.1.2)
+  openssl (4.0.2)
+  pkg-config (1.6.5)
+  prettier_print (1.2.1)
+  protocol-hpack (1.5.1)
+  protocol-http (0.63.0)
+  protocol-http1 (0.39.0)
+  protocol-http2 (0.26.0)
+  protocol-url (0.4.0)
+  racc (1.8.1)
+  rb-fsevent (0.11.2)
+  rb-inotify (0.11.1)
+  rmagick (7.0.5)
+  samovar (2.5.1)
+  syntax_tree (6.3.0)
+  syntax_tree-haml (4.0.3)
+  temple (0.10.4)
+  thor (1.5.0)
+  tilt (2.8.0)
+  toml-rb (4.2.0)
+  traces (0.18.2)
+  tsort (0.2.0)
+
+BUNDLED WITH
+  4.0.16
