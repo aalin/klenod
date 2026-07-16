@@ -554,12 +554,12 @@ class Klenod::ExampleTest < Minitest::Test
     Example::Context.with(request: english) do
       other = Fiber.new do
         Example::Context.with(request: swedish) do
-          Example::I18n.t(translations, "title")
+          Example::I18n.t(translations, :title)
         end
       end
 
       assert_equal("Hej", other.resume)
-      assert_equal("Hello", Example::I18n.t(translations, "title"))
+      assert_equal("Hello", Example::I18n.t(translations, :title))
     end
   end
 
@@ -572,8 +572,8 @@ class Klenod::ExampleTest < Minitest::Test
 
     _stdout, stderr = capture_io do
       Example::Context.with(request: request) do
-        assert_equal("Hello", Example::I18n.t(translations, "title", source: "components/Greeting.haml"))
-        assert_equal("Hello", Example::I18n.t(translations, "title", source: "components/Greeting.haml"))
+        assert_equal("Hello", Example::I18n.t(translations, :title, source: "components/Greeting.haml"))
+        assert_equal("Hello", Example::I18n.t(translations, :title, source: "components/Greeting.haml"))
       end
     end
 

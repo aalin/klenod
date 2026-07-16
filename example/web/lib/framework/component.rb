@@ -18,8 +18,8 @@ module Example
       self.class.i18n
     end
 
-    def t(key, default: nil)
-      i18n.t(key, default: default)
+    def t(*key, default: nil)
+      i18n.t(*key, default: default)
     end
 
     def initialize(...)

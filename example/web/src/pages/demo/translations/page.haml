@@ -12,34 +12,34 @@
 
 %article{ lang: I18n.lang }
   %PageHeader{
-    kicker: I18n.t("header.kicker"),
-    title: I18n.t("header.title"),
-    summary: I18n.t("header.summary")
+    kicker: I18n.t(:header, :kicker),
+    title: I18n.t(:header, :title),
+    summary: I18n.t(:header, :summary)
   }
 
   %section
-    %Panel{ title: I18n.t("current.title") }
+    %Panel{ title: I18n.t(:current, :title) }
       %dl
         %div
-          %dt= I18n.t("current.requested")
-          %dd= request.headers.fetch("accept-language", I18n.t("current.none"))
+          %dt= I18n.t(:current, :requested)
+          %dd= request.headers.fetch("accept-language", I18n.t(:current, :none))
         %div
-          %dt= I18n.t("current.resolved")
+          %dt= I18n.t(:current, :resolved)
           %dd= I18n.lang
         %div
-          %dt= I18n.t("current.cookie")
-          %dd= request.cookies.fetch(Example::LOCALE_COOKIE, I18n.t("current.none"))
+          %dt= I18n.t(:current, :cookie)
+          %dd= request.cookies.fetch(Example::LOCALE_COOKIE, I18n.t(:current, :none))
 
-    %Panel{ title: I18n.t("usage.title") }
-      %p= I18n.t("usage.body")
+    %Panel{ title: I18n.t(:usage, :title) }
+      %p= I18n.t(:usage, :body)
       %pre
-        %code= I18n.t("usage.code")
+        %code= I18n.t(:usage, :code)
 
-    %Panel{ title: I18n.t("examples.title") }
+    %Panel{ title: I18n.t(:examples, :title) }
       %Form(method="post" action="/demo/translations/locale")
         = Locales.map do |locale, label|
           %label
             %input{ type: "radio", name: "locale", value: locale, checked: I18n.lang == locale }
             %span= label
             %code= locale
-        %Button(type="submit")= I18n.t("examples.submit")
+        %Button(type="submit")= I18n.t(:examples, :submit)

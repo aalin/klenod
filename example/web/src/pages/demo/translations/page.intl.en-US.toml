@@ -12,8 +12,8 @@ none = "not provided"
 
 [usage]
 title = "Component API"
-body = "Haml components can call t(\"key\") to read from their own companion translation files."
-code = "title: t(\"header.title\")"
+body = "Haml components can call I18n.t(:section, :key) to read from their own companion translation files."
+code = "title: I18n.t(:header, :title)"
 
 [examples]
 title = "Set a language cookie"

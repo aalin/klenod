@@ -12,8 +12,8 @@ none = "saknas"
 
 [usage]
 title = "Komponent-API"
-body = "Haml-komponenter kan anropa t(\"key\") för att läsa från sina egna översättningsfiler."
-code = "title: t(\"header.title\")"
+body = "Haml-komponenter kan anropa I18n.t(:section, :key) för att läsa från sina egna översättningsfiler."
+code = "title: I18n.t(:header, :title)"
 
 [examples]
 title = "Sätt en språk-cookie"
