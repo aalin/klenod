@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&family=Source+Sans+3:ital,wght@0,200..900;1,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&family=Source+Sans+3:ital,wght@0,200..900;1,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900");
 
 @view-transition {
   navigation: auto;
@@ -50,28 +50,28 @@
   box-sizing: border-box;
 }
 
-:global(::view-transition-group(root)) {
+::view-transition-group(root) {
   animation-duration: var(--transition-page);
   animation-timing-function: var(--transition-fade-ease);
 }
 
-:global(::view-transition-old(root)),
-:global(::view-transition-new(root)) {
+::view-transition-old(root),
+::view-transition-new(root) {
   animation: none;
 }
 
-:global(::view-transition-group(page-header)) {
+::view-transition-group(page-header) {
   animation-duration: var(--transition-header);
   animation-timing-function: var(--transition-header-ease);
 }
 
-:global(::view-transition-group(page-header-title)) {
+::view-transition-group(page-header-title) {
   animation-duration: var(--transition-header);
   animation-timing-function: var(--transition-header-ease);
 }
 
-:global(::view-transition-old(page-header)),
-:global(::view-transition-new(page-header)) {
+::view-transition-old(page-header),
+::view-transition-new(page-header) {
   animation-duration: var(--transition-header);
   animation-timing-function: var(--transition-fade-ease);
   animation-fill-mode: both;
@@ -82,8 +82,8 @@
   mix-blend-mode: normal;
 }
 
-:global(::view-transition-old(page-header-title)),
-:global(::view-transition-new(page-header-title)) {
+::view-transition-old(page-header-title),
+::view-transition-new(page-header-title) {
   width: 100%;
   height: 100%;
   object-fit: none;
@@ -91,20 +91,20 @@
   mix-blend-mode: normal;
 }
 
-:global(::view-transition-old(page-header)) {
+::view-transition-old(page-header) {
   animation-name: header-fade-out;
 }
 
-:global(::view-transition-new(page-header)) {
+::view-transition-new(page-header) {
   animation-name: header-fade-in;
 }
 
-:global(::view-transition-old(page-content)) {
+::view-transition-old(page-content) {
   animation: fade-out var(--transition-page-out) var(--transition-fade-ease) both;
   mix-blend-mode: normal;
 }
 
-:global(::view-transition-new(page-content)) {
+::view-transition-new(page-content) {
   animation: fade-in var(--transition-page) var(--transition-fade-ease) both;
   mix-blend-mode: normal;
 }
