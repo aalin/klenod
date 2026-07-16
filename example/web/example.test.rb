@@ -157,6 +157,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Rendera lokaliserad komponenttext")
     assert_includes(html, "<article lang=\"sv-SE\"")
     assert_includes(html, "Vald locale")
+    assert_includes(html, "Haml-komponenter som PageHeader")
+    assert_includes(html, "2 locales är tillgängliga.")
     assert_includes(html, "sv-SE")
     refute_includes(html, "Render localized component text")
   end
@@ -610,6 +612,38 @@ class Klenod::ExampleTest < Minitest::Test
       assert_equal("Hej", other.resume)
       assert_equal("Hello", Example::I18n.t(translations, :title))
     end
+  end
+
+  def test_example_i18n_supports_configurable_default_locale
+    translations = {
+      "en-US" => {"title" => "Hello"},
+      "sv-SE" => {"title" => "Hej"}
+    }
+    previous = Example::I18n.default_locale
+    Example::I18n.default_locale = "sv-SE"
+
+    assert_equal("sv-SE", Example::I18n.resolve_locale(translations, request: nil))
+    assert_equal("Hej", Example::I18n.t(translations, :title, locale: nil))
+  ensure
+    Example::I18n.default_locale = previous
+  end
+
+  def test_example_i18n_interpolates_values_and_pluralizes_counts
+    translations = {
+      "en-US" => {
+        "greeting" => "Hello %{name}",
+        "items" => {
+          "zero" => "No items",
+          "one" => "One item",
+          "other" => "%{count} items"
+        }
+      }
+    }
+
+    assert_equal("Hello Andreas", Example::I18n.t(translations, :greeting, name: "Andreas"))
+    assert_equal("No items", Example::I18n.t(translations, :items, count: 0))
+    assert_equal("One item", Example::I18n.t(translations, :items, count: 1))
+    assert_equal("3 items", Example::I18n.t(translations, :items, count: 3))
   end
 
   def test_example_i18n_warns_once_for_missing_translations

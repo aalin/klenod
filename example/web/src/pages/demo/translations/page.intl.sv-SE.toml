@@ -12,8 +12,13 @@ none = "saknas"
 
 [usage]
 title = "Komponent-API"
-body = "Haml-komponenter kan anropa I18n.t(:section, :key) för att läsa från sina egna översättningsfiler."
+body = "Haml-komponenter som %{component} kan anropa I18n.t(:section, :key) för att läsa från sina egna översättningsfiler."
 code = "title: I18n.t(:header, :title)"
+
+[usage.locale_count]
+zero = "Inga locales är tillgängliga."
+one = "En locale är tillgänglig."
+other = "%{count} locales är tillgängliga."
 
 [examples]
 title = "Sätt en språk-cookie"

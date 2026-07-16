@@ -12,8 +12,13 @@ none = "not provided"
 
 [usage]
 title = "Component API"
-body = "Haml components can call I18n.t(:section, :key) to read from their own companion translation files."
+body = "Haml components like %{component} can call I18n.t(:section, :key) to read from their own companion translation files."
 code = "title: I18n.t(:header, :title)"
+
+[usage.locale_count]
+zero = "No locales are available."
+one = "One locale is available."
+other = "%{count} locales are available."
 
 [examples]
 title = "Set a language cookie"

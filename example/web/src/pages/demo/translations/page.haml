@@ -30,7 +30,8 @@
           %dd= request.cookies.fetch(Example::LOCALE_COOKIE, I18n.t(:current, :none))
 
     %Panel{ title: I18n.t(:usage, :title) }
-      %p= I18n.t(:usage, :body)
+      %p= I18n.t(:usage, :body, component: "PageHeader")
+      %p= I18n.t(:usage, :locale_count, count: I18n.translations.length)
       %pre
         %code= I18n.t(:usage, :code)
 
