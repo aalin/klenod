@@ -186,7 +186,7 @@ module Klenod
           "input" => source_map.input,
           "marks_by_output_line" =>
             source_map.marks_by_output_line.to_h do |line, mark|
-              [line.to_s, {"line" => mark.line, "source" => mark.source}]
+              [line.to_s, mark.line]
             end
         }
       end
@@ -196,9 +196,8 @@ module Klenod
 
         payload = expect_hash!(payload, "source map")
         marks =
-          expect_hash!(payload.fetch("marks_by_output_line"), "source map marks").to_h do |line, mark_payload|
-            mark_payload = expect_hash!(mark_payload, "source map mark")
-            [line.to_i, SourceMap::Mark.new(mark_payload.fetch("line"), mark_payload.fetch("source"))]
+          expect_hash!(payload.fetch("marks_by_output_line"), "source map marks").to_h do |line, source_line|
+            [line.to_i, SourceMap::Mark.new(source_line)]
           end
         SourceMap::SourceMap.new(payload.fetch("input"), output, marks.freeze)
       end

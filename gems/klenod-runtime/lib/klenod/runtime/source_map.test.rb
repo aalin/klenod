@@ -9,6 +9,7 @@ class Klenod::Runtime::SourceMap::Test < Minitest::Test
     mark = Klenod::Runtime::SourceMap::Mark.new(7, "hello")
 
     assert_equal(mark, Klenod::Runtime::SourceMap::Mark.parse(mark.to_s))
+    assert_equal(mark, Klenod::Runtime::SourceMap::Mark.new(7, "ignored after parsing"))
   end
 
   def test_maps_generated_lines_to_nearest_prior_mark

@@ -215,6 +215,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     loaded = Klenod::Runtime.load_bundle(StringIO.new(payload))
 
     refute_includes(parsed.fetch("modules").fetch("entry.rb").fetch("source_map"), "output")
+    assert_equal(1, parsed.fetch("modules").fetch("entry.rb").fetch("source_map").fetch("marks_by_output_line").fetch("1"))
     assert_equal(source, loaded.load("entry").source_map.output)
   end
 
