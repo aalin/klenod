@@ -1,14 +1,12 @@
 # frozen_string_literal: true
 
-require "async"
-require "async/http"
 require "cgi/escape"
-require "protocol/http/response"
 
 require "klenod"
 require_relative "../dev/update_logger"
 require_relative "errors"
 require_relative "formatting"
+require_relative "runner"
 
 module Example
   class DevServer
@@ -29,10 +27,7 @@ module Example
       begin
         watcher.start
 
-        Async do
-          server = Async::HTTP::Server.for(endpoint) { |request| response_for(request) }
-          server.run.wait
-        end
+        server_runner.run
       ensure
         watcher&.stop
       end
@@ -50,10 +45,6 @@ module Example
       @entrypoint ||= config.entrypoints.fetch(0)
     end
 
-    def endpoint
-      @endpoint ||= Async::HTTP::Endpoint.parse("http://localhost:#{port}")
-    end
-
     def context
       @context ||= config.context
     end
@@ -68,6 +59,16 @@ module Example
         install_update_handler
         watcher
       end
+    end
+
+    def server_runner
+      @server_runner ||=
+        ServerRunner.new(
+          port: port,
+          asset_app: asset_app,
+          app: ->(request) { entry.call(request, context) },
+          error_handler: ->(request, error) { handle_request_error(request, error) }
+        )
     end
 
     def asset_app
@@ -98,25 +99,10 @@ module Example
       end
     end
 
-    def response_for(request)
-      start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-
-      if (asset_response = asset_app.response_for(request.path))
-        status, headers, body = asset_response.status, asset_response.headers, [asset_response.body]
-      else
-        status, headers, body = entry.call(request, context)
-      end
-      ServerFormatting.log_request(request, status, start_time)
-      protocol_response(status, headers, body)
-    rescue => e
-      formatted = ServerErrors.format_exception(e, context)
-      log_error_unless_recent(e, formatted)
-      ServerFormatting.log_request(request, 500, start_time) if start_time
-      protocol_response(*error_response_for(request, e, formatted))
-    end
-
-    def protocol_response(status, headers, body)
-      Protocol::HTTP::Response[status, headers, body]
+    def handle_request_error(request, error)
+      formatted = ServerErrors.format_exception(error, context)
+      log_error_unless_recent(error, formatted)
+      error_response_for(request, error, formatted)
     end
 
     def error_response_for(request, error, formatted)
@@ -321,6 +307,56 @@ module Example
 
     def current_time
       Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
+  end
+
+  class ProductionServer
+    def initialize(config_path:, port: Integer(ENV.fetch("PORT", "9292")))
+      @config = Klenod::Build::ConfigLoader.load(config_path)
+      @port = port
+    end
+
+    def run
+      ServerFormatting.suppress_io_buffer_experimental_warning
+      bundle
+      asset_app
+      ServerFormatting.log_startup(port:, source_dir: config.source_path, assets_dir: config.assets_path, source_label: "source")
+      server_runner.run
+    end
+
+    private
+
+    attr_reader :config, :port
+
+    def bundle
+      @bundle ||= Klenod::Runtime.load_bundle(config.output_path, source_root: config.source_path)
+    end
+
+    def entry
+      @entry ||= bundle.exports(config.entrypoints.fetch(0))
+    end
+
+    def asset_app
+      @asset_app ||= Klenod::Rack::AssetApp.new(bundle, assets_dir: config.assets_path)
+    end
+
+    def server_runner
+      @server_runner ||=
+        ServerRunner.new(
+          port: port,
+          asset_app: asset_app,
+          app: ->(request) { entry.call(request, bundle) },
+          error_handler: ->(_request, error) { error_response_for(error) }
+        )
+    end
+
+    def error_response_for(error)
+      warn error.full_message
+      [
+        500,
+        {"content-type" => "text/plain; charset=utf-8"},
+        ["Internal server error\n"]
+      ]
     end
   end
 end

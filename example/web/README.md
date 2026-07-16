@@ -11,7 +11,7 @@ example/web/bin/routes
 example/web/bin/server
 ```
 
-`bin/build` writes `example/web/dist/klenod.bundle` and `example/web/dist/public`, printing the collected module count, emitted assets, generated assets, and written files. `bin/run` reloads that bundle through the runtime API and evaluates the entrypoint without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
+`bin/build` writes `example/web/dist/klenod.bundle` and `example/web/dist/public`, printing the collected module count, emitted assets, generated assets, and written files. `bin/run` starts a production-style `async-http` server from that built bundle without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
 
 ```ruby
 bundle = Klenod::Runtime.load_bundle("example/web/dist/klenod.bundle", source_root: "/app/src")
@@ -35,7 +35,9 @@ Vernier writes a profile file in the current directory. Use `bundle exec vernier
 
 `bin/routes` prints a Rails-style route table with the HTTP method, server path, route type, and source file for each discovered `page.haml` and `route.rb`.
 
-`bin/server` starts a small `async-http` server on `http://localhost:9292`. It watches the source tree, matches each request through the router plugin, and serves emitted CSS/image assets from the build context.
+`bin/server` starts the development `async-http` server on `http://localhost:9292`. It watches the source tree, matches each request through the router plugin, serves emitted CSS/image assets from the build context, and renders detailed development exception pages.
+
+`bin/run` starts the production server on `http://localhost:9292` from the bundle and assets written by `bin/build`. It logs exceptions server-side, but returns a generic 500 response instead of rendering development error details.
 
 `bin/server` can also mirror emitted assets to disk:
 

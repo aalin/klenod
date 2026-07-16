@@ -65,11 +65,11 @@ module Example
       Warning[:experimental] = previous unless previous.nil?
     end
 
-    def log_startup(port:, source_dir:, assets_dir:)
+    def log_startup(port:, source_dir:, assets_dir:, source_label: "watching")
       puts color(:title, "Klenod example server")
-      puts "  #{color(:label, "url")}      #{color(:value, "http://localhost:#{port}")}"
-      puts "  #{color(:label, "watching")} #{source_dir}"
-      puts "  #{color(:label, "assets")}   #{assets_dir || color(:dim, "in memory")}"
+      puts "  #{color(:label, "url")}       #{color(:value, "http://localhost:#{port}")}"
+      puts "  #{color(:label, source_label)} #{source_dir}"
+      puts "  #{color(:label, "assets")}    #{assets_dir || color(:dim, "in memory")}"
     end
   end
 end

@@ -464,6 +464,54 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(["RuntimeError: broken", "\n"], body)
   end
 
+  def test_server_runner_serves_assets_before_app
+    asset_response = Klenod::Rack::Response.new(200, {"content-type" => "text/css"}, "body {}")
+    asset_app = Data.define(:response) do
+      def response_for(_path) = response
+    end.new(asset_response)
+    app = ->(_request) { raise "app should not be called" }
+    runner = Example::ServerRunner.new(port: 9292, asset_app: asset_app, app: app, error_handler: ->(_request, error) { raise error })
+
+    response = nil
+    capture_io do
+      response = runner.response_for(HeaderRequest["GET", "/assets/app.css", HeaderList.new([])])
+    end
+
+    assert_equal(200, response.status)
+    assert_equal("text/css", response.headers["content-type"])
+  end
+
+  def test_server_runner_dispatches_non_asset_requests_to_app
+    asset_app = Data.define(:response) do
+      def response_for(_path) = response
+    end.new(nil)
+    app = ->(_request) { [201, {"content-type" => "text/plain"}, ["ok"]] }
+    runner = Example::ServerRunner.new(port: 9292, asset_app: asset_app, app: app, error_handler: ->(_request, error) { raise error })
+
+    response = nil
+    capture_io do
+      response = runner.response_for(HeaderRequest["GET", "/demo", HeaderList.new([])])
+    end
+
+    assert_equal(201, response.status)
+    assert_equal("text/plain", response.headers["content-type"])
+  end
+
+  def test_production_server_returns_generic_error_response
+    server = Example::ProductionServer.allocate
+    status, headers, body = nil
+    _stdout, stderr = capture_io do
+      status, headers, body = server.send(:error_response_for, RuntimeError.new("secret failure"))
+    end
+
+    assert_equal(500, status)
+    assert_equal("text/plain; charset=utf-8", headers.fetch("content-type"))
+    assert_equal(["Internal server error\n"], body)
+    assert_includes(stderr, "RuntimeError")
+    assert_includes(stderr, "secret failure")
+    refute_includes(body.join, "secret failure")
+  end
+
   def test_example_server_tracks_logged_update_errors
     server = Example::DevServer.allocate
     error = RuntimeError.new("broken module")
