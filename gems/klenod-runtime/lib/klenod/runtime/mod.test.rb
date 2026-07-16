@@ -190,7 +190,7 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
   end
 
   def test_runtime_bundle_format_does_not_duplicate_transformed_source_in_source_maps
-    source = "# SourceMapMark:1:VkFMVUUgPSAx\nVALUE = 1\n"
+    source = "# SourceMapMark:1\nVALUE = 1\n"
     source_map = Klenod::Runtime::SourceMap::SourceMap.parse("VALUE = 1\n", source)
     bundle =
       Klenod::Runtime::Bundle.new(

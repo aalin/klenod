@@ -253,8 +253,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     ) do |_dir, _context, record, exports|
       assert_operator(exports::Default, :<, FakeFramework::ComponentBase)
       assert_equal([:button, "Click me", {onclick: :clicked}], exports::Default.new.render)
-      assert_match(/SourceMapMark:2:/, record.transformed_source)
-      assert_match(/SourceMapMark:6:/, record.transformed_source)
+      assert_match(/SourceMapMark:2/, record.transformed_source)
+      assert_match(/SourceMapMark:6/, record.transformed_source)
     end
   end
 
@@ -280,8 +280,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       plugins: [plugin]
     ) do |_dir, _context, record, exports|
       assert_equal([:ul, [[:li, "A"], [:li, "B"]]], exports::Default.new.render)
-      assert_match(/SourceMapMark:8:/, record.transformed_source)
-      assert_match(/SourceMapMark:9:/, record.transformed_source)
+      assert_match(/SourceMapMark:8/, record.transformed_source)
+      assert_match(/SourceMapMark:9/, record.transformed_source)
     end
   end
 
@@ -307,8 +307,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       plugins: [plugin]
     ) do |_dir, _context, record, exports|
       assert_equal([:ul, [[:li, "A"], [:li, "B"]]], exports::Default.new.render)
-      assert_match(/SourceMapMark:8:/, record.transformed_source)
-      assert_match(/SourceMapMark:9:/, record.transformed_source)
+      assert_match(/SourceMapMark:8/, record.transformed_source)
+      assert_match(/SourceMapMark:9/, record.transformed_source)
     end
   end
 
@@ -343,8 +343,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
 
       assert_equal([:ul, nil], component.render)
       assert_equal(["A", "B"], component.seen)
-      assert_match(/SourceMapMark:12:/, record.transformed_source)
-      assert_match(/SourceMapMark:13:/, record.transformed_source)
+      assert_match(/SourceMapMark:12/, record.transformed_source)
+      assert_match(/SourceMapMark:13/, record.transformed_source)
     end
   end
 
@@ -379,8 +379,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
 
       assert_equal([:ul, nil], component.render)
       assert_equal(["A", "B"], component.seen)
-      assert_match(/SourceMapMark:12:/, record.transformed_source)
-      assert_match(/SourceMapMark:13:/, record.transformed_source)
+      assert_match(/SourceMapMark:12/, record.transformed_source)
+      assert_match(/SourceMapMark:13/, record.transformed_source)
     end
   end
 
@@ -406,8 +406,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     ) do |_dir, _context, record, exports|
       assert_nil(exports::Default.new(show: true).render)
       assert_nil(exports::Default.new(show: false).render)
-      assert_match(/SourceMapMark:7:/, record.transformed_source)
-      assert_match(/SourceMapMark:9:/, record.transformed_source)
+      assert_match(/SourceMapMark:7/, record.transformed_source)
+      assert_match(/SourceMapMark:9/, record.transformed_source)
     end
   end
 
@@ -434,8 +434,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     ) do |_dir, _context, record, exports|
       assert_equal([:section, [:p, "Visible"]], exports::Default.new(show: true).render)
       assert_equal([:section, [:p, "Empty"]], exports::Default.new(show: false).render)
-      assert_match(/SourceMapMark:8:/, record.transformed_source)
-      assert_match(/SourceMapMark:10:/, record.transformed_source)
+      assert_match(/SourceMapMark:8/, record.transformed_source)
+      assert_match(/SourceMapMark:10/, record.transformed_source)
     end
   end
 
@@ -450,7 +450,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
 
     assert_equal([:section, [:p, "Visible"]], exports::Default.new(show: true).render)
     assert_equal([:section, nil], exports::Default.new(show: false).render)
-    assert_match(/SourceMapMark:8:/, record.transformed_source)
+    assert_match(/SourceMapMark:8/, record.transformed_source)
   end
 
   def test_haml_imports_haml_component_classes_for_capitalized_tags

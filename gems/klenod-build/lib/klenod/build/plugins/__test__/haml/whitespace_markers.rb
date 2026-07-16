@@ -13,23 +13,23 @@ class WhitespaceMarkers < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   public def render
-    # SourceMapMark:1:cA==
+    # SourceMapMark:1
     TestFramework::H[
       :p,
       begin
-        # SourceMapMark:2:YmVmb3Jl
+        # SourceMapMark:2
         "before"
       end,
       " ",
       begin
-        # SourceMapMark:3:bGluaw==
+        # SourceMapMark:3
         TestFramework::H[
           :a,
           "link",
           **{
             href:
               begin
-                # SourceMapMark:3:bGluaw==
+                # SourceMapMark:3
                 "#"
               end
           }
@@ -37,7 +37,7 @@ class WhitespaceMarkers < TestFramework::ComponentBase
       end,
       " ",
       begin
-        # SourceMapMark:4:YWZ0ZXI=
+        # SourceMapMark:4
         "after"
       end
     ]

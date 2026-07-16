@@ -35,8 +35,8 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
 
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
     assert_kind_of(SyntaxTree::ARef, fragment.node)
-    assert_includes(fragment.source, "# SourceMapMark:1:")
-    assert_includes(fragment.source, "# SourceMapMark:2:")
+    assert_includes(fragment.source, "# SourceMapMark:1")
+    assert_includes(fragment.source, "# SourceMapMark:2")
     assert_includes(fragment.source, "**{")
     assert_includes(fragment.source, "class:")
     assert_includes(fragment.source, '"intro"')
@@ -165,7 +165,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
 
     assert_kind_of(SyntaxTree::Command, fragment.node)
     assert_includes(fragment.source, "public def render")
-    assert_includes(fragment.source, "# SourceMapMark:3:")
+    assert_includes(fragment.source, "# SourceMapMark:3")
     assert_includes(fragment.source, "title")
   end
 
@@ -305,7 +305,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_kind_of(SyntaxTree::Statements, marked.node)
     assert_equal(child.node, marked.node.body.last)
     assert_kind_of(SyntaxTree::Comment, marked.node.body.first)
-    assert_includes(marked.source, "# SourceMapMark:1:")
+    assert_includes(marked.source, "# SourceMapMark:1")
     assert_includes(marked.source, '"Hello"')
   end
 
@@ -350,7 +350,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.expressions([child, builder.expression('"World"')])
 
     assert_kind_of(SyntaxTree::ArrayLiteral, fragment.node)
-    assert_includes(fragment.source, "# SourceMapMark:1:")
+    assert_includes(fragment.source, "# SourceMapMark:1")
     assert_includes(fragment.source, '"World"')
   end
 
@@ -375,7 +375,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
       ])
 
     assert_kind_of(SyntaxTree::Statements, fragment.node)
-    assert_includes(fragment.source, "# SourceMapMark:2:")
+    assert_includes(fragment.source, "# SourceMapMark:2")
     assert_includes(fragment.source, "begin\n")
     assert_includes(fragment.source, "def title")
   end
@@ -441,7 +441,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.script_block("items.map do |item|", body)
 
     assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
-    assert_includes(fragment.source, "# SourceMapMark:2:")
+    assert_includes(fragment.source, "# SourceMapMark:2")
     assert_includes(fragment.source, "items.map do |item|")
   end
 
@@ -543,7 +543,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
       ])
 
     assert_kind_of(SyntaxTree::IfNode, fragment.node)
-    assert_includes(fragment.source, "# SourceMapMark:2:")
+    assert_includes(fragment.source, "# SourceMapMark:2")
     assert_includes(fragment.source, "if show")
   end
 end

@@ -13,42 +13,42 @@ class LineConstants < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   begin
-    # SourceMapMark:2:ZGVmIGZpbHRlcl9saW5l
+    # SourceMapMark:2
     def filter_line
-      # SourceMapMark:3:X19MSU5FX18=
+      # SourceMapMark:3
       3
-      # SourceMapMark:4:ZW5k
+      # SourceMapMark:4
     end
-    # SourceMapMark:5:
+    # SourceMapMark:5
   end
   public def render
-    # SourceMapMark:6:bWFpbg==
+    # SourceMapMark:6
     TestFramework::H[
       :main,
       begin
-        # SourceMapMark:7:IF9fTElORV9f
+        # SourceMapMark:7
         (7)
       end,
       begin
-        # SourceMapMark:8:IGZpbHRlcl9saW5l
+        # SourceMapMark:8
         (filter_line)
       end,
       begin
-        # SourceMapMark:9:ICJfX0xJTkVfXyI=
+        # SourceMapMark:9
         ("__LINE__")
       end,
       begin
-        # SourceMapMark:10:X19MSU5FX18=
+        # SourceMapMark:10
         TestFramework::H[:span, (10)]
       end,
       begin
-        # SourceMapMark:11:
+        # SourceMapMark:11
         TestFramework::H[
           :section,
           **{
             key:
               begin
-                # SourceMapMark:11:
+                # SourceMapMark:11
                 11
               end
           }
@@ -57,7 +57,7 @@ class LineConstants < TestFramework::ComponentBase
       **{
         data_line:
           begin
-            # SourceMapMark:6:bWFpbg==
+            # SourceMapMark:6
             6
           end
       }

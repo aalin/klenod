@@ -428,8 +428,8 @@ module Klenod
               end
             end
 
-            def source_mark(line_no, source)
-              "# #{Runtime::SourceMap::Mark.new(line_no, source)}"
+            def source_mark(line_no, _source)
+              "# #{Runtime::SourceMap::Mark.new(line_no)}"
             end
 
             def marked_expression(mark, expression)

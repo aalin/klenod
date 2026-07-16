@@ -3,41 +3,20 @@
 module Klenod
   module Runtime
     module SourceMap
-      MARK_PREFIX = "SourceMapMark:"
+      MARK_PREFIX = "SourceMapMark"
 
-      class Mark
-        attr_reader :line
-
-        def self.[](line, source = nil)
-          new(line, source)
-        end
-
+      Mark = Data.define(:line) do
         def self.parse(value)
           return value if value.is_a?(self)
           return nil unless value
 
-          if value =~ /\ASourceMapMark:(?<line>\d+):(?<encoded>[A-Za-z0-9+\/=]+)\z/
-            new($~[:line].to_i, $~[:encoded].unpack1("m0"))
+          if value =~ /\A#{MARK_PREFIX}:(?<line>\d+):?\z/
+            new($~[:line].to_i)
           end
         end
 
-        def initialize(line, source = nil)
-          @line = line
-          @source = source
-        end
-
         def to_s
-          "#{MARK_PREFIX}#{line}:#{[@source].pack("m0")}"
-        end
-
-        def ==(other)
-          other.is_a?(self.class) && other.line == line
-        end
-
-        alias_method :eql?, :==
-
-        def hash
-          [self.class, line].hash
+          "#{MARK_PREFIX}:#{line}"
         end
       end
 
@@ -46,7 +25,7 @@ module Klenod
           marks = {}
 
           output.each_line.with_index(1) do |line, line_no|
-            if (mark = Mark.parse(line[/#{MARK_PREFIX}\d+:[A-Za-z0-9+\/=]+/]))
+            if (mark = Mark.parse(line[/#{MARK_PREFIX}:\d+:?/]))
               marks[line_no] = mark
             end
           end

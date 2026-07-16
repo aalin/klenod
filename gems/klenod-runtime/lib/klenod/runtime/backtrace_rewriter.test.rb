@@ -25,15 +25,15 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
         %p= hello
     INPUT
       class MyComponent
-        # #{SourceMap::Mark[2, "def hello"]}
+        # #{SourceMap::Mark[2]}
         def hello
-          # #{SourceMap::Mark[3, 'raise "asd"']}
+          # #{SourceMap::Mark[3]}
           raise "asd"
         end
         def render
           H[:div,
             H[:p
-              # #{SourceMap::Mark[6, "hello"]}
+              # #{SourceMap::Mark[6]}
               hello
             ]
           ]
@@ -72,15 +72,15 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
         %p= hello
     INPUT
       class MyComponent
-        # #{SourceMap::Mark[2, "def hello"]}
+        # #{SourceMap::Mark[2]}
         def hello
-          # #{SourceMap::Mark[3, 'raise "asd"']}
+          # #{SourceMap::Mark[3]}
           raise "asd"
         end
         def render
           H[:div,
             H[:p
-              # #{SourceMap::Mark[6, "hello"]}
+              # #{SourceMap::Mark[6]}
               hello
             ]
           ]
@@ -123,7 +123,7 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
     source_map = SourceMap::SourceMap.parse(<<~INPUT, <<~OUTPUT)
       raise "boom"
     INPUT
-      # #{SourceMap::Mark[3, 'raise "boom"']}
+      # #{SourceMap::Mark[3]}
       raise "boom"
     OUTPUT
     error = StandardError.new("Boom")

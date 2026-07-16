@@ -13,38 +13,38 @@ class SilentScriptBlock < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   begin
-    # SourceMapMark:2:SXRlbSA9IERhdGEuZGVmaW5lKDpuYW1lKQ==
+    # SourceMapMark:2
     Item = Data.define(:name)
-    # SourceMapMark:3:
+    # SourceMapMark:3
 
-    # SourceMapMark:4:ZGVmIGluaXRpYWxpemU=
+    # SourceMapMark:4
     def initialize
-      # SourceMapMark:5:QGl0ZW1zID0gW0l0ZW0ubmV3KCJBIiksIEl0ZW0ubmV3KCJCIild
+      # SourceMapMark:5
       @items = [Item.new("A"), Item.new("B")]
-      # SourceMapMark:6:QHNlZW4gPSBbXQ==
+      # SourceMapMark:6
       @seen = []
-      # SourceMapMark:7:ZW5k
+      # SourceMapMark:7
     end
-    # SourceMapMark:8:
+    # SourceMapMark:8
   end
   public def render
-    # SourceMapMark:9:dWw=
+    # SourceMapMark:9
     TestFramework::H[
       :ul,
       begin
-        # SourceMapMark:10:IEBpdGVtcy5lYWNoIGRvIHxpdGVtfA==
+        # SourceMapMark:10
         begin
           @items.each do |item|
             [
               begin
-                # SourceMapMark:11:IEBzZWVuIDw8IGl0ZW0ubmFtZQ==
+                # SourceMapMark:11
                 begin
                   @seen << item.name
                   nil
                 end
               end,
               begin
-                # SourceMapMark:12:aXRlbS5uYW1l
+                # SourceMapMark:12
                 TestFramework::H[:li, (item.name)]
               end
             ]

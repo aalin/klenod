@@ -13,20 +13,20 @@ class OutputConditionalWithoutElse < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   begin
-    # SourceMapMark:2:ZGVmIGluaXRpYWxpemUoc2hvdzop
+    # SourceMapMark:2
     def initialize(show:)
-      # SourceMapMark:3:QHNob3cgPSBzaG93
+      # SourceMapMark:3
       @show = show
-      # SourceMapMark:4:ZW5k
+      # SourceMapMark:4
     end
-    # SourceMapMark:5:
+    # SourceMapMark:5
   end
   public def render
-    # SourceMapMark:6:c2VjdGlvbg==
+    # SourceMapMark:6
     TestFramework::H[
       :section,
       if @show
-        # SourceMapMark:8:VmlzaWJsZQ==
+        # SourceMapMark:8
         TestFramework::H[:p, "Visible"]
       end
     ]

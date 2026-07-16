@@ -13,22 +13,22 @@ class ComponentImport < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   begin
-    # SourceMapMark:2:RGV0YWlscyA9IGltcG9ydCgiY29tcG9uZW50cy9EZXRhaWxzIik=
+    # SourceMapMark:2
     Details = import("components/Details")
-    # SourceMapMark:3:
+    # SourceMapMark:3
   end
   public def render
-    # SourceMapMark:4:RGV0YWlscw==
+    # SourceMapMark:4
     TestFramework::H[
       Details,
       begin
-        # SourceMapMark:5:TG9yZW0gaXBzdW0=
+        # SourceMapMark:5
         TestFramework::H[:p, "Lorem ipsum"]
       end,
       **{
         summary:
           begin
-            # SourceMapMark:4:RGV0YWlscw==
+            # SourceMapMark:4
             "More information"
           end
       }

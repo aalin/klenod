@@ -13,22 +13,22 @@ class SilentConditional < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   begin
-    # SourceMapMark:2:ZGVmIGluaXRpYWxpemUoc2hvdzop
+    # SourceMapMark:2
     def initialize(show:)
-      # SourceMapMark:3:QHNob3cgPSBzaG93
+      # SourceMapMark:3
       @show = show
-      # SourceMapMark:4:ZW5k
+      # SourceMapMark:4
     end
-    # SourceMapMark:5:
+    # SourceMapMark:5
   end
   public def render
-    # SourceMapMark:6:IGlmIEBzaG93
+    # SourceMapMark:6
     begin
       if @show
-        # SourceMapMark:7:VmlzaWJsZQ==
+        # SourceMapMark:7
         TestFramework::H[:p, "Visible"]
       else
-        # SourceMapMark:9:RW1wdHk=
+        # SourceMapMark:9
         TestFramework::H[:p, "Empty"]
       end
       nil

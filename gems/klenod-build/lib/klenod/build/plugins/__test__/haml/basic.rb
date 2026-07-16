@@ -13,21 +13,21 @@ class Basic < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   public def render
-    # SourceMapMark:1:bWFpbg==
+    # SourceMapMark:1
     TestFramework::H[
       :main,
       begin
-        # SourceMapMark:2:SGVsbG8=
+        # SourceMapMark:2
         TestFramework::H[:h1, "Hello"]
       end,
       begin
-        # SourceMapMark:3:IkZyb20gUnVieSI=
+        # SourceMapMark:3
         TestFramework::H[:p, ("From Ruby")]
       end,
       **{
         class:
           begin
-            # SourceMapMark:1:bWFpbg==
+            # SourceMapMark:1
             "shell".upcase
           end
       }

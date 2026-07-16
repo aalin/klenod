@@ -13,26 +13,26 @@ class ScriptBlock < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   begin
-    # SourceMapMark:2:SXRlbSA9IERhdGEuZGVmaW5lKDpuYW1lKQ==
+    # SourceMapMark:2
     Item = Data.define(:name)
-    # SourceMapMark:3:
+    # SourceMapMark:3
 
-    # SourceMapMark:4:ZGVmIGluaXRpYWxpemU=
+    # SourceMapMark:4
     def initialize
-      # SourceMapMark:5:QGl0ZW1zID0gW0l0ZW0ubmV3KCJBIiksIEl0ZW0ubmV3KCJCIild
+      # SourceMapMark:5
       @items = [Item.new("A"), Item.new("B")]
-      # SourceMapMark:6:ZW5k
+      # SourceMapMark:6
     end
-    # SourceMapMark:7:
+    # SourceMapMark:7
   end
   public def render
-    # SourceMapMark:8:dWw=
+    # SourceMapMark:8
     TestFramework::H[
       :ul,
       begin
-        # SourceMapMark:9:IEBpdGVtcy5tYXAgZG8gfGl0ZW18
+        # SourceMapMark:9
         @items.map do |item|
-          # SourceMapMark:10:aXRlbS5uYW1l
+          # SourceMapMark:10
           TestFramework::H[:li, (item.name)]
         end
       end

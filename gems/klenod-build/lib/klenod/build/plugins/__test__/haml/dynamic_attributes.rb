@@ -13,22 +13,22 @@ class DynamicAttributes < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   public def render
-    # SourceMapMark:1:ZGlhbG9n
+    # SourceMapMark:1
     TestFramework::H[
       :dialog,
       begin
-        # SourceMapMark:2:SGVsbG8=
+        # SourceMapMark:2
         TestFramework::H[:p, "Hello"]
       end,
       **{
         "data-state":
           begin
-            # SourceMapMark:1:ZGlhbG9n
+            # SourceMapMark:1
             "ready"
           end,
         open:
           begin
-            # SourceMapMark:1:ZGlhbG9n
+            # SourceMapMark:1
             true
           end
       }

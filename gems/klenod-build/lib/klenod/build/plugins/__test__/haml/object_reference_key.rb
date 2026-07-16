@@ -13,21 +13,21 @@ class ObjectReferenceKey < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   begin
-    # SourceMapMark:2:VXNlciA9IERhdGEuZGVmaW5lKDppZCk=
+    # SourceMapMark:2
     User = Data.define(:id)
-    # SourceMapMark:3:QHVzZXIgPSBVc2VyLm5ldygxNSk=
+    # SourceMapMark:3
     @user = User.new(15)
-    # SourceMapMark:4:
+    # SourceMapMark:4
   end
   public def render
-    # SourceMapMark:5:SGVsbG8=
+    # SourceMapMark:5
     TestFramework::H[
       :div,
       "Hello",
       **{
         key:
           begin
-            # SourceMapMark:5:SGVsbG8=
+            # SourceMapMark:5
             [@user, :greeting]
           end
       }

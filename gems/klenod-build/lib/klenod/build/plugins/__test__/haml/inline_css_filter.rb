@@ -13,14 +13,14 @@ class InlineCssFilter < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   public def render
-    # SourceMapMark:6:SGVsbG8=
+    # SourceMapMark:6
     TestFramework::H[
       :h1,
       "Hello",
       **{
         class:
           begin
-            # SourceMapMark:6:SGVsbG8=
+            # SourceMapMark:6
             Klenod::Runtime.class_names(Styles[:title] || "title")
           end
       }

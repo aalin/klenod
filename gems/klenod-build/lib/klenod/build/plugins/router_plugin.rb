@@ -892,7 +892,7 @@ module Klenod
             elsif line.strip.empty?
               line
             else
-              "  # #{Klenod::Runtime::SourceMap::Mark.new(line_no, line.chomp)}\n  #{line}"
+              "  # #{Klenod::Runtime::SourceMap::Mark.new(line_no)}\n  #{line}"
             end
           end.join
         end

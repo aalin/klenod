@@ -246,6 +246,6 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
     assert_kind_of(SyntaxTree::Statements, fragment.node)
     assert_kind_of(SyntaxTree::Comment, fragment.node.body.first)
-    assert_includes(fragment.source, "SourceMapMark:2:")
+    assert_includes(fragment.source, "SourceMapMark:2")
   end
 end

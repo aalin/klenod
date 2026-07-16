@@ -13,23 +13,23 @@ class RubyFilter < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   begin
-    # SourceMapMark:2:ZGVmIGhhbmRsZV9jbGljaw==
+    # SourceMapMark:2
     def handle_click
-      # SourceMapMark:3:OmNsaWNrZWQ=
+      # SourceMapMark:3
       :clicked
-      # SourceMapMark:4:ZW5k
+      # SourceMapMark:4
     end
-    # SourceMapMark:5:
+    # SourceMapMark:5
   end
   public def render
-    # SourceMapMark:6:Q2xpY2sgbWU=
+    # SourceMapMark:6
     TestFramework::H[
       :button,
       "Click me",
       **{
         onclick:
           begin
-            # SourceMapMark:6:Q2xpY2sgbWU=
+            # SourceMapMark:6
             handle_click
           end
       }

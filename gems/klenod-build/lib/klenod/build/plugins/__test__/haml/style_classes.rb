@@ -13,22 +13,22 @@ class StyleClasses < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   public def render
-    # SourceMapMark:1:ZmlndXJl
+    # SourceMapMark:1
     TestFramework::H[
       :figure,
       begin
-        # SourceMapMark:2:aW1n
+        # SourceMapMark:2
         TestFramework::H[
           :img,
           **{
             src:
               begin
-                # SourceMapMark:2:aW1n
+                # SourceMapMark:2
                 "/assets/fish.png"
               end,
             class:
               begin
-                # SourceMapMark:2:aW1n
+                # SourceMapMark:2
                 Klenod::Runtime.class_names(
                   Styles[:__img],
                   Styles[:image] || "image"
@@ -38,14 +38,14 @@ class StyleClasses < TestFramework::ComponentBase
         ]
       end,
       begin
-        # SourceMapMark:3:RnJlc2ggc21va2U=
+        # SourceMapMark:3
         TestFramework::H[
           :figcaption,
           "Fresh smoke",
           **{
             class:
               begin
-                # SourceMapMark:3:RnJlc2ggc21va2U=
+                # SourceMapMark:3
                 Klenod::Runtime.class_names(Styles[:__figcaption])
               end
           }
@@ -54,7 +54,7 @@ class StyleClasses < TestFramework::ComponentBase
       **{
         class:
           begin
-            # SourceMapMark:1:ZmlndXJl
+            # SourceMapMark:1
             Klenod::Runtime.class_names(
               Styles[:__figure],
               Styles[:card] || "card"

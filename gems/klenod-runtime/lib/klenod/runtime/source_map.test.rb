@@ -6,10 +6,9 @@ require_relative "source_map"
 
 class Klenod::Runtime::SourceMap::Test < Minitest::Test
   def test_mark_round_trips_through_comment_text
-    mark = Klenod::Runtime::SourceMap::Mark.new(7, "hello")
+    mark = Klenod::Runtime::SourceMap::Mark.new(7)
 
     assert_equal(mark, Klenod::Runtime::SourceMap::Mark.parse(mark.to_s))
-    assert_equal(mark, Klenod::Runtime::SourceMap::Mark.new(7, "ignored after parsing"))
   end
 
   def test_maps_generated_lines_to_nearest_prior_mark
@@ -18,7 +17,7 @@ class Klenod::Runtime::SourceMap::Test < Minitest::Test
         "one\ntwo\nthree\n",
         <<~RUBY
           class Example
-            # #{Klenod::Runtime::SourceMap::Mark.new(2, "two")}
+            # #{Klenod::Runtime::SourceMap::Mark.new(2)}
             def call
               :ok
             end
@@ -35,12 +34,12 @@ class Klenod::Runtime::SourceMap::Test < Minitest::Test
         "one\ntwo\nthree\n",
         <<~RUBY
           class Example
-            # #{Klenod::Runtime::SourceMap::Mark.new(1, "one")}
+            # #{Klenod::Runtime::SourceMap::Mark.new(1)}
             def first
               :ok
             end
 
-            # #{Klenod::Runtime::SourceMap::Mark.new(3, "three")}
+            # #{Klenod::Runtime::SourceMap::Mark.new(3)}
             def second
               :ok
             end
