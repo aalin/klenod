@@ -161,6 +161,23 @@ class Klenod::ExampleTest < Minitest::Test
     refute_includes(html, "Render localized component text")
   end
 
+  def test_example_app_falls_back_to_available_locale_with_same_language
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, _headers, body =
+      entry.call(
+        HeaderRequest["GET", "/demo/translations", HeaderList.new([["Accept-Language", "sv-FI;q=0.9,en-US;q=0.8"]])],
+        context
+      )
+    html = body.join
+
+    assert_equal(200, status)
+    assert_includes(html, "Rendera lokaliserad komponenttext")
+    assert_includes(html, "<article lang=\"sv-SE\"")
+    assert_includes(html, "sv-SE")
+  end
+
   def test_example_app_falls_back_to_default_translation_locale
     config = example_config
     context = config.context

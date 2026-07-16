@@ -44,8 +44,7 @@ module Example
       return fallback_locale(translations, cookie_locale) if !cookie_locale.empty? && fallback_locale(translations, cookie_locale)
 
       requested = preferred_locales(request)
-      matched = HTTP::Accept::Languages::Locales.new(available) & requested
-      matched.first || fallback_locale(translations, DEFAULT_LOCALE) || available.first
+      requested.filter_map { |language| fallback_locale(translations, language.locale) }.first || fallback_locale(translations, DEFAULT_LOCALE) || available.first
     end
 
     def self.preferred_locales(request)
