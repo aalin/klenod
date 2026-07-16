@@ -155,6 +155,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
     assert_equal("Accept-Language, Cookie", headers.fetch("vary"))
     assert_includes(html, "Rendera lokaliserad komponenttext")
+    assert_includes(html, "<article lang=\"sv-SE\"")
     assert_includes(html, "Vald locale")
     assert_includes(html, "sv-SE")
     refute_includes(html, "Render localized component text")

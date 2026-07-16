@@ -10,16 +10,16 @@ module Example
       context&.request
     end
 
-    def t(key, default: nil)
-      translations =
-        if self.class.const_defined?(:Translations, false)
-          self.class.const_get(:Translations)
-        else
-          {}
-        end
+    def self.i18n
+      @i18n ||= I18n.new(self)
+    end
 
-      source = self.class.module_path if self.class.respond_to?(:module_path)
-      I18n.t(translations, key, default: default, source: source)
+    def i18n
+      self.class.i18n
+    end
+
+    def t(key, default: nil)
+      i18n.t(key, default: default)
     end
 
     def initialize(...)

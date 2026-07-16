@@ -3,9 +3,25 @@
 require "http/accept/languages"
 
 module Example
-  module I18n
+  class I18n
     DEFAULT_LOCALE = "en-US"
     @missing_keys = Set.new
+
+    attr_reader :translations
+
+    def initialize(owner = nil, translations = nil)
+      @owner = owner
+      @translations = translations || translations_for(owner)
+      @source = owner.module_path if owner&.respond_to?(:module_path)
+    end
+
+    def t(key, locale: nil, default: nil)
+      self.class.t(@translations, key, locale: locale, default: default, source: @source)
+    end
+
+    def lang
+      self.class.resolve_locale(@translations)
+    end
 
     def self.t(translations, key, locale: nil, default: nil, source: nil)
       locale ||= resolve_locale(translations)
@@ -77,6 +93,16 @@ module Example
       location = source ? " in #{source}" : ""
       fallback_text = fallback ? "; falling back to #{fallback}" : ""
       warn "Missing translation #{key.inspect} for #{locale}#{location}#{fallback_text}"
+    end
+
+    private
+
+    def translations_for(owner)
+      if owner&.const_defined?(:Translations, false)
+        owner.const_get(:Translations)
+      else
+        {}
+      end
     end
   end
 end

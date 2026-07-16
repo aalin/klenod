@@ -3,42 +3,43 @@
   Button = import("/components/Button.haml")
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
+  I18n = Example::I18n.new(self, Translations)
 
   Locales = [
     ["en-US", "English"],
     ["sv-SE", "Svenska"]
   ]
 
-%article
+%article{ lang: I18n.lang }
   %PageHeader{
-    kicker: t("header.kicker"),
-    title: t("header.title"),
-    summary: t("header.summary")
+    kicker: I18n.t("header.kicker"),
+    title: I18n.t("header.title"),
+    summary: I18n.t("header.summary")
   }
 
   %section
-    %Panel{ title: t("current.title") }
+    %Panel{ title: I18n.t("current.title") }
       %dl
         %div
-          %dt= t("current.requested")
-          %dd= request.headers.fetch("accept-language", t("current.none"))
+          %dt= I18n.t("current.requested")
+          %dd= request.headers.fetch("accept-language", I18n.t("current.none"))
         %div
-          %dt= t("current.resolved")
-          %dd= I18n.resolve_locale(Translations)
+          %dt= I18n.t("current.resolved")
+          %dd= I18n.lang
         %div
-          %dt= t("current.cookie")
-          %dd= request.cookies.fetch(Example::LOCALE_COOKIE, t("current.none"))
+          %dt= I18n.t("current.cookie")
+          %dd= request.cookies.fetch(Example::LOCALE_COOKIE, I18n.t("current.none"))
 
-    %Panel{ title: t("usage.title") }
-      %p= t("usage.body")
+    %Panel{ title: I18n.t("usage.title") }
+      %p= I18n.t("usage.body")
       %pre
-        %code= t("usage.code")
+        %code= I18n.t("usage.code")
 
-    %Panel{ title: t("examples.title") }
+    %Panel{ title: I18n.t("examples.title") }
       %Form(method="post" action="/demo/translations/locale")
         = Locales.map do |locale, label|
           %label
-            %input{ type: "radio", name: "locale", value: locale, checked: I18n.resolve_locale(Translations) == locale }
+            %input{ type: "radio", name: "locale", value: locale, checked: I18n.lang == locale }
             %span= label
             %code= locale
-        %Button(type="submit")= t("examples.submit")
+        %Button(type="submit")= I18n.t("examples.submit")
