@@ -166,7 +166,7 @@ module Klenod
               %(url(#{quote}#{asset.output_path}#{quote}))
             end
 
-          css_asset = css_asset(module_id, url, rewritten_css)
+          css_asset = css_asset(module_id, url, rewritten_css, font_assets.keys)
           @assets_by_module_id[module_id] = [css_asset, *font_assets.values]
           ruby_module_source(css_asset.output_path)
         end
@@ -230,7 +230,7 @@ module Klenod
           raise Error, "Could not download Google Fonts asset #{url.inspect}: #{error.message}"
         end
 
-        def css_asset(module_id, url, css)
+        def css_asset(module_id, url, css, font_source_urls)
           hash = Hashing.short(css)
           output_path = "/assets/#{google_fonts_asset_name(url)}.#{hash}.css"
 
@@ -241,7 +241,7 @@ module Klenod
             nil,
             css,
             "text/css",
-            {type: :css, google_fonts: true}
+            {type: :css, google_fonts: true, font_source_urls: font_source_urls}
           )
         end
 

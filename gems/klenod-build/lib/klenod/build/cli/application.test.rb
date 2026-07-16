@@ -16,6 +16,7 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
 
     assert_includes(spec.files, "lib/klenod/build.rb")
     assert_includes(spec.files, "lib/klenod/build/context.rb")
+    assert_includes(spec.files, "lib/klenod/build/graphviz.rb")
     assert_includes(spec.files, "lib/klenod/build/plugins/haml_plugin.rb")
     assert_includes(spec.files, "lib/klenod/build/cli/application.rb")
     assert_includes(spec.files, "lib/klenod/build/watcher.rb")
@@ -131,6 +132,96 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
       assert_equal("ran", File.binread(result_path))
       assert_includes(stdout.string, "Built executable bundle ")
       assert(File.executable?(output), "Expected #{output} to be executable")
+    end
+  end
+
+  def test_graph_command_exports_runtime_bundle_dot
+    Dir.mktmpdir do |dir|
+      output = "#{dir}/klenod.bundle"
+      bundle =
+        Klenod::Runtime::Bundle.new(
+          {"entry" => "entry.rb"},
+          {
+            "entry.rb" => Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              "",
+              {"dep" => Klenod::Runtime::ImportSpec.new("dep.css", nil, false)},
+              nil,
+              0,
+              nil
+            ),
+            "dep.css" => Klenod::Runtime::ModuleSpec.new(
+              "dep.css",
+              "dep.css",
+              "",
+              {},
+              nil,
+              0,
+              nil
+            )
+          },
+          {
+            "/assets/dep.123.css" => Klenod::Runtime::AssetSpec.new(
+              "dep.css",
+              "123",
+              "/assets/dep.123.css",
+              "text/css",
+              {type: :stylesheet}
+            )
+          },
+          source_root: "#{dir}/src"
+        )
+      File.binwrite(output, Klenod::Runtime::BundleFormat.dump(bundle))
+
+      stdout = StringIO.new
+      command = Klenod::Build::CLI::Application.new(["graph", output], output: stdout)
+
+      dot = command.call
+
+      assert_equal(dot, stdout.string)
+      assert_includes(stdout.string, "digraph klenod")
+      assert_includes(stdout.string, "label=\"entry.rb\\nrb entrypoint\"")
+      assert_includes(stdout.string, "label=\"lazy\"")
+      assert_includes(stdout.string, "label=\"/assets/dep.123.css\\ntext/css\"")
+    end
+  end
+
+  def test_graph_command_can_hide_assets
+    Dir.mktmpdir do |dir|
+      output = "#{dir}/klenod.bundle"
+      bundle =
+        Klenod::Runtime::Bundle.new(
+          {"entry" => "entry.rb"},
+          {
+            "entry.rb" => Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              "",
+              {},
+              nil,
+              0,
+              nil
+            )
+          },
+          {
+            "/assets/entry.123.js" => Klenod::Runtime::AssetSpec.new(
+              "entry.rb",
+              "123",
+              "/assets/entry.123.js",
+              "text/javascript",
+              {}
+            )
+          }
+        )
+      File.binwrite(output, Klenod::Runtime::BundleFormat.dump(bundle))
+
+      stdout = StringIO.new
+      command = Klenod::Build::CLI::Application.new(["graph", "--no-assets", output], output: stdout)
+
+      command.call
+
+      refute_includes(stdout.string, "/assets/entry.123.js")
     end
   end
 

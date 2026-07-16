@@ -9,6 +9,7 @@ ensure
 end
 
 require_relative "../context"
+require_relative "../graphviz"
 require_relative "../version"
 
 module Klenod
@@ -62,6 +63,23 @@ module Klenod
         end
       end
 
+      class Graph < Samovar::Command
+        self.description = "Export a Klenod runtime bundle as Graphviz DOT."
+
+        options do
+          option "--no-assets", "Hide generated asset nodes and edges."
+        end
+
+        one :bundle_path, "Path to a Klenod runtime bundle.", required: true
+
+        def call
+          bundle = Klenod::Runtime.load_bundle(@bundle_path)
+          dot = Klenod::Build::Graphviz.call(bundle, include_assets: !@options[:no_assets])
+          output.write(dot)
+          dot
+        end
+      end
+
       class Application < Samovar::Command
         self.description = "Build and develop Klenod applications."
 
@@ -71,7 +89,8 @@ module Klenod
         end
 
         nested :command, {
-          "build" => Build
+          "build" => Build,
+          "graph" => Graph
         }
 
         def call

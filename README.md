@@ -87,6 +87,15 @@ The same build path is available through the CLI. It finds the nearest `klenod.c
 bundle exec klenod build
 ```
 
+You can inspect a built bundle without evaluating application modules by exporting the serialized graph as Graphviz DOT:
+
+```sh
+bundle exec klenod graph dist/klenod.bundle > graph.dot
+dot -Tsvg graph.dot > graph.svg
+```
+
+Graph output colors modules by kind, marks lazy imports with dashed edges, and includes generated asset nodes by default. Use `--no-assets` to hide asset nodes and edges.
+
 The config file is Ruby, so applications can configure plugins directly:
 
 ```ruby

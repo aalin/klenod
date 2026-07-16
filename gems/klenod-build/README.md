@@ -19,3 +19,9 @@ require "klenod/build"
 context = Klenod::Build::Context.new(source_dir: "src")
 context.build(entrypoints: ["pages/server"], output: "dist/klenod.bundle")
 ```
+
+The CLI can also export a built bundle as Graphviz DOT without evaluating bundled modules:
+
+```sh
+bundle exec klenod graph dist/klenod.bundle > graph.dot
+```
