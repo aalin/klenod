@@ -232,6 +232,38 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(headers.fetch("set-cookie"), "#{Example::LOCALE_COOKIE}=sv-SE")
   end
 
+  def test_example_app_clears_locale_cookie_from_form_post
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    existing_cookie = "#{Example::LOCALE_COOKIE}=sv-SE"
+    _status, response_headers, body =
+      entry.call(BodyRequest["GET", "/demo/translations", HeaderList.new([["Cookie", existing_cookie]]), nil], context)
+    session_cookie = response_headers.fetch("set-cookie").split(";", 2).fetch(0)
+    csrf_token = csrf_token_from(body.join)
+    form = URI.encode_www_form("csrf_token" => csrf_token, "locale" => "")
+    status, headers, body =
+      entry.call(
+        BodyRequest[
+          "POST",
+          "/demo/translations/locale",
+          HeaderList.new([
+            ["Content-Type", "application/x-www-form-urlencoded"],
+            ["Cookie", "#{existing_cookie}; #{session_cookie}"],
+            ["Referer", "/demo/translations"]
+          ]),
+          form
+        ],
+        context
+      )
+
+    assert_equal(302, status)
+    assert_equal("/demo/translations", headers.fetch("location"))
+    assert_empty(body)
+    assert_includes(headers.fetch("set-cookie"), "#{Example::LOCALE_COOKIE}=")
+    assert_includes(headers.fetch("set-cookie"), "Max-Age=0")
+  end
+
   def test_example_routes_utility_prints_route_table
     stdout, stderr, status =
       Open3.capture3(

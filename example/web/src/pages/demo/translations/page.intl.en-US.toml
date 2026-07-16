@@ -17,4 +17,5 @@ code = "title: I18n.t(:header, :title)"
 
 [examples]
 title = "Set a language cookie"
+auto = "Use browser language"
 submit = "Save language"

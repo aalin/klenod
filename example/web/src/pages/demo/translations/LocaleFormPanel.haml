@@ -8,11 +8,18 @@
     @locales = locales
   end
 
+  def cookie_locale
+    request.cookies.fetch(Example::LOCALE_COOKIE, "")
+  end
+
 %Panel{ title: @i18n.t(:examples, :title) }
   %Form.form(method="post" action="/demo/translations/locale")
+    %label
+      %input{ type: "radio", name: "locale", value: "", checked: cookie_locale.empty? }
+      %span= @i18n.t(:examples, :auto)
     = @locales.map do |locale, label|
       %label
-        %input{ type: "radio", name: "locale", value: locale, checked: @i18n.lang == locale }
+        %input{ type: "radio", name: "locale", value: locale, checked: cookie_locale == locale }
         %span= label
         %code= locale
     %Button(type="submit")= @i18n.t(:examples, :submit)

@@ -5,6 +5,7 @@ LOCALES = %w[en-US sv-SE].freeze
 def POST(request)
   locale = request.form.fetch("locale", "").to_s
   response = Example::Response.redirect(redirect_location(request))
+  return response.delete_cookie(Example::LOCALE_COOKIE, http_only: false) if locale.empty?
   return response unless LOCALES.include?(locale)
 
   response.with_cookie(Example::LOCALE_COOKIE, locale, http_only: false)

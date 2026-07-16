@@ -17,4 +17,5 @@ code = "title: I18n.t(:header, :title)"
 
 [examples]
 title = "Sätt en språk-cookie"
+auto = "Använd webbläsarens språk"
 submit = "Spara språk"
