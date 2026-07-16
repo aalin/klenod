@@ -189,6 +189,35 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert(payload.start_with?(Klenod::Runtime::BundleFormat::MAGIC))
   end
 
+  def test_runtime_bundle_format_does_not_duplicate_transformed_source_in_source_maps
+    source = "# SourceMapMark:1:VkFMVUUgPSAx\nVALUE = 1\n"
+    source_map = Klenod::Runtime::SourceMap::SourceMap.parse("VALUE = 1\n", source)
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"entry" => "entry.rb"},
+        {
+          "entry.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              source,
+              {},
+              source_map,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("entry.rb")
+            )
+        },
+        {}
+      )
+
+    payload = Klenod::Runtime::BundleFormat.dump(bundle)
+    parsed = JSON.parse(payload.delete_prefix(Klenod::Runtime::BundleFormat::MAGIC))
+    loaded = Klenod::Runtime.load_bundle(StringIO.new(payload))
+
+    refute_includes(parsed.fetch("modules").fetch("entry.rb").fetch("source_map"), "output")
+    assert_equal(source, loaded.load("entry").source_map.output)
+  end
+
   def test_runtime_load_bundle_rejects_invalid_format
     error = assert_raises(Klenod::Runtime::BundleFormatError) do
       Klenod::Runtime.load_bundle(StringIO.new("not a klenod bundle"))

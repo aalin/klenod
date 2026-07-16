@@ -103,7 +103,7 @@ module Klenod
               spec_payload.fetch("source_path"),
               spec_payload.fetch("source"),
               decode_imports(spec_payload.fetch("imports")),
-              decode_source_map(spec_payload["source_map"]),
+              decode_source_map(spec_payload["source_map"], spec_payload.fetch("source")),
               spec_payload.fetch("version"),
               spec_payload.fetch("constant_name")
             )
@@ -184,7 +184,6 @@ module Klenod
 
         {
           "input" => source_map.input,
-          "output" => source_map.output,
           "marks_by_output_line" =>
             source_map.marks_by_output_line.to_h do |line, mark|
               [line.to_s, {"line" => mark.line, "source" => mark.source}]
@@ -192,7 +191,7 @@ module Klenod
         }
       end
 
-      def decode_source_map(payload)
+      def decode_source_map(payload, output)
         return nil unless payload
 
         payload = expect_hash!(payload, "source map")
@@ -201,7 +200,7 @@ module Klenod
             mark_payload = expect_hash!(mark_payload, "source map mark")
             [line.to_i, SourceMap::Mark.new(mark_payload.fetch("line"), mark_payload.fetch("source"))]
           end
-        SourceMap::SourceMap.new(payload.fetch("input"), payload.fetch("output"), marks.freeze)
+        SourceMap::SourceMap.new(payload.fetch("input"), output, marks.freeze)
       end
 
       def encode_value(value)
