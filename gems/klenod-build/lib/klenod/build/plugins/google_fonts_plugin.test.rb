@@ -34,7 +34,8 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       google_css_asset = context.assets.values.find { |asset| asset.metadata[:google_fonts] && asset.metadata[:type] == :css }
       font_asset = context.assets.values.find { |asset| asset.metadata[:google_fonts] && asset.metadata[:type] == :font }
 
-      assert_includes(home_css, google_css_asset.output_path)
+      refute_includes(home_css, google_css_asset.output_path)
+      refute_includes(home_css, "@import")
       assert_includes(google_css_asset.bytes, font_asset.output_path)
       refute_includes(google_css_asset.bytes, "fonts.gstatic.com")
       assert_match(%r{\A/assets/google_fonts_source_sans_3\.[a-f0-9]{16}\.css\z}, google_css_asset.output_path)

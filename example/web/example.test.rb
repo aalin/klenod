@@ -63,6 +63,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "/assets/pages_page_css")
     paths = stylesheet_paths(html)
     assert_stylesheet_indexes_present(html)
+    assert_stylesheet_paths_unique(paths)
+    assert_linked_stylesheets_do_not_import_linked_stylesheets(context, paths)
     assert_stylesheet_order(paths, "pages_root_css", "pages_layout_css", "pages_page_css", "components_Button_css")
     refute(paths.any? { |path| path.include?("pages_demo_dashboard") })
     refute(paths.any? { |path| path.include?("pages_demo_assets") })
@@ -78,6 +80,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(200, status)
     assert_stylesheet_indexes_present(html)
+    assert_stylesheet_paths_unique(paths)
     assert(paths.any? { |path| path.include?("pages_demo_dashboard_page_css") })
     assert(paths.any? { |path| path.include?("components_MetricCard_css") })
     refute(paths.any? { |path| path.include?("pages_page_css") })
@@ -934,6 +937,19 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(paths.length, indexes.length)
     assert_equal(indexes.sort, indexes)
+  end
+
+  def assert_stylesheet_paths_unique(paths)
+    assert_equal(paths.uniq, paths)
+  end
+
+  def assert_linked_stylesheets_do_not_import_linked_stylesheets(context, paths)
+    paths.each do |path|
+      css = context.asset(path).bytes
+      imported_linked_paths = paths.reject { |linked_path| linked_path == path }.select { |linked_path| css.include?(linked_path) }
+
+      assert_equal([], imported_linked_paths, "Expected #{path} not to import linked stylesheets")
+    end
   end
 
   def assert_stylesheet_order(paths, *names)

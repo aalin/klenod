@@ -55,7 +55,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
-  def test_css_dependencies_replace_import_and_url_placeholders
+  def test_css_dependencies_remove_local_imports_and_replace_url_placeholders
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
       FileUtils.mkdir_p("#{dir}/images")
@@ -73,7 +73,8 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       record = context.evaluate("styles/home.css")
       css = record.assets.first.bytes
 
-      assert_includes(css, "/assets/styles_base_css")
+      refute_includes(css, "@import")
+      refute_includes(css, "/assets/styles_base_css")
       assert_includes(css, "/assets/logo.")
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/home.css", nil)))
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/base.css", nil)))
@@ -114,7 +115,8 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       home_asset = context.assets_for("styles/home.css").fetch(0)
       base_asset = context.assets_for("styles/base.css").fetch(0)
 
-      assert_includes(home_asset.bytes, %(@import "#{base_asset.output_path}";))
+      refute_includes(home_asset.bytes, "@import")
+      refute_includes(home_asset.bytes, base_asset.output_path)
       assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, home_asset.output_path)
       assert_match(%r{\A/assets/styles_base_css\.[a-f0-9]{16}\.css\z}, base_asset.output_path)
       assert_equal(2, bundle.assets.length)
@@ -179,13 +181,13 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       assert_equal(["styles/base.css"], result.reloaded_module_ids.map(&:to_s))
       assert_equal(["styles/home.css", "entry.rb"], result.reevaluated_module_ids.map(&:to_s))
       refute_equal(old_base_asset.output_path, new_base_asset.output_path)
-      refute_equal(old_home_asset.output_path, new_home_asset.output_path)
-      assert_includes(new_home_asset.bytes, new_base_asset.output_path)
+      assert_equal(old_home_asset.output_path, new_home_asset.output_path)
+      refute_includes(new_home_asset.bytes, new_base_asset.output_path)
       assert_match(/title/, title)
       assert_includes(result.added_assets, new_base_asset.output_path)
-      assert_includes(result.added_assets, new_home_asset.output_path)
+      refute_includes(result.added_assets, new_home_asset.output_path)
       assert_includes(result.removed_assets, old_base_asset.output_path)
-      assert_includes(result.removed_assets, old_home_asset.output_path)
+      refute_includes(result.removed_assets, old_home_asset.output_path)
     end
   end
 

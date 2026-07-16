@@ -49,6 +49,7 @@ module Klenod
             dependency_records,
             result.metadata.fetch(:external_dependencies)
           )
+          css = remove_empty_imports(css)
           hash = Hashing.short(css)
           output_path = "/assets/#{asset_name(module_id)}.#{hash}.css"
           asset =
@@ -127,18 +128,18 @@ module Klenod
 
             resolved_dependency = dependencies_by_placeholder.fetch(css_dependency.placeholder)
             record = dependency_records.fetch(resolved_dependency.dependency.id)
-            asset_path_for_dependency(resolved_dependency, record)
+            replacement_for_dependency(resolved_dependency, record)
           end
         end
 
-        def asset_path_for_dependency(resolved_dependency, record)
+        def replacement_for_dependency(resolved_dependency, record)
           case resolved_dependency.dependency.kind
           when :css_import
             css_asset = record.assets.find { |asset| asset.metadata[:type] == :css }
             unless css_asset
               raise UnsupportedFileError, "CSS @import #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to module #{record.id}, which does not emit a CSS asset"
             end
-            return css_asset.output_path
+            return ""
           when :asset_url
             unless record.assets.first
               raise UnsupportedFileError, "CSS url() #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to module #{record.id}, which does not emit an asset"
@@ -146,6 +147,10 @@ module Klenod
           end
 
           record.assets.first&.output_path || record.id.to_s
+        end
+
+        def remove_empty_imports(css)
+          css.gsub(/^[ \t]*@import\s+(?:url\(\s*)?["']{2}\s*\)?\s*;\s*\n?/i, "")
         end
 
         def external_url?(value)
