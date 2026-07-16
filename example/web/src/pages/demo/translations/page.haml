@@ -1,6 +1,5 @@
 :ruby
-  Form = Example::Form
-  Button = import("/components/Button.haml")
+  LocaleFormPanel = import("./LocaleFormPanel.haml")
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
   I18n = Example::I18n.new(self, Translations)
@@ -35,11 +34,4 @@
       %pre
         %code= I18n.t(:usage, :code)
 
-    %Panel{ title: I18n.t(:examples, :title) }
-      %Form(method="post" action="/demo/translations/locale")
-        = Locales.map do |locale, label|
-          %label
-            %input{ type: "radio", name: "locale", value: locale, checked: I18n.lang == locale }
-            %span= label
-            %code= locale
-        %Button(type="submit")= I18n.t(:examples, :submit)
+    %LocaleFormPanel{ i18n: I18n, locales: Locales }
