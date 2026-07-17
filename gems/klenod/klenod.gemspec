@@ -17,7 +17,7 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= #{ruby_version}"
 
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "https://github.com/aalin/klenod"
+  spec.metadata["source_code_uri"] = "https://github.com/aalin/klenod/tree/main/gems/klenod"
 
   spec.files = Dir.chdir(root) { ["README.md", *Dir["lib/**/*.rb"].reject { |path| path.end_with?(".test.rb") }, "exe/klenod"] }
   spec.bindir = "exe"

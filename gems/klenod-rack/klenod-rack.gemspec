@@ -17,7 +17,7 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= #{ruby_version}"
 
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "https://github.com/aalin/klenod"
+  spec.metadata["source_code_uri"] = "https://github.com/aalin/klenod/tree/main/gems/klenod-rack"
 
   spec.files =
     Dir.chdir(root) do
