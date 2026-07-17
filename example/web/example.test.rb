@@ -17,6 +17,21 @@ class Klenod::ExampleTest < Minitest::Test
   HeaderRequest = Data.define(:method, :path, :headers)
   BodyRequest = Data.define(:method, :path, :headers, :body)
 
+  class EarlyHintsRequest
+    attr_reader :method, :path, :headers, :interim_responses
+
+    def initialize(method, path, headers = HeaderList.new([]))
+      @method = method
+      @path = path
+      @headers = headers
+      @interim_responses = []
+    end
+
+    def send_interim_response(status, headers)
+      @interim_responses << [status, headers]
+    end
+  end
+
   class HeaderList
     def initialize(headers)
       @headers = headers
@@ -94,6 +109,40 @@ class Klenod::ExampleTest < Minitest::Test
       "pages_demo_dashboard_page_css",
       "components_MetricCard_css"
     )
+  end
+
+  def test_example_app_sends_early_hints_for_route_stylesheets
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    request = EarlyHintsRequest.new("GET", "/demo/dashboard")
+
+    status, headers, body = entry.call(request, context)
+    paths = stylesheet_paths(body.join)
+    _early_status, early_headers = request.interim_responses.fetch(0)
+    link = early_headers.fetch(0).fetch(1)
+
+    assert_equal(200, status)
+    refute_includes(headers.keys, "link")
+    assert_equal([[103, [["link", link]]]], request.interim_responses)
+    paths.each do |path|
+      assert_includes(link, "<#{path}>; rel=preload; as=style")
+    end
+  end
+
+  def test_example_app_includes_preload_link_header_without_early_hints_support
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    status, headers, body = entry.call(request("/demo/dashboard"), context)
+    paths = stylesheet_paths(body.join)
+    link = headers.fetch("link")
+
+    assert_equal(200, status)
+    paths.each do |path|
+      assert_includes(link, "<#{path}>; rel=preload; as=style")
+    end
   end
 
   def test_example_app_renders_nested_route_through_layout

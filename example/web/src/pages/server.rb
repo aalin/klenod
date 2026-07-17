@@ -10,7 +10,7 @@ def self.call(raw_request, context)
     return [404, {"content-type" => "text/plain"}, ["Not found\n"]] unless not_found_match
 
     request = Example::Request.from(raw_request, params: not_found_match.params)
-    return render_page_response(not_found_match, request, context, status: 404, props: {path: path, status: 404})
+    return render_page_response(not_found_match, request, context, raw_request: raw_request, status: 404, props: {path: path, status: 404})
   end
 
   request = Example::Request.from(raw_request, params: match.params)
@@ -18,13 +18,13 @@ def self.call(raw_request, context)
   return Example::Response.text("Method not allowed\n", status: 405).to_a unless page_request?(match, request)
 
   begin
-    render_page_response(match, request, context)
+    render_page_response(match, request, context, raw_request: raw_request)
   rescue Example::NotFoundError
     not_found_match = Router::Default.not_found(path)
     raise unless not_found_match
 
     not_found_request = Example::Request.from(raw_request, params: not_found_match.params)
-    render_page_response(not_found_match, not_found_request, context, status: 404, props: {path: path, status: 404})
+    render_page_response(not_found_match, not_found_request, context, raw_request: raw_request, status: 404, props: {path: path, status: 404})
   rescue => error
     error_match = Router::Default.error(path)
     raise unless error_match
@@ -32,19 +32,23 @@ def self.call(raw_request, context)
     formatted_error = format_render_error(error, context)
     warn formatted_error
     error_request = Example::Request.from(raw_request, params: error_match.params)
-    render_page_response(error_match, error_request, context, status: 500, props: {path: path, status: 500, error: error, error_details: strip_ansi(formatted_error)})
+    render_page_response(error_match, error_request, context, raw_request: raw_request, status: 500, props: {path: path, status: 500, error: error, error_details: strip_ansi(formatted_error)})
   end
 end
 
-def self.render_page_response(match, request, context, status: 200, props: {})
+def self.render_page_response(match, request, context, raw_request: nil, status: 200, props: {})
+  page = match.page
+  layouts = match.layouts
+  prepare_slot_pages(match, layouts)
+  css_asset_references = context.asset_references_for_module(css_module_ids_for(match), type: :css)
+  early_hints_sent = send_early_hints(raw_request, css_asset_references)
+
   body =
     Example::Context.with(request: request) do
-      page = match.page
       body =
         page_instance(page, props)
           .render
-      match
-        .layouts
+      layouts
         .reverse_each
         .reduce(body) do |inner, layout|
         layout
@@ -52,7 +56,6 @@ def self.render_page_response(match, request, context, status: 200, props: {})
           .render
       end
     end
-  css_asset_references = context.asset_references_for_module(css_module_ids_for(match), type: :css)
 
   response = commit_session(
     Example::Response.html(
@@ -67,7 +70,7 @@ def self.render_page_response(match, request, context, status: 200, props: {})
         </html>
       HTML
       status: status,
-      headers: {"vary" => "Accept-Language, Cookie"}
+      headers: html_response_headers(css_asset_references, include_link: !early_hints_sent)
     ),
     request
   )
@@ -110,6 +113,31 @@ def self.stylesheet_links(asset_references)
   asset_references
     .map { |reference| %(<link rel="stylesheet" href="#{reference.asset.output_path}" data-index="#{reference.index}">) }
     .join("\n")
+end
+
+def self.html_response_headers(css_asset_references, include_link: true)
+  headers = {"vary" => "Accept-Language, Cookie"}
+  link = stylesheet_preload_link_header(css_asset_references)
+  headers["link"] = link if include_link && !link.empty?
+  headers
+end
+
+def self.send_early_hints(raw_request, css_asset_references)
+  return unless raw_request&.respond_to?(:send_interim_response)
+
+  link = stylesheet_preload_link_header(css_asset_references)
+  return false if link.empty?
+
+  raw_request.send_interim_response(103, [["link", link]])
+  true
+rescue
+  false
+end
+
+def self.stylesheet_preload_link_header(asset_references)
+  asset_references
+    .map { |reference| %(<#{reference.asset.output_path}>; rel=preload; as=style) }
+    .join(", ")
 end
 
 def self.request_path(raw_request)
@@ -221,6 +249,14 @@ def self.render_slots(match, layout, request)
         end
       ]
     ]
+  end
+end
+
+def self.prepare_slot_pages(match, layouts)
+  layouts.each do |layout|
+    match.slots.each_value do |slot_match|
+      slot_match.page if slot_for_layout?(slot_match, layout)
+    end
   end
 end
 
