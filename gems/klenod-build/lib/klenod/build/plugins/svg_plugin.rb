@@ -87,7 +87,7 @@ module Klenod
 
         def svg_runtime_source
           <<~RUBY
-            Svg = Data.define(:src, :width, :height)
+            Svg = Data.define(:src, :width, :height, :content_type)
           RUBY
         end
 
@@ -98,7 +98,8 @@ module Klenod
               SvgRuntime::Svg.new(
                 src: #{asset.output_path.inspect},
                 width: #{asset.metadata[:width].inspect},
-                height: #{asset.metadata[:height].inspect}
+                height: #{asset.metadata[:height].inspect},
+                content_type: #{asset.content_type.inspect}
               )
 
           RUBY

@@ -21,6 +21,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
           IMAGE_SRC = Logo.src
           IMAGE_WIDTH = Logo.width
           IMAGE_HEIGHT = Logo.height
+          IMAGE_CONTENT_TYPE = Logo.content_type
         RUBY
       )
 
@@ -32,6 +33,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.png\z}, exports::IMAGE_SRC)
       assert_equal(2, exports::IMAGE_WIDTH)
       assert_equal(3, exports::IMAGE_HEIGHT)
+      assert_equal("image/png", exports::IMAGE_CONTENT_TYPE)
       assert_equal(2, asset.metadata[:width])
       assert_equal(3, asset.metadata[:height])
       assert_equal(:png, asset.metadata[:format])
@@ -97,6 +99,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert(loaded.modules.key?("virtual:klenod/image.rb"))
       assert_equal(4, image.width)
       assert_equal(5, image.height)
+      assert_equal("image/png", image.content_type)
       assert_equal(4, asset.metadata[:width])
       assert_equal(5, asset.metadata[:height])
       assert_equal(bundle.assets.keys, loaded.assets.keys)
@@ -133,6 +136,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_match(%r{\A/assets/hero\.2w\.[a-f0-9]{16}\.png\z}, variant.src)
       assert_equal(2, variant.width)
       assert_equal(1, variant.height)
+      assert_equal("image/png", variant.content_type)
       assert_equal(:png, variant.format)
       assert_equal("2w", variant.descriptor)
       assert_equal("#{variant.src} 2w", srcset)
@@ -245,6 +249,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal(1, variants.length)
       assert_equal(3, variants.first.width)
       assert_equal(2, variants.first.height)
+      assert_equal("image/png", variants.first.content_type)
       assert(variant_asset.ready?)
     end
   end

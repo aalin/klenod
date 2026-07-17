@@ -129,7 +129,7 @@ module Klenod
         def image_runtime_source
           <<~RUBY
             Image =
-              Data.define(:src, :width, :height, :variants) do
+              Data.define(:src, :width, :height, :content_type, :variants) do
                 def srcset
                   return nil if variants.empty?
 
@@ -144,7 +144,7 @@ module Klenod
                 end
               end
 
-            ImageVariant = Data.define(:src, :width, :height, :format, :descriptor, :metadata)
+            ImageVariant = Data.define(:src, :width, :height, :content_type, :format, :descriptor, :metadata)
           RUBY
         end
 
@@ -163,6 +163,7 @@ module Klenod
                 src: #{asset.output_path.inspect},
                 width: #{asset.metadata[:width].inspect},
                 height: #{asset.metadata[:height].inspect},
+                content_type: #{asset.content_type.inspect},
                 variants: [
                   #{variants.join(",\n    ")}
                 ]
@@ -177,6 +178,7 @@ module Klenod
               src: #{asset.output_path.inspect},
               width: #{asset.metadata[:width].inspect},
               height: #{asset.metadata[:height].inspect},
+              content_type: #{asset.content_type.inspect},
               format: #{asset.metadata[:format].inspect},
               descriptor: #{asset.metadata[:descriptor].inspect},
               metadata: #{asset.metadata.inspect}
