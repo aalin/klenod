@@ -19,6 +19,12 @@ TEST_LIBS = [
   "gems/klenod-build/lib",
   "gems/klenod-rack/lib"
 ].freeze
+GEMS = {
+  "klenod-runtime" => "gems/klenod-runtime",
+  "klenod-build" => "gems/klenod-build",
+  "klenod-rack" => "gems/klenod-rack",
+  "klenod" => "gems/klenod"
+}.freeze
 
 def minitest_task(name, description, globs)
   Minitest::TestTask.create(name) do |test|
@@ -43,6 +49,10 @@ end
 
 def root_version
   File.read(KLENOD_VERSION).strip
+end
+
+def gem_command
+  [RbConfig.ruby, "-S", "gem"]
 end
 
 def version_file_source(namespace, version)
@@ -120,6 +130,18 @@ namespace :version do
 end
 
 require "standard/rake"
+
+desc "Build all gem packages into pkg/"
+task build: "version:check" do
+  version = root_version
+  FileUtils.mkdir_p("pkg")
+
+  GEMS.each do |name, dir|
+    Dir.chdir(dir) do
+      sh(*gem_command, "build", "#{name}.gemspec", "--output", "../../pkg/#{name}-#{version}.gem")
+    end
+  end
+end
 
 desc "Run all gem and example tests"
 task test: ["version:check", "test:gems", "test:examples"]
