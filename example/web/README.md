@@ -24,6 +24,13 @@ cd example/web
 bundle exec klenod build
 ```
 
+Export the built bundle graph as Graphviz DOT and render it as SVG:
+
+```sh
+bundle exec klenod graph dist/klenod.bundle > graph.dot
+dot -Tsvg graph.dot > graph.svg
+```
+
 To profile a build with Vernier:
 
 ```sh
