@@ -55,6 +55,8 @@ module Klenod
         style = module_style(id)
         attributes = {
           label: module_label(spec),
+          id: svg_node_id(id),
+          class: module_classes(id),
           fillcolor: style.fetch(:fillcolor),
           color: style.fetch(:color),
           penwidth: entrypoint?(id) ? "2.2" : "1.2"
@@ -76,6 +78,8 @@ module Klenod
             next unless @bundle.modules.key?(import.target_id)
 
             attributes = {
+              id: svg_edge_id(id, import.target_id),
+              class: edge_classes(import),
               color: import.eager ? "#475467" : "#7a5af8",
               style: import.eager ? "solid" : "dashed"
             }
@@ -92,6 +96,8 @@ module Klenod
           next unless owner
 
           attributes = {
+            id: svg_edge_id(owner_node_name(owner), asset.output_path),
+            class: "edge edge-asset",
             color: "#e26d39",
             style: "dotted",
             label: "asset"
@@ -145,6 +151,15 @@ module Klenod
         end
       end
 
+      def owner_node_name(owner)
+        type, value = owner
+        case type
+        when :module then value
+        when :asset then value.output_path
+        else raise ArgumentError, "unknown graph owner: #{owner.inspect}"
+        end
+      end
+
       def import_spec(import)
         case import
         when Runtime::ImportSpec
@@ -163,6 +178,8 @@ module Klenod
       def asset_attributes(asset)
         ASSET_STYLE.merge(
           label: "#{display_path(asset.output_path)}\n#{asset.content_type || "asset"}",
+          id: svg_node_id(asset.output_path),
+          class: asset_classes(asset),
           shape: "note"
         )
       end
@@ -178,6 +195,27 @@ module Klenod
 
         ext = File.extname(id)
         ext.empty? ? "module" : ext.delete_prefix(".")
+      end
+
+      def module_classes(id)
+        [
+          "node",
+          "node-module",
+          "module-#{css_identifier(module_type(id))}",
+          ("entrypoint" if entrypoint?(id))
+        ].compact.join(" ")
+      end
+
+      def asset_classes(asset)
+        [
+          "node",
+          "node-asset",
+          "asset-#{css_identifier(asset.metadata[:type] || "asset")}"
+        ].join(" ")
+      end
+
+      def edge_classes(import)
+        ["edge", import.eager ? "edge-import" : "edge-import edge-lazy"].join(" ")
       end
 
       def entrypoint?(id)
@@ -210,6 +248,18 @@ module Klenod
 
       def asset_node_id(asset)
         "asset_#{dot_identifier(asset.output_path)}"
+      end
+
+      def svg_node_id(id)
+        "node-#{dot_identifier(id)}"
+      end
+
+      def svg_edge_id(from, to)
+        "edge-#{dot_identifier(from)}-#{dot_identifier(to)}"
+      end
+
+      def css_identifier(value)
+        value.to_s.gsub(/[^A-Za-z0-9_-]+/, "-").gsub(/\A-+|-+\z/, "")
       end
 
       def dot_identifier(value)

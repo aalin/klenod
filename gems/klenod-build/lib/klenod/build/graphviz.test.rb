@@ -13,15 +13,27 @@ class Klenod::Build::Graphviz::Test < Minitest::Test
 
     assert_includes(dot, "digraph klenod")
     assert_includes(dot, "label=\"entry.rb\\nrb entrypoint\"")
+    assert_includes(dot, "id=\"#{svg_node_id("entry.rb")}\"")
+    assert_includes(dot, "class=\"node node-module module-rb entrypoint\"")
     assert_includes(dot, "label=\"components/Card.haml\\nhaml\"")
+    assert_includes(dot, "class=\"node node-module module-haml\"")
     assert_includes(dot, "label=\"virtual:router\\nvirtual\"")
+    assert_includes(dot, "class=\"node node-module module-virtual\"")
     assert_includes(dot, "fillcolor=\"#d7ecff\"")
     assert_includes(dot, "fillcolor=\"#f4dcff\"")
     assert_includes(dot, "fillcolor=\"#eceff4\"")
+    assert_includes(dot, "id=\"#{svg_edge_id("entry.rb", "components/Card.haml")}\"")
+    assert_includes(dot, "class=\"edge edge-import\"")
     assert_includes(dot, "style=\"solid\"")
+    assert_includes(dot, "id=\"#{svg_edge_id("entry.rb", "virtual:router")}\"")
+    assert_includes(dot, "class=\"edge edge-import edge-lazy\"")
     assert_includes(dot, "style=\"dashed\"")
     assert_includes(dot, "label=\"lazy\"")
     assert_includes(dot, "label=\"/assets/styles_app_css.abc123.css\\ntext/css\"")
+    assert_includes(dot, "id=\"#{svg_node_id("/assets/styles_app_css.abc123.css")}\"")
+    assert_includes(dot, "class=\"node node-asset asset-stylesheet\"")
+    assert_includes(dot, "id=\"#{svg_edge_id("styles/app.css", "/assets/styles_app_css.abc123.css")}\"")
+    assert_includes(dot, "class=\"edge edge-asset\"")
     assert_includes(dot, "style=\"dotted\"")
     assert_includes(dot, "label=\"asset\"")
   end
@@ -131,6 +143,14 @@ class Klenod::Build::Graphviz::Test < Minitest::Test
 
   def asset_node_id(asset)
     "asset_#{dot_identifier(asset.output_path)}"
+  end
+
+  def svg_node_id(id)
+    "node-#{dot_identifier(id)}"
+  end
+
+  def svg_edge_id(from, to)
+    "edge-#{dot_identifier(from)}-#{dot_identifier(to)}"
   end
 
   def dot_identifier(value)
