@@ -125,9 +125,9 @@ Behavior:
 - Uses path-backed loading so original image bytes are not stored in graph records.
 - Computes source hashes with a streaming file digest.
 - Reads dimensions from the source path with `image_size`.
-- Emits the original image as a source-path asset.
+- Emits the original image as a source-path asset unless import query options require a generated default asset.
 - Emits resized variants as generated CPU assets using RMagick.
-- Exports an image metadata object with `src`, `width`, `height`, `variants`, `srcset`, and `sizes`.
+- Exports an image metadata object with `src`, `width`, `height`, `content_type`, `variants`, `srcset`, and `sizes`.
 
 Configuration:
 
@@ -144,10 +144,12 @@ Klenod::Build::Plugins::ImagePlugin.new(
 Import query options:
 
 ```ruby
-import("hero.jpg?width=320,640&format=webp,jpeg")
+import("hero.jpg?width=320,640&format=webp,jpeg&quality=82")
 ```
 
-Overlapping variants from separate imports are deduplicated by source path, source hash, width, and format.
+`format` applies to variants and, when explicitly provided, to the default `src` asset. `quality` applies to generated default and variant assets for image formats that support it.
+
+Overlapping variants from separate imports are deduplicated by source path, source hash, width, format, and quality.
 
 ## DataPlugin And Data Formats
 

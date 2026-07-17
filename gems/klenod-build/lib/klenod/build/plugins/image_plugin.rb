@@ -19,8 +19,8 @@ module Klenod
         IMAGE_RUNTIME_SPECIFIER = "virtual:klenod/image"
         IMAGE_RUNTIME_MODULE_ID = ModuleId.new("#{IMAGE_RUNTIME_SPECIFIER}.rb", nil)
 
-        ImageDefaultKey = Data.define(:source_path, :source_hash, :format)
-        ImageVariantKey = Data.define(:source_path, :source_hash, :width, :format)
+        ImageDefaultKey = Data.define(:source_path, :source_hash, :format, :quality)
+        ImageVariantKey = Data.define(:source_path, :source_hash, :width, :format, :quality)
 
         def initialize(widths: [], formats: nil)
           @widths = widths
@@ -95,11 +95,23 @@ module Klenod
         end
 
         def default_image_asset(module_id, source_path, source_hash, dimensions, image_options, queue)
-          return static_image_asset(module_id, source_path, source_hash, dimensions) unless image_options.explicit_formats && image_options.formats.any?
+          return static_image_asset(module_id, source_path, source_hash, dimensions) unless generated_default_image?(image_options)
 
-          format = image_options.formats.fetch(0)
-          key = ImageDefaultKey.new(module_id.path, source_hash, format)
-          @default_asset_cache[key] ||= generated_default_image_asset(module_id, source_path, source_hash, dimensions, format, queue)
+          format = default_image_format(module_id, image_options)
+          key = ImageDefaultKey.new(module_id.path, source_hash, format, image_options.quality)
+          @default_asset_cache[key] ||= generated_default_image_asset(module_id, source_path, source_hash, dimensions, format, image_options.quality, queue)
+        end
+
+        def generated_default_image?(image_options)
+          return true if image_options.explicit_formats && image_options.formats.any?
+
+          !image_options.quality.nil?
+        end
+
+        def default_image_format(module_id, image_options)
+          return image_options.formats.fetch(0) if image_options.explicit_formats && image_options.formats.any?
+
+          module_id.extname.delete_prefix(".")
         end
 
         def static_image_asset(module_id, source_path, source_hash, dimensions)
@@ -120,16 +132,17 @@ module Klenod
           )
         end
 
-        def generated_default_image_asset(module_id, source_path, source_hash, dimensions, format, queue)
+        def generated_default_image_asset(module_id, source_path, source_hash, dimensions, format, quality, queue)
           format = format.downcase
           extname = ".#{format}"
-          hash = Hashing.short("#{source_hash}:default:#{format}")
+          hash = Hashing.short("#{source_hash}:default:#{format}:#{quality}")
           metadata = {
             type: :image,
             width: dimensions.width,
             height: dimensions.height,
             format: format.to_sym
           }
+          metadata[:quality] = quality if quality
 
           Asset.generated(
             module_id.path,
@@ -138,11 +151,11 @@ module Klenod
             source_path,
             content_type(extname),
             metadata,
-            writer: ->(io) { write_image_bytes(source_path, format, io) },
+            writer: ->(io) { write_image_bytes(source_path, format, quality, io) },
             queue: queue,
             queue_kind: :cpu
           ) do
-            generate_image_bytes(source_path, format)
+            generate_image_bytes(source_path, format, quality:)
           end
         end
 
@@ -155,13 +168,13 @@ module Klenod
             image_options.widths.filter_map do |width|
               next if width <= 0
 
-              key = ImageVariantKey.new(module_id.path, source_hash, width, format.downcase)
-              @variant_cache[key] ||= variant_asset(module_id, source_path, dimensions, source_hash, width, format, queue)
+              key = ImageVariantKey.new(module_id.path, source_hash, width, format.downcase, image_options.quality)
+              @variant_cache[key] ||= variant_asset(module_id, source_path, dimensions, source_hash, width, format, image_options.quality, queue)
             end
           end
         end
 
-        ImageOptions = Data.define(:widths, :formats, :explicit_formats)
+        ImageOptions = Data.define(:widths, :formats, :explicit_formats, :quality)
 
         def image_runtime_source
           <<~RUBY
@@ -239,14 +252,23 @@ module Klenod
               @formats || [module_id.extname.delete_prefix(".")]
             end
 
-          ImageOptions.new(widths.uniq, formats.map(&:downcase).uniq, explicit_formats)
+          ImageOptions.new(widths.uniq, formats.map(&:downcase).uniq, explicit_formats, image_quality(query["quality"]))
         end
 
-        def variant_asset(module_id, source_path, dimensions, source_hash, width, format, queue)
+        def image_quality(value)
+          return nil if value.nil?
+
+          quality = Integer(value, exception: false)
+          return nil unless quality&.between?(1, 100)
+
+          quality
+        end
+
+        def variant_asset(module_id, source_path, dimensions, source_hash, width, format, quality, queue)
           format = format.downcase
           extname = ".#{format}"
           descriptor = "#{width}w"
-          hash = Hashing.short("#{source_hash}:#{width}:#{format}")
+          hash = Hashing.short("#{source_hash}:#{width}:#{format}:#{quality}")
           output_path = "/assets/#{asset_name(module_id)}.#{width}w.#{hash}#{extname}"
           metadata = {
             type: :image_variant,
@@ -256,6 +278,7 @@ module Klenod
             descriptor: descriptor,
             source_width: width
           }
+          metadata[:quality] = quality if quality
 
           Asset.generated(
             module_id.path,
@@ -264,29 +287,32 @@ module Klenod
             source_path,
             content_type(extname),
             metadata,
-            writer: ->(io) { write_variant_bytes(source_path, width, format, io) },
+            writer: ->(io) { write_variant_bytes(source_path, width, format, quality, io) },
             queue: queue,
             queue_kind: :cpu
           ) do
-            generate_image_bytes(source_path, format, width: width)
+            generate_image_bytes(source_path, format, width: width, quality:)
           end
         end
 
-        def generate_image_bytes(source_path, format, width: nil)
+        def generate_image_bytes(source_path, format, width: nil, quality: nil)
           image = Magick::Image.read(source_path.to_s).first
           output_image = width ? image.resize_to_fit(width) : image
-          output_image.to_blob { |info| info.format = format.upcase }
+          output_image.to_blob do |info|
+            info.format = format.upcase
+            info.quality = quality if quality
+          end
         ensure
           output_image&.destroy! if output_image && output_image != image
           image&.destroy!
         end
 
-        def write_variant_bytes(source_path, width, format, io)
-          io.write(generate_image_bytes(source_path, format, width: width))
+        def write_variant_bytes(source_path, width, format, quality, io)
+          io.write(generate_image_bytes(source_path, format, width: width, quality:))
         end
 
-        def write_image_bytes(source_path, format, io)
-          io.write(generate_image_bytes(source_path, format))
+        def write_image_bytes(source_path, format, quality, io)
+          io.write(generate_image_bytes(source_path, format, quality:))
         end
 
         def scaled_height(dimensions, width)

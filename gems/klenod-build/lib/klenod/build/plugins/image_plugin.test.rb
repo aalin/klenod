@@ -226,6 +226,70 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     end
   end
 
+  def test_ruby_import_query_quality_generates_default_image_src
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/hero.png", real_png_bytes(width: 4, height: 2))
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Hero = import("images/hero.png?width=2&quality=75")
+          IMAGE = Hero
+        RUBY
+      )
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::ImagePlugin.new
+          ]
+        )
+
+      record = context.evaluate("entry")
+      image = context.graph.mods.fetch(record.id).const_get(:Exports)::IMAGE
+      assets = context.assets_for("images/hero.png")
+      default_asset = assets.find { |asset| asset.metadata[:type] == :image }
+      variant_asset = assets.find { |asset| asset.metadata[:type] == :image_variant }
+
+      assert_equal(2, assets.length)
+      assert_match(%r{\A/assets/hero\.[a-f0-9]{16}\.png\z}, image.src)
+      assert_equal("image/png", image.content_type)
+      assert_equal(image.src, default_asset.output_path)
+      assert_equal(75, default_asset.metadata[:quality])
+      assert_equal(75, variant_asset.metadata[:quality])
+      assert_equal(:cpu, default_asset.queue_kind)
+      refute(default_asset.ready?)
+    end
+  end
+
+  def test_ruby_import_query_quality_changes_generated_asset_hashes
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/hero.png", real_png_bytes(width: 4, height: 2))
+      File.write("#{dir}/entry_a.rb", "Hero = import(\"images/hero.png?width=2&quality=70\")\nIMAGE = Hero\n")
+      File.write("#{dir}/entry_b.rb", "Hero = import(\"images/hero.png?width=2&quality=80\")\nIMAGE = Hero\n")
+      image_plugin = Klenod::Build::Plugins::ImagePlugin.new
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [Klenod::Build::Plugins::RubyPlugin.new, image_plugin]
+        )
+
+      record_a = context.evaluate("entry_a")
+      record_b = context.evaluate("entry_b")
+      image_a = context.graph.mods.fetch(record_a.id).const_get(:Exports)::IMAGE
+      image_b = context.graph.mods.fetch(record_b.id).const_get(:Exports)::IMAGE
+      variant_a = image_a.variants.fetch(0)
+      variant_b = image_b.variants.fetch(0)
+
+      refute_equal(image_a.src, image_b.src)
+      refute_equal(variant_a.src, variant_b.src)
+      assert_equal(70, context.asset(image_a.src).metadata[:quality])
+      assert_equal(80, context.asset(image_b.src).metadata[:quality])
+    end
+  end
+
   def test_overlapping_image_import_queries_reuse_generated_variants
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")
