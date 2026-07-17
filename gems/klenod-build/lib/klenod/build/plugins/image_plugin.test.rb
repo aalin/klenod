@@ -185,6 +185,47 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     end
   end
 
+  def test_ruby_import_query_format_updates_default_image_src
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/hero.png", real_png_bytes(width: 4, height: 2))
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Hero = import("images/hero.png?width=2&format=webp")
+          IMAGE = Hero
+        RUBY
+      )
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::ImagePlugin.new
+          ]
+        )
+
+      record = context.evaluate("entry")
+      image = context.graph.mods.fetch(record.id).const_get(:Exports)::IMAGE
+      assets = context.assets_for("images/hero.png")
+      default_asset = assets.find { |asset| asset.metadata[:type] == :image }
+      variant = image.variants.fetch(0)
+
+      assert_equal(2, assets.length)
+      assert_match(%r{\A/assets/hero\.[a-f0-9]{16}\.webp\z}, image.src)
+      assert_equal("image/webp", image.content_type)
+      assert_equal(4, image.width)
+      assert_equal(2, image.height)
+      assert_equal(image.src, default_asset.output_path)
+      assert_equal("image/webp", default_asset.content_type)
+      assert_equal(:webp, default_asset.metadata[:format])
+      assert_equal(:cpu, default_asset.queue_kind)
+      refute(default_asset.ready?)
+      assert_match(%r{\A/assets/hero\.2w\.[a-f0-9]{16}\.webp\z}, variant.src)
+      assert_equal("image/webp", variant.content_type)
+    end
+  end
+
   def test_overlapping_image_import_queries_reuse_generated_variants
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")
@@ -224,6 +265,37 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal(shared_variant_a.src, shared_variant_b.src)
       assert_equal(1, generated_3w_assets.length)
       assert_equal(shared_variant_b.src, generated_3w_assets.fetch(0).output_path)
+    end
+  end
+
+  def test_runtime_bundle_preserves_explicitly_formatted_default_image
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/hero.png", real_png_bytes(width: 6, height: 3))
+      File.write("#{dir}/entry.rb", "Hero = import(\"images/hero.png?width=3&format=png\")\nIMAGE = Hero\n")
+      output = "#{dir}/bundle.mpk"
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::ImagePlugin.new
+          ]
+        )
+
+      bundle = context.build(entrypoints: ["entry"], output: output)
+      loaded = Klenod::Runtime.load_bundle(output)
+      image = loaded.load("entry").const_get(:Exports)::IMAGE
+      default_asset = bundle.assets_for("images/hero.png").find { |asset| asset.metadata[:type] == :image }
+
+      assert_match(%r{\A/assets/hero\.[a-f0-9]{16}\.png\z}, image.src)
+      assert_equal("image/png", image.content_type)
+      assert_equal(6, image.width)
+      assert_equal(3, image.height)
+      assert_equal(image.src, default_asset.output_path)
+      assert_equal("image/png", default_asset.content_type)
+      assert_equal(:image, default_asset.metadata[:type])
+      assert_equal(:png, default_asset.metadata[:format])
     end
   end
 
