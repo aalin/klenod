@@ -101,6 +101,13 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_equal(':"article-card"', dashed_symbol.source)
   end
 
+  def test_ruby_builder_reuses_short_string_literals
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+
+    assert_same(builder.literal(" "), builder.literal(" "))
+    refute_same(builder.literal("Hello"), builder.literal("Hello"))
+  end
+
   def test_ruby_builder_builds_frozen_literals_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     literal =

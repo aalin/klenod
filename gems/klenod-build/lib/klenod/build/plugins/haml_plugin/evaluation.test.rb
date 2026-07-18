@@ -58,6 +58,40 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_supports_simple_dynamic_attribute_hashes
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def title
+              "hello"
+            end
+
+          %p{ title: "\#{title}, friend", value: 2 } Hello
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:p, "Hello", {title: "hello, friend", value: 2}], exports::Default.new.render)
+    end
+  end
+
+  def test_haml_transformer_supports_nested_dynamic_attribute_hashes
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def title
+              "hello"
+            end
+
+          %p{ title: title.upcase, data: { count: 1 } } Hello
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:p, "Hello", {title: "HELLO", data: {count: 1}}], exports::Default.new.render)
+    end
+  end
+
   def test_haml_transformer_maps_object_reference_to_key_prop
     evaluate_haml(
       {

@@ -170,6 +170,7 @@ module Klenod
               @expression_cache = {}
               @statements_cache = {}
               @program_cache = {}
+              @literal_cache = {}
             end
 
             def component_source(
@@ -332,6 +333,14 @@ module Klenod
             end
 
             def literal(value)
+              if value.is_a?(String) && value.length <= 1
+                return @literal_cache[value] ||= literal_fragment(value)
+              end
+
+              literal_fragment(value)
+            end
+
+            def literal_fragment(value)
               Fragment.new(literal_source(value), literal_node(value))
             end
 
@@ -413,6 +422,10 @@ module Klenod
             def symbol(value)
               value = value.to_s
               Fragment.new(symbol_source(value), symbol_node(value))
+            end
+
+            def symbol_fragment(value)
+              Fragment.new(symbol_source(value.to_s), nil)
             end
 
             def styles_lookup(name)
@@ -1354,7 +1367,7 @@ module Klenod
 
           def compile_tag_name(node, builder:)
             tag_name = node.value.fetch(:name)
-            constant_tag_name?(tag_name) ? builder.expression(tag_name) : builder.symbol(tag_name)
+            constant_tag_name?(tag_name) ? builder.expression(tag_name) : builder.symbol_fragment(tag_name)
           end
 
           def attributes(node, builder:, styleable: false)
@@ -1426,6 +1439,12 @@ module Klenod
 
             measure_compile(:haml_compile_dynamic_attributes) do
               source = builder.line_rewritten_source(source, node.line)
+              simple = simple_dynamic_attributes(source, builder: builder)
+              if simple
+                simple.each { |key, value| props[key] = value }
+                return simple
+              end
+
               hash = builder.hash_expression(source)
               return {} unless hash
 
@@ -1438,6 +1457,61 @@ module Klenod
               end
               dynamic
             end
+          end
+
+          def simple_dynamic_attributes(source, builder:)
+            source = source.strip
+            return nil unless source.start_with?("{") && source.end_with?("}")
+
+            pairs = split_simple_attribute_pairs(source[1...-1].strip)
+            return nil unless pairs
+
+            pairs.to_h do |pair|
+              match = pair.match(/\A([a-zA-Z_]\w*):\s*(.+)\z/m)
+              return nil unless match
+
+              value = match[2].strip
+              return nil if value.empty?
+
+              [match[1].to_sym, builder.node_fragment(value, nil)]
+            end
+          end
+
+          def split_simple_attribute_pairs(source)
+            return [] if source.empty?
+
+            pairs = []
+            start = 0
+            quote = nil
+            escaped = false
+
+            source.each_byte.with_index do |byte, index|
+              if quote
+                if escaped
+                  escaped = false
+                elsif byte == 92 # \
+                  escaped = true
+                elsif byte == quote
+                  quote = nil
+                end
+                next
+              end
+
+              case byte
+              when 34, 39 # " '
+                quote = byte
+              when 40, 41, 91, 93, 123, 125 # ( ) [ ] { }
+                return nil
+              when 44 # ,
+                pairs << source[start...index].strip
+                start = index + 1
+              end
+            end
+
+            return nil if quote
+
+            pairs << source[start..].strip
+            pairs
           end
 
           def class_attributes(node, dynamic_attributes:, builder:, props:, styleable: false)
