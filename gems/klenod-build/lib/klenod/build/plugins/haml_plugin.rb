@@ -494,7 +494,7 @@ module Klenod
             end
 
             def source_mark(line_no, _source)
-              "# #{Runtime::SourceMap::Mark.new(line_no)}"
+              "# #{Runtime::SourceMap::MARK_PREFIX}:#{line_no}"
             end
 
             def marked_expression(mark, expression)
@@ -1215,24 +1215,24 @@ module Klenod
           end
 
           def compile_node(node, factory:, builder:, styleable: false)
-            mark = source_mark(node, builder: builder)
-            expression =
-              case node.type
-              when :tag
-                builder.marked_expression(mark, compile_tag(node, mark: mark, factory: factory, styleable: styleable, builder: builder))
-              when :plain
-                builder.literal(node.value.fetch(:text))
-              when :script
-                compile_script(node, factory: factory, styleable: styleable, builder: builder)
-              when :silent_script
-                compile_silent_script(node, factory: factory, styleable: styleable, builder: builder)
-              when :filter
-                compile_filter_node(node, builder: builder)
-              end
+            measure_compile(:"haml_compile_node_#{node.type}") do
+              mark = source_mark(node, builder: builder)
+              expression =
+                case node.type
+                when :tag
+                  builder.marked_expression(mark, compile_tag(node, mark: mark, factory: factory, styleable: styleable, builder: builder))
+                when :plain
+                  builder.literal(node.value.fetch(:text))
+                when :script
+                  compile_script(node, factory: factory, styleable: styleable, builder: builder)
+                when :silent_script
+                  compile_silent_script(node, factory: factory, styleable: styleable, builder: builder)
+                when :filter
+                  compile_filter_node(node, builder: builder)
+                end
 
-            return expression if node.type == :tag
-
-            builder.marked_expression(mark, expression)
+              (node.type == :tag) ? expression : builder.marked_expression(mark, expression)
+            end
           end
 
           def compile_script_group(nodes, factory:, builder:, styleable: false)
@@ -1380,7 +1380,7 @@ module Klenod
               source << builder.line_rewritten_source(line.chomp, line_no).chomp
             end
 
-            builder.statements(source)
+            builder.node_fragment(source, nil)
           end
 
           def compile_filter_node(node, builder:)
@@ -1509,22 +1509,7 @@ module Klenod
           end
 
           def source_mark(node, builder:)
-            builder.source_mark(node.line, source_for_mark(node))
-          end
-
-          def source_for_mark(node)
-            case node.type
-            when :tag
-              node.value.fetch(:value) || node.value.fetch(:name)
-            when :plain
-              node.value.fetch(:text)
-            when :script
-              node.value.fetch(:text)
-            when :silent_script
-              node.value.fetch(:text)
-            when :filter
-              node.value.fetch(:name).to_s
-            end
+            builder.source_mark(node.line, nil)
           end
         end
 

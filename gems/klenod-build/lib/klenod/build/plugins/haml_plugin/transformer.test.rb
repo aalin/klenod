@@ -232,7 +232,7 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     end
   end
 
-  def test_haml_transformer_compiles_ruby_filter_to_statement_fragment
+  def test_haml_transformer_compiles_ruby_filter_to_source_fragment
     transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     parsed = SyntaxTree::Haml.parse(<<~HAML)
@@ -244,8 +244,8 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     fragment = transformer.send(:compile_ruby_filter, parsed.children.fetch(0), builder: builder)
 
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
-    assert_kind_of(SyntaxTree::Statements, fragment.node)
-    assert_kind_of(SyntaxTree::Comment, fragment.node.body.first)
-    assert_includes(builder.fragment(fragment.node).source, "SourceMapMark:2")
+    assert_nil(fragment.node)
+    assert_includes(fragment.source, "SourceMapMark:2")
+    assert_includes(fragment.source, "def title")
   end
 end
