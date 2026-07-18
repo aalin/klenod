@@ -66,7 +66,8 @@ module Klenod
         asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY,
         profiler: nil
       )
-        @resolver = Resolver.new(source_dir: source_dir)
+        @profiler = profiler || Profiler.new
+        @resolver = Resolver.new(source_dir: source_dir, profiler: @profiler)
         @plugins = plugins
         @mode = mode
         @asset_generation_queue =
@@ -74,7 +75,6 @@ module Klenod
             concurrency: asset_generation_concurrency,
             download_concurrency: asset_download_concurrency
           )
-        @profiler = profiler || Profiler.new
         @records = {}
         @mods = {}
         @virtual_sources = {}
@@ -172,18 +172,23 @@ module Klenod
 
       def resolve_dependency(dependency)
         if (virtual_module_id = dependency.metadata[:virtual_module_id])
+          @profiler.count(:resolve_virtual_metadata_hit)
           return ResolvedDependency.new(dependency, virtual_module_id, {virtual: true})
         end
 
         @plugins.each do |plugin|
+          @profiler.count(:plugin_resolve_check)
           resolved =
             @profiler.measure(:plugin_resolve, plugin: plugin.class.name, specifier: dependency.specifier) do
               plugin.resolve(dependency, self)
             end
+          @profiler.count(:plugin_resolve_hit) if resolved
           return resolved if resolved
         end
 
-        @resolver.resolve(dependency)
+        @profiler.measure(:resolver_resolve, specifier: dependency.specifier) do
+          @resolver.resolve(dependency)
+        end
       end
 
       def absolute_path(module_id)
@@ -717,19 +722,46 @@ module Klenod
         if resolved_dependencies.length == 1
           resolved_dependency = resolved_dependencies.fetch(0)
           return {
-            resolved_dependency.dependency.id => collect_module(resolved_dependency.module_id)
+            resolved_dependency.dependency.id => collected_dependency_record(resolved_dependency)
           }
         end
 
+        cached_records = {}
+        pending_dependencies = []
+        resolved_dependencies.each do |resolved_dependency|
+          record = @records[resolved_dependency.module_id]
+          if record
+            @profiler.count(:collect_dependency_record_cache_hit)
+            raise_failed_module!(record)
+            cached_records[resolved_dependency.dependency.id] = record
+          else
+            pending_dependencies << resolved_dependency
+          end
+        end
+        return cached_records if pending_dependencies.empty?
+
         with_async_task do |task|
-          wait_for_dependency_tasks(
-            resolved_dependencies.map do |resolved_dependency|
-              [
-                resolved_dependency.dependency.id,
-                task.async { AsyncResult.capture { collect_module(resolved_dependency.module_id) } }
-              ]
-            end
+          cached_records.merge(
+            wait_for_dependency_tasks(
+              pending_dependencies.map do |resolved_dependency|
+                [
+                  resolved_dependency.dependency.id,
+                  task.async { AsyncResult.capture { collect_module(resolved_dependency.module_id) } }
+                ]
+              end
+            )
           )
+        end
+      end
+
+      def collected_dependency_record(resolved_dependency)
+        record = @records[resolved_dependency.module_id]
+        if record
+          @profiler.count(:collect_dependency_record_cache_hit)
+          raise_failed_module!(record)
+          record
+        else
+          collect_module(resolved_dependency.module_id)
         end
       end
 
@@ -935,15 +967,21 @@ module Klenod
 
       def load_source(module_id, absolute_path)
         @plugins.each do |plugin|
+          @profiler.count(:plugin_load_check)
           loaded =
             @profiler.measure(:plugin_load, plugin: plugin.class.name, module_id: module_id.to_s) do
               plugin.load(module_id, self)
             end
+          @profiler.count(:plugin_load_hit) if loaded
           return loaded if loaded
         end
-        return @virtual_sources.fetch(module_id) if @virtual_sources.key?(module_id)
+        if @virtual_sources.key?(module_id)
+          @profiler.count(:virtual_source_hit)
+          return @virtual_sources.fetch(module_id)
+        end
 
-        absolute_path.binread
+        @profiler.count(:module_file_read)
+        @profiler.measure(:module_file_read, module_id: module_id.to_s) { absolute_path.binread }
       end
 
       def transform(module_id, source)

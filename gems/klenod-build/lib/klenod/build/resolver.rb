@@ -9,9 +9,10 @@ module Klenod
     class Resolver
       DEFAULT_EXTENSIONS = [".rb", ".haml"].freeze
 
-      def initialize(source_dir:, extensions: DEFAULT_EXTENSIONS)
+      def initialize(source_dir:, extensions: DEFAULT_EXTENSIONS, profiler: nil)
         @source_dir = Pathname.new(source_dir).expand_path
         @extensions = extensions
+        @profiler = profiler
         @resolved_module_ids = {}
         @absolute_paths = {}
       end
@@ -31,17 +32,28 @@ module Klenod
           end
 
         assert_inside_source_dir!(base_path)
-        module_id =
-          @resolved_module_ids.fetch([base_path.to_s, query]) do |key|
-            resolved_path = resolve_existing_path(base_path)
-            relative = resolved_path.relative_path_from(@source_dir).to_s
-            @resolved_module_ids[key] = ModuleId.new(relative, query)
-          end
+        key = [base_path.to_s, query]
+        module_id = @resolved_module_ids[key]
+        if module_id
+          @profiler&.count(:resolver_cache_hit)
+        else
+          @profiler&.count(:resolver_cache_miss)
+          resolved_path = resolve_existing_path(base_path)
+          relative = resolved_path.relative_path_from(@source_dir).to_s
+          module_id = @resolved_module_ids[key] = ModuleId.new(relative, query)
+        end
 
         ResolvedDependency.new(dependency, module_id, {})
       end
 
       def absolute_path(module_id)
+        path = @absolute_paths[module_id.path]
+        if path
+          @profiler&.count(:resolver_absolute_path_cache_hit)
+          return path
+        end
+
+        @profiler&.count(:resolver_absolute_path_cache_miss)
         @absolute_paths.fetch(module_id.path) do |path_key|
           path = @source_dir.join(path_key).cleanpath
           assert_inside_source_dir!(path)

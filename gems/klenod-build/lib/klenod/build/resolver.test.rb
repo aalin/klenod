@@ -6,6 +6,7 @@ require "tmpdir"
 
 require_relative "dependency"
 require_relative "module_id"
+require_relative "profiler"
 require_relative "resolver"
 
 class Klenod::Build::Resolver::Test < Minitest::Test
@@ -88,6 +89,26 @@ class Klenod::Build::Resolver::Test < Minitest::Test
       resolver.clear_cache
 
       assert_equal("pages/page.rb", resolver.resolve(dependency).module_id.path)
+    end
+  end
+
+  def test_reports_resolver_cache_counts
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/page.rb", "")
+
+      profiler = Klenod::Build::Profiler.new(enabled: true)
+      resolver = Resolver.new(source_dir: dir, profiler: profiler)
+      dependency = Dependency.create(specifier: "page", importer_id: nil, kind: :entrypoint)
+
+      resolver.resolve(dependency)
+      resolver.resolve(dependency)
+      resolver.absolute_path(ModuleId.new("page.rb", nil))
+      resolver.absolute_path(ModuleId.new("page.rb", nil))
+
+      assert_equal(1, profiler.counts.fetch(:resolver_cache_miss))
+      assert_equal(1, profiler.counts.fetch(:resolver_cache_hit))
+      assert_equal(1, profiler.counts.fetch(:resolver_absolute_path_cache_miss))
+      assert_equal(1, profiler.counts.fetch(:resolver_absolute_path_cache_hit))
     end
   end
 
