@@ -8,10 +8,11 @@ module Klenod
   module Build
     module Plugins
       class RubyPlugin < Plugin
-        def transform(module_id, code, _context)
+        def transform(module_id, code, context)
           return TransformResult.identity(code) unless module_id.extname == ".rb"
 
-          result = RubyImportRewriter.new(module_id: module_id, kind: :ruby_import).rewrite(code)
+          profiler = context.respond_to?(:profiler) ? context.profiler : nil
+          result = RubyImportRewriter.new(module_id: module_id, kind: :ruby_import, profiler: profiler).rewrite(code)
           TransformResult.new(result.code, result.dependencies, nil, [], [], {})
         end
       end

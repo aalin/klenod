@@ -849,23 +849,41 @@ module Klenod
             end
 
             def parse_expression(source)
-              SyntaxTree
-                .parse(source)
-                &.statements
-                &.body
-                &.find { |node| !node.instance_of?(SyntaxTree::Comment) }
+              if @profiler
+                @profiler.measure(:haml_parse_expression) do
+                  SyntaxTree
+                    .parse(source)
+                    &.statements
+                    &.body
+                    &.find { |node| !node.instance_of?(SyntaxTree::Comment) }
+                end
+              else
+                SyntaxTree
+                  .parse(source)
+                  &.statements
+                  &.body
+                  &.find { |node| !node.instance_of?(SyntaxTree::Comment) }
+              end
             rescue SyntaxTree::Parser::ParseError
               nil
             end
 
             def parse_statements(source)
-              SyntaxTree.parse(source)&.statements
+              if @profiler
+                @profiler.measure(:haml_parse_statements) { SyntaxTree.parse(source)&.statements }
+              else
+                SyntaxTree.parse(source)&.statements
+              end
             rescue SyntaxTree::Parser::ParseError
               nil
             end
 
             def parse_program(source)
-              SyntaxTree.parse(source)
+              if @profiler
+                @profiler.measure(:haml_parse_program) { SyntaxTree.parse(source) }
+              else
+                SyntaxTree.parse(source)
+              end
             rescue SyntaxTree::Parser::ParseError
               nil
             end
@@ -902,7 +920,8 @@ module Klenod
             styles_source:,
             translations_source:,
             styleable: false,
-            profiler: nil
+            profiler: nil,
+            import_rewriter: nil
           )
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
@@ -910,10 +929,10 @@ module Klenod
             template =
               if profiler
                 profiler.measure(:haml_compile_template, module_id: module_id.to_s) do
-                  compile_template(source, module_id: module_id, factory: factory, styleable: styleable, builder: builder)
+                  compile_template(source, module_id: module_id, factory: factory, styleable: styleable, builder: builder, import_rewriter: import_rewriter)
                 end
               else
-                compile_template(source, module_id: module_id, factory: factory, styleable: styleable, builder: builder)
+                compile_template(source, module_id: module_id, factory: factory, styleable: styleable, builder: builder, import_rewriter: import_rewriter)
               end
             ast =
               if profiler
@@ -961,11 +980,11 @@ module Klenod
           Template = Data.define(:ruby, :render)
           RubyLine = Data.define(:line_no, :source)
 
-          def compile_template(source, factory:, builder:, module_id: nil, styleable: false)
+          def compile_template(source, factory:, builder:, module_id: nil, styleable: false, import_rewriter: nil)
             parsed = HamlPlugin.parse_haml(source, module_id: module_id)
             render_nodes = parsed.children.reject { |node| ruby_filter?(node) || css_filter?(node) }
             ruby_nodes = parsed.children.select { |node| ruby_filter?(node) }
-            ruby = compile_ruby_filters(ruby_nodes, builder: builder)
+            ruby = compile_ruby_filters(ruby_nodes, builder: builder, import_rewriter: import_rewriter)
             render = compile_nodes(render_nodes, factory: factory, styleable: styleable, builder: builder)
 
             Template.new(ruby, render)
@@ -1157,13 +1176,15 @@ module Klenod
               .merge(class_attributes(node, dynamic_attributes: dynamic, styleable: styleable, builder: builder))
           end
 
-          def compile_ruby_filters(nodes, builder:)
-            builder.ruby_filters(nodes.map { |node| compile_ruby_filter(node, builder: builder) })
+          def compile_ruby_filters(nodes, builder:, import_rewriter: nil)
+            builder.ruby_filters(nodes.map { |node| compile_ruby_filter(node, builder: builder, import_rewriter: import_rewriter) })
           end
 
-          def compile_ruby_filter(node, builder:)
+          def compile_ruby_filter(node, builder:, import_rewriter: nil)
+            text = node.value.fetch(:text)
+            text = import_rewriter.call(text) if import_rewriter && text.include?("import")
             source =
-              node.value.fetch(:text)
+              text
                 .lines
                 .map
                 .with_index(node.line + 1) do |line, line_no|
@@ -1309,6 +1330,7 @@ module Klenod
           companion_css = companion_path(module_id, ".css")
           dependencies = []
           style_dependencies = []
+          import_dependencies = []
           profiler = context.respond_to?(:profiler) ? context.profiler : nil
           builder = Transformer::RubyBuilder.new(profiler: profiler)
           context.unregister_virtual_modules(module_id)
@@ -1344,6 +1366,20 @@ module Klenod
           styles_source = styles_source_for(builder, style_dependencies)
           translations_source = builder.frozen_literal(translations_for(context, module_id)).source
           component_class_name = component_class_name(module_id)
+          import_rewriter =
+            lambda do |source|
+              result =
+                RubyImportRewriter
+                  .new(
+                    module_id: module_id,
+                    kind: :haml_import,
+                    profiler: profiler,
+                    dependency_id_offset: import_dependencies.length
+                  )
+                  .rewrite(source)
+              import_dependencies.concat(result.dependencies)
+              result.code
+            end
           haml_result =
             @transformer.call(
               source: code,
@@ -1354,20 +1390,36 @@ module Klenod
               styles_source: styles_source,
               translations_source: translations_source,
               styleable: !style_dependencies.empty?,
-              profiler: profiler
+              profiler: profiler,
+              import_rewriter: import_rewriter
             )
           import_rewrite =
-            if profiler
+            if !haml_result.code.include?("import(") && !haml_result.code.include?("lazy_import(")
+              RubyImportRewriter::Result.new(haml_result.code, [])
+            elsif profiler
               profiler.measure(:haml_import_rewrite, module_id: module_id.to_s) do
-                RubyImportRewriter.new(module_id: module_id, kind: :haml_import).rewrite(haml_result.code)
+                RubyImportRewriter
+                  .new(
+                    module_id: module_id,
+                    kind: :haml_import,
+                    profiler: profiler,
+                    dependency_id_offset: import_dependencies.length
+                  )
+                  .rewrite(haml_result.code)
               end
             else
-              RubyImportRewriter.new(module_id: module_id, kind: :haml_import).rewrite(haml_result.code)
+              RubyImportRewriter
+                .new(
+                  module_id: module_id,
+                  kind: :haml_import,
+                  dependency_id_offset: import_dependencies.length
+                )
+                .rewrite(haml_result.code)
             end
 
           TransformResult.new(
             import_rewrite.code,
-            dependencies + import_rewrite.dependencies,
+            dependencies + import_dependencies + import_rewrite.dependencies,
             haml_result.source_map,
             [],
             companion_patterns(module_id),

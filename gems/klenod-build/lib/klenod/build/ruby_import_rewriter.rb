@@ -31,14 +31,16 @@ module Klenod
         }
       }.freeze
 
-      def initialize(module_id:, kind:)
+      def initialize(module_id:, kind:, profiler: nil, dependency_id_offset: 0)
         @module_id = module_id
         @kind = kind
+        @profiler = profiler
+        @dependency_id_offset = dependency_id_offset
       end
 
       def rewrite(code)
-        ast = SyntaxTree.parse(code)
-        calls = import_calls(ast)
+        ast = measure(:ruby_import_parse) { SyntaxTree.parse(code) }
+        calls = measure(:ruby_import_scan) { import_calls(ast) }
         dependencies =
           calls.each_with_index.map do |call, index|
             if call.dynamic
@@ -53,13 +55,20 @@ module Klenod
                 loc: call.location
               )
               .with(eager: call.eager)
-              .with(id: "#{@module_id}:dependency:#{index}")
+              .with(id: "#{@module_id}:dependency:#{@dependency_id_offset + index}")
           end
 
-        Result.new(rewrite_import_calls(code, calls, dependencies), dependencies)
+        rewritten = measure(:ruby_import_rewrite_source) { rewrite_import_calls(code, calls, dependencies) }
+        Result.new(rewritten, dependencies)
       end
 
       private
+
+      def measure(name, &block)
+        return yield unless @profiler
+
+        @profiler.measure(name, module_id: @module_id.to_s, kind: @kind, &block)
+      end
 
       def import_calls(node)
         calls = []

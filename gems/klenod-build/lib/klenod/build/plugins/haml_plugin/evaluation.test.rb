@@ -489,6 +489,9 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
       details_class = context.graph.mods.fetch(ModuleId.new("components/details.haml", nil)).const_get(:Exports)::Default
 
+      refute_includes(record.transformed_source, "import(\"components/details.haml\")")
+      assert_includes(record.transformed_source, "__klenod_import__(\"page.haml:dependency:0\")")
+      assert_equal(["page.haml:dependency:0"], record.dependencies.select { |dependency| dependency.kind == :haml_import }.map(&:id))
       assert_same(details_class, exports::Default.const_get(:Details))
       assert_equal(
         [
