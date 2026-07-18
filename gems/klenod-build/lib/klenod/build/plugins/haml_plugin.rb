@@ -570,6 +570,8 @@ module Klenod
               return source.to_s unless line_no
 
               source = source.to_s
+              return source unless source.include?("__LINE__")
+
               line_offsets = [0]
               source.each_line(chomp: false) { |line| line_offsets << line_offsets.last + line.length }
 
@@ -1080,6 +1082,10 @@ module Klenod
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
             builder = RubyBuilder.new(profiler: profiler)
+            previous_profiler = @profiler
+            previous_module_id = @module_id
+            @profiler = profiler
+            @module_id = module_id
             template =
               if profiler
                 profiler.measure(:haml_compile_template, module_id: module_id.to_s) do
@@ -1127,6 +1133,9 @@ module Klenod
             end
           rescue RubyParseError => error
             raise ParseError.new(error, source: source, module_id: module_id)
+          ensure
+            @profiler = previous_profiler
+            @module_id = previous_module_id
           end
 
           private
@@ -1134,18 +1143,36 @@ module Klenod
           Template = Data.define(:ruby, :render)
           RubyLine = Data.define(:line_no, :source)
 
+          def measure_compile(name)
+            return yield unless @profiler
+
+            @profiler.measure(name, module_id: @module_id.to_s) { yield }
+          end
+
           def compile_template(source, factory:, builder:, module_id: nil, styleable: false, import_rewriter: nil)
-            parsed = HamlPlugin.parse_haml(source, module_id: module_id)
-            render_nodes = parsed.children.reject { |node| ruby_filter?(node) || css_filter?(node) }
-            ruby_nodes = parsed.children.select { |node| ruby_filter?(node) }
-            ruby = compile_ruby_filters(ruby_nodes, builder: builder, import_rewriter: import_rewriter)
-            render = compile_nodes(render_nodes, factory: factory, styleable: styleable, builder: builder)
+            parsed = measure_compile(:haml_parse_haml) { HamlPlugin.parse_haml(source, module_id: module_id) }
+            render_nodes, ruby_nodes =
+              measure_compile(:haml_partition_top_level_nodes) do
+                [
+                  parsed.children.reject { |node| ruby_filter?(node) || css_filter?(node) },
+                  parsed.children.select { |node| ruby_filter?(node) }
+                ]
+              end
+            ruby =
+              if ruby_nodes.empty?
+                ""
+              else
+                measure_compile(:haml_compile_ruby_filters) { compile_ruby_filters(ruby_nodes, builder: builder, import_rewriter: import_rewriter) }
+              end
+            render = measure_compile(:haml_compile_render_nodes) { compile_nodes(render_nodes, factory: factory, styleable: styleable, builder: builder) }
 
             Template.new(ruby, render)
           end
 
           def compile_nodes(nodes, factory:, builder:, styleable: false)
-            builder.expressions(compile_node_expressions(nodes, factory: factory, styleable: styleable, builder: builder))
+            expressions = measure_compile(:haml_compile_node_expressions) { compile_node_expressions(nodes, factory: factory, styleable: styleable, builder: builder) }
+
+            measure_compile(:haml_build_expression_list) { builder.expressions(expressions) }
           end
 
           def compile_node_expressions(nodes, factory:, builder:, styleable: false)
@@ -1172,7 +1199,7 @@ module Klenod
               end
             end
 
-            expressions_with_whitespace(entries, builder: builder)
+            measure_compile(:haml_compile_whitespace) { expressions_with_whitespace(entries, builder: builder) }
           end
 
           def expressions_with_whitespace(entries, builder:)
@@ -1303,7 +1330,7 @@ module Klenod
             end
             children.concat(compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder))
 
-            compile_factory_call(node, children, factory: factory, styleable: styleable, builder: builder)
+            measure_compile(:haml_compile_factory_call) { compile_factory_call(node, children, factory: factory, styleable: styleable, builder: builder) }
           end
 
           def compile_factory_call(node, children, factory:, builder:, styleable: false)
@@ -1322,12 +1349,14 @@ module Klenod
           end
 
           def attributes(node, builder:, styleable: false)
-            dynamic = dynamic_attributes(node, builder: builder)
+            measure_compile(:haml_compile_attributes) do
+              dynamic = dynamic_attributes(node, builder: builder)
 
-            static_attributes(node, builder: builder)
-              .merge(dynamic)
-              .merge(object_ref_attributes(node, builder: builder))
-              .merge(class_attributes(node, dynamic_attributes: dynamic, styleable: styleable, builder: builder))
+              static_attributes(node, builder: builder)
+                .merge(dynamic)
+                .merge(object_ref_attributes(node, builder: builder))
+                .merge(class_attributes(node, dynamic_attributes: dynamic, styleable: styleable, builder: builder))
+            end
           end
 
           def compile_ruby_filters(nodes, builder:, import_rewriter: nil)
