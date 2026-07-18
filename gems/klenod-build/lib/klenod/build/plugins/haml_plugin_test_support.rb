@@ -49,7 +49,11 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
         translations_source: "{}.freeze",
         styleable: basename == "style_classes"
       )
-      .code
+      .then { |result| format_generated_ruby(result.code) }
+  end
+
+  def format_generated_ruby(source)
+    SyntaxTree::Formatter.format(+"", SyntaxTree.parse(source), 0)
   end
 
   def default_plugins_with(plugin)

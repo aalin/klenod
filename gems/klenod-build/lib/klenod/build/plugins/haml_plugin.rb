@@ -206,7 +206,7 @@ module Klenod
               styles_source = expression_fragment(styles_source)
 
               header = [
-                fragment(comment_node("# frozen_string_literal: true")),
+                Fragment.new("# frozen_string_literal: true", comment_node("# frozen_string_literal: true")),
                 constant_assignment(
                   "KlenodImport",
                   call(receiver: nil, name: "method", arguments: [symbol("__klenod_import__")])
@@ -238,7 +238,7 @@ module Klenod
               render_source:
             )
               skeleton = class_skeleton_fragment(component_class_name, component_base_class)
-              body =
+              body_fragments =
                 [
                   method_definition("module_path", target: "self", body: file_expression),
                   constant_assignment("Self", "self"),
@@ -256,10 +256,16 @@ module Klenod
                   ),
                   ruby_source,
                   public_method_definition("render", body: render_source)
-                ].flat_map { |fragment| statement_body_for(fragment) }
+                ]
+              body =
+                body_fragments.flat_map { |fragment| statement_body_for(fragment) }
 
               Fragment.new(
-                "",
+                [
+                  "class #{to_source(component_class_name)} < #{to_source(component_base_class)}",
+                  indent(compact_join(body_fragments), 2),
+                  "end"
+                ].join("\n"),
                 skeleton.node.copy(
                   bodystmt: BodyStmt(
                     Statements(body),
@@ -289,7 +295,7 @@ module Klenod
               source = rewrite_line_constant(source, line_no)
               node = parse_statements(source)
 
-              Fragment.new(node ? "" : source, node)
+              Fragment.new(source, node)
             end
 
             def program(source)
@@ -299,9 +305,10 @@ module Klenod
             end
 
             def program_from_fragments(*fragments)
-              body = fragments.flatten.flat_map { |fragment| statement_body_for(fragment) }
+              fragments = fragments.flatten
+              body = fragments.flat_map { |fragment| statement_body_for(fragment) }
 
-              fragment(Program(Statements(body)))
+              Fragment.new(compact_join(fragments), Program(Statements(body)))
             end
 
             def fragment(node)
@@ -341,24 +348,31 @@ module Klenod
             end
 
             def constant_assignment(name, value)
-              node = Assign(VarField(Const(name.to_s)), node_for(expression_fragment(value)))
-              Fragment.new("", node)
+              value = expression_fragment(value)
+              node = Assign(VarField(Const(name.to_s)), node_for(value))
+              Fragment.new("#{name} = #{to_source(value)}", node)
             end
 
             def call(receiver:, name:, arguments:)
-              receiver_node = receiver.nil? ? nil : node_for(expression_fragment(receiver))
+              receiver = expression_fragment(receiver) unless receiver.nil?
+              arguments = arguments.map { |argument| expression_fragment(argument) }
+              receiver_node = receiver.nil? ? nil : node_for(receiver)
 
               node =
                 CallNode(
                   receiver_node,
                   receiver_node ? Period(".") : nil,
                   Ident(name.to_s),
-                  ArgParen(Args(arguments.map { |argument| node_for(expression_fragment(argument)) }))
+                  ArgParen(Args(arguments.map { |argument| node_for(argument) }))
                 )
-              Fragment.new("", node)
+              receiver_prefix = receiver ? "#{to_source(receiver)}." : nil
+              source = "#{receiver_prefix}#{name}(#{arguments.map { |argument| to_source(argument) }.join(", ")})"
+              Fragment.new(source, node)
             end
 
             def method_definition(name, body:, target: nil, parameters: [])
+              body = Array(body)
+              body_source = compact_join(body)
               node =
                 DefNode(
                   target && node_for(expression_fragment(target)),
@@ -367,17 +381,21 @@ module Klenod
                   Params(parameters.map { |parameter| Ident(parameter.to_s) }, [], nil, [], [], nil, nil),
                   body_statement(body)
                 )
-              Fragment.new("", node)
+              target_source = target ? "#{to_source(expression_fragment(target))}." : ""
+              params_source = parameters.empty? ? "" : "(#{parameters.join(", ")})"
+              source = ["def #{target_source}#{name}#{params_source}", indent(body_source, 2), "end"].join("\n")
+              Fragment.new(source, node)
             end
 
             def public_method_definition(name, body:, parameters: [])
+              method = method_definition(name, parameters: parameters, body: body)
               node =
                 Command(
                   Ident("public"),
-                  Args([method_definition(name, parameters: parameters, body: body).node]),
+                  Args([method.node]),
                   nil
                 )
-              Fragment.new("", node)
+              Fragment.new("public #{method.source}", node)
             end
 
             def nil_expression
@@ -528,6 +546,13 @@ module Klenod
               to_source(value).lines.map { |line| "#{" " * spaces}#{line}" }.join
             end
 
+            def compact_join(fragments)
+              Array(fragments)
+                .map { |fragment| to_source(fragment).to_s }
+                .reject(&:empty?)
+                .join("\n")
+            end
+
             def line_rewritten_source(source, line_no)
               rewrite_line_constant(source, line_no)
             end
@@ -569,11 +594,14 @@ module Klenod
               else
                 node = ArrayLiteral(LBracket("["), Args(expressions.map { |item| argument_node(item) }))
 
-                Fragment.new("", node)
+                Fragment.new("[#{expressions.map { |item| argument_source(item) }.join(", ")}]", node)
               end
             end
 
             def ast_factory_call(factory:, tag:, children:, props:, mark:)
+              factory = expression_fragment(factory)
+              tag = expression_fragment(tag)
+              children = children.map { |child| expression_fragment(child) }
               factory_node = expression_node(factory)
               arguments = [
                 expression_node(tag),
@@ -585,7 +613,12 @@ module Klenod
 
               node = ARef(factory_node, Args(parts))
 
-              Fragment.new("", node)
+              source_parts = [
+                to_source(tag),
+                *children.map { |child| argument_source(child) },
+                keyword_props_source(props, mark: mark)
+              ].compact
+              Fragment.new("#{to_source(factory)}[#{source_parts.join(", ")}]", node)
             end
 
             def ast_silent_script(source)
@@ -594,14 +627,14 @@ module Klenod
 
               node = ast_begin([*statement_body_for(statements), nil_node])
 
-              Fragment.new("", node)
+              Fragment.new(["begin", indent(source, 2), "  nil", "end"].join("\n"), node)
             end
 
             def ast_script_block(source, body)
               node = block_script_node(source, body)
               return nil unless node
 
-              Fragment.new("", node)
+              Fragment.new(block_source(source, body), node)
             end
 
             def ast_silent_script_block(source, body)
@@ -610,14 +643,14 @@ module Klenod
 
               node = ast_begin([node, nil_node])
 
-              Fragment.new("", node)
+              Fragment.new(["begin", indent(block_source(source, body), 2), "  nil", "end"].join("\n"), node)
             end
 
             def ast_branches(branches)
               node = branch_node(branches)
               return nil unless node
 
-              Fragment.new("", node)
+              Fragment.new(branch_source(branches), node)
             end
 
             def ast_silent_branches(branches)
@@ -626,7 +659,7 @@ module Klenod
 
               node = ast_begin([node, nil_node])
 
-              Fragment.new("", node)
+              Fragment.new(["begin", indent(branch_source(branches), 2), "  nil", "end"].join("\n"), node)
             end
 
             def ast_ruby_filters(nodes)
@@ -643,7 +676,9 @@ module Klenod
                   ast_begin(statement_body_for(statements))
                 end
 
-              Fragment.new("", Statements(begins))
+              source = nodes.map { |node| ["begin", indent(to_source(node), 2), "end"].join("\n") }.join("\n")
+
+              Fragment.new(source, Statements(begins))
             end
 
             def ast_begin(statement_nodes)
@@ -656,6 +691,31 @@ module Klenod
                   nil
                 )
               )
+            end
+
+            def block_source(source, body)
+              body_source = to_source(body)
+
+              if source.include?("{")
+                "#{source} #{body_source} }"
+              else
+                [source, indent(body_source, 2), "end"].join("\n")
+              end
+            end
+
+            def branch_source(branches)
+              body =
+                branches
+                  .map do |source, body|
+                    if source == "else"
+                      ["else", indent(to_source(body), 2)].join("\n")
+                    else
+                      [source, indent(to_source(body), 2)].join("\n")
+                    end
+                  end
+                  .join("\n")
+
+              "#{body}\nend"
             end
 
             def body_statement(body)
@@ -769,6 +829,24 @@ module Klenod
                   props.map { |name, value| Assoc(prop_key_node(name), argument_node(value, mark: mark)) }
                 )
               )
+            end
+
+            def keyword_props_source(props, mark:)
+              return nil if props.empty?
+
+              props_source =
+                props.map do |name, value|
+                  "#{prop_key_source(name)} #{argument_source(value, mark: mark)}"
+                end
+
+              "**{ #{props_source.join(", ")} }"
+            end
+
+            def prop_key_source(name)
+              name = name.to_s
+              return "#{name}:" if name.match?(/\A[a-zA-Z_]\w*\z/)
+
+              "#{symbol_source(name)} =>"
             end
 
             def frozen_literal_node(value)
@@ -898,6 +976,21 @@ module Klenod
               end
 
               ast_begin(statements)
+            end
+
+            def argument_source(value, mark: nil)
+              fragment = expression_fragment(value)
+              source = to_source(fragment)
+
+              if mark
+                source = "#{mark}\n#{source}"
+              end
+
+              if fragment.node.is_a?(SyntaxTree::Statements) || mark
+                ["begin", indent(source, 2), "end"].join("\n")
+              else
+                source
+              end
             end
 
             def statement_body_for(value)
