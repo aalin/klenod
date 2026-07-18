@@ -775,9 +775,13 @@ module Klenod
 
       def load_all_runtime_dependencies
         queue = @records.values.flat_map(&:resolved_dependencies)
+        seen = Set.new
+        index = 0
 
-        until queue.empty?
-          resolved_dependency = queue.shift
+        while index < queue.length
+          resolved_dependency = queue[index]
+          index += 1
+          next unless seen.add?(resolved_dependency.module_id)
           next if @records.key?(resolved_dependency.module_id)
 
           record = load_module(resolved_dependency.module_id)
@@ -791,8 +795,13 @@ module Klenod
             @records.values.flat_map(&:resolved_dependencies)
           end
 
-        until queue.empty?
-          resolved_dependency = @profiler.measure(:runtime_dependencies_dequeue) { queue.shift }
+        seen = Set.new
+        index = 0
+
+        while index < queue.length
+          resolved_dependency = @profiler.measure(:runtime_dependencies_dequeue) { queue[index] }
+          index += 1
+          next unless seen.add?(resolved_dependency.module_id)
           loaded =
             @profiler.measure(:runtime_dependencies_cached_check, module_id: resolved_dependency.module_id.to_s) do
               @records.key?(resolved_dependency.module_id)
