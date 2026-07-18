@@ -1179,37 +1179,34 @@ module Klenod
           end
 
           def compile_node_expressions(nodes, factory:, builder:, styleable: false)
-            entries = []
+            expressions = []
+            previous_node = nil
             index = 0
 
             while index < nodes.length
-              node = nodes.fetch(index)
+              node = nodes[index]
 
               if script_node?(node) && !continuation?(node)
                 group = [node]
                 index += 1
 
-                while index < nodes.length && continuation?(nodes.fetch(index))
-                  group << nodes.fetch(index)
+                while index < nodes.length && continuation?(nodes[index])
+                  group << nodes[index]
                   index += 1
                 end
 
-                entries << [node, compile_script_group(group, factory: factory, styleable: styleable, builder: builder)]
+                expression = compile_script_group(group, factory: factory, styleable: styleable, builder: builder)
               else
                 expression = compile_node(node, factory: factory, styleable: styleable, builder: builder)
-                entries << [node, expression]
                 index += 1
               end
+
+              expressions << builder.literal(" ") if previous_node && whitespace_between?(previous_node, node)
+              expressions << expression
+              previous_node = node
             end
 
-            measure_compile(:haml_compile_whitespace) { expressions_with_whitespace(entries, builder: builder) }
-          end
-
-          def expressions_with_whitespace(entries, builder:)
-            entries.each_cons(2).each_with_object([entries.first&.last].compact) do |((left, _left_expression), (right, right_expression)), expressions|
-              expressions << builder.literal(" ") if whitespace_between?(left, right)
-              expressions << right_expression
-            end
+            expressions
           end
 
           def whitespace_between?(left, right)
@@ -1222,7 +1219,7 @@ module Klenod
             expression =
               case node.type
               when :tag
-                builder.marked_expression(mark, compile_tag(node, factory: factory, styleable: styleable, builder: builder))
+                builder.marked_expression(mark, compile_tag(node, mark: mark, factory: factory, styleable: styleable, builder: builder))
               when :plain
                 builder.literal(node.value.fetch(:text))
               when :script
@@ -1239,8 +1236,8 @@ module Klenod
           end
 
           def compile_script_group(nodes, factory:, builder:, styleable: false)
-            return compile_script_branch(nodes.fetch(0), factory: factory, styleable: styleable, builder: builder) if nodes.length == 1 && branch_start?(nodes.fetch(0))
-            return compile_node(nodes.fetch(0), factory: factory, styleable: styleable, builder: builder) if nodes.length == 1
+            return compile_script_branch(nodes[0], factory: factory, styleable: styleable, builder: builder) if nodes.length == 1 && branch_start?(nodes[0])
+            return compile_node(nodes[0], factory: factory, styleable: styleable, builder: builder) if nodes.length == 1
 
             compile_branches(
               nodes.map { |node| [script_source(node, builder: builder), node.children] },
@@ -1325,30 +1322,30 @@ module Klenod
             node.type == :script && %w[if unless case begin].include?(node.value.fetch(:keyword))
           end
 
-          def compile_tag(node, factory:, builder:, styleable: false)
+          def compile_tag(node, mark:, factory:, builder:, styleable: false)
             children = []
             value = node.value.fetch(:value)
             if value && !value.empty?
               children << (node.value.fetch(:parse) ? builder.parenthesized_expression(value, line_no: node.line) : builder.literal(value))
             end
-            children.concat(compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder))
+            children.concat(compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder)) unless node.children.empty?
 
-            measure_compile(:haml_compile_factory_call) { compile_factory_call(node, children, factory: factory, styleable: styleable, builder: builder) }
+            measure_compile(:haml_compile_factory_call) { compile_factory_call(node, children, mark: mark, factory: factory, styleable: styleable, builder: builder) }
           end
 
-          def compile_factory_call(node, children, factory:, builder:, styleable: false)
+          def compile_factory_call(node, children, mark:, factory:, builder:, styleable: false)
             builder.factory_call(
               factory: factory,
               tag: compile_tag_name(node, builder: builder),
               children: children,
               props: attributes(node, styleable: styleable, builder: builder),
-              mark: source_mark(node, builder: builder)
+              mark: mark
             )
           end
 
           def compile_tag_name(node, builder:)
             tag_name = node.value.fetch(:name)
-            tag_name.match?(/\A[A-Z]/) ? builder.expression(tag_name) : builder.symbol(tag_name)
+            constant_tag_name?(tag_name) ? builder.expression(tag_name) : builder.symbol(tag_name)
           end
 
           def attributes(node, builder:, styleable: false)
@@ -1441,7 +1438,7 @@ module Klenod
             return unless styleable || !static_class_source.empty? || dynamic_class
 
             measure_compile(:haml_compile_class_attributes) do
-              static_classes = static_class_lookups(static_class_source, builder: builder)
+              static_classes = static_class_source.empty? ? [] : static_class_lookups(static_class_source, builder: builder)
               unless styleable || !static_classes.empty?
                 props[:class] = dynamic_class if dynamic_class
                 return
@@ -1460,9 +1457,14 @@ module Klenod
 
           def tag_class_lookup(node, builder:)
             tag_name = node.value.fetch(:name)
-            return nil if tag_name.match?(/\A[A-Z]/)
+            return nil if constant_tag_name?(tag_name)
 
             builder.styles_lookup("__#{tag_name}")
+          end
+
+          def constant_tag_name?(tag_name)
+            first = tag_name.getbyte(0)
+            first && first >= 65 && first <= 90
           end
 
           def static_class_lookups(source, builder:)
