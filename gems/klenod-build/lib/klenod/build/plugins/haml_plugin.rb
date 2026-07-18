@@ -1349,13 +1349,19 @@ module Klenod
           end
 
           def attributes(node, builder:, styleable: false)
-            measure_compile(:haml_compile_attributes) do
-              dynamic = dynamic_attributes(node, builder: builder)
+            value = node.value
+            static = value.fetch(:attributes)
+            dynamic = value.fetch(:dynamic_attributes)
+            object_ref = value.fetch(:object_ref)
+            return {} if !styleable && static.empty? && !dynamic.old && !dynamic.new && !object_ref.is_a?(String)
 
-              static_attributes(node, builder: builder)
-                .merge(dynamic)
-                .merge(object_ref_attributes(node, builder: builder))
-                .merge(class_attributes(node, dynamic_attributes: dynamic, styleable: styleable, builder: builder))
+            measure_compile(:haml_compile_attributes) do
+              props = {}
+              static_attributes(node, builder: builder, props: props)
+              dynamic = dynamic_attributes(node, builder: builder, props: props)
+              object_ref_attributes(node, builder: builder, props: props)
+              class_attributes(node, dynamic_attributes: dynamic, builder: builder, props: props, styleable: styleable)
+              props
             end
           end
 
@@ -1393,40 +1399,61 @@ module Klenod
             node.type == :filter && node.value.fetch(:name) == "css"
           end
 
-          def static_attributes(node, builder:)
-            node
-              .value
-              .fetch(:attributes)
-              .except("class")
-              .to_h { |key, value| [key.to_sym, builder.literal(value)] }
+          def static_attributes(node, builder:, props:)
+            attributes = node.value.fetch(:attributes)
+            return if attributes.empty? || (attributes.length == 1 && attributes.key?("class"))
+
+            measure_compile(:haml_compile_static_attributes) do
+              attributes.each do |key, value|
+                next if key == "class"
+
+                props[key.to_sym] = builder.literal(value)
+              end
+            end
           end
 
-          def dynamic_attributes(node, builder:)
+          def dynamic_attributes(node, builder:, props:)
             dynamic_attributes = node.value.fetch(:dynamic_attributes)
             source = dynamic_attributes.old || dynamic_attributes.new
             return {} unless source
 
-            hash = builder.hash_expression(source, line_no: node.line)
-            return {} unless hash
+            measure_compile(:haml_compile_dynamic_attributes) do
+              hash = builder.hash_expression(source, line_no: node.line)
+              return {} unless hash
 
-            hash.node.assocs.to_h do |assoc|
-              [attribute_key(assoc.key, builder: builder), builder.fragment(assoc.value)]
+              dynamic = {}
+              hash.node.assocs.each do |assoc|
+                key = attribute_key(assoc.key, builder: builder)
+                value = builder.fragment(assoc.value)
+                dynamic[key] = value
+                props[key] = value
+              end
+              dynamic
             end
           end
 
-          def class_attributes(node, dynamic_attributes:, builder:, styleable: false)
-            static_classes = static_class_lookups(node, builder: builder)
+          def class_attributes(node, dynamic_attributes:, builder:, props:, styleable: false)
+            attributes = node.value.fetch(:attributes)
+            static_class_source = attributes.fetch("class", "")
             dynamic_class = dynamic_attributes[:class]
-            return dynamic_class ? {class: dynamic_class} : {} unless styleable || !static_classes.empty?
+            return unless styleable || !static_class_source.empty? || dynamic_class
 
-            values = [
-              (tag_class_lookup(node, builder: builder) if styleable),
-              *static_classes,
-              dynamic_class
-            ].compact
-            return {} if values.empty?
+            measure_compile(:haml_compile_class_attributes) do
+              static_classes = static_class_lookups(static_class_source, builder: builder)
+              unless styleable || !static_classes.empty?
+                props[:class] = dynamic_class if dynamic_class
+                return
+              end
 
-            {class: builder.class_names(values)}
+              values = [
+                (tag_class_lookup(node, builder: builder) if styleable),
+                *static_classes,
+                dynamic_class
+              ].compact
+              return if values.empty?
+
+              props[:class] = builder.class_names(values)
+            end
           end
 
           def tag_class_lookup(node, builder:)
@@ -1436,28 +1463,27 @@ module Klenod
             builder.styles_lookup("__#{tag_name}")
           end
 
-          def static_class_lookups(node, builder:)
-            node
-              .value
-              .fetch(:attributes)
-              .fetch("class", "")
+          def static_class_lookups(source, builder:)
+            source
               .split
               .map { |class_name| builder.class_name_lookup(class_name) }
           end
 
-          def object_ref_attributes(node, builder:)
+          def object_ref_attributes(node, builder:, props:)
             source = node.value.fetch(:object_ref)
-            return {} unless source.is_a?(String)
+            return unless source.is_a?(String)
 
-            expression = builder.expression(source, line_no: node.line)
-            key =
-              if expression.node.is_a?(SyntaxTree::ArrayLiteral) && expression.node.contents&.parts&.length == 1
-                builder.fragment(expression.node.contents.parts.fetch(0))
-              else
-                expression
-              end
+            measure_compile(:haml_compile_object_ref_attributes) do
+              expression = builder.expression(source, line_no: node.line)
+              key =
+                if expression.node.is_a?(SyntaxTree::ArrayLiteral) && expression.node.contents&.parts&.length == 1
+                  builder.fragment(expression.node.contents.parts.fetch(0))
+                else
+                  expression
+                end
 
-            {key: key}
+              props[:key] = key
+            end
           end
 
           def attribute_key(node, builder:)
