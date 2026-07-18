@@ -279,7 +279,7 @@ module Klenod
             end
 
             def expressions(expressions)
-              ast_expressions(expressions)
+              source_expressions(expressions)
             end
 
             def expression(source, line_no: nil)
@@ -504,7 +504,7 @@ module Klenod
             end
 
             def factory_call(factory:, tag:, children:, props:, mark: nil)
-              ast_factory_call(factory: factory, tag: tag, children: children, props: props, mark: mark)
+              source_factory_call(factory: factory, tag: tag, children: children, props: props, mark: mark)
             end
 
             def script_block(source, body, line_no: nil)
@@ -589,7 +589,7 @@ module Klenod
                 end
             end
 
-            def ast_expressions(expressions)
+            def source_expressions(expressions)
               case expressions.length
               when 0
                 nil_expression
@@ -598,33 +598,21 @@ module Klenod
 
                 expression.is_a?(Fragment) ? expression : self.expression(to_source(expression))
               else
-                node = ArrayLiteral(LBracket("["), Args(expressions.map { |item| argument_node(item) }))
-
-                Fragment.new("[#{expressions.map { |item| argument_source(item) }.join(", ")}]", node)
+                Fragment.new("[#{expressions.map { |item| argument_source(item) }.join(", ")}]", nil)
               end
             end
 
-            def ast_factory_call(factory:, tag:, children:, props:, mark:)
+            def source_factory_call(factory:, tag:, children:, props:, mark:)
               factory = expression_fragment(factory)
               tag = expression_fragment(tag)
               children = children.map { |child| expression_fragment(child) }
-              factory_node = expression_node(factory)
-              arguments = [
-                expression_node(tag),
-                *children.map { |child| argument_node(child) }
-              ]
-              return nil if arguments.any?(&:nil?)
-
-              parts = [*arguments, ast_keyword_props(props, mark: mark)].compact
-
-              node = ARef(factory_node, Args(parts))
 
               source_parts = [
                 to_source(tag),
                 *children.map { |child| argument_source(child) },
                 keyword_props_source(props, mark: mark)
               ].compact
-              Fragment.new("#{to_source(factory)}[#{source_parts.join(", ")}]", node)
+              Fragment.new("#{to_source(factory)}[#{source_parts.join(", ")}]", nil)
             end
 
             def ast_silent_script(source)
@@ -992,11 +980,15 @@ module Klenod
                 source = "#{mark}\n#{source}"
               end
 
-              if fragment.node.is_a?(SyntaxTree::Statements) || mark
+              if fragment.node.is_a?(SyntaxTree::Statements) || mark || (source.include?("\n") && !multiline_argument_expression?(source))
                 ["begin", indent(source, 2), "end"].join("\n")
               else
                 source
               end
+            end
+
+            def multiline_argument_expression?(source)
+              source.start_with?("if ", "unless ", "case", "begin")
             end
 
             def statement_body_for(value)
@@ -1324,21 +1316,32 @@ module Klenod
 
           def compile_tag(node, mark:, factory:, builder:, styleable: false)
             children = []
-            value = node.value.fetch(:value)
-            if value && !value.empty?
-              children << (node.value.fetch(:parse) ? builder.parenthesized_expression(value, line_no: node.line) : builder.literal(value))
+            measure_compile(:haml_compile_tag_value) do
+              value = node.value.fetch(:value)
+              if value && !value.empty?
+                children << (node.value.fetch(:parse) ? builder.parenthesized_expression(value, line_no: node.line) : builder.literal(value))
+              end
             end
-            children.concat(compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder)) unless node.children.empty?
+            unless node.children.empty?
+              children.concat(
+                measure_compile(:haml_compile_tag_children) do
+                  compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder)
+                end
+              )
+            end
 
             measure_compile(:haml_compile_factory_call) { compile_factory_call(node, children, mark: mark, factory: factory, styleable: styleable, builder: builder) }
           end
 
           def compile_factory_call(node, children, mark:, factory:, builder:, styleable: false)
+            tag = measure_compile(:haml_compile_tag_name) { compile_tag_name(node, builder: builder) }
+            props = measure_compile(:haml_compile_tag_attributes) { attributes(node, styleable: styleable, builder: builder) }
+
             builder.factory_call(
               factory: factory,
-              tag: compile_tag_name(node, builder: builder),
+              tag: tag,
               children: children,
-              props: attributes(node, styleable: styleable, builder: builder),
+              props: props,
               mark: mark
             )
           end

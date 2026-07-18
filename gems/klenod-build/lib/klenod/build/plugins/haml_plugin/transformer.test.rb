@@ -58,7 +58,7 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, template.ruby)
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, template.render)
     assert_kind_of(SyntaxTree::Statements, template.ruby.node)
-    assert_kind_of(SyntaxTree::Node, template.render.node)
+    assert_nil(template.render.node)
   end
 
   def test_haml_transformer_wraps_parse_errors_with_source_context
