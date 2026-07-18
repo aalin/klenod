@@ -112,9 +112,11 @@ module Klenod
 
         HamlTransformResult = Data.define(:code, :source_map, :metadata, :ast) do
           def self.from_ast(ast, source:, metadata:)
+            code = ast.source
+
             new(
-              ast.source,
-              Runtime::SourceMap::SourceMap.parse(source, ast.source),
+              code,
+              Runtime::SourceMap::SourceMap.parse(source, code),
               metadata,
               ast
             )
@@ -980,13 +982,13 @@ module Klenod
                 )
               end
             if profiler
-              profiler.measure(:haml_source_map, module_id: module_id.to_s) do
-                HamlTransformResult.from_ast(
-                  ast,
-                  source: source,
-                  metadata: {source: source, module_id: module_id}
-                )
-              end
+              code = profiler.measure(:haml_generate_code, module_id: module_id.to_s) { ast.source }
+              source_map =
+                profiler.measure(:haml_source_map_parse, module_id: module_id.to_s) do
+                  Runtime::SourceMap::SourceMap.parse(source, code)
+                end
+
+              HamlTransformResult.new(code, source_map, {source: source, module_id: module_id}, ast)
             else
               HamlTransformResult.from_ast(
                 ast,
