@@ -10,6 +10,7 @@ module Klenod
         @events = store_events ? [] : nil
         @totals = Hash.new(0.0)
         @totals_by_plugin = Hash.new(0.0)
+        @counts = Hash.new(0)
         @categories = categories.map(&:to_sym).to_h { |category| [category, true] }
       end
 
@@ -39,12 +40,22 @@ module Klenod
         @categories.key?(name.to_sym)
       end
 
+      def count(name, value = 1)
+        return unless enabled?
+
+        @counts[name] += value
+      end
+
       def totals
         @totals.dup
       end
 
       def totals_by_plugin
         @totals_by_plugin.dup
+      end
+
+      def counts
+        @counts.dup
       end
 
       private

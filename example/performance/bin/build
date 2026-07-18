@@ -70,6 +70,14 @@ profiler.totals.sort_by { |_name, duration| -duration }.each do |name, duration|
   puts "  #{name}: #{format_duration(duration)}"
 end
 
+unless profiler.counts.empty?
+  puts
+  puts "Build counters:"
+  profiler.counts.sort.each do |name, count|
+    puts "  #{name}: #{count}"
+  end
+end
+
 puts
 puts "Plugin profile:"
 profiler

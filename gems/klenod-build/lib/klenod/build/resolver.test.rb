@@ -71,6 +71,26 @@ class Klenod::Build::Resolver::Test < Minitest::Test
     end
   end
 
+  def test_clear_cache_recomputes_extensionless_resolution
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.haml", "")
+
+      resolver = Resolver.new(source_dir: dir)
+      dependency = Dependency.create(specifier: "pages/page", importer_id: nil, kind: :entrypoint)
+
+      assert_equal("pages/page.haml", resolver.resolve(dependency).module_id.path)
+
+      File.write("#{dir}/pages/page.rb", "")
+
+      assert_equal("pages/page.haml", resolver.resolve(dependency).module_id.path)
+
+      resolver.clear_cache
+
+      assert_equal("pages/page.rb", resolver.resolve(dependency).module_id.path)
+    end
+  end
+
   def test_skips_explicit_only_extensions_for_extensionless_imports
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/components")

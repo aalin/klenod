@@ -210,6 +210,7 @@ module Klenod
       end
 
       def invalidate_paths(changed_paths, removed_paths: [])
+        @resolver.clear_cache
         previous_assets = assets
         evaluated_module_ids = @mods.keys
         changed_module_ids = module_ids_for_paths(changed_paths)
@@ -305,9 +306,11 @@ module Klenod
           raise_failed_module!(cached)
 
           if cached&.source_hash == source_hash && !force && !reevaluate
+            @profiler.count(:load_module_cache_hit)
             evaluate_module(module_id) unless @mods.key?(module_id)
             return cached
           end
+          @profiler.count(:load_module_cache_miss)
 
           transform = loaded_source.transform || transform_module_source(module_id, source)
           resolved_dependencies = resolve_transform_dependencies(transform)
@@ -353,7 +356,11 @@ module Klenod
 
           raise_failed_module!(cached)
 
-          return cached if cached&.source_hash == source_hash && !force
+          if cached&.source_hash == source_hash && !force
+            @profiler.count(:collect_module_cache_hit)
+            return cached
+          end
+          @profiler.count(:collect_module_cache_miss)
 
           transform = loaded_source.transform || transform_module_source(module_id, source)
           resolved_dependencies = resolve_transform_dependencies(transform)
@@ -495,18 +502,26 @@ module Klenod
       end
 
       def read_module_source(module_id)
-        loaded = load_source(module_id, @resolver.absolute_path(module_id))
+        loaded =
+          @profiler.measure(:module_source_read, module_id: module_id.to_s) do
+            load_source(module_id, @resolver.absolute_path(module_id))
+          end
         return loaded if loaded.is_a?(LoadResult)
 
         LoadResult.new(loaded, nil, nil)
       end
 
       def transform_module_source(module_id, source)
-        transform(module_id, source)
+        transform(module_id, source).tap do |result|
+          @profiler.count(:transform_dependencies, result.dependencies.length)
+          @profiler.count(:transform_assets, result.assets.length)
+        end
       end
 
       def resolve_transform_dependencies(transform)
-        transform.dependencies.map { |dependency| resolve_dependency(dependency) }
+        @profiler.measure(:dependency_resolution, count: transform.dependencies.length) do
+          transform.dependencies.map { |dependency| resolve_dependency(dependency) }
+        end
       end
 
       def load_eager_dependency_records(resolved_dependencies)

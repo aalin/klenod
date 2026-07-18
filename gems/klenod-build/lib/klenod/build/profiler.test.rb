@@ -34,6 +34,23 @@ class Klenod::Build::ProfilerTest < Minitest::Test
     refute(profiler.category?(:other))
   end
 
+  def test_profiler_collects_counts
+    profiler = Klenod::Build::Profiler.new(enabled: true)
+
+    profiler.count(:cache_hit)
+    profiler.count(:cache_hit, 2)
+
+    assert_equal({cache_hit: 3}, profiler.counts)
+  end
+
+  def test_disabled_profiler_does_not_collect_counts
+    profiler = Klenod::Build::Profiler.new
+
+    profiler.count(:cache_hit)
+
+    assert_empty(profiler.counts)
+  end
+
   def test_context_records_plugin_timings_when_profiler_is_enabled
     Dir.mktmpdir do |dir|
       File.write(File.join(dir, "entry.rb"), <<~RUBY)

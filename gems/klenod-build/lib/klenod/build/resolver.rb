@@ -12,6 +12,8 @@ module Klenod
       def initialize(source_dir:, extensions: DEFAULT_EXTENSIONS)
         @source_dir = Pathname.new(source_dir).expand_path
         @extensions = extensions
+        @resolved_module_ids = {}
+        @absolute_paths = {}
       end
 
       attr_reader :source_dir
@@ -29,16 +31,27 @@ module Klenod
           end
 
         assert_inside_source_dir!(base_path)
-        resolved_path = resolve_existing_path(base_path)
-        relative = resolved_path.relative_path_from(@source_dir).to_s
+        module_id =
+          @resolved_module_ids.fetch([base_path.to_s, query]) do |key|
+            resolved_path = resolve_existing_path(base_path)
+            relative = resolved_path.relative_path_from(@source_dir).to_s
+            @resolved_module_ids[key] = ModuleId.new(relative, query)
+          end
 
-        ResolvedDependency.new(dependency, ModuleId.new(relative, query), {})
+        ResolvedDependency.new(dependency, module_id, {})
       end
 
       def absolute_path(module_id)
-        path = @source_dir.join(module_id.path).cleanpath
-        assert_inside_source_dir!(path)
-        path
+        @absolute_paths.fetch(module_id.path) do |path_key|
+          path = @source_dir.join(path_key).cleanpath
+          assert_inside_source_dir!(path)
+          @absolute_paths[path_key] = path
+        end
+      end
+
+      def clear_cache
+        @resolved_module_ids.clear
+        @absolute_paths.clear
       end
 
       private
