@@ -17,6 +17,16 @@ class Klenod::Build::ProfilerTest < Minitest::Test
     assert_equal([[:phase, "Plugin"]], profiler.totals_by_plugin.keys)
   end
 
+  def test_profiler_can_record_totals_without_storing_events
+    profiler = Klenod::Build::Profiler.new(enabled: true, store_events: false)
+
+    profiler.measure(:phase, plugin: "Plugin") { nil }
+
+    assert_empty(profiler.events)
+    assert_equal([:phase], profiler.totals.keys)
+    assert_equal([[:phase, "Plugin"]], profiler.totals_by_plugin.keys)
+  end
+
   def test_context_records_plugin_timings_when_profiler_is_enabled
     Dir.mktmpdir do |dir|
       File.write(File.join(dir, "entry.rb"), <<~RUBY)

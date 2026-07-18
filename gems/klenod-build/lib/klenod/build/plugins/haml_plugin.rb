@@ -165,6 +165,9 @@ module Klenod
 
             def initialize(profiler: nil)
               @profiler = profiler
+              @expression_cache = {}
+              @statements_cache = {}
+              @program_cache = {}
             end
 
             def component_source(
@@ -320,7 +323,7 @@ module Klenod
             end
 
             def literal(value)
-              fragment(literal_node(value))
+              Fragment.new(literal_source(value), literal_node(value))
             end
 
             def frozen_literal(value)
@@ -328,7 +331,8 @@ module Klenod
             end
 
             def import_call(dependency_id)
-              fragment(
+              Fragment.new(
+                "__klenod_import__(#{literal_source(dependency_id)})",
                 CallNode(
                   nil,
                   nil,
@@ -379,15 +383,16 @@ module Klenod
             end
 
             def nil_expression
-              fragment(nil_node)
+              Fragment.new("nil", nil_node)
             end
 
             def file_expression
-              fragment(VarRef(Kw("__FILE__")))
+              Fragment.new("__FILE__", VarRef(Kw("__FILE__")))
             end
 
             def symbol(value)
-              fragment(symbol_node(value.to_s))
+              value = value.to_s
+              Fragment.new(symbol_source(value), symbol_node(value))
             end
 
             def parenthesized_expression(source, line_no: nil)
@@ -774,6 +779,23 @@ module Klenod
               end
             end
 
+            def literal_source(value)
+              case value
+              when String
+                value.inspect
+              when Integer, Float
+                value.to_s
+              when true
+                "true"
+              when false
+                "false"
+              when nil
+                "nil"
+              else
+                value.inspect
+              end
+            end
+
             def freeze_node(node)
               CallNode(node, Period("."), Ident("freeze"), nil)
             end
@@ -787,6 +809,14 @@ module Klenod
                 SymbolLiteral(Ident(value))
               else
                 DynaSymbol([TStringContent(value)], ":\"")
+              end
+            end
+
+            def symbol_source(value)
+              if value.match?(/\A[a-zA-Z_]\w*[!?=]?\z/)
+                ":#{value}"
+              else
+                ":#{value.inspect}"
               end
             end
 
@@ -852,15 +882,7 @@ module Klenod
             end
 
             def parse_expression(source)
-              if @profiler
-                @profiler.measure(:haml_parse_expression) do
-                  SyntaxTree
-                    .parse(source)
-                    &.statements
-                    &.body
-                    &.find { |node| !node.instance_of?(SyntaxTree::Comment) }
-                end
-              else
+              cached_parse(@expression_cache, source, :haml_parse_expression) do
                 SyntaxTree
                   .parse(source)
                   &.statements
@@ -872,23 +894,27 @@ module Klenod
             end
 
             def parse_statements(source)
-              if @profiler
-                @profiler.measure(:haml_parse_statements) { SyntaxTree.parse(source)&.statements }
-              else
-                SyntaxTree.parse(source)&.statements
-              end
+              cached_parse(@statements_cache, source, :haml_parse_statements) { SyntaxTree.parse(source)&.statements }
             rescue SyntaxTree::Parser::ParseError
               nil
             end
 
             def parse_program(source)
-              if @profiler
-                @profiler.measure(:haml_parse_program) { SyntaxTree.parse(source) }
-              else
-                SyntaxTree.parse(source)
-              end
+              cached_parse(@program_cache, source, :haml_parse_program) { SyntaxTree.parse(source) }
             rescue SyntaxTree::Parser::ParseError
               nil
+            end
+
+            def cached_parse(cache, source, event_name)
+              source = source.to_s
+              return cache.fetch(source) if cache.key?(source)
+
+              cache[source] =
+                if @profiler
+                  @profiler.measure(event_name) { yield }
+                else
+                  yield
+                end
             end
 
             def fix_syntax_by_adding_missing_pairs(source)

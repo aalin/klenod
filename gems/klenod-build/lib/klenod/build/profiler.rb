@@ -5,15 +5,19 @@ module Klenod
     class Profiler
       Event = Data.define(:name, :duration, :metadata)
 
-      attr_reader :events
-
-      def initialize(enabled: false)
+      def initialize(enabled: false, store_events: true)
         @enabled = enabled
-        @events = []
+        @events = store_events ? [] : nil
+        @totals = Hash.new(0.0)
+        @totals_by_plugin = Hash.new(0.0)
       end
 
       def enabled?
         @enabled
+      end
+
+      def events
+        @events || []
       end
 
       def measure(name, metadata = nil)
@@ -22,25 +26,30 @@ module Klenod
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         result = yield
         duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
-        @events << Event.new(name, duration, metadata || {})
+        record(name, duration, metadata || {})
         result
       rescue
         duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at if started_at
-        @events << Event.new(name, duration, (metadata || {}).merge(error: true)) if duration
+        record(name, duration, (metadata || {}).merge(error: true)) if duration
         raise
       end
 
       def totals
-        @events.each_with_object(Hash.new(0.0)) do |event, index|
-          index[event.name] += event.duration
-        end
+        @totals.dup
       end
 
       def totals_by_plugin
-        @events.each_with_object(Hash.new(0.0)) do |event, index|
-          plugin = event.metadata[:plugin]
-          index[[event.name, plugin]] += event.duration if plugin
-        end
+        @totals_by_plugin.dup
+      end
+
+      private
+
+      def record(name, duration, metadata)
+        @events << Event.new(name, duration, metadata) if @events
+        @totals[name] += duration
+
+        plugin = metadata[:plugin]
+        @totals_by_plugin[[name, plugin]] += duration if plugin
       end
     end
   end
