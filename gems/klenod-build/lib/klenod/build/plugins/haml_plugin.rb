@@ -405,7 +405,8 @@ module Klenod
             end
 
             def class_skeleton_fragment(component_class_name, component_base_class)
-              fragment(
+              Fragment.new(
+                "",
                 ClassDeclaration(
                   constant_path(component_class_name, declaration: true),
                   constant_path(component_base_class),
@@ -530,7 +531,7 @@ module Klenod
               else
                 node = ArrayLiteral(LBracket("["), Args(expressions.map { |item| argument_node(item) }))
 
-                Fragment.new(format_node(node), node)
+                Fragment.new("", node)
               end
             end
 
@@ -546,7 +547,7 @@ module Klenod
 
               node = ARef(factory_node, Args(parts))
 
-              Fragment.new(format_node(node), node)
+              Fragment.new("", node)
             end
 
             def ast_silent_script(source)
@@ -800,7 +801,7 @@ module Klenod
 
               node = Statements([comment_node(mark), node])
 
-              Fragment.new(format_node(node), node)
+              Fragment.new(marked_source, node)
             end
 
             def comment_node(value)

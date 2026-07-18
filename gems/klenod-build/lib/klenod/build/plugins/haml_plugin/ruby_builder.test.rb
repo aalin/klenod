@@ -15,10 +15,11 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
 
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
     assert_kind_of(SyntaxTree::ARef, fragment.node)
-    assert_includes(fragment.source, "#{self.class.name}::FakeFramework::H[")
-    assert_includes(fragment.source, ":p")
-    assert_includes(fragment.source, '"Hello"')
-    assert_includes(fragment.source, '**{ class: "intro" }')
+    formatted = builder.fragment(fragment.node).source
+    assert_includes(formatted, "#{self.class.name}::FakeFramework::H[")
+    assert_includes(formatted, ":p")
+    assert_includes(formatted, '"Hello"')
+    assert_includes(formatted, '**{ class: "intro" }')
   end
 
   def test_ruby_builder_preserves_source_map_marks_when_composing_factory_calls
@@ -35,11 +36,12 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
 
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
     assert_kind_of(SyntaxTree::ARef, fragment.node)
-    assert_includes(fragment.source, "# SourceMapMark:1")
-    assert_includes(fragment.source, "# SourceMapMark:2")
-    assert_includes(fragment.source, "**{")
-    assert_includes(fragment.source, "class:")
-    assert_includes(fragment.source, '"intro"')
+    formatted = builder.fragment(fragment.node).source
+    assert_includes(formatted, "# SourceMapMark:1")
+    assert_includes(formatted, "# SourceMapMark:2")
+    assert_includes(formatted, "**{")
+    assert_includes(formatted, "class:")
+    assert_includes(formatted, '"intro"')
   end
 
   def test_ruby_builder_fragments_keep_parsed_syntax_tree_nodes
@@ -243,7 +245,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.class_skeleton_fragment("Page", "Framework::Component::Base")
 
     assert_kind_of(SyntaxTree::ClassDeclaration, fragment.node)
-    assert_equal("class Page < Framework::Component::Base\nend", fragment.source)
+    assert_equal("class Page < Framework::Component::Base\nend", builder.fragment(fragment.node).source)
   end
 
   def test_ruby_builder_component_program_formats_from_syntax_tree_program
@@ -341,7 +343,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
       ])
 
     assert_kind_of(SyntaxTree::ArrayLiteral, fragment.node)
-    assert_equal('[H[:p, "Hello"], H[:span, "World"]]', fragment.source)
+    assert_equal('[H[:p, "Hello"], H[:span, "World"]]', builder.fragment(fragment.node).source)
   end
 
   def test_ruby_builder_preserves_source_map_marks_when_composing_expression_lists
@@ -350,8 +352,9 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.expressions([child, builder.expression('"World"')])
 
     assert_kind_of(SyntaxTree::ArrayLiteral, fragment.node)
-    assert_includes(fragment.source, "# SourceMapMark:1")
-    assert_includes(fragment.source, '"World"')
+    formatted = builder.fragment(fragment.node).source
+    assert_includes(formatted, "# SourceMapMark:1")
+    assert_includes(formatted, '"World"')
   end
 
   def test_ruby_builder_builds_silent_scripts_from_syntax_tree_nodes
