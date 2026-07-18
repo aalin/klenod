@@ -38,7 +38,7 @@ module Klenod
 
           bundle = nil
           Dir.chdir(config.base_dir) do
-            context = config.context
+            context = config.context(mode: :build)
             bundle =
               if @options[:executable]
                 context.build_executable(entrypoints: entrypoints, output: output, assets_dir: assets_dir)

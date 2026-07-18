@@ -336,6 +336,12 @@ module Klenod
         raise_import_cycle_if_present(module_id) unless force
 
         if !force
+          if @mode == :build && (cached = @records[module_id])
+            @profiler.count(:collect_module_cache_hit)
+            raise_failed_module!(cached)
+            return cached
+          end
+
           return @loading_tasks.fetch(module_id).wait if @loading_tasks.key?(module_id)
 
           begin

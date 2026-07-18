@@ -201,6 +201,23 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_build_mode_collect_reuses_cached_records_without_source_reads
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/entry.rb", "VALUE = 1\n")
+
+      profiler = Klenod::Build::Profiler.new(enabled: true)
+      context = Klenod::Build::Context.new(source_dir: dir, mode: :build, profiler: profiler)
+
+      context.collect("entry")
+      first_reads = profiler.counts.fetch(:module_file_read)
+
+      context.collect("entry")
+
+      assert_equal(first_reads, profiler.counts.fetch(:module_file_read))
+      assert_equal(1, profiler.counts.fetch(:collect_module_cache_hit))
+    end
+  end
+
   def test_build_bundle_can_rebase_file_paths_when_loaded
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

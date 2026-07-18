@@ -26,7 +26,7 @@ end
 config = Klenod::Build::ConfigLoader.load(CONFIG_PATH)
 profile_categories = ENV.fetch("KLENOD_PROFILE", "").split(",").reject(&:empty?)
 profiler = Klenod::Build::Profiler.new(enabled: true, store_events: false, categories: profile_categories)
-context = config.context(profiler: profiler)
+context = config.context(mode: :build, profiler: profiler)
 
 started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
