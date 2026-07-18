@@ -278,7 +278,9 @@ module Klenod
 
             def expression(source, line_no: nil)
               source = rewrite_line_constant(source, line_no)
-              node = parse_expression(source)
+              return Fragment.new(source, constant_path(source)) if source.match?(VALID_CONST_PATH)
+
+              node = parse_expression(source, context: :expression)
 
               Fragment.new(source, node)
             end
@@ -391,9 +393,42 @@ module Klenod
               Fragment.new(symbol_source(value), symbol_node(value))
             end
 
+            def styles_lookup(name)
+              name = name.to_s
+
+              Fragment.new(
+                "Styles[#{symbol_source(name)}]",
+                ARef(VarRef(Const("Styles")), Args([symbol_node(name)]))
+              )
+            end
+
+            def class_name_lookup(name)
+              name = name.to_s
+              lookup = styles_lookup(name)
+
+              Fragment.new(
+                "#{lookup.source} || #{literal_source(name)}",
+                Binary(lookup.node, :"||", literal_node(name))
+              )
+            end
+
+            def class_names(values)
+              fragments = values.map { |value| expression_fragment(value) }
+
+              Fragment.new(
+                "Klenod::Runtime.class_names(#{fragments.map(&:source).join(", ")})",
+                CallNode(
+                  constant_path("Klenod::Runtime"),
+                  Period("."),
+                  Ident("class_names"),
+                  ArgParen(Args(fragments.map { |fragment| node_for(fragment) }))
+                )
+              )
+            end
+
             def parenthesized_expression(source, line_no: nil)
               source = rewrite_line_constant(source, line_no)
-              node = parse_expression(source)
+              node = parse_expression(source, context: :parenthesized_expression)
               return expression("(#{source})") unless node
 
               fragment(Paren(LParen("("), Statements([node])))
@@ -401,7 +436,7 @@ module Klenod
 
             def hash_expression(source, line_no: nil)
               source = rewrite_line_constant(source, line_no)
-              node = parse_expression(source)
+              node = parse_expression(source, context: :hash_expression)
               return nil unless node.is_a?(SyntaxTree::HashLiteral)
 
               fragment(node)
@@ -499,7 +534,7 @@ module Klenod
 
             def block_script?(source)
               fixed_source = fix_syntax_by_adding_missing_pairs(source)
-              node = parse_expression(fixed_source)
+              node = parse_expression(fixed_source, context: :block_script_predicate)
 
               node.is_a?(SyntaxTree::MethodAddBlock)
             end
@@ -652,7 +687,7 @@ module Klenod
                 when /\Aelsif\s+(.+)\z/ then $1
                 else return nil
                 end
-              predicate = parse_expression(predicate_source)
+              predicate = parse_expression(predicate_source, context: :branch_predicate)
               return nil unless predicate
 
               consequent =
@@ -677,7 +712,7 @@ module Klenod
               value_source = source[/\Acase\s*(.*)\z/, 1]
               return nil unless value_source
 
-              value = value_source.empty? ? nil : parse_expression(value_source)
+              value = value_source.empty? ? nil : parse_expression(value_source, context: :case_value)
               consequent = when_node(branches)
               return nil unless consequent
 
@@ -693,7 +728,7 @@ module Klenod
                 source
                   .delete_prefix("when ")
                   .split(",")
-                  .map { |argument| parse_expression(argument.strip) }
+                  .map { |argument| parse_expression(argument.strip, context: :when_argument) }
               return nil if arguments.any?(&:nil?)
 
               consequent =
@@ -705,7 +740,7 @@ module Klenod
             end
 
             def block_script_node(source, body)
-              node = parse_expression(fix_syntax_by_adding_missing_pairs(source))
+              node = parse_expression(fix_syntax_by_adding_missing_pairs(source), context: :block_script)
               return nil unless node.is_a?(SyntaxTree::MethodAddBlock)
 
               MethodAddBlock(
@@ -843,7 +878,7 @@ module Klenod
             def node_for(value)
               return value.node if value.is_a?(Fragment)
 
-              parse_expression(to_source(value))
+              parse_expression(to_source(value), context: :node_for)
             end
 
             def argument_node(value, mark: nil)
@@ -873,12 +908,13 @@ module Klenod
 
             def expression_node(source)
               source = source.to_s
+              return constant_path(source) if source.match?(VALID_CONST_PATH)
 
-              parse_expression(source) || raise(ArgumentError, "Could not parse Ruby expression: #{source.inspect}")
+              parse_expression(source, context: :expression_node) || raise(ArgumentError, "Could not parse Ruby expression: #{source.inspect}")
             end
 
-            def parse_expression(source)
-              cached_parse(@expression_cache, source, :haml_parse_expression) do
+            def parse_expression(source, context:)
+              cached_parse(@expression_cache, source, :"haml_parse_expression:#{context}") do
                 SyntaxTree
                   .parse(source)
                   &.statements
@@ -1268,14 +1304,14 @@ module Klenod
             ].compact
             return {} if values.empty?
 
-            {class: builder.expression("Klenod::Runtime.class_names(#{values.map(&:source).join(", ")})")}
+            {class: builder.class_names(values)}
           end
 
           def tag_class_lookup(node, builder:)
             tag_name = node.value.fetch(:name)
             return nil if tag_name.match?(/\A[A-Z]/)
 
-            builder.expression("Styles[#{builder.symbol("__#{tag_name}").source}]")
+            builder.styles_lookup("__#{tag_name}")
           end
 
           def static_class_lookups(node, builder:)
@@ -1284,7 +1320,7 @@ module Klenod
               .fetch(:attributes)
               .fetch("class", "")
               .split
-              .map { |class_name| builder.expression("Styles[#{builder.symbol(class_name).source}] || #{class_name.inspect}") }
+              .map { |class_name| builder.class_name_lookup(class_name) }
           end
 
           def object_ref_attributes(node, builder:)

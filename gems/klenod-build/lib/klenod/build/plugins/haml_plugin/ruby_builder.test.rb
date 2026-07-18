@@ -130,6 +130,25 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_equal('__klenod_import__("pages/page.haml:companion_style")', fragment.source)
   end
 
+  def test_ruby_builder_builds_style_lookup_helpers_from_syntax_tree_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    tag_lookup = builder.styles_lookup("__p")
+    class_lookup = builder.class_name_lookup("article-card")
+    class_names = builder.class_names([tag_lookup, class_lookup, builder.expression("dynamic_class")])
+
+    assert_kind_of(SyntaxTree::ARef, tag_lookup.node)
+    assert_equal("Styles[:__p]", tag_lookup.source)
+    assert_kind_of(SyntaxTree::Binary, class_lookup.node)
+    assert_equal('Styles[:"article-card"] || "article-card"', class_lookup.source)
+    assert_kind_of(SyntaxTree::CallNode, class_names.node)
+
+    formatted = builder.fragment(class_names.node).source
+    assert_includes(formatted, "Klenod::Runtime.class_names(")
+    assert_includes(formatted, "Styles[:__p]")
+    assert_includes(formatted, 'Styles[:"article-card"] || "article-card"')
+    assert_includes(formatted, "dynamic_class")
+  end
+
   def test_ruby_builder_builds_constant_assignments_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.constant_assignment("Default", "Page")
