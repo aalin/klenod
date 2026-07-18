@@ -315,6 +315,10 @@ module Klenod
               Fragment.new(format_node(node), node)
             end
 
+            def node_fragment(source, node)
+              Fragment.new(source.to_s, node)
+            end
+
             def expression_fragment(value)
               value.is_a?(Fragment) ? value : expression(value.to_s)
             end
@@ -457,7 +461,7 @@ module Klenod
               node = parse_expression(source, context: :hash_expression)
               return nil unless node.is_a?(SyntaxTree::HashLiteral)
 
-              fragment(node)
+              Fragment.new(source, node)
             end
 
             def class_skeleton_fragment(component_class_name, component_base_class)
@@ -1141,7 +1145,6 @@ module Klenod
           private
 
           Template = Data.define(:ruby, :render)
-          RubyLine = Data.define(:line_no, :source)
 
           def measure_compile(name)
             return yield unless @profiler
@@ -1372,15 +1375,13 @@ module Klenod
           def compile_ruby_filter(node, builder:, import_rewriter: nil)
             text = node.value.fetch(:text)
             text = import_rewriter.call(text) if import_rewriter && text.include?("import")
-            source =
-              text
-                .lines
-                .map
-                .with_index(node.line + 1) do |line, line_no|
-                  rewritten = builder.line_rewritten_source(line.chomp, line_no)
-                  "#{source_mark(RubyLine.new(line_no, line.strip), builder: builder)}\n#{rewritten.chomp}"
-                end
-                .join("\n")
+            source = +""
+            text.each_line.with_index(node.line + 1) do |line, line_no|
+              source << "\n" unless source.empty?
+              source << builder.source_mark(line_no, nil)
+              source << "\n"
+              source << builder.line_rewritten_source(line.chomp, line_no).chomp
+            end
 
             builder.statements(source)
           end
@@ -1418,13 +1419,14 @@ module Klenod
             return {} unless source
 
             measure_compile(:haml_compile_dynamic_attributes) do
-              hash = builder.hash_expression(source, line_no: node.line)
+              source = builder.line_rewritten_source(source, node.line)
+              hash = builder.hash_expression(source)
               return {} unless hash
 
               dynamic = {}
               hash.node.assocs.each do |assoc|
                 key = attribute_key(assoc.key, builder: builder)
-                value = builder.fragment(assoc.value)
+                value = builder.node_fragment(node_source(source, assoc.value), assoc.value)
                 dynamic[key] = value
                 props[key] = value
               end
@@ -1486,6 +1488,13 @@ module Klenod
             end
           end
 
+          def node_source(source, node)
+            location = node.location
+            return source unless location
+
+            source[location.start_char...location.end_char]
+          end
+
           def attribute_key(node, builder:)
             case node
             when SyntaxTree::Label
@@ -1498,28 +1507,21 @@ module Klenod
           end
 
           def source_mark(node, builder:)
-            line_no = node.is_a?(RubyLine) ? node.line_no : node.line
-
-            builder.source_mark(line_no, source_for_mark(node))
+            builder.source_mark(node.line, source_for_mark(node))
           end
 
           def source_for_mark(node)
-            case node
-            when RubyLine
-              node.source
-            else
-              case node.type
-              when :tag
-                node.value.fetch(:value) || node.value.fetch(:name)
-              when :plain
-                node.value.fetch(:text)
-              when :script
-                node.value.fetch(:text)
-              when :silent_script
-                node.value.fetch(:text)
-              when :filter
-                node.value.fetch(:name).to_s
-              end
+            case node.type
+            when :tag
+              node.value.fetch(:value) || node.value.fetch(:name)
+            when :plain
+              node.value.fetch(:text)
+            when :script
+              node.value.fetch(:text)
+            when :silent_script
+              node.value.fetch(:text)
+            when :filter
+              node.value.fetch(:name).to_s
             end
           end
         end
