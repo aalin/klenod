@@ -24,7 +24,8 @@ def format_duration(seconds)
 end
 
 config = Klenod::Build::ConfigLoader.load(CONFIG_PATH)
-profiler = Klenod::Build::Profiler.new(enabled: true, store_events: false)
+profile_categories = ENV.fetch("KLENOD_PROFILE", "").split(",").reject(&:empty?)
+profiler = Klenod::Build::Profiler.new(enabled: true, store_events: false, categories: profile_categories)
 context = config.context(profiler: profiler)
 
 started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)

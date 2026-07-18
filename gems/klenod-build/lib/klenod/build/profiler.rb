@@ -5,11 +5,12 @@ module Klenod
     class Profiler
       Event = Data.define(:name, :duration, :metadata)
 
-      def initialize(enabled: false, store_events: true)
+      def initialize(enabled: false, store_events: true, categories: [])
         @enabled = enabled
         @events = store_events ? [] : nil
         @totals = Hash.new(0.0)
         @totals_by_plugin = Hash.new(0.0)
+        @categories = categories.map(&:to_sym).to_h { |category| [category, true] }
       end
 
       def enabled?
@@ -32,6 +33,10 @@ module Klenod
         duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at if started_at
         record(name, duration, (metadata || {}).merge(error: true)) if duration
         raise
+      end
+
+      def category?(name)
+        @categories.key?(name.to_sym)
       end
 
       def totals

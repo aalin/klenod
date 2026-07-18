@@ -27,6 +27,13 @@ class Klenod::Build::ProfilerTest < Minitest::Test
     assert_equal([[:phase, "Plugin"]], profiler.totals_by_plugin.keys)
   end
 
+  def test_profiler_categories_are_opt_in
+    profiler = Klenod::Build::Profiler.new(enabled: true, categories: [:haml_detail])
+
+    assert(profiler.category?(:haml_detail))
+    refute(profiler.category?(:other))
+  end
+
   def test_context_records_plugin_timings_when_profiler_is_enabled
     Dir.mktmpdir do |dir|
       File.write(File.join(dir, "entry.rb"), <<~RUBY)

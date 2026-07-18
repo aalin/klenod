@@ -15,6 +15,12 @@ Build it:
 bin/build
 ```
 
+Enable detailed Haml transform buckets:
+
+```sh
+KLENOD_PROFILE=haml_detail bin/build
+```
+
 The generated case lives in `tmp/cases/web-1k`, which is ignored by git.
 Re-running `bin/generate` recreates that directory from scratch.
 

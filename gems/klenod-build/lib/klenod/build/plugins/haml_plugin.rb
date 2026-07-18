@@ -1144,6 +1144,12 @@ module Klenod
             @profiler.measure(name, module_id: @module_id.to_s) { yield }
           end
 
+          def measure_compile_detail(name)
+            return yield unless @profiler&.category?(:haml_detail)
+
+            @profiler.measure(name, module_id: @module_id.to_s) { yield }
+          end
+
           def compile_template(source, factory:, builder:, module_id: nil, styleable: false, import_rewriter: nil)
             parsed = measure_compile(:haml_parse_haml) { HamlPlugin.parse_haml(source, module_id: module_id) }
             render_nodes, ruby_nodes =
@@ -1207,7 +1213,7 @@ module Klenod
           end
 
           def compile_node(node, factory:, builder:, styleable: false)
-            measure_compile(:"haml_compile_node_#{node.type}") do
+            measure_compile_detail(:"haml_compile_node_#{node.type}") do
               mark = source_mark(node, builder: builder)
               expression =
                 case node.type
@@ -1316,7 +1322,7 @@ module Klenod
 
           def compile_tag(node, mark:, factory:, builder:, styleable: false)
             children = []
-            measure_compile(:haml_compile_tag_value) do
+            measure_compile_detail(:haml_compile_tag_value) do
               value = node.value.fetch(:value)
               if value && !value.empty?
                 children << (node.value.fetch(:parse) ? builder.parenthesized_expression(value, line_no: node.line) : builder.literal(value))
@@ -1324,7 +1330,7 @@ module Klenod
             end
             unless node.children.empty?
               children.concat(
-                measure_compile(:haml_compile_tag_children) do
+                measure_compile_detail(:haml_compile_tag_children) do
                   compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder)
                 end
               )
@@ -1334,8 +1340,8 @@ module Klenod
           end
 
           def compile_factory_call(node, children, mark:, factory:, builder:, styleable: false)
-            tag = measure_compile(:haml_compile_tag_name) { compile_tag_name(node, builder: builder) }
-            props = measure_compile(:haml_compile_tag_attributes) { attributes(node, styleable: styleable, builder: builder) }
+            tag = measure_compile_detail(:haml_compile_tag_name) { compile_tag_name(node, builder: builder) }
+            props = measure_compile_detail(:haml_compile_tag_attributes) { attributes(node, styleable: styleable, builder: builder) }
 
             builder.factory_call(
               factory: factory,
