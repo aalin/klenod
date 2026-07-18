@@ -277,14 +277,8 @@ module Klenod
             def expression(source, line_no: nil)
               source = rewrite_line_constant(source, line_no)
               node = parse_expression(source)
-              formatted_source =
-                if node && !source.include?(Runtime::SourceMap::MARK_PREFIX)
-                  format_node(node)
-                else
-                  source
-                end
 
-              Fragment.new(formatted_source, node)
+              Fragment.new(source, node)
             end
 
             def statements(source, line_no: nil)
@@ -563,14 +557,14 @@ module Klenod
 
               node = ast_begin([*statement_body_for(statements), nil_node])
 
-              Fragment.new(format_node(node), node)
+              Fragment.new("", node)
             end
 
             def ast_script_block(source, body)
               node = block_script_node(source, body)
               return nil unless node
 
-              Fragment.new(format_node(node), node)
+              Fragment.new("", node)
             end
 
             def ast_silent_script_block(source, body)
@@ -579,14 +573,14 @@ module Klenod
 
               node = ast_begin([node, nil_node])
 
-              Fragment.new(format_node(node), node)
+              Fragment.new("", node)
             end
 
             def ast_branches(branches)
               node = branch_node(branches)
               return nil unless node
 
-              Fragment.new(format_node(node), node)
+              Fragment.new("", node)
             end
 
             def ast_silent_branches(branches)
@@ -595,7 +589,7 @@ module Klenod
 
               node = ast_begin([node, nil_node])
 
-              Fragment.new(format_node(node), node)
+              Fragment.new("", node)
             end
 
             def ast_ruby_filters(nodes)
@@ -612,7 +606,7 @@ module Klenod
                   ast_begin(statement_body_for(statements))
                 end
 
-              fragment(Statements(begins))
+              Fragment.new("", Statements(begins))
             end
 
             def ast_begin(statement_nodes)

@@ -49,7 +49,8 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     unmarked = builder.expression('H[:p, **{:class => "intro"}]')
 
     assert_kind_of(SyntaxTree::ARef, unmarked.node)
-    assert_equal('H[:p, **{ class: "intro" }]', unmarked.source)
+    assert_equal('H[:p, **{:class => "intro"}]', unmarked.source)
+    assert_equal('H[:p, **{ class: "intro" }]', builder.fragment(unmarked.node).source)
   end
 
   def test_ruby_builder_program_fragments_keep_parsed_syntax_tree_nodes
@@ -364,7 +365,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.silent_script("@visible = true")
 
     assert_kind_of(SyntaxTree::Begin, fragment.node)
-    assert_equal(<<~RUBY.chomp, fragment.source)
+    assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
       begin
         @visible = true
         nil
@@ -380,9 +381,10 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
       ])
 
     assert_kind_of(SyntaxTree::Statements, fragment.node)
-    assert_includes(fragment.source, "# SourceMapMark:2")
-    assert_includes(fragment.source, "begin\n")
-    assert_includes(fragment.source, "def title")
+    formatted = formatted_source(builder, fragment)
+    assert_includes(formatted, "# SourceMapMark:2")
+    assert_includes(formatted, "begin\n")
+    assert_includes(formatted, "def title")
   end
 
   def test_ruby_builder_builds_script_blocks_from_syntax_tree_nodes
@@ -391,7 +393,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.script_block("items.map do |item|", body)
 
     assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
-    assert_equal("items.map { |item| H[:li, item] }", fragment.source)
+    assert_equal("items.map { |item| H[:li, item] }", formatted_source(builder, fragment))
   end
 
   def test_ruby_builder_builds_brace_script_blocks_from_syntax_tree_nodes
@@ -400,7 +402,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.script_block("items.map { |item|", body)
 
     assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
-    assert_equal("items.map { |item| H[:li, item] }", fragment.source)
+    assert_equal("items.map { |item| H[:li, item] }", formatted_source(builder, fragment))
   end
 
   def test_ruby_builder_builds_silent_script_blocks_with_nil_result
@@ -409,7 +411,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.silent_script_block("items.each do |item|", body)
 
     assert_kind_of(SyntaxTree::Begin, fragment.node)
-    assert_equal(<<~RUBY.chomp, fragment.source)
+    assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
       begin
         items.each { |item| H[:li, item] }
         nil
@@ -423,7 +425,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.silent_script_block("items.each { |item|", body)
 
     assert_kind_of(SyntaxTree::Begin, fragment.node)
-    assert_equal(<<~RUBY.chomp, fragment.source)
+    assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
       begin
         items.each { |item| H[:li, item] }
         nil
@@ -446,8 +448,9 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.script_block("items.map do |item|", body)
 
     assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
-    assert_includes(fragment.source, "# SourceMapMark:2")
-    assert_includes(fragment.source, "items.map do |item|")
+    formatted = formatted_source(builder, fragment)
+    assert_includes(formatted, "# SourceMapMark:2")
+    assert_includes(formatted, "items.map do |item|")
   end
 
   def test_ruby_builder_reports_helpful_script_block_parse_errors
@@ -472,9 +475,10 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
       ])
 
     assert_kind_of(SyntaxTree::IfNode, fragment.node)
-    assert_includes(fragment.source, "show")
-    assert_includes(fragment.source, "H[:p]")
-    assert_includes(fragment.source, "H[:span]")
+    formatted = formatted_source(builder, fragment)
+    assert_includes(formatted, "show")
+    assert_includes(formatted, "H[:p]")
+    assert_includes(formatted, "H[:span]")
   end
 
   def test_ruby_builder_builds_branch_nodes
@@ -501,7 +505,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
       ])
 
     assert_kind_of(SyntaxTree::Begin, fragment.node)
-    assert_equal(<<~RUBY.chomp, fragment.source)
+    assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
       begin
         show ? H[:p] : H[:span]
         nil
@@ -517,8 +521,9 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
       ])
 
     assert_kind_of(SyntaxTree::Begin, fragment.node)
-    assert_includes(fragment.source, "return")
-    assert_includes(fragment.source, "nil")
+    formatted = formatted_source(builder, fragment)
+    assert_includes(formatted, "return")
+    assert_includes(formatted, "nil")
   end
 
   def test_ruby_builder_builds_case_branches_from_syntax_tree_nodes
@@ -531,11 +536,12 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
       ])
 
     assert_kind_of(SyntaxTree::Case, fragment.node)
-    assert_includes(fragment.source, "case value")
-    assert_includes(fragment.source, "when 1")
-    assert_includes(fragment.source, "H[:p]")
-    assert_includes(fragment.source, "else")
-    assert_includes(fragment.source, "H[:span]")
+    formatted = formatted_source(builder, fragment)
+    assert_includes(formatted, "case value")
+    assert_includes(formatted, "when 1")
+    assert_includes(formatted, "H[:p]")
+    assert_includes(formatted, "else")
+    assert_includes(formatted, "H[:span]")
   end
 
   def test_ruby_builder_preserves_source_map_marks_when_composing_branches
@@ -548,7 +554,14 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
       ])
 
     assert_kind_of(SyntaxTree::IfNode, fragment.node)
-    assert_includes(fragment.source, "# SourceMapMark:2")
-    assert_includes(fragment.source, "if show")
+    formatted = formatted_source(builder, fragment)
+    assert_includes(formatted, "# SourceMapMark:2")
+    assert_includes(formatted, "if show")
+  end
+
+  private
+
+  def formatted_source(builder, fragment)
+    builder.fragment(fragment.node).source
   end
 end
