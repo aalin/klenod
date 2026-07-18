@@ -30,6 +30,8 @@ module Klenod
           eager: false
         }
       }.freeze
+      IMPORT_SOURCE_PATTERN = /(?<![A-Za-z0-9_])(?:import|lazy_import)\s*(?:\(|["'])/
+      FAST_LITERAL_IMPORT_PATTERN = /(?<![A-Za-z0-9_])(import|lazy_import)\s*\(\s*("(?:\\.|[^"\\#])*")\s*\)/
 
       def initialize(module_id:, kind:, profiler: nil, dependency_id_offset: 0)
         @module_id = module_id
@@ -39,6 +41,10 @@ module Klenod
       end
 
       def rewrite(code)
+        return Result.new(code, []) unless import_source?(code)
+        fast_result = rewrite_literal_import_calls(code)
+        return fast_result if fast_result
+
         ast = measure(:ruby_import_parse) { SyntaxTree.parse(code) }
         calls = measure(:ruby_import_scan) { import_calls(ast) }
         dependencies =
@@ -63,6 +69,52 @@ module Klenod
       end
 
       private
+
+      def import_source?(code)
+        code.match?(IMPORT_SOURCE_PATTERN)
+      end
+
+      def rewrite_literal_import_calls(code)
+        matches = []
+        code.to_enum(:scan, IMPORT_SOURCE_PATTERN).each do
+          start = Regexp.last_match.begin(0)
+          match = FAST_LITERAL_IMPORT_PATTERN.match(code, start)
+          return nil unless match && match.begin(0) == start
+
+          matches << match
+        end
+        return nil if matches.empty?
+
+        dependencies =
+          matches.each_with_index.map do |match, index|
+            specifier =
+              begin
+                match[2].undump
+              rescue RuntimeError
+                return nil
+              end
+
+            Dependency
+              .create(
+                specifier: specifier,
+                importer_id: @module_id,
+                kind: @kind
+              )
+              .with(eager: IMPORT_METHODS.fetch(match[1]).fetch(:eager))
+              .with(id: "#{@module_id}:dependency:#{@dependency_id_offset + index}")
+          end
+
+        rewritten =
+          matches
+            .zip(dependencies)
+            .reverse_each
+            .each_with_object(code.dup) do |(match, dependency), source|
+              replacement = IMPORT_METHODS.fetch(match[1]).fetch(:replacement)
+              source[match.begin(0)...match.end(0)] = "#{replacement}(#{dependency.id.inspect})"
+            end
+
+        Result.new(rewritten, dependencies)
+      end
 
       def measure(name, &block)
         return yield unless @profiler
