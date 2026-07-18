@@ -134,7 +134,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.constant_assignment("Default", "Page")
 
     assert_kind_of(SyntaxTree::Assign, fragment.node)
-    assert_equal("Default = Page", fragment.source)
+    assert_equal("Default = Page", builder.fragment(fragment.node).source)
   end
 
   def test_ruby_builder_builds_method_calls_from_syntax_tree_nodes
@@ -143,9 +143,9 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     receiver_call = builder.call(receiver: "Default", name: "const_set", arguments: [builder.symbol("Styles"), "Styles"])
 
     assert_kind_of(SyntaxTree::CallNode, bare_call.node)
-    assert_equal("method(:__klenod_import__)", bare_call.source)
+    assert_equal("method(:__klenod_import__)", builder.fragment(bare_call.node).source)
     assert_kind_of(SyntaxTree::CallNode, receiver_call.node)
-    assert_equal("Default.const_set(:Styles, Styles)", receiver_call.source)
+    assert_equal("Default.const_set(:Styles, Styles)", builder.fragment(receiver_call.node).source)
   end
 
   def test_ruby_builder_builds_method_definitions_from_syntax_tree_nodes
@@ -153,7 +153,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.method_definition("title", body: builder.literal("Hello"))
 
     assert_kind_of(SyntaxTree::DefNode, fragment.node)
-    assert_equal(<<~RUBY.chomp, fragment.source)
+    assert_equal(<<~RUBY.chomp, builder.fragment(fragment.node).source)
       def title
         "Hello"
       end
@@ -166,9 +166,10 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.public_method_definition("render", body: body)
 
     assert_kind_of(SyntaxTree::Command, fragment.node)
-    assert_includes(fragment.source, "public def render")
-    assert_includes(fragment.source, "# SourceMapMark:3")
-    assert_includes(fragment.source, "title")
+    formatted = builder.fragment(fragment.node).source
+    assert_includes(formatted, "public def render")
+    assert_includes(formatted, "# SourceMapMark:3")
+    assert_includes(formatted, "title")
   end
 
   def test_ruby_builder_wraps_existing_syntax_tree_nodes_as_fragments
@@ -279,10 +280,11 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
 
     assert_kind_of(SyntaxTree::ClassDeclaration, fragment.node)
     assert_kind_of(SyntaxTree::Assign, fragment.node.bodystmt.statements.body.fetch(1))
-    assert_includes(fragment.source, "class Page < Object")
-    assert_includes(fragment.source, "Translations = {}.freeze")
-    assert_includes(fragment.source, "def title")
-    assert_includes(fragment.source, "public def render")
+    formatted = builder.fragment(fragment.node).source
+    assert_includes(formatted, "class Page < Object")
+    assert_includes(formatted, "Translations = {}.freeze")
+    assert_includes(formatted, "def title")
+    assert_includes(formatted, "public def render")
   end
 
   def test_ruby_builder_component_source_returns_component_program_source

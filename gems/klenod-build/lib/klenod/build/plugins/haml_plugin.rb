@@ -253,7 +253,8 @@ module Klenod
                   public_method_definition("render", body: render_source)
                 ].flat_map { |fragment| statement_body_for(fragment) }
 
-              fragment(
+              Fragment.new(
+                "",
                 skeleton.node.copy(
                   bodystmt: BodyStmt(
                     Statements(body),
@@ -287,7 +288,7 @@ module Klenod
               source = rewrite_line_constant(source, line_no)
               node = parse_statements(source)
 
-              Fragment.new(node ? format_node(node) : source, node)
+              Fragment.new(node ? "" : source, node)
             end
 
             def program(source)
@@ -338,24 +339,25 @@ module Klenod
             end
 
             def constant_assignment(name, value)
-              fragment(Assign(VarField(Const(name.to_s)), node_for(expression_fragment(value))))
+              node = Assign(VarField(Const(name.to_s)), node_for(expression_fragment(value)))
+              Fragment.new("", node)
             end
 
             def call(receiver:, name:, arguments:)
               receiver_node = receiver.nil? ? nil : node_for(expression_fragment(receiver))
 
-              fragment(
+              node =
                 CallNode(
                   receiver_node,
                   receiver_node ? Period(".") : nil,
                   Ident(name.to_s),
                   ArgParen(Args(arguments.map { |argument| node_for(expression_fragment(argument)) }))
                 )
-              )
+              Fragment.new("", node)
             end
 
             def method_definition(name, body:, target: nil, parameters: [])
-              fragment(
+              node =
                 DefNode(
                   target && node_for(expression_fragment(target)),
                   target ? Period(".") : nil,
@@ -363,17 +365,17 @@ module Klenod
                   Params(parameters.map { |parameter| Ident(parameter.to_s) }, [], nil, [], [], nil, nil),
                   body_statement(body)
                 )
-              )
+              Fragment.new("", node)
             end
 
             def public_method_definition(name, body:, parameters: [])
-              fragment(
+              node =
                 Command(
                   Ident("public"),
                   Args([method_definition(name, parameters: parameters, body: body).node]),
                   nil
                 )
-              )
+              Fragment.new("", node)
             end
 
             def nil_expression
