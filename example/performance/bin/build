@@ -1,0 +1,62 @@
+#!/usr/bin/env -S asdf exec ruby -rbundler/setup
+# frozen_string_literal: true
+
+require "fileutils"
+require "klenod"
+
+ROOT_DIR = File.expand_path("../tmp", __dir__)
+CASE_NAME = ARGV.fetch(0, "web-1k")
+CASE_DIR = File.join(ROOT_DIR, "cases", CASE_NAME)
+CONFIG_PATH = File.join(CASE_DIR, "klenod.config.rb")
+
+abort "Missing #{CONFIG_PATH}. Run `example/performance/bin/generate #{CASE_NAME}` first." unless File.file?(CONFIG_PATH)
+
+def measure
+  started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  result = yield
+  finished_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  [result, finished_at - started_at]
+end
+
+def format_duration(seconds)
+  format("%.4fs", seconds)
+end
+
+config = Klenod::Build::ConfigLoader.load(CONFIG_PATH)
+context = config.context
+
+started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+bundle, collect_duration =
+  measure do
+    context.graph.bundle(entrypoints: config.entrypoints)
+  end
+
+_assets, asset_duration =
+  measure do
+    if config.assets_path
+      context.write_assets(config.assets_path)
+    else
+      context.wait_for_assets
+    end
+  end
+
+_write, write_duration =
+  measure do
+    FileUtils.mkdir_p(File.dirname(config.output_path))
+    File.binwrite(config.output_path, Klenod::Runtime::BundleFormat.dump(bundle))
+  end
+
+bundle_size = File.size(config.output_path)
+total_duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+
+puts "Built #{CASE_NAME}"
+puts "  source: #{config.source_path}"
+puts "  bundle: #{config.output_path}"
+puts "  modules: #{bundle.modules.length}"
+puts "  assets: #{bundle.assets.length}"
+puts "  bundle size: #{bundle_size} bytes"
+puts "  collect: #{format_duration(collect_duration)}"
+puts "  assets: #{format_duration(asset_duration)}"
+puts "  write: #{format_duration(write_duration)}"
+puts "  total: #{format_duration(total_duration)}"

@@ -1,0 +1,20 @@
+#!/usr/bin/env -S asdf exec ruby -rbundler/setup
+# frozen_string_literal: true
+
+require_relative "../lib/performance_case"
+
+ROOT_DIR = File.expand_path("../tmp", __dir__)
+CASES = {
+  "web-1k" => KlenodPerformance::Generator::DEFAULT_CASE
+}.freeze
+
+case_name = ARGV.fetch(0, "web-1k")
+case_definition = CASES.fetch(case_name) do
+  abort "Unknown performance case #{case_name.inspect}. Available cases: #{CASES.keys.join(", ")}"
+end
+
+case_dir = KlenodPerformance::Generator.new(root_dir: ROOT_DIR).generate(case_definition)
+puts "Generated #{case_definition.name}"
+puts "  path: #{case_dir}"
+puts "  components: #{case_definition.component_count}"
+puts "  routes: #{case_definition.route_count}"

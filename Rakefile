@@ -83,6 +83,7 @@ namespace :test do
   minitest_task(:meta, "Run klenod meta gem tests", ["gems/klenod/lib/**/*.test.rb"])
   minitest_task(:standalone, "Run standalone example tests", ["example/standalone/**/*.test.rb"])
   minitest_task(:box, "Run Ruby::Box example tests", ["example/box/**/*.test.rb"])
+  minitest_task(:performance, "Run performance example tests", ["example/performance/**/*.test.rb"])
 
   desc "Run web example tests with the example/web bundle"
   task :web do
@@ -98,7 +99,7 @@ namespace :test do
   task gems: %i[runtime build rack meta]
 
   desc "Run all example app tests"
-  task examples: %i[standalone box web]
+  task examples: %i[standalone box performance web]
 end
 
 namespace :version do
