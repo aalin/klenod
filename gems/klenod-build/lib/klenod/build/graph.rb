@@ -722,46 +722,19 @@ module Klenod
         if resolved_dependencies.length == 1
           resolved_dependency = resolved_dependencies.fetch(0)
           return {
-            resolved_dependency.dependency.id => collected_dependency_record(resolved_dependency)
+            resolved_dependency.dependency.id => collect_module(resolved_dependency.module_id)
           }
         end
 
-        cached_records = {}
-        pending_dependencies = []
-        resolved_dependencies.each do |resolved_dependency|
-          record = @records[resolved_dependency.module_id]
-          if record
-            @profiler.count(:collect_dependency_record_cache_hit)
-            raise_failed_module!(record)
-            cached_records[resolved_dependency.dependency.id] = record
-          else
-            pending_dependencies << resolved_dependency
-          end
-        end
-        return cached_records if pending_dependencies.empty?
-
         with_async_task do |task|
-          cached_records.merge(
-            wait_for_dependency_tasks(
-              pending_dependencies.map do |resolved_dependency|
-                [
-                  resolved_dependency.dependency.id,
-                  task.async { AsyncResult.capture { collect_module(resolved_dependency.module_id) } }
-                ]
-              end
-            )
+          wait_for_dependency_tasks(
+            resolved_dependencies.map do |resolved_dependency|
+              [
+                resolved_dependency.dependency.id,
+                task.async { AsyncResult.capture { collect_module(resolved_dependency.module_id) } }
+              ]
+            end
           )
-        end
-      end
-
-      def collected_dependency_record(resolved_dependency)
-        record = @records[resolved_dependency.module_id]
-        if record
-          @profiler.count(:collect_dependency_record_cache_hit)
-          raise_failed_module!(record)
-          record
-        else
-          collect_module(resolved_dependency.module_id)
         end
       end
 
