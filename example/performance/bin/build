@@ -3,6 +3,7 @@
 
 require "fileutils"
 require "klenod"
+require "klenod/build/profiler"
 
 ROOT_DIR = File.expand_path("../tmp", __dir__)
 CASE_NAME = ARGV.fetch(0, "web-1k")
@@ -23,7 +24,8 @@ def format_duration(seconds)
 end
 
 config = Klenod::Build::ConfigLoader.load(CONFIG_PATH)
-context = config.context
+profiler = Klenod::Build::Profiler.new(enabled: true)
+context = config.context(profiler: profiler)
 
 started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
@@ -60,3 +62,19 @@ puts "  collect: #{format_duration(collect_duration)}"
 puts "  assets: #{format_duration(asset_duration)}"
 puts "  write: #{format_duration(write_duration)}"
 puts "  total: #{format_duration(total_duration)}"
+
+puts
+puts "Build profile:"
+profiler.totals.sort_by { |_name, duration| -duration }.each do |name, duration|
+  puts "  #{name}: #{format_duration(duration)}"
+end
+
+puts
+puts "Plugin profile:"
+profiler
+  .totals_by_plugin
+  .sort_by { |(_name, _plugin), duration| -duration }
+  .first(12)
+  .each do |(name, plugin), duration|
+    puts "  #{name} #{plugin}: #{format_duration(duration)}"
+  end

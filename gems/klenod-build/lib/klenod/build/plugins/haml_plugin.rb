@@ -163,6 +163,10 @@ module Klenod
               end
             end
 
+            def initialize(profiler: nil)
+              @profiler = profiler
+            end
+
             def component_source(
               component_class_name:,
               component_base_class:,
@@ -472,7 +476,13 @@ module Klenod
             end
 
             def format_node(node)
-              SyntaxTree::Formatter.format(+"", node, 0)
+              if @profiler
+                @profiler.measure(:haml_format_node, node: node.class.name) do
+                  SyntaxTree::Formatter.format(+"", node, 0)
+                end
+              else
+                SyntaxTree::Formatter.format(+"", node, 0)
+              end
             end
 
             def indent(value, spaces)
@@ -891,26 +901,57 @@ module Klenod
             factory:,
             styles_source:,
             translations_source:,
-            styleable: false
+            styleable: false,
+            profiler: nil
           )
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
-            builder = RubyBuilder.new
-            template = compile_template(source, module_id: module_id, factory: factory, styleable: styleable, builder: builder)
+            builder = RubyBuilder.new(profiler: profiler)
+            template =
+              if profiler
+                profiler.measure(:haml_compile_template, module_id: module_id.to_s) do
+                  compile_template(source, module_id: module_id, factory: factory, styleable: styleable, builder: builder)
+                end
+              else
+                compile_template(source, module_id: module_id, factory: factory, styleable: styleable, builder: builder)
+              end
             ast =
-              builder.component_program(
-                component_class_name: component_class_name,
-                component_base_class: component_base_class,
-                translations_source: translations_source,
-                ruby_source: template.ruby,
-                render_source: template.render,
-                styles_source: styles_source
+              if profiler
+                profiler.measure(:haml_component_program, module_id: module_id.to_s) do
+                  builder.component_program(
+                    component_class_name: component_class_name,
+                    component_base_class: component_base_class,
+                    translations_source: translations_source,
+                    ruby_source: template.ruby,
+                    render_source: template.render,
+                    styles_source: styles_source
+                  )
+                end
+              else
+                builder.component_program(
+                  component_class_name: component_class_name,
+                  component_base_class: component_base_class,
+                  translations_source: translations_source,
+                  ruby_source: template.ruby,
+                  render_source: template.render,
+                  styles_source: styles_source
+                )
+              end
+            if profiler
+              profiler.measure(:haml_source_map, module_id: module_id.to_s) do
+                HamlTransformResult.from_ast(
+                  ast,
+                  source: source,
+                  metadata: {source: source, module_id: module_id}
+                )
+              end
+            else
+              HamlTransformResult.from_ast(
+                ast,
+                source: source,
+                metadata: {source: source, module_id: module_id}
               )
-            HamlTransformResult.from_ast(
-              ast,
-              source: source,
-              metadata: {source: source, module_id: module_id}
-            )
+            end
           rescue RubyParseError => error
             raise ParseError.new(error, source: source, module_id: module_id)
           end
@@ -1268,7 +1309,8 @@ module Klenod
           companion_css = companion_path(module_id, ".css")
           dependencies = []
           style_dependencies = []
-          builder = Transformer::RubyBuilder.new
+          profiler = context.respond_to?(:profiler) ? context.profiler : nil
+          builder = Transformer::RubyBuilder.new(profiler: profiler)
           context.unregister_virtual_modules(module_id)
 
           if context.absolute_path(companion_css).file?
@@ -1311,9 +1353,17 @@ module Klenod
               factory: @factory,
               styles_source: styles_source,
               translations_source: translations_source,
-              styleable: !style_dependencies.empty?
+              styleable: !style_dependencies.empty?,
+              profiler: profiler
             )
-          import_rewrite = RubyImportRewriter.new(module_id: module_id, kind: :haml_import).rewrite(haml_result.code)
+          import_rewrite =
+            if profiler
+              profiler.measure(:haml_import_rewrite, module_id: module_id.to_s) do
+                RubyImportRewriter.new(module_id: module_id, kind: :haml_import).rewrite(haml_result.code)
+              end
+            else
+              RubyImportRewriter.new(module_id: module_id, kind: :haml_import).rewrite(haml_result.code)
+            end
 
           TransformResult.new(
             import_rewrite.code,

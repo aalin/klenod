@@ -12,6 +12,7 @@ require_relative "invalidation_result"
 require_relative "load_result"
 require_relative "module_id"
 require_relative "module_record"
+require_relative "profiler"
 require_relative "resolver"
 require_relative "transform_result"
 require_relative "watched_pattern"
@@ -54,7 +55,7 @@ module Klenod
         end
       end
 
-      attr_reader :records, :mods, :asset_generation_queue, :mode
+      attr_reader :records, :mods, :asset_generation_queue, :mode, :profiler
       attr_reader :plugins
 
       def initialize(
@@ -62,7 +63,8 @@ module Klenod
         plugins:,
         mode: :development,
         asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY,
-        asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY
+        asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY,
+        profiler: nil
       )
         @resolver = Resolver.new(source_dir: source_dir)
         @plugins = plugins
@@ -72,6 +74,7 @@ module Klenod
             concurrency: asset_generation_concurrency,
             download_concurrency: asset_download_concurrency
           )
+        @profiler = profiler || Profiler.new
         @records = {}
         @mods = {}
         @virtual_sources = {}
@@ -93,19 +96,23 @@ module Klenod
 
       def bundle(entrypoints:)
         loaded_entrypoints =
-          entrypoints.to_h do |entrypoint|
-            dependency = Dependency.create(specifier: entrypoint, importer_id: nil, kind: :entrypoint)
-            resolved = resolve_dependency(dependency)
-            [entrypoint, collect_module(resolved.module_id).id.to_s]
+          @profiler.measure(:entrypoints, count: entrypoints.length) do
+            entrypoints.to_h do |entrypoint|
+              dependency = Dependency.create(specifier: entrypoint, importer_id: nil, kind: :entrypoint)
+              resolved = resolve_dependency(dependency)
+              [entrypoint, collect_module(resolved.module_id).id.to_s]
+            end
           end
-        collect_all_runtime_dependencies
+        @profiler.measure(:runtime_dependencies) { collect_all_runtime_dependencies }
 
-        Runtime::Bundle.new(
-          loaded_entrypoints,
-          runtime_module_specs,
-          runtime_asset_specs,
-          source_root: source_dir.to_s
-        )
+        @profiler.measure(:bundle_specs) do
+          Runtime::Bundle.new(
+            loaded_entrypoints,
+            runtime_module_specs,
+            runtime_asset_specs,
+            source_root: source_dir.to_s
+          )
+        end
       end
 
       def assets
@@ -169,7 +176,10 @@ module Klenod
         end
 
         @plugins.each do |plugin|
-          resolved = plugin.resolve(dependency, self)
+          resolved =
+            @profiler.measure(:plugin_resolve, plugin: plugin.class.name, specifier: dependency.specifier) do
+              plugin.resolve(dependency, self)
+            end
           return resolved if resolved
         end
 
@@ -889,7 +899,10 @@ module Klenod
 
       def load_source(module_id, absolute_path)
         @plugins.each do |plugin|
-          loaded = plugin.load(module_id, self)
+          loaded =
+            @profiler.measure(:plugin_load, plugin: plugin.class.name, module_id: module_id.to_s) do
+              plugin.load(module_id, self)
+            end
           return loaded if loaded
         end
         return @virtual_sources.fetch(module_id) if @virtual_sources.key?(module_id)
@@ -899,7 +912,10 @@ module Klenod
 
       def transform(module_id, source)
         @plugins.reduce(TransformResult.identity(source)) do |current, plugin|
-          result = plugin.transform(module_id, current.code, self) || TransformResult.identity(current.code)
+          result =
+            @profiler.measure(:plugin_transform, plugin: plugin.class.name, module_id: module_id.to_s) do
+              plugin.transform(module_id, current.code, self)
+            end || TransformResult.identity(current.code)
           TransformResult.new(
             result.code,
             current.dependencies + result.dependencies,
@@ -913,7 +929,9 @@ module Klenod
 
       def finalize(module_id, result, resolved_dependencies, dependency_records)
         @plugins.reduce(result) do |current, plugin|
-          plugin.finalize(module_id, current, resolved_dependencies, dependency_records, self)
+          @profiler.measure(:plugin_finalize, plugin: plugin.class.name, module_id: module_id.to_s) do
+            plugin.finalize(module_id, current, resolved_dependencies, dependency_records, self)
+          end
         end
       end
 
@@ -928,7 +946,10 @@ module Klenod
 
       def plugin_import_value(resolved_dependency, record)
         @plugins.each do |plugin|
-          value = plugin.import_value(resolved_dependency, record, self)
+          value =
+            @profiler.measure(:plugin_import_value, plugin: plugin.class.name, module_id: record.id.to_s) do
+              plugin.import_value(resolved_dependency, record, self)
+            end
           return value unless value.nil?
         end
 
@@ -937,7 +958,10 @@ module Klenod
 
       def plugin_runtime_import_value(resolved_dependency, record)
         @plugins.each do |plugin|
-          value = plugin.runtime_import_value(resolved_dependency, record, self)
+          value =
+            @profiler.measure(:plugin_runtime_import_value, plugin: plugin.class.name, module_id: record.id.to_s) do
+              plugin.runtime_import_value(resolved_dependency, record, self)
+            end
           return value unless value.nil?
         end
 
