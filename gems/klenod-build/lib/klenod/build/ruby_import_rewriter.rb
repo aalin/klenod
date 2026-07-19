@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "ripper"
 require "syntax_tree"
 
 require_relative "dependency"
@@ -84,6 +85,7 @@ module Klenod
           matches << match
         end
         return nil if matches.empty?
+        return nil unless bare_import_tokens?(code, matches)
 
         dependencies =
           matches.each_with_index.map do |match, index|
@@ -114,6 +116,44 @@ module Klenod
             end
 
         Result.new(rewritten, dependencies)
+      end
+
+      def bare_import_tokens?(code, matches)
+        match_starts = matches.to_h { |match| [match.begin(1), match[1]] }
+        return true if match_starts.empty?
+
+        line_offsets = line_offsets_for(code)
+        previous_significant_token = nil
+        matched = {}
+
+        Ripper.lex(code).each do |(line, column), type, token, _state|
+          offset = line_offsets.fetch(line - 1) + column
+          expected = match_starts[offset]
+          if expected
+            return false unless type == :on_ident && token == expected
+            return false if receiver_token?(previous_significant_token)
+
+            matched[offset] = true
+          end
+
+          previous_significant_token = [type, token] unless insignificant_token?(type)
+        end
+
+        matched.length == match_starts.length
+      end
+
+      def receiver_token?(token)
+        token == [:on_period, "."] || token == [:on_op, "::"] || token == [:on_op, "&."]
+      end
+
+      def line_offsets_for(code)
+        offsets = [0]
+        code.each_line(chomp: false) { |line| offsets << offsets.last + line.length }
+        offsets
+      end
+
+      def insignificant_token?(type)
+        type == :on_sp || type == :on_ignored_nl || type == :on_nl || type == :on_comment
       end
 
       def measure(name, &block)

@@ -52,6 +52,71 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
     assert_equal("Dep = __klenod_import__(\"pages/page.rb:dependency:0\")\n", result.code)
   end
 
+  def test_does_not_rewrite_import_text_inside_strings
+    code = "value = \"import(\\\"../dep\\\")\"\n"
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        code,
+        nil
+      )
+
+    assert_empty(result.dependencies)
+    assert_equal(code, result.code)
+  end
+
+  def test_does_not_rewrite_import_text_inside_comments
+    code = "# import(\"../dep\")\nvalue = 1\n"
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        code,
+        nil
+      )
+
+    assert_empty(result.dependencies)
+    assert_equal(code, result.code)
+  end
+
+  def test_does_not_fast_rewrite_receiver_import_calls
+    code = "Dep = loader.import(\"../dep\")\n"
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        code,
+        nil
+      )
+
+    assert_empty(result.dependencies)
+    assert_equal(code, result.code)
+  end
+
+  def test_does_not_fast_rewrite_namespace_import_calls
+    code = "Dep = Namespace::import(\"../dep\")\n"
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        code,
+        nil
+      )
+
+    assert_empty(result.dependencies)
+    assert_equal(code, result.code)
+  end
+
+  def test_does_not_fast_rewrite_safe_navigation_import_calls
+    code = "Dep = loader&.import(\"../dep\")\n"
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        code,
+        nil
+      )
+
+    assert_empty(result.dependencies)
+    assert_equal(code, result.code)
+  end
+
   def test_detects_command_style_imports
     assert_raises(Klenod::Build::DynamicImportError) do
       RubyPlugin.new.transform(
