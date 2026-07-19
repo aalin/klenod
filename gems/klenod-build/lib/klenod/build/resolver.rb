@@ -10,7 +10,8 @@ module Klenod
       DEFAULT_EXTENSIONS = [".rb", ".haml"].freeze
 
       def initialize(source_dir:, extensions: DEFAULT_EXTENSIONS, profiler: nil)
-        @source_dir = Pathname.new(source_dir).expand_path
+        @source_dir_path = File.expand_path(source_dir)
+        @source_dir = Pathname.new(@source_dir_path)
         @extensions = extensions
         @profiler = profiler
         @resolved_module_ids = {}
@@ -23,23 +24,23 @@ module Klenod
         specifier, query = dependency.specifier.split("?", 2)
         base_path =
           if specifier.start_with?("/")
-            @source_dir.join(specifier.delete_prefix("/")).cleanpath
+            File.expand_path(specifier.delete_prefix("/"), @source_dir_path)
           elsif specifier.start_with?(".")
             importer_dir = dependency.importer_id&.dirname || "."
-            @source_dir.join(importer_dir, specifier).cleanpath
+            File.expand_path(File.join(importer_dir, specifier), @source_dir_path)
           else
-            @source_dir.join(specifier).cleanpath
+            File.expand_path(specifier, @source_dir_path)
           end
 
         assert_inside_source_dir!(base_path)
-        key = [base_path.to_s, query]
+        key = [base_path, query]
         module_id = @resolved_module_ids[key]
         if module_id
           @profiler&.count(:resolver_cache_hit)
         else
           @profiler&.count(:resolver_cache_miss)
           resolved_path = resolve_existing_path(base_path)
-          relative = resolved_path.relative_path_from(@source_dir).to_s
+          relative = relative_source_path(resolved_path)
           module_id = @resolved_module_ids[key] = ModuleId.new(relative, query)
         end
 
@@ -55,7 +56,7 @@ module Klenod
 
         @profiler&.count(:resolver_absolute_path_cache_miss)
         @absolute_paths.fetch(module_id.path) do |path_key|
-          path = @source_dir.join(path_key).cleanpath
+          path = Pathname.new(File.expand_path(path_key, @source_dir_path))
           assert_inside_source_dir!(path)
           @absolute_paths[path_key] = path
         end
@@ -69,22 +70,25 @@ module Klenod
       private
 
       def resolve_existing_path(path)
-        return path if path.file?
+        return path if File.file?(path)
 
         @extensions.each do |extension|
-          candidate = Pathname.new("#{path}#{extension}")
-          return candidate if candidate.file?
+          candidate = "#{path}#{extension}"
+          return candidate if File.file?(candidate)
         end
 
-        raise ResolveError, "Could not resolve #{path.relative_path_from(@source_dir)}"
+        raise ResolveError, "Could not resolve #{relative_source_path(path)}"
       end
 
       def assert_inside_source_dir!(path)
-        expanded = path.expand_path.to_s
-        source = @source_dir.to_s
-        return if expanded == source || expanded.start_with?("#{source}/")
+        expanded = File.expand_path(path.to_s)
+        return if expanded == @source_dir_path || expanded.start_with?("#{@source_dir_path}/")
 
         raise ResolveError, "Resolved path escapes source_dir: #{path}"
+      end
+
+      def relative_source_path(path)
+        Pathname.new(path).relative_path_from(@source_dir).to_s
       end
     end
   end
