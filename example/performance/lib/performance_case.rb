@@ -198,13 +198,13 @@ module KlenodPerformance
       child_index = ((index - 1) / 10) * 10
       child_import =
         if child_index.positive? && index != child_index + 1
-          "  Child = import(\"./Component#{component_number(index - 1)}.haml\")\n"
+          "  Child = import(\"/#{component_path(index - 1, ext: ".haml")}\")\n"
         else
           ""
         end
 
       write_file(
-        File.join(case_dir, "src/components/Component#{component_number(index)}.haml"),
+        File.join(case_dir, "src", component_path(index, ext: ".haml")),
         <<~HAML
           :ruby
             Styles = import("./Component#{component_number(index)}.css")
@@ -223,7 +223,7 @@ module KlenodPerformance
         HAML
       )
       write_file(
-        File.join(case_dir, "src/components/Component#{component_number(index)}.css"),
+        File.join(case_dir, "src", component_path(index, ext: ".css")),
         <<~CSS
           .card {
             display: grid;
@@ -251,7 +251,7 @@ module KlenodPerformance
         next if first_component > case_definition.component_count
 
         last_component = [first_component + components_per_route - 1, case_definition.component_count].min
-        path = File.join("bench", "route-#{route_number(route_index + 1)}", "page.haml")
+        path = route_path(route_index + 1)
         write_page(case_dir, path, first_component, last_component)
       end
     end
@@ -259,7 +259,7 @@ module KlenodPerformance
     def write_page(case_dir, relative_path, first_component, last_component)
       imports =
         (first_component..last_component).map do |index|
-          "  Component#{component_number(index)} = import(\"/components/Component#{component_number(index)}.haml\")"
+          "  Component#{component_number(index)} = import(\"/#{component_path(index, ext: ".haml")}\")"
         end.join("\n")
       renders =
         (first_component..last_component).map do |index|
@@ -306,8 +306,27 @@ module KlenodPerformance
       format("%04d", index)
     end
 
+    def component_path(index, ext:)
+      File.join(
+        "components",
+        "cluster-#{format("%02d", (index - 1) / 250)}",
+        "group-#{format("%02d", (index - 1) / 25)}",
+        "Component#{component_number(index)}#{ext}"
+      )
+    end
+
     def route_number(index)
       format("%03d", index)
+    end
+
+    def route_path(index)
+      File.join(
+        "bench",
+        "section-#{format("%02d", (index - 1) / 25)}",
+        "group-#{format("%02d", (index - 1) / 5)}",
+        "route-#{route_number(index)}",
+        "page.haml"
+      )
     end
   end
 end

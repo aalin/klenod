@@ -20,9 +20,9 @@ class KlenodPerformanceExampleTest < Minitest::Test
       second_digest = digest_case(second_case_dir)
 
       assert_equal(first_digest, second_digest)
-      assert_path_exists(File.join(second_case_dir, "src/components/Component0001.haml"))
-      assert_path_exists(File.join(second_case_dir, "src/components/Component0001.css"))
-      assert_path_exists(File.join(second_case_dir, "src/pages/bench/route-001/page.haml"))
+      assert_path_exists(File.join(second_case_dir, "src/components/cluster-00/group-00/Component0001.haml"))
+      assert_path_exists(File.join(second_case_dir, "src/components/cluster-00/group-00/Component0001.css"))
+      assert_path_exists(File.join(second_case_dir, "src/pages/bench/section-00/group-00/route-001/page.haml"))
 
       config = Klenod::Build::ConfigLoader.load(File.join(second_case_dir, "klenod.config.rb"))
       context = config.context
