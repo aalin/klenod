@@ -5,7 +5,8 @@ require_relative "../lib/performance_case"
 
 ROOT_DIR = File.expand_path("../tmp", __dir__)
 CASES = {
-  "web-1k" => KlenodPerformance::Generator::DEFAULT_CASE
+  "web-1k" => KlenodPerformance::Generator::WEB_1K_CASE,
+  "web-5k" => KlenodPerformance::Generator::WEB_5K_CASE
 }.freeze
 
 case_name = ARGV.fetch(0, "web-1k")

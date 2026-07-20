@@ -9,6 +9,12 @@ Generate the default web-shaped 1k component case:
 bin/generate
 ```
 
+Generate the 5k component case:
+
+```sh
+bin/generate web-5k
+```
+
 Build it:
 
 ```sh
@@ -21,8 +27,8 @@ Enable detailed Haml transform buckets:
 KLENOD_PROFILE=haml_detail bin/build
 ```
 
-The generated case lives in `tmp/cases/web-1k`, which is ignored by git.
-Re-running `bin/generate` recreates that directory from scratch.
+Generated cases live under `tmp/cases`, which is ignored by git.
+Re-running `bin/generate <case>` recreates that case directory from scratch.
 
 To profile the build with Vernier:
 

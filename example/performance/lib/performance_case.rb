@@ -14,7 +14,9 @@ module KlenodPerformance
   end
 
   class Generator
-    DEFAULT_CASE = CaseDefinition.new(name: "web-1k", component_count: 1000)
+    WEB_1K_CASE = CaseDefinition.new(name: "web-1k", component_count: 1000)
+    WEB_5K_CASE = CaseDefinition.new(name: "web-5k", component_count: 5000)
+    DEFAULT_CASE = WEB_1K_CASE
 
     def initialize(root_dir:)
       @root_dir = File.expand_path(root_dir)
