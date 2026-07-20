@@ -1,7 +1,7 @@
 [segments]
 about = "om"
 api = "api"
-assets = "tillgangar"
+assets = "assets"
 blog = "blogg"
 dashboard = "instrumentpanel"
 data = "data"

@@ -2,37 +2,38 @@
   Figure = import("/components/Figure.haml")
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
+  I18n = Example::I18n.new(self)
 
   Items = [
     {
       name: "coffee.jpg",
       image: import("./coffee.jpg"),
-      alt: "Coffee cup on a table",
-      caption: "Default import"
+      alt: [:images, :coffee, :alt],
+      caption: [:items, :default, :caption]
     },
     {
       name: "coffee.jpg",
       image: import("./coffee.jpg?width=240,360,720,960"),
-      alt: "Coffee cup on a table",
-      caption: "Imported with configured widths"
+      alt: [:images, :coffee, :alt],
+      caption: [:items, :configured_widths, :caption]
     },
     {
       name: "coffee.jpg",
       image: import("./coffee.jpg?width=360,720&format=webp"),
-      alt: "Coffee cup on a table",
-      caption: "Imported as webp."
+      alt: [:images, :coffee, :alt],
+      caption: [:items, :webp, :caption]
     },
     {
       name: "sailing-boat.jpg",
       image: import("./sailing-boat.jpg?width=360,720&format=jpeg"),
-      alt: "Sailing boat on open water",
-      caption: "A sailing image with generated JPEG widths."
+      alt: [:images, :sailing_boat, :alt],
+      caption: [:items, :sailing_boat, :caption]
     },
     {
       name: "vegetables.jpg",
       image: import("./vegetables.jpg?width=360,720&format=jpeg"),
-      alt: "Vegetables arranged for cooking",
-      caption: "Vegetables rendered through the shared Figure component."
+      alt: [:images, :vegetables, :alt],
+      caption: [:items, :vegetables, :caption]
     }
   ]
 
@@ -48,20 +49,20 @@
 
 %article
   %PageHeader{
-    kicker: "Assets",
-    title: "Images become generated browser assets",
-    summary: "Assets are imported through routed Haml pages and emitted with generated variants for responsive image markup."
+    kicker: I18n.t(:header, :kicker),
+    title: I18n.t(:header, :title),
+    summary: I18n.t(:header, :summary)
   }
 
-  %Panel{ title: "CSS url()" }
+  %Panel{ title: I18n.t(:css, :title) }
     %div.css-frame
       %div.css-image
-    %p CSS can reference image files with `url("./coffee.jpg")`; the CSS plugin rewrites the URL to the generated asset path.
+    %p= I18n.t(:css, :body)
 
   %section
     = Items.map do |item|
       %Panel
-        %Figure{ image: item[:image], alt: item[:alt], caption: item[:caption] }
+        %Figure{ image: item[:image], alt: I18n.t(*item[:alt]), caption: I18n.t(*item[:caption]) }
         %div.metadata
           %h2= item[:name]
           %dl
@@ -69,7 +70,7 @@
               %dt= label
               %dd
                 %code= value
-          %h3 Variants
+          %h3= I18n.t(:metadata, :variants)
           %ol
             = item[:image].variants.map do |variant|
               %li

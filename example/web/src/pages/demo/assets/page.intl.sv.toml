@@ -1,0 +1,35 @@
+[header]
+kicker = "Assets"
+title = "Bilder blir genererade browser assets"
+summary = "Assets importeras genom routade Haml-sidor och genereras med varianter för responsiv bildmarkup."
+
+[css]
+title = "CSS url()"
+body = "CSS kan referera bildfiler med `url(\"./coffee.jpg\")`; CSS-pluginet skriver om URL:en till den genererade asset-sökvägen."
+
+[items.default]
+caption = "Standardimport"
+
+[items.configured_widths]
+caption = "Importerad med konfigurerade bredder"
+
+[items.webp]
+caption = "Importerad som webp."
+
+[items.sailing_boat]
+caption = "En seglingsbild med genererade JPEG-bredder."
+
+[items.vegetables]
+caption = "Grönsaker renderade genom den delade Figure-komponenten."
+
+[images.coffee]
+alt = "Kaffekopp på ett bord"
+
+[images.sailing_boat]
+alt = "Segelbåt på öppet vatten"
+
+[images.vegetables]
+alt = "Grönsaker arrangerade för matlagning"
+
+[metadata]
+variants = "Varianter"

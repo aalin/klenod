@@ -1,0 +1,35 @@
+[header]
+kicker = "Assets"
+title = "Images become generated browser assets"
+summary = "Assets are imported through routed Haml pages and emitted with generated variants for responsive image markup."
+
+[css]
+title = "CSS url()"
+body = "CSS can reference image files with `url(\"./coffee.jpg\")`; the CSS plugin rewrites the URL to the generated asset path."
+
+[items.default]
+caption = "Default import"
+
+[items.configured_widths]
+caption = "Imported with configured widths"
+
+[items.webp]
+caption = "Imported as webp."
+
+[items.sailing_boat]
+caption = "A sailing image with generated JPEG widths."
+
+[items.vegetables]
+caption = "Vegetables rendered through the shared Figure component."
+
+[images.coffee]
+alt = "Coffee cup on a table"
+
+[images.sailing_boat]
+alt = "Sailing boat on open water"
+
+[images.vegetables]
+alt = "Vegetables arranged for cooking"
+
+[metadata]
+variants = "Variants"

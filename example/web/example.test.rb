@@ -195,20 +195,22 @@ class Klenod::ExampleTest < Minitest::Test
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
-    status, _headers, body = entry.call(request("/sv/demo/tillgangar"), context)
+    status, _headers, body = entry.call(request("/sv/demo/assets"), context)
     html = body.join
 
     assert_equal(200, status)
-    assert_includes(html, "Images become generated browser assets")
+    assert_includes(html, "Bilder blir genererade browser assets")
     assert_includes(html, "popovertarget=\"language-menu\"")
     assert_includes(html, "popovertargetaction=\"toggle\"")
     assert_includes(html, "title=\"Choose language\"")
     assert_includes(html, "language_solid_full")
     assert_includes(html, "href=\"/demo/assets\"")
-    assert_includes(html, "href=\"/sv/demo/tillgangar\"")
+    assert_includes(html, "href=\"/sv/demo/assets\"")
     assert_includes(html, "href=\"/sv/demo/formular\"")
     assert_includes(html, "href=\"/sv/demo/blogg/graph\"")
     assert_includes(html, "href=\"/sv/demo/butik/sale/red\"")
+    assert_includes(html, "Standardimport")
+    assert_includes(html, "Varianter")
   end
 
   def test_example_app_keeps_dynamic_values_when_localizing_routes
@@ -705,15 +707,15 @@ class Klenod::ExampleTest < Minitest::Test
   def test_example_localized_routes_translate_static_segments
     routes = localized_routes
 
-    assert_equal("/sv/demo/tillgangar", routes.localized_path("/demo/assets", locale: "sv"))
-    assert_equal("/demo/assets", routes.canonicalize_path("/sv/demo/tillgangar").path)
+    assert_equal("/sv/demo/assets", routes.localized_path("/demo/assets", locale: "sv"))
+    assert_equal("/demo/assets", routes.canonicalize_path("/sv/demo/assets").path)
   end
 
   def test_example_localized_routes_use_same_language_fallback
     routes = localized_routes
-    localized = routes.canonicalize_path("/sv-SE/demo/tillgangar")
+    localized = routes.canonicalize_path("/sv-SE/demo/assets")
 
-    assert_equal("/sv-SE/demo/tillgangar", routes.localized_path("/demo/assets", locale: "sv-SE"))
+    assert_equal("/sv-SE/demo/assets", routes.localized_path("/demo/assets", locale: "sv-SE"))
     assert_equal("/demo/assets", localized.path)
     assert_equal("sv-SE", localized.locale)
     assert_equal("sv", localized.route_locale)
@@ -983,7 +985,7 @@ class Klenod::ExampleTest < Minitest::Test
       ],
       translations: translations || {
         "en" => {"segments" => {"demo" => "demo", "assets" => "assets", "blog" => "blog", "shop" => "shop"}},
-        "sv" => {"segments" => {"demo" => "demo", "assets" => "tillgangar", "blog" => "blogg", "shop" => "butik"}}
+        "sv" => {"segments" => {"demo" => "demo", "assets" => "assets", "blog" => "blogg", "shop" => "butik"}}
       },
       default_locale: "en"
     )
