@@ -12,12 +12,12 @@
   current_path = request.canonical_path || request.path
   current_locale = request.route_locale || "en"
 .switcher
-  %button.button(type="button" popovertarget="language-menu" popovertargetaction="toggle" title="Choose language")
+  %button(type="button" popovertarget="language-menu" popovertargetaction="toggle" title="Choose language")
     %img.icon{ src: Icon.src, width: Icon.width, height: Icon.height, alt: "" }
     %span.code= current_locale.upcase
   #language-menu.popover{ popover: "auto" }
     = Languages.map do |language|
-      - selected = language.fetch(:locale) == current_locale
-      %a{ href: localized_path(current_path, locale: language.fetch(:locale)), "aria-current" => selected ? "true" : nil }
-        %span= language.fetch(:label)
-        %code= language.fetch(:code)
+      - selected = language[:locale] == current_locale
+      %a{ href: localized_path(current_path, locale: language[:locale]), "aria-current" => selected ? "true" : nil }
+        %span= language[:label]
+        %code= language[:code]

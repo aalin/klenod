@@ -2,7 +2,7 @@
   display: inline-flex;
 }
 
-.button {
+button {
   anchor-name: --language-switcher;
   display: inline-flex;
   gap: var(--space-2);
