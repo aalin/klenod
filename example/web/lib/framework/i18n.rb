@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "http/accept/languages"
-
 module Example
   class I18n
     DEFAULT_LOCALE = "en-US"
@@ -58,21 +56,8 @@ module Example
       available = translations.keys.map(&:to_s)
       return default_locale if available.empty?
 
-      cookie_locale = request&.cookies&.fetch(LOCALE_COOKIE, nil).to_s
-      return cookie_locale if available.include?(cookie_locale)
-      return fallback_locale(translations, cookie_locale) if !cookie_locale.empty? && fallback_locale(translations, cookie_locale)
-
-      requested = preferred_locales(request, default_locale: default_locale)
-      requested.filter_map { |language| fallback_locale(translations, language.locale) }.first || fallback_locale(translations, default_locale) || available.first
-    end
-
-    def self.preferred_locales(request, default_locale: self.default_locale)
-      header = request&.headers&.fetch("accept-language", nil).to_s
-      return [HTTP::Accept::Languages::LanguageRange.new(default_locale, nil)] if header.empty?
-
-      HTTP::Accept::Languages.parse(header)
-    rescue HTTP::Accept::ParseError
-      [HTTP::Accept::Languages::LanguageRange.new(default_locale, nil)]
+      locale = request&.locale || default_locale
+      fallback_locale(translations, locale) || fallback_locale(translations, default_locale) || available.first
     end
 
     def self.lookup(values, key)

@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "http/accept/languages"
-
 module Example
   class LocalizedRoutes
     LOCALE_PATTERN = /\A[a-z]{2,3}(?:-[A-Za-z]{2})?\z/
@@ -16,12 +14,11 @@ module Example
 
     attr_reader :default_locale
 
-    def canonicalize_path(path, headers: {}, cookies: {})
+    def canonicalize_path(path)
       visible_path = normalized_path(path)
       parts = path_parts(visible_path)
       prefix = locale_prefix(parts)
-      preferred_locale = preferred_locale(headers:, cookies:)
-      locale = prefix&.fetch(:locale) || preferred_locale
+      locale = prefix&.fetch(:locale) || default_locale
       route_locale = prefix&.fetch(:route_locale) || route_locale_for(default_locale)
       match_parts = prefix ? parts.drop(1) : parts
       canonical = canonical_path_for(match_parts, route_locale) || visible_path
@@ -70,23 +67,6 @@ module Example
 
     def ui_locale_supported?(locale)
       route_locale_for(locale) || locale_language(locale) == locale_language(default_locale)
-    end
-
-    def preferred_locale(headers:, cookies:)
-      cookie_locale = cookies.fetch(LOCALE_COOKIE, "").to_s
-      return cookie_locale unless cookie_locale.empty?
-
-      preferred_locales(headers.fetch("accept-language", nil).to_s).find do |locale|
-        route_locale_for(locale) || locale_language(locale) == locale_language(default_locale)
-      end || default_locale
-    end
-
-    def preferred_locales(header)
-      return [default_locale] if header.empty?
-
-      HTTP::Accept::Languages.parse(header).map(&:locale)
-    rescue HTTP::Accept::ParseError
-      [default_locale]
     end
 
     def route_locale_for(locale)

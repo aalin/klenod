@@ -173,7 +173,6 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/demo/blog/assets", "Generated assets as imports")
     assert_route_includes(entry, context, "/demo/data", "Imported from a plain text file.")
     assert_route_includes(entry, context, "/demo/hybrid", "Hybrid page and route handler")
-    assert_route_includes(entry, context, "/demo/translations", "Render localized component text")
     assert_route_includes(entry, context, "/demo/docs/guides/routing", "Path parts: guides / routing")
     assert_route_includes(entry, context, "/demo/shop", "No filters selected")
     assert_route_includes(entry, context, "/demo/shop/sale/red", "Filters: sale, red")
@@ -235,149 +234,6 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_includes(specifiers, "/routes.intl.en.toml")
     assert_includes(specifiers, "/routes.intl.sv.toml")
-  end
-
-  def test_example_app_resolves_translations_from_accept_language
-    config = example_config
-    context = config.context
-    entry = context.entry(config.entrypoints.fetch(0))
-    status, headers, body =
-      entry.call(
-        HeaderRequest["GET", "/demo/translations", HeaderList.new([["Accept-Language", "sv-SE,sv;q=0.9,en-US;q=0.8"]])],
-        context
-      )
-    html = body.join
-
-    assert_equal(200, status)
-    assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
-    assert_equal("Accept-Language, Cookie", headers.fetch("vary"))
-    assert_includes(html, "Rendera lokaliserad komponenttext")
-    assert_includes(html, "<article lang=\"sv-SE\"")
-    assert_includes(html, "Vald locale")
-    assert_includes(html, "Haml-komponenter som PageHeader")
-    assert_includes(html, "2 locales är tillgängliga.")
-    assert_includes(html, "sv-SE")
-    refute_includes(html, "Render localized component text")
-  end
-
-  def test_example_app_falls_back_to_available_locale_with_same_language
-    config = example_config
-    context = config.context
-    entry = context.entry(config.entrypoints.fetch(0))
-    status, _headers, body =
-      entry.call(
-        HeaderRequest["GET", "/demo/translations", HeaderList.new([["Accept-Language", "sv-FI;q=0.9,en-US;q=0.8"]])],
-        context
-      )
-    html = body.join
-
-    assert_equal(200, status)
-    assert_includes(html, "Rendera lokaliserad komponenttext")
-    assert_includes(html, "<article lang=\"sv-SE\"")
-    assert_includes(html, "sv-SE")
-  end
-
-  def test_example_app_falls_back_to_default_translation_locale
-    config = example_config
-    context = config.context
-    entry = context.entry(config.entrypoints.fetch(0))
-    status, _headers, body =
-      entry.call(
-        HeaderRequest["GET", "/demo/translations", HeaderList.new([["Accept-Language", "fr-FR,fr;q=0.9"]])],
-        context
-      )
-    html = body.join
-
-    assert_equal(200, status)
-    assert_includes(html, "Render localized component text")
-    assert_includes(html, "Resolved locale")
-    assert_includes(html, "en-US")
-  end
-
-  def test_example_app_locale_cookie_overrides_accept_language
-    config = example_config
-    context = config.context
-    entry = context.entry(config.entrypoints.fetch(0))
-    status, headers, body =
-      entry.call(
-        HeaderRequest[
-          "GET",
-          "/demo/translations",
-          HeaderList.new([
-            ["Accept-Language", "en-US,en;q=0.9"],
-            ["Cookie", "#{Example::LOCALE_COOKIE}=sv-SE"]
-          ])
-        ],
-        context
-      )
-    html = body.join
-
-    assert_equal(200, status)
-    assert_equal("Accept-Language, Cookie", headers.fetch("vary"))
-    assert_includes(html, "Rendera lokaliserad komponenttext")
-    assert_includes(html, "Locale-cookie")
-    assert_includes(html, "sv-SE")
-  end
-
-  def test_example_app_sets_locale_cookie_from_form_post
-    config = example_config
-    context = config.context
-    entry = context.entry(config.entrypoints.fetch(0))
-    _status, response_headers, body = entry.call(BodyRequest["GET", "/demo/translations", HeaderList.new([]), nil], context)
-    cookie = response_headers.fetch("set-cookie").split(";", 2).fetch(0)
-    csrf_token = csrf_token_from(body.join)
-    form = URI.encode_www_form("csrf_token" => csrf_token, "locale" => "sv-SE")
-    status, headers, body =
-      entry.call(
-        BodyRequest[
-          "POST",
-          "/demo/translations/locale",
-          HeaderList.new([
-            ["Content-Type", "application/x-www-form-urlencoded"],
-            ["Cookie", cookie],
-            ["Referer", "/demo/translations"]
-          ]),
-          form
-        ],
-        context
-      )
-
-    assert_equal(302, status)
-    assert_equal("/demo/translations", headers.fetch("location"))
-    assert_empty(body)
-    assert_includes(headers.fetch("set-cookie"), "#{Example::LOCALE_COOKIE}=sv-SE")
-  end
-
-  def test_example_app_clears_locale_cookie_from_form_post
-    config = example_config
-    context = config.context
-    entry = context.entry(config.entrypoints.fetch(0))
-    existing_cookie = "#{Example::LOCALE_COOKIE}=sv-SE"
-    _status, response_headers, body =
-      entry.call(BodyRequest["GET", "/demo/translations", HeaderList.new([["Cookie", existing_cookie]]), nil], context)
-    session_cookie = response_headers.fetch("set-cookie").split(";", 2).fetch(0)
-    csrf_token = csrf_token_from(body.join)
-    form = URI.encode_www_form("csrf_token" => csrf_token, "locale" => "")
-    status, headers, body =
-      entry.call(
-        BodyRequest[
-          "POST",
-          "/demo/translations/locale",
-          HeaderList.new([
-            ["Content-Type", "application/x-www-form-urlencoded"],
-            ["Cookie", "#{existing_cookie}; #{session_cookie}"],
-            ["Referer", "/demo/translations"]
-          ]),
-          form
-        ],
-        context
-      )
-
-    assert_equal(302, status)
-    assert_equal("/demo/translations", headers.fetch("location"))
-    assert_empty(body)
-    assert_includes(headers.fetch("set-cookie"), "#{Example::LOCALE_COOKIE}=")
-    assert_includes(headers.fetch("set-cookie"), "Max-Age=0")
   end
 
   def test_example_routes_utility_prints_route_table
@@ -744,8 +600,8 @@ class Klenod::ExampleTest < Minitest::Test
       "en-US" => {"title" => "Hello"},
       "sv-SE" => {"title" => "Hej"}
     }
-    english = Example::Request.from(HeaderRequest["GET", "/", HeaderList.new([["Accept-Language", "en-US"]])])
-    swedish = Example::Request.from(HeaderRequest["GET", "/", HeaderList.new([["Accept-Language", "sv-SE"]])])
+    english = localized_request(locale: "en")
+    swedish = localized_request(locale: "sv")
 
     Example::Context.with(request: english) do
       other = Fiber.new do
@@ -865,12 +721,21 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("en", localized.locale)
   end
 
+  def test_example_localized_routes_ignore_headers_without_locale_prefix
+    routes = localized_routes
+    localized = routes.canonicalize_path("/demo/assets")
+
+    assert_equal("/demo/assets", localized.path)
+    assert_equal("en", localized.locale)
+    assert_equal("en", localized.route_locale)
+  end
+
   def test_example_i18n_warns_once_for_missing_translations
     translations = {
       "en-US" => {"title" => "Hello"},
       "sv-SE" => {}
     }
-    request = Example::Request.from(HeaderRequest["GET", "/", HeaderList.new([["Accept-Language", "sv-SE"]])])
+    request = localized_request(locale: "sv")
 
     _stdout, stderr = capture_io do
       Example::Context.with(request: request) do
@@ -1081,6 +946,11 @@ class Klenod::ExampleTest < Minitest::Test
 
   def request(path, method: "GET")
     Request[method, path]
+  end
+
+  def localized_request(locale:, path: "/")
+    localized = Example::LocalizedRoutes::LocalizedPath.new(path, path, locale, locale)
+    Example::Request.from(Request["GET", path], localized: localized)
   end
 
   def localized_routes(translations: nil)

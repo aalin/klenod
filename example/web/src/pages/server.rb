@@ -126,7 +126,7 @@ def self.stylesheet_links(asset_references)
 end
 
 def self.html_response_headers(css_asset_references, include_link: true)
-  headers = {"vary" => "Accept-Language, Cookie"}
+  headers = {}
   link = stylesheet_preload_link_header(css_asset_references)
   headers["link"] = link if include_link && !link.empty?
   headers
@@ -157,12 +157,7 @@ def self.request_path(raw_request)
 end
 
 def self.localized_request_path(raw_request, path)
-  headers = Example::Request.headers_from(raw_request)
-  Routes.canonicalize_path(
-    path,
-    headers: headers,
-    cookies: Example::Request.parse_cookies(headers.fetch("cookie", nil))
-  )
+  Routes.canonicalize_path(path)
 end
 
 def self.call_route_handler(handler, request, vary_accept: false)
