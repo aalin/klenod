@@ -201,6 +201,12 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(200, status)
     assert_includes(html, "Images become generated browser assets")
+    assert_includes(html, "popovertarget=\"language-menu\"")
+    assert_includes(html, "popovertargetaction=\"toggle\"")
+    assert_includes(html, "title=\"Choose language\"")
+    assert_includes(html, "language_solid_full")
+    assert_includes(html, "href=\"/demo/assets\"")
+    assert_includes(html, "href=\"/sv/demo/tillgangar\"")
     assert_includes(html, "href=\"/sv/demo/formular\"")
     assert_includes(html, "href=\"/sv/demo/blogg/graph\"")
     assert_includes(html, "href=\"/sv/demo/butik/sale/red\"")

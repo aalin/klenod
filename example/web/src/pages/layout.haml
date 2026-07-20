@@ -1,4 +1,5 @@
 :ruby
+  LanguageSwitcher = import("/components/LanguageSwitcher.haml")
   Links = [
     { href: "/", label: "Overview" },
     { href: "/demo", label: "Demo" }
@@ -14,8 +15,10 @@
     %a{ href: localized_path("/") }
       %span Klenod
       %span example
-    %nav(aria-label="Primary")
-      = Links.map do |link|
-        %a{ href: localized_path(link.fetch(:href)) }= link.fetch(:label)
+    .header-actions
+      %nav(aria-label="Primary")
+        = Links.map do |link|
+          %a{ href: localized_path(link.fetch(:href)) }= link.fetch(:label)
+      %LanguageSwitcher
   %main
     = @children
