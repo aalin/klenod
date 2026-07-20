@@ -147,7 +147,6 @@ module KlenodPerformance
         File.join(case_dir, "src/pages/layout.haml"),
         <<~HAML
           :ruby
-            Styles = import("./layout.css")
             def initialize(children: [])
               @children = children
             end
@@ -207,7 +206,6 @@ module KlenodPerformance
         File.join(case_dir, "src", component_path(index, ext: ".haml")),
         <<~HAML
           :ruby
-            Styles = import("./Component#{component_number(index)}.css")
           #{child_import}  def initialize(label: "Component #{component_number(index)}", value: #{index}, children: [])
               @label = label
               @value = value
