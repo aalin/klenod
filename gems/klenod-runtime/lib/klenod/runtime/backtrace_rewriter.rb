@@ -24,6 +24,8 @@ module Klenod
               line.parsed_backtrace_entry
             in /\A(?<file>.*):(?<line>\d+):in [`'](?<description>.*)'\z/
               new($~[:file], $~[:line].to_i, $~[:description])
+            else
+              nil
             end
           end
 

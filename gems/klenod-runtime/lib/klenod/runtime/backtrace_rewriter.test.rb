@@ -119,6 +119,16 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
     refute_includes(formatted, "Sources:")
   end
 
+  def test_format_exception_keeps_unrecognized_backtrace_lines
+    error = StandardError.new("Haml parse error")
+    error.set_backtrace(["(haml):21"])
+
+    formatted = BacktraceRewriter.new({}).format_exception(error)
+
+    assert_includes(formatted, "Haml parse error")
+    assert_includes(formatted, "from (haml):21")
+  end
+
   def test_format_exception_handles_source_ranges_past_end_of_file
     source_map = SourceMap::SourceMap.parse(<<~INPUT, <<~OUTPUT)
       raise "boom"
