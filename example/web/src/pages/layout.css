@@ -14,17 +14,22 @@ header {
   position: sticky;
   top: 0;
   z-index: 2;
-  display: flex;
-  gap: var(--space-5);
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4) clamp(var(--space-4), 4vw, var(--space-7));
+  padding: var(--space-4) 0;
   background: oklch(from var(--color-surface) l c h / 92%);
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(14px);
 }
 
-header > a {
+.header-inner {
+  display: flex;
+  gap: var(--space-5);
+  align-items: center;
+  justify-content: space-between;
+  width: min(var(--page-width), calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.header-inner > a {
   display: inline-flex;
   gap: var(--space-2);
   align-items: baseline;
@@ -34,7 +39,7 @@ header > a {
   white-space: nowrap;
 }
 
-header > a span:last-child {
+.header-inner > a span:last-child {
   color: var(--color-muted);
   font-size: var(--font-size-small);
   font-weight: 750;
@@ -73,13 +78,13 @@ nav a:hover {
 main {
   view-transition-name: page-content;
   contain: layout;
-  width: min(1120px, calc(100% - 2rem));
+  width: min(var(--page-width), calc(100% - 2rem));
   margin: 0 auto;
   padding: var(--space-6) 0;
 }
 
 @media (max-width: 760px) {
-  header {
+  .header-inner {
     align-items: flex-start;
     flex-direction: column;
     gap: var(--space-3);

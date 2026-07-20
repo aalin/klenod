@@ -1,8 +1,9 @@
 :ruby
+  I18n = Example::I18n.new(self)
   LanguageSwitcher = import("/components/LanguageSwitcher.haml")
   Links = [
-    { href: "/", label: "Overview" },
-    { href: "/demo", label: "Demo" }
+    { href: "/", label: [:nav, :overview] },
+    { href: "/demo", label: [:nav, :demo] }
   ]
 
   def initialize(children:, slots: {})
@@ -12,13 +13,14 @@
 
 %body
   %header
-    %a{ href: localized_path("/") }
-      %span Klenod
-      %span example
-    .header-actions
-      %nav(aria-label="Primary")
-        = Links.map do |link|
-          %a{ href: localized_path(link.fetch(:href)) }= link.fetch(:label)
-      %LanguageSwitcher
+    .header-inner
+      %a{ href: localized_path("/") }
+        %span Klenod
+        %span= I18n.t(:brand, :label)
+      .header-actions
+        %nav{ aria: { label: I18n.t(:nav, :label) } }
+          = Links.map do |link|
+            %a{ href: localized_path(link[:href]) }= I18n.t(*link[:label])
+        %LanguageSwitcher
   %main
     = @children

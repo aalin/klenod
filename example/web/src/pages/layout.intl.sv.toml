@@ -1,0 +1,7 @@
+[brand]
+label = "exempel"
+
+[nav]
+label = "Primär"
+overview = "Översikt"
+demo = "Demo"
