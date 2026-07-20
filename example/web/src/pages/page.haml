@@ -2,20 +2,21 @@
   Button = import("../components/Button.haml")
   PageHeader = import("../components/PageHeader.haml")
   Panel = import("../components/Panel.haml")
+  I18n = Example::I18n.new(self)
 
 %article
   %PageHeader{
-    kicker: "Overview",
-    title: "Build Ruby modules like a modern frontend graph",
-    summary: "Klenod loads Ruby, Haml, CSS, data files, and assets through one dependency graph with development reloading and production bundles."
+    kicker: I18n.t(:header, :kicker),
+    title: I18n.t(:header, :title),
+    summary: I18n.t(:header, :summary)
   }
   %section
-    %Panel{ title: "Transform source files" }
-      %p Haml components become Ruby classes, CSS selectors are scoped, and imports become dependency records.
-    %Panel{ title: "Emit browser assets" }
-      %p Images and stylesheets are generated from imports while Ruby modules receive stable runtime values.
-    %Panel{ title: "Bundle for runtime" }
-      %p The collected graph can be serialized with Marshal and loaded later without build plugins.
+    %Panel{ title: I18n.t(:features, :transform, :title) }
+      %p= I18n.t(:features, :transform, :body)
+    %Panel{ title: I18n.t(:features, :assets, :title) }
+      %p= I18n.t(:features, :assets, :body)
+    %Panel{ title: I18n.t(:features, :bundle, :title) }
+      %p= I18n.t(:features, :bundle, :body)
   %footer
-    %Button{ href: localized_path("/demo") } Explore demos
-    %Button{ href: localized_path("/demo/assets") } View assets
+    %Button{ href: localized_path("/demo") }= I18n.t(:actions, :demo)
+    %Button{ href: localized_path("/demo/assets") }= I18n.t(:actions, :assets)

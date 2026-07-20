@@ -1,0 +1,16 @@
+[header]
+kicker = "Demos"
+title = "Utforska Klenod-funktioner i små routade exempel"
+summary = "De här sidorna håller exemplen fokuserade: laddning av datafiler, dynamiska routes, catch-all-parametrar, intercepted routes och sammansatta layouts."
+
+[sections.data]
+title = "Dataimport"
+body = "Importera JSON, YAML, TOML och text från en routad Haml-sida."
+
+[sections.routing]
+title = "Routning"
+body = "Inspektera dynamiska parametrar, catch-all-segment, route groups, parallella slots och intercepted routes."
+
+[sections.runtime]
+title = "Runtime HTTP"
+body = "Formulär, krypterade sessioner, redirects och CSRF bor i exempelframeworket."

@@ -1,0 +1,20 @@
+[header]
+kicker = "Overview"
+title = "Build Ruby modules like a modern frontend graph"
+summary = "Klenod loads Ruby, Haml, CSS, data files, and assets through one dependency graph with development reloading and production bundles."
+
+[features.transform]
+title = "Transform source files"
+body = "Haml components become Ruby classes, CSS selectors are scoped, and imports become dependency records."
+
+[features.assets]
+title = "Emit browser assets"
+body = "Images and stylesheets are generated from imports while Ruby modules receive stable runtime values."
+
+[features.bundle]
+title = "Bundle for runtime"
+body = "The collected graph can be serialized and loaded later without build plugins."
+
+[actions]
+demo = "Explore demos"
+assets = "View assets"

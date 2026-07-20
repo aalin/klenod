@@ -1,0 +1,20 @@
+[header]
+kicker = "Översikt"
+title = "Bygg Ruby-moduler som en modern frontendgraf"
+summary = "Klenod laddar Ruby, Haml, CSS, datafiler och assets genom en dependency graph med utvecklingsreload och produktionsbundles."
+
+[features.transform]
+title = "Transformera källfiler"
+body = "Haml-komponenter blir Ruby-klasser, CSS-selektorer scopas och importer blir dependency records."
+
+[features.assets]
+title = "Generera browser assets"
+body = "Bilder och stylesheets genereras från importer medan Ruby-moduler får stabila runtime-värden."
+
+[features.bundle]
+title = "Bundla för runtime"
+body = "Den insamlade grafen kan serialiseras och laddas senare utan build-plugins."
+
+[actions]
+demo = "Utforska demos"
+assets = "Visa assets"

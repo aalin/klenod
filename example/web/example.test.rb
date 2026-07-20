@@ -224,6 +224,26 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "href=\"/sv-SE/demo/blogg/graph\"")
   end
 
+  def test_example_app_renders_translated_overview_pages
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    status, _headers, body = entry.call(request("/sv"), context)
+    html = body.join
+
+    assert_equal(200, status)
+    assert_includes(html, "Bygg Ruby-moduler som en modern frontendgraf")
+    assert_includes(html, "Utforska demos")
+
+    status, _headers, body = entry.call(request("/sv/demo"), context)
+    html = body.join
+
+    assert_equal(200, status)
+    assert_includes(html, "Utforska Klenod-funktioner i små routade exempel")
+    assert_includes(html, "Importera JSON, YAML, TOML och text")
+  end
+
   def test_example_app_imports_route_translation_files_for_reloading
     config = example_config
     context = config.context
