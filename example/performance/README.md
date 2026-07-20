@@ -21,6 +21,10 @@ Build it:
 bin/build
 ```
 
+Build progress is logged at coarse phases and every 500 collected modules.
+Set `KLENOD_PROGRESS_INTERVAL=1000` to change the module interval, or `0` to
+hide intermediate module progress.
+
 Enable detailed Haml transform buckets:
 
 ```sh

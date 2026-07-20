@@ -43,6 +43,24 @@ class Klenod::Build::ProfilerTest < Minitest::Test
     assert_equal({cache_hit: 3}, profiler.counts)
   end
 
+  def test_profiler_reports_progress_when_enabled
+    progress_events = []
+    profiler = Klenod::Build::Profiler.new(enabled: true, progress: ->(name, metadata) { progress_events << [name, metadata] })
+
+    profiler.progress(:phase, count: 1)
+
+    assert_equal([[:phase, {count: 1}]], progress_events)
+  end
+
+  def test_disabled_profiler_does_not_report_progress
+    progress_events = []
+    profiler = Klenod::Build::Profiler.new(progress: ->(name, metadata) { progress_events << [name, metadata] })
+
+    profiler.progress(:phase, count: 1)
+
+    assert_empty(progress_events)
+  end
+
   def test_disabled_profiler_does_not_collect_counts
     profiler = Klenod::Build::Profiler.new
 

@@ -5,13 +5,14 @@ module Klenod
     class Profiler
       Event = Data.define(:name, :duration, :metadata)
 
-      def initialize(enabled: false, store_events: true, categories: [])
+      def initialize(enabled: false, store_events: true, categories: [], progress: nil)
         @enabled = enabled
         @events = store_events ? [] : nil
         @totals = Hash.new(0.0)
         @totals_by_plugin = Hash.new(0.0)
         @counts = Hash.new(0)
         @categories = categories.map(&:to_sym).to_h { |category| [category, true] }
+        @progress = progress
       end
 
       def enabled?
@@ -44,6 +45,12 @@ module Klenod
         return unless enabled?
 
         @counts[name] += value
+      end
+
+      def progress(name, metadata = {})
+        return unless enabled? && @progress
+
+        @progress.call(name, metadata)
       end
 
       def totals

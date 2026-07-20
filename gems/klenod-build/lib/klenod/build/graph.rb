@@ -381,6 +381,7 @@ module Klenod
 
           @records[module_id] = record
           @mods.delete(module_id)
+          @profiler.progress(:collect_module, module_id: record.id.to_s, total_records: @records.length)
           record
         end
       end

@@ -12,31 +12,56 @@ CONFIG_PATH = File.join(CASE_DIR, "klenod.config.rb")
 
 abort "Missing #{CONFIG_PATH}. Run `example/performance/bin/generate #{CASE_NAME}` first." unless File.file?(CONFIG_PATH)
 
-def measure
-  started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  result = yield
-  finished_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  [result, finished_at - started_at]
-end
-
 def format_duration(seconds)
   format("%.4fs", seconds)
 end
 
-config = Klenod::Build::ConfigLoader.load(CONFIG_PATH)
+def color(code, text)
+  return text if ENV["NO_COLOR"]
+
+  "\e[#{code}m#{text}\e[0m"
+end
+
+def log_step(label)
+  warn "#{color(36, "→")} #{label}..."
+  started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  result = yield
+  duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+  warn "#{color(32, "✓")} #{label} #{color(2, "(#{format_duration(duration)})")}"
+  [result, duration]
+end
+
+config, _config_duration =
+  log_step("Loading config") do
+    Klenod::Build::ConfigLoader.load(CONFIG_PATH)
+  end
+
+progress_interval = Integer(ENV.fetch("KLENOD_PROGRESS_INTERVAL", "500"))
 profile_categories = ENV.fetch("KLENOD_PROFILE", "").split(",").reject(&:empty?)
-profiler = Klenod::Build::Profiler.new(enabled: true, store_events: false, categories: profile_categories)
+profiler =
+  Klenod::Build::Profiler.new(
+    enabled: true,
+    store_events: false,
+    categories: profile_categories,
+    progress: lambda do |name, metadata|
+      next unless name == :collect_module
+      next unless progress_interval.positive?
+      next unless (metadata.fetch(:total_records) % progress_interval).zero?
+
+      warn "  #{color(2, "collected #{metadata.fetch(:total_records)} modules")} #{color(2, "(latest: #{metadata.fetch(:module_id)})")}"
+    end
+  )
 context = config.context(mode: :build, profiler: profiler)
 
 started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
 bundle, collect_duration =
-  measure do
+  log_step("Collecting graph") do
     context.graph.bundle(entrypoints: config.entrypoints)
   end
 
 _assets, asset_duration =
-  measure do
+  log_step("Writing assets") do
     if config.assets_path
       context.write_assets(config.assets_path)
     else
@@ -45,7 +70,7 @@ _assets, asset_duration =
   end
 
 _write, write_duration =
-  measure do
+  log_step("Writing bundle") do
     FileUtils.mkdir_p(File.dirname(config.output_path))
     File.binwrite(config.output_path, Klenod::Runtime::BundleFormat.dump(bundle))
   end
