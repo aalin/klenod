@@ -1,6 +1,7 @@
-#!/usr/bin/env -S asdf exec ruby -rbundler/setup
+#!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require "bundler/setup"
 require_relative "../lib/server/app"
 
 Example::DevServer.new(config_path: File.expand_path("../klenod.config.rb", __dir__)).run

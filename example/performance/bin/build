@@ -1,6 +1,7 @@
-#!/usr/bin/env -S asdf exec ruby -rbundler/setup
+#!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require "bundler/setup"
 require "fileutils"
 require "klenod"
 require "klenod/build/profiler"
