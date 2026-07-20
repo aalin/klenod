@@ -549,6 +549,21 @@ module Klenod
               ast_ruby_filters(nodes) || statements(nodes.map { |node| "begin\n#{indent(node, 2)}\nend" }.join("\n"))
             end
 
+            def render_ruby_filter(node)
+              source = to_source(node)
+              parsed = (node if node.is_a?(Fragment) && node.node?) || statements(source)
+              return statements("begin\n#{indent(source, 2)}\n  nil\nend") unless parsed
+
+              fragment(
+                ast_begin([
+                  *statement_body_for(parsed),
+                  nil_node
+                ])
+              )
+            rescue SyntaxTree::Parser::ParseError
+              statements("begin\n#{indent(source, 2)}\n  nil\nend")
+            end
+
             def format_node(node)
               if @profiler
                 @profiler.measure(:haml_format_node, node: node.class.name) do
@@ -1167,10 +1182,7 @@ module Klenod
             parsed = measure_compile(:haml_parse_haml) { HamlPlugin.parse_haml(source, module_id: module_id) }
             render_nodes, ruby_nodes =
               measure_compile(:haml_partition_top_level_nodes) do
-                [
-                  parsed.children.reject { |node| ruby_filter?(node) || css_filter?(node) },
-                  parsed.children.select { |node| ruby_filter?(node) }
-                ]
+                partition_top_level_nodes(parsed.children)
               end
             ruby =
               if ruby_nodes.empty?
@@ -1181,6 +1193,25 @@ module Klenod
             render = measure_compile(:haml_compile_render_nodes) { compile_nodes(render_nodes, factory: factory, styleable: styleable, builder: builder) }
 
             Template.new(ruby, render)
+          end
+
+          def partition_top_level_nodes(nodes)
+            class_ruby_nodes = []
+            render_nodes = []
+            class_ruby_seen = false
+
+            nodes.each do |node|
+              if css_filter?(node)
+                next
+              elsif !class_ruby_seen && ruby_filter?(node)
+                class_ruby_seen = true
+                class_ruby_nodes << node
+              else
+                render_nodes << node
+              end
+            end
+
+            [render_nodes, class_ruby_nodes]
           end
 
           def compile_nodes(nodes, factory:, builder:, styleable: false)
@@ -1408,7 +1439,7 @@ module Klenod
           def compile_filter_node(node, builder:)
             raise ArgumentError, "Only :ruby Haml filters are supported" unless ruby_filter?(node)
 
-            builder.literal(node.value.fetch(:text))
+            builder.render_ruby_filter(compile_ruby_filter(node, builder: builder))
           end
 
           def ruby_filter?(node)

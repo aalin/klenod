@@ -1522,6 +1522,14 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(["components/Table.haml"], result.errors.map { |module_id, _error| module_id.to_s })
       assert_equal([], result.reevaluated_module_ids)
       assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.evaluate("first.rb") }
+
+      File.write("#{dir}/components/Table.haml", "%table\n  %tbody Recovered\n")
+      result = context.invalidate_paths(["#{dir}/components/Table.haml"])
+
+      assert_empty(result.errors)
+      assert_equal(["components/Table.haml"], result.reloaded_module_ids.map(&:to_s))
+      first = context.evaluate("first.rb")
+      assert_kind_of(Module, context.exports(first)::Table)
     end
   end
 

@@ -308,9 +308,8 @@ module Klenod
           source_hash = loaded_source.source_hash || Hashing.hexdigest(source)
           cached = @records[module_id]
 
-          raise_failed_module!(cached)
-
           if cached&.source_hash == source_hash && !force && !reevaluate
+            raise_failed_module!(cached)
             @profiler.count(:load_module_cache_hit)
             evaluate_module(module_id) unless @mods.key?(module_id)
             return cached
@@ -365,9 +364,8 @@ module Klenod
           source_hash = loaded_source.source_hash || Hashing.hexdigest(source)
           cached = @records[module_id]
 
-          raise_failed_module!(cached)
-
           if cached&.source_hash == source_hash && !force
+            raise_failed_module!(cached)
             @profiler.count(:collect_module_cache_hit)
             return cached
           end
