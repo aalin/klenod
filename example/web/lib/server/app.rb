@@ -318,7 +318,7 @@ module Example
 
     def run
       ServerFormatting.suppress_io_buffer_experimental_warning
-      bundle
+      bundle.preload_entrypoints
       asset_app
       ServerFormatting.log_startup(port:, source_dir: config.source_path, assets_dir: config.assets_path, source_label: "source")
       server_runner.run

@@ -1,0 +1,94 @@
+#!/usr/bin/env -S asdf exec ruby -rbundler/setup
+# frozen_string_literal: true
+
+require "open3"
+require "rbconfig"
+require "klenod"
+
+ROOT_DIR = File.expand_path("../tmp", __dir__)
+case_name = "web-1k"
+measure_mode = nil
+
+args = ARGV.dup
+until args.empty?
+  arg = args.shift
+  case arg
+  when "--measure"
+    measure_mode = args.shift&.to_sym || abort("Missing value for --measure")
+  when /\A--measure=(?<measure>.+)\z/
+    measure_mode = Regexp.last_match(:measure).to_sym
+  else
+    case_name = arg
+  end
+end
+
+abort "Unknown measure mode #{measure_mode.inspect}. Expected first or preload." if measure_mode && ![:first, :preload].include?(measure_mode)
+
+case_dir = File.join(ROOT_DIR, "cases", case_name)
+config_path = File.join(case_dir, "klenod.config.rb")
+abort "Missing #{config_path}. Run `example/performance/bin/generate #{case_name}` first." unless File.file?(config_path)
+
+def measure
+  started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  result = yield
+  finished_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  [result, finished_at - started_at]
+end
+
+def format_duration(seconds)
+  format("%.4fs", seconds)
+end
+
+config = Klenod::Build::ConfigLoader.load(config_path)
+bundle_path = config.output_path
+abort "Missing #{bundle_path}. Run `example/performance/bin/build #{case_name}` first." unless File.file?(bundle_path)
+
+unless measure_mode
+  puts "Loaded #{case_name}"
+  puts "  bundle: #{bundle_path}"
+  puts "  bundle size: #{File.size(bundle_path)} bytes"
+
+  [:first, :preload].each do |child_measure|
+    stdout, stderr, status =
+      Open3.capture3(
+        RbConfig.ruby,
+        "-rbundler/setup",
+        __FILE__,
+        case_name,
+        "--measure",
+        child_measure.to_s
+      )
+    warn stderr unless stderr.empty?
+    print stdout
+    exit(status.exitstatus || 1) unless status.success?
+  end
+
+  exit
+end
+
+bundle, load_duration =
+  measure do
+    Klenod::Runtime.load_bundle(bundle_path)
+  end
+
+puts "  modules: #{bundle.modules.length}"
+puts "  assets: #{bundle.assets.length}"
+
+case measure_mode
+when :first
+  _exports, evaluate_duration =
+    measure do
+      bundle.exports
+    end
+  puts "  first load: #{format_duration(load_duration)}"
+  puts "  first evaluation: #{format_duration(evaluate_duration)}"
+  puts "  first total: #{format_duration(load_duration + evaluate_duration)}"
+when :preload
+  _preloaded, preload_duration =
+    measure do
+      bundle.preload_entrypoints
+    end
+  puts "  preload load: #{format_duration(load_duration)}"
+  puts "  preload evaluation: #{format_duration(preload_duration)}"
+  puts "  preload total: #{format_duration(load_duration + preload_duration)}"
+end

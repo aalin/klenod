@@ -163,6 +163,123 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert(exports::Dep.loaded?)
   end
 
+  def test_bundle_preload_evaluates_reachable_lazy_import_targets
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"entry" => "entry.rb"},
+        {
+          "dep.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "dep.rb",
+              "dep.rb",
+              "VALUE = 41",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("dep.rb")
+            ),
+          "entry.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              "Dep = __klenod_lazy_import__(\"dep\")",
+              {"dep" => Klenod::Runtime::ImportSpec.new("dep.rb", nil, false)},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("entry.rb")
+            )
+        },
+        {}
+      )
+
+    mods = bundle.preload("entry")
+    exports = bundle.exports("entry")
+
+    assert_equal(["entry.rb", "dep.rb"], mods.map(&:path))
+    assert_equal(41, bundle.mod("dep.rb").const_get(:Exports)::VALUE)
+    refute(exports::Dep.loaded?)
+    assert_equal(41, exports::Dep.call::VALUE)
+  end
+
+  def test_bundle_preload_without_ref_evaluates_all_modules
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"entry" => "entry.rb"},
+        {
+          "entry.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              "VALUE = 1",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("entry.rb")
+            ),
+          "unused.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "unused.rb",
+              "unused.rb",
+              "VALUE = 2",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("unused.rb")
+            )
+        },
+        {}
+      )
+
+    bundle.preload
+
+    assert_equal(1, bundle.mod("entry.rb").const_get(:Exports)::VALUE)
+    assert_equal(2, bundle.mod("unused.rb").const_get(:Exports)::VALUE)
+  end
+
+  def test_bundle_preload_entrypoints_evaluates_reachable_modules_for_each_entrypoint
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"a" => "a.rb", "b" => "b.rb"},
+        {
+          "shared.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "shared.rb",
+              "shared.rb",
+              "VALUE = 1",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("shared.rb")
+            ),
+          "a.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "a.rb",
+              "a.rb",
+              "Shared = __klenod_import__(\"shared\")",
+              {"shared" => "shared.rb"},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("a.rb")
+            ),
+          "b.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "b.rb",
+              "b.rb",
+              "Shared = __klenod_import__(\"shared\")",
+              {"shared" => "shared.rb"},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("b.rb")
+            )
+        },
+        {}
+      )
+
+    mods = bundle.preload_entrypoints
+
+    assert_equal(["a.rb", "shared.rb", "b.rb"], mods.map(&:path))
+  end
+
   def test_runtime_load_bundle_accepts_io
     bundle =
       Klenod::Runtime::Bundle.new(

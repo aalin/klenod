@@ -17,3 +17,9 @@ require "klenod/runtime"
 bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
 exports = bundle.exports("pages/server")
 ```
+
+Production servers can explicitly preload bundled modules:
+
+```ruby
+bundle.preload_entrypoints
+```

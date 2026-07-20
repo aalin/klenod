@@ -52,6 +52,27 @@ module Klenod
         entrypoint_ids.map { |entrypoint| load(entrypoint) }
       end
 
+      def preload(module_ref = nil)
+        module_ids =
+          if module_ref
+            reachable_module_ids(module_ref)
+          else
+            @modules.keys
+          end
+
+        module_ids.map { |module_id| instantiate(module_id) }
+      end
+
+      def preload_entrypoints
+        entrypoint_ids = entrypoints.respond_to?(:values) ? entrypoints.values : entrypoints
+        seen = Set.new
+        module_ids =
+          entrypoint_ids
+            .flat_map { |entrypoint| reachable_module_ids(entrypoint) }
+            .select { |module_id| seen.add?(module_id) }
+        module_ids.map { |module_id| instantiate(module_id) }
+      end
+
       def exports(entrypoint = nil)
         load(entrypoint).const_get(:Exports)
       end
@@ -110,6 +131,7 @@ module Klenod
 
       def module_id_for(module_ref)
         id = module_ref.respond_to?(:path) ? module_ref.path : module_ref.to_s
+        id = entrypoints.fetch(id, id) if entrypoints.respond_to?(:fetch)
         return id if @modules.key?(id)
 
         if (relative_id = module_id_for_absolute_ref(id))
@@ -134,15 +156,18 @@ module Klenod
 
       def reachable_module_ids(module_ref)
         root_id = module_id_for(module_ref)
-        seen = []
+        seen = Set.new
+        ordered = []
         queue = [root_id]
+        index = 0
 
-        until queue.empty?
-          module_id = queue.shift
-          next if seen.include?(module_id)
+        while index < queue.length
+          module_id = queue[index]
+          index += 1
+          next unless seen.add?(module_id)
           next unless @modules.key?(module_id)
 
-          seen << module_id
+          ordered << module_id
           queue.concat(
             @modules
               .fetch(module_id)
@@ -152,7 +177,7 @@ module Klenod
           )
         end
 
-        seen
+        ordered
       end
 
       def module_ids_for_assets(module_ref, recursive:)

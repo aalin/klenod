@@ -25,6 +25,15 @@ Build progress is logged at coarse phases and every 500 collected modules.
 Set `KLENOD_PROGRESS_INTERVAL=1000` to change the module interval, or `0` to
 hide intermediate module progress.
 
+Measure startup:
+
+```sh
+bin/startup
+```
+
+The startup command reports both first-entrypoint evaluation and full
+entrypoint-reachable preload timings.
+
 Enable detailed Haml transform buckets:
 
 ```sh
