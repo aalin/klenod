@@ -5,6 +5,6 @@ def POST(request)
   request.session["name"] = name unless name.empty?
 
   Example::Response
-    .redirect("/demo/forms")
+    .redirect(localized_path("/demo/forms"))
     .with_session(request)
 end

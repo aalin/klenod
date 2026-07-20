@@ -4,8 +4,8 @@ require "rbnacl"
 require "uri"
 
 module Example
-  Request = Data.define(:method, :path, :params, :query, :headers, :cookies, :form, :session, :raw) do
-    def self.from(raw, params: {})
+  Request = Data.define(:method, :path, :params, :query, :headers, :cookies, :form, :session, :raw, :canonical_path, :locale, :route_locale) do
+    def self.from(raw, params: {}, localized: nil)
       raw_path = raw&.path.to_s
       raw_path = "/" if raw_path.empty?
       path, query_string = raw_path.split("?", 2)
@@ -21,7 +21,10 @@ module Example
         cookies,
         parse_form(read_body(raw)),
         Session.new(SessionCookie.decode(cookies[SESSION_COOKIE])),
-        raw
+        raw,
+        localized&.path || (path.empty? ? "/" : path),
+        localized&.locale,
+        localized&.route_locale
       ]
     end
 
@@ -84,7 +87,7 @@ module Example
     end
 
     def with_params(params)
-      self.class[method, path, params, query, headers, cookies, form, session, raw]
+      self.class[method, path, params, query, headers, cookies, form, session, raw, canonical_path, locale, route_locale]
     end
 
     def csrf_token

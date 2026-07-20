@@ -13,7 +13,7 @@
   end
 
 %Panel{ title: @i18n.t(:examples, :title) }
-  %Form.form(method="post" action="/demo/translations/locale")
+  %Form.form{ method: "post", action: localized_path("/demo/translations/locale") }
     %label
       %input{ type: "radio", name: "locale", value: "", checked: cookie_locale.empty? }
       %span= @i18n.t(:examples, :auto)

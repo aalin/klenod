@@ -22,6 +22,10 @@ module Example
       i18n.t(*key, default: default)
     end
 
+    def localized_path(...)
+      context.routes.localized_path(...)
+    end
+
     def initialize(...)
     end
   end

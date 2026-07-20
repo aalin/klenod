@@ -2,6 +2,6 @@
 
 def POST(_request)
   Example::Response
-    .redirect("/demo/forms")
+    .redirect(localized_path("/demo/forms"))
     .delete_session
 end

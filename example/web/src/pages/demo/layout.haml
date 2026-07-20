@@ -20,6 +20,6 @@
   end
 
 %article
-  %NavTabs{ links: Links }
+  %NavTabs{ links: Links.map { |link| link.merge(href: localized_path(link.fetch(:href))) } }
   %section
     = @children

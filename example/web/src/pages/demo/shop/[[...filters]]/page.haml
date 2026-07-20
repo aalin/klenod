@@ -26,7 +26,7 @@
       end
     next_filters = Filters.map { it.fetch(:slug) } & selected
 
-    ["/demo/shop", *next_filters].join("/")
+    localized_path("/demo/shop/[[...filters]]", filters: next_filters)
   end
 
 %article

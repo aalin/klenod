@@ -1,37 +1,47 @@
 # frozen_string_literal: true
 
 Router = import("virtual:router")
+ROUTE_TRANSLATIONS = {
+  "en" => import("/routes.intl.en.toml"),
+  "sv" => import("/routes.intl.sv.toml")
+}
+Routes = Example::LocalizedRoutes.new(
+  routes: Router::Default.routes,
+  translations: ROUTE_TRANSLATIONS,
+  default_locale: "en"
+)
 
 def self.call(raw_request, context)
   path = request_path(raw_request)
-  match = Router::Default.match(path)
+  localized = localized_request_path(raw_request, path)
+  match = Router::Default.match(localized.path)
   unless match
-    not_found_match = Router::Default.not_found(path)
+    not_found_match = Router::Default.not_found(localized.path)
     return [404, {"content-type" => "text/plain"}, ["Not found\n"]] unless not_found_match
 
-    request = Example::Request.from(raw_request, params: not_found_match.params)
+    request = Example::Request.from(raw_request, params: not_found_match.params, localized: localized)
     return render_page_response(not_found_match, request, context, raw_request: raw_request, status: 404, props: {path: path, status: 404})
   end
 
-  request = Example::Request.from(raw_request, params: match.params)
+  request = Example::Request.from(raw_request, params: match.params, localized: localized)
   return call_route_handler(match.handler, request, vary_accept: hybrid_get_request?(match, request)) if route_handler_request?(match, request)
   return Example::Response.text("Method not allowed\n", status: 405).to_a unless page_request?(match, request)
 
   begin
     render_page_response(match, request, context, raw_request: raw_request)
   rescue Example::NotFoundError
-    not_found_match = Router::Default.not_found(path)
+    not_found_match = Router::Default.not_found(localized.path)
     raise unless not_found_match
 
-    not_found_request = Example::Request.from(raw_request, params: not_found_match.params)
+    not_found_request = Example::Request.from(raw_request, params: not_found_match.params, localized: localized)
     render_page_response(not_found_match, not_found_request, context, raw_request: raw_request, status: 404, props: {path: path, status: 404})
   rescue => error
-    error_match = Router::Default.error(path)
+    error_match = Router::Default.error(localized.path)
     raise unless error_match
 
     formatted_error = format_render_error(error, context)
     warn formatted_error
-    error_request = Example::Request.from(raw_request, params: error_match.params)
+    error_request = Example::Request.from(raw_request, params: error_match.params, localized: localized)
     render_page_response(error_match, error_request, context, raw_request: raw_request, status: 500, props: {path: path, status: 500, error: error, error_details: strip_ansi(formatted_error)})
   end
 end
@@ -44,7 +54,7 @@ def self.render_page_response(match, request, context, raw_request: nil, status:
   early_hints_sent = send_early_hints(raw_request, css_asset_references)
 
   body =
-    Example::Context.with(request: request) do
+    Example::Context.with(request: request, routes: Routes) do
       body =
         page_instance(page, props)
           .render
@@ -146,12 +156,24 @@ def self.request_path(raw_request)
   raw_path.split("?", 2).fetch(0)
 end
 
+def self.localized_request_path(raw_request, path)
+  headers = Example::Request.headers_from(raw_request)
+  Routes.canonicalize_path(
+    path,
+    headers: headers,
+    cookies: Example::Request.parse_cookies(headers.fetch("cookie", nil))
+  )
+end
+
 def self.call_route_handler(handler, request, vary_accept: false)
   method_name = request_method(request)
   return Example::Response.text("Method not allowed\n", status: 405).to_a unless handler.method_defined?(method_name)
   return Example::Response.text("Invalid CSRF token\n", status: 403).to_a unless Example::CSRF.valid?(request)
 
-  response = normalize_response(handler.new.public_send(method_name, request), request)
+  response =
+    Example::Context.with(request: request, routes: Routes) do
+      normalize_response(handler.new.public_send(method_name, request), request)
+    end
   vary_accept ? with_vary_accept(response) : response
 end
 

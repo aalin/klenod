@@ -192,6 +192,45 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/login", "Login intercept")
   end
 
+  def test_example_app_renders_swedish_localized_routes
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, _headers, body = entry.call(request("/sv/demo/tillgangar"), context)
+    html = body.join
+
+    assert_equal(200, status)
+    assert_includes(html, "Images become generated browser assets")
+    assert_includes(html, "href=\"/sv/demo/formular\"")
+    assert_includes(html, "href=\"/sv/demo/blogg/graph\"")
+    assert_includes(html, "href=\"/sv/demo/butik/sale/red\"")
+  end
+
+  def test_example_app_keeps_dynamic_values_when_localizing_routes
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, _headers, body = entry.call(request("/sv-SE/demo/blogg/tillgangar"), context)
+    html = body.join
+
+    assert_equal(200, status)
+    assert_includes(html, "Blog post: tillgangar")
+    assert_includes(html, "No TOML post exists for this slug")
+    assert_includes(html, "href=\"/sv-SE/demo/blogg/graph\"")
+  end
+
+  def test_example_app_imports_route_translation_files_for_reloading
+    config = example_config
+    context = config.context
+
+    context.entry(config.entrypoints.fetch(0))
+    server_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("pages/server.rb", nil))
+    specifiers = server_record.dependencies.map(&:specifier)
+
+    assert_includes(specifiers, "/routes.intl.en.toml")
+    assert_includes(specifiers, "/routes.intl.sv.toml")
+  end
+
   def test_example_app_resolves_translations_from_accept_language
     config = example_config
     context = config.context
@@ -774,6 +813,52 @@ class Klenod::ExampleTest < Minitest::Test
     end
   end
 
+  def test_example_localized_routes_use_default_locale_without_prefix
+    routes = localized_routes
+
+    assert_equal("/demo/assets", routes.localized_path("/demo/assets", locale: "en"))
+    assert_equal("/demo/assets", routes.canonicalize_path("/demo/assets").path)
+  end
+
+  def test_example_localized_routes_translate_static_segments
+    routes = localized_routes
+
+    assert_equal("/sv/demo/tillgangar", routes.localized_path("/demo/assets", locale: "sv"))
+    assert_equal("/demo/assets", routes.canonicalize_path("/sv/demo/tillgangar").path)
+  end
+
+  def test_example_localized_routes_use_same_language_fallback
+    routes = localized_routes
+    localized = routes.canonicalize_path("/sv-SE/demo/tillgangar")
+
+    assert_equal("/sv-SE/demo/tillgangar", routes.localized_path("/demo/assets", locale: "sv-SE"))
+    assert_equal("/demo/assets", localized.path)
+    assert_equal("sv-SE", localized.locale)
+    assert_equal("sv", localized.route_locale)
+  end
+
+  def test_example_localized_routes_fall_back_to_canonical_missing_segments
+    routes = localized_routes(translations: {"en" => {"segments" => {}}, "sv" => {"segments" => {"demo" => "demo"}}})
+
+    assert_equal("/sv/demo/assets", routes.localized_path("/demo/assets", locale: "sv"))
+    assert_equal("/demo/assets", routes.canonicalize_path("/sv/demo/assets").path)
+  end
+
+  def test_example_localized_routes_do_not_translate_dynamic_segments
+    routes = localized_routes
+
+    assert_equal("/sv/demo/blogg/tillgangar", routes.localized_path("/demo/blog/[slug]", locale: "sv", slug: "tillgangar"))
+    assert_equal("/demo/blog/tillgangar", routes.canonicalize_path("/sv/demo/blogg/tillgangar").path)
+  end
+
+  def test_example_localized_routes_keep_unknown_locale_prefixes
+    routes = localized_routes
+    localized = routes.canonicalize_path("/fr/demo/tillgangar")
+
+    assert_equal("/fr/demo/tillgangar", localized.path)
+    assert_equal("en", localized.locale)
+  end
+
   def test_example_i18n_warns_once_for_missing_translations
     translations = {
       "en-US" => {"title" => "Hello"},
@@ -848,6 +933,30 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
     assert_includes(html, "Submit the form to store your name in an encrypted session cookie.")
     refute_includes(html, "Welcome back, Andreas.")
+  end
+
+  def test_example_app_localizes_form_actions_and_redirects
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, response_headers, body = entry.call(BodyRequest["GET", "/sv/demo/formular", HeaderList.new([]), nil], context)
+    html = body.join
+
+    assert_equal(200, status)
+    assert_includes(html, "action=\"/sv/demo/formular/submit\"")
+
+    cookie = response_headers.fetch("set-cookie").split(";", 2).fetch(0)
+    csrf_token = csrf_token_from(html)
+    headers = HeaderList.new([
+      ["Content-Type", "application/x-www-form-urlencoded"],
+      ["Cookie", cookie]
+    ])
+    form = URI.encode_www_form("csrf_token" => csrf_token, "name" => "Andreas")
+    status, response_headers, body = entry.call(BodyRequest["POST", "/sv/demo/formular/submit", headers, form], context)
+
+    assert_equal(302, status)
+    assert_equal("/sv/demo/formular", response_headers.fetch("location"))
+    assert_empty(body)
   end
 
   def test_example_app_rejects_invalid_csrf_tokens
@@ -966,6 +1075,22 @@ class Klenod::ExampleTest < Minitest::Test
 
   def request(path, method: "GET")
     Request[method, path]
+  end
+
+  def localized_routes(translations: nil)
+    route = Data.define(:match_parts)
+    Example::LocalizedRoutes.new(
+      routes: [
+        route.new([[:static, "demo", nil], [:static, "assets", nil]]),
+        route.new([[:static, "demo", nil], [:static, "blog", nil], [:dynamic, nil, "slug"]]),
+        route.new([[:static, "demo", nil], [:static, "shop", nil], [:optional_catch_all, nil, "filters"]])
+      ],
+      translations: translations || {
+        "en" => {"segments" => {"demo" => "demo", "assets" => "assets", "blog" => "blog", "shop" => "shop"}},
+        "sv" => {"segments" => {"demo" => "demo", "assets" => "tillgangar", "blog" => "blogg", "shop" => "butik"}}
+      },
+      default_locale: "en"
+    )
   end
 
   def csrf_token_from(html)
