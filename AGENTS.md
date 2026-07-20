@@ -58,7 +58,7 @@ Example app commands:
 
 ```sh
 example/web/bin/build
-example/web/bin/run
+example/web/bin/dev
 example/web/bin/routes
 example/web/bin/server
 ```

@@ -6,12 +6,12 @@ Run it from the repository root:
 
 ```sh
 example/web/bin/build
-example/web/bin/run
+example/web/bin/dev
 example/web/bin/routes
 example/web/bin/server
 ```
 
-`bin/build` writes `example/web/dist/klenod.bundle` and `example/web/dist/public`, printing the collected module count, emitted assets, generated assets, and written files. `bin/run` starts a production-style `async-http` server from that built bundle without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
+`bin/build` writes `example/web/dist/klenod.bundle` and `example/web/dist/public`, printing the collected module count, emitted assets, generated assets, and written files. `bin/server` starts a production-style `async-http` server from that built bundle without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
 
 ```ruby
 bundle = Klenod::Runtime.load_bundle("example/web/dist/klenod.bundle", source_root: "/app/src")
@@ -42,14 +42,14 @@ Vernier writes a profile file in the current directory. Use `bundle exec vernier
 
 `bin/routes` prints a Rails-style route table with the HTTP method, server path, route type, and source file for each discovered `page.haml` and `route.rb`.
 
-`bin/server` starts the development `async-http` server on `http://localhost:9292`. It watches the source tree, matches each request through the router plugin, serves emitted CSS/image assets from the build context, and renders detailed development exception pages.
+`bin/dev` starts the development `async-http` server on `http://localhost:9292`. It watches the source tree, matches each request through the router plugin, serves emitted CSS/image assets from the build context, and renders detailed development exception pages.
 
-`bin/run` starts the production server on `http://localhost:9292` from the bundle and assets written by `bin/build`. It logs exceptions server-side, but returns a generic 500 response instead of rendering development error details.
+`bin/server` starts the production server on `http://localhost:9292` from the bundle and assets written by `bin/build`. It logs exceptions server-side, but returns a generic 500 response instead of rendering development error details.
 
-`bin/server` can also mirror emitted assets to disk:
+`bin/dev` can also mirror emitted assets to disk:
 
 ```sh
-ASSETS_DIR=example/web/tmp/public example/web/bin/server
+ASSETS_DIR=example/web/tmp/public example/web/bin/dev
 ```
 
 When `ASSETS_DIR` is set, the examples write the current asset manifest once and then apply `event.asset_updates` after each successful graph update.
