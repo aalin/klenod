@@ -1,0 +1,11 @@
+[tabs]
+overview = "Översikt"
+assets = "Tillgångar"
+forms = "Formulär"
+dashboard = "Instrumentpanel"
+blog = "Blogg"
+data = "Dataimport"
+hybrid = "Hybridroute"
+routing = "Routning"
+dynamic_params = "Dynamiska parametrar"
+catch_all = "Catch-all"

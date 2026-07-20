@@ -1,0 +1,11 @@
+[tabs]
+overview = "Overview"
+assets = "Assets"
+forms = "Forms"
+dashboard = "Dashboard"
+blog = "Blog"
+data = "Data imports"
+hybrid = "Hybrid route"
+routing = "Routing"
+dynamic_params = "Dynamic params"
+catch_all = "Catch-all"

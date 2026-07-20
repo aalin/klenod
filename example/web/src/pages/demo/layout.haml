@@ -1,17 +1,18 @@
 :ruby
   NavTabs = import("/components/NavTabs.haml")
+  I18n = Example::I18n.new(self)
 
   Links = [
-    { href: "/demo", label: "Overview" },
-    { href: "/demo/assets", label: "Assets" },
-    { href: "/demo/forms", label: "Forms" },
-    { href: "/demo/dashboard", label: "Dashboard" },
-    { href: "/demo/blog", label: "Blog" },
-    { href: "/demo/data", label: "Data imports" },
-    { href: "/demo/hybrid", label: "Hybrid route" },
-    { href: "/demo/routing", label: "Routing" },
-    { href: "/demo/blog/graph", label: "Dynamic params" },
-    { href: "/demo/shop/sale/red", label: "Catch-all" }
+    { href: "/demo", label: [:tabs, :overview] },
+    { href: "/demo/assets", label: [:tabs, :assets] },
+    { href: "/demo/forms", label: [:tabs, :forms] },
+    { href: "/demo/dashboard", label: [:tabs, :dashboard] },
+    { href: "/demo/blog", label: [:tabs, :blog] },
+    { href: "/demo/data", label: [:tabs, :data] },
+    { href: "/demo/hybrid", label: [:tabs, :hybrid] },
+    { href: "/demo/routing", label: [:tabs, :routing] },
+    { href: "/demo/blog/graph", label: [:tabs, :dynamic_params] },
+    { href: "/demo/shop/sale/red", label: [:tabs, :catch_all] }
   ]
 
   def initialize(children:, slots: {})
@@ -19,6 +20,6 @@
   end
 
 %article
-  %NavTabs{ links: Links.map { |link| link.merge(href: localized_path(link.fetch(:href))) } }
+  %NavTabs{ links: Links.map { |link| link.merge(href: localized_path(link[:href]), label: I18n.t(*link[:label])) } }
   %section
     = @children
