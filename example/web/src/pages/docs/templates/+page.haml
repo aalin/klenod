@@ -50,8 +50,8 @@
       If `/markdown-components.rb` exists, Markdown rendering uses its `Default` hash to map tags to components.
 
       ```ruby
-      Heading = import("/components/MarkdownHeading.haml")
-      Link = import("/components/MarkdownLink.haml")
+      Heading = import("/components/markdown/Heading.haml")
+      Link = import("/components/markdown/Link.haml")
 
       Default = {
         h1: Heading,

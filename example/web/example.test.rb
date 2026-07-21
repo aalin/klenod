@@ -175,7 +175,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/demo/hybrid", "Hybrid page and route handler")
     assert_route_includes(entry, context, "/demo/markdown", "Render Markdown through factory calls")
     assert_route_includes(entry, context, "/demo/markdown", "Inline Markdown")
-    assert_route_includes(entry, context, "/demo/markdown", "components/MarkdownLink")
+    assert_route_includes(entry, context, "/demo/markdown", "components/markdown/Link")
     assert_route_includes(entry, context, "/demo/docs/guides/routing", "Path parts: guides / routing")
     assert_route_includes(entry, context, "/demo/shop", "No filters selected")
     assert_route_includes(entry, context, "/demo/shop/sale/red", "Filters: sale, red")
@@ -225,9 +225,9 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html_by_path.fetch("/docs"), "components/DocsLinkCard")
     assert_includes(html_by_path.fetch("/docs/templates"), "components/DocsPage")
     assert_includes(html_by_path.fetch("/docs/templates"), "components/DocsSection")
-    assert_includes(html_by_path.fetch("/docs/templates"), "components/MarkdownParagraph")
-    assert_includes(html_by_path.fetch("/docs/templates"), "components/MarkdownInlineCode")
-    assert_includes(html_by_path.fetch("/docs/assets"), "components/MarkdownListItem")
+    assert_includes(html_by_path.fetch("/docs/templates"), "components/markdown/Paragraph")
+    assert_includes(html_by_path.fetch("/docs/templates"), "components/markdown/InlineCode")
+    assert_includes(html_by_path.fetch("/docs/assets"), "components/markdown/ListItem")
     refute_includes(html_by_path.fetch("/docs/templates"), "docs-content p")
   end
 
