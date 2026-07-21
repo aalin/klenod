@@ -123,12 +123,12 @@ Routing belongs to `RouterPlugin`; it should stay optional and framework-agnosti
 
 The router supports:
 
-- `page.rb` and `page.haml`.
-- `route.rb` handlers.
-- Hybrid directories with both a page and `route.rb`.
-- `layout.rb`/`layout.haml`.
-- `error.rb`/`error.haml`.
-- `not-found.rb`/`not-found.haml`.
+- `+page.rb` and `+page.haml`.
+- `+route.rb` handlers.
+- Hybrid directories with both a page and `+route.rb`.
+- `+layout.rb`/`+layout.haml`.
+- `+error.rb`/`+error.haml`.
+- `+not-found.rb`/`+not-found.haml`.
 - Dynamic segments: `[id]`.
 - Catch-all segments: `[...slug]`.
 - Optional catch-all segments: `[[...slug]]`.
@@ -151,9 +151,9 @@ When no page route matches, the generated router should resolve the closest `not
 
 Hybrid route behavior is framework/server policy, not router policy. The example web server follows SvelteKit-style rules:
 
-- `PUT`, `PATCH`, `DELETE`, and `OPTIONS` go to `route.rb`.
+- `PUT`, `PATCH`, `DELETE`, and `OPTIONS` go to `+route.rb`.
 - `GET`, `POST`, and `HEAD` render the page if `Accept` prefers `text/html`.
-- Otherwise they go to `route.rb`.
+- Otherwise they go to `+route.rb`.
 - Hybrid `GET` handler responses should include `Vary: Accept`.
 
 `example/web/bin/routes` is the current route visualization tool. It prints a table and a tree. Route display ordering still needs a future pass so it follows actual router match priority.
@@ -171,8 +171,8 @@ The Haml plugin is an adapter, not a framework renderer:
 
 Companion files:
 
-- `page.haml` automatically imports/watches `page.css` as `Styles`.
-- `page.haml` watches `page.intl.*.toml` and exposes translations.
+- `+page.haml` automatically imports/watches `+page.css` as `Styles`.
+- `+page.haml` watches `+page.intl.*.toml` and exposes translations.
 - Companion file add/update/remove should invalidate the Haml owner even when the companion was not in the dependency graph before.
 
 Source maps:
@@ -267,7 +267,7 @@ Pages are under `example/web/src/pages`.
 
 Important routes:
 
-- `/demo/hybrid`: page + `route.rb` hybrid behavior.
+- `/demo/hybrid`: page + `+route.rb` hybrid behavior.
 - `/demo/dashboard`: layouts and parallel routes.
 - `/demo/blog`: TOML data imports.
 - `/demo/assets`: image variants.

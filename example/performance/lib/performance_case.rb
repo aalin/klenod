@@ -146,7 +146,7 @@ module KlenodPerformance
 
     def write_layouts(case_dir)
       write_file(
-        File.join(case_dir, "src/pages/layout.haml"),
+        File.join(case_dir, "src/pages/+layout.haml"),
         <<~HAML
           :ruby
             def initialize(children: [])
@@ -159,7 +159,7 @@ module KlenodPerformance
         HAML
       )
       write_file(
-        File.join(case_dir, "src/pages/layout.css"),
+        File.join(case_dir, "src/pages/+layout.css"),
         <<~CSS
           body {
             margin: 0;
@@ -174,14 +174,14 @@ module KlenodPerformance
         CSS
       )
       write_file(
-        File.join(case_dir, "src/pages/not-found.haml"),
+        File.join(case_dir, "src/pages/+not-found.haml"),
         <<~HAML
           %article
             %h1 Not found
         HAML
       )
       write_file(
-        File.join(case_dir, "src/pages/error.haml"),
+        File.join(case_dir, "src/pages/+error.haml"),
         <<~HAML
           %article
             %h1 Error
@@ -244,7 +244,7 @@ module KlenodPerformance
       route_count = case_definition.route_count
       components_per_route = (case_definition.component_count.to_f / route_count).ceil
 
-      write_page(case_dir, "page.haml", 1, [1, components_per_route].max)
+      write_page(case_dir, "+page.haml", 1, [1, components_per_route].max)
 
       route_count.times do |route_index|
         first_component = (route_index * components_per_route) + 1
@@ -325,7 +325,7 @@ module KlenodPerformance
         "section-#{format("%02d", (index - 1) / 25)}",
         "group-#{format("%02d", (index - 1) / 5)}",
         "route-#{route_number(index)}",
-        "page.haml"
+        "+page.haml"
       )
     end
   end

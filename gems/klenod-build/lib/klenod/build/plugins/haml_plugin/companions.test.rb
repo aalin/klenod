@@ -24,6 +24,26 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_records_plus_route_companion_watched_patterns
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/+page.haml", "%h1 Hello\n")
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+
+      record = context.evaluate("pages/+page.haml")
+
+      assert_equal(
+        ["pages/+page.css", "pages/+page.intl.*.toml"],
+        record.watched_patterns.map(&:glob)
+      )
+    end
+  end
+
   def test_haml_loads_companion_intl_files_into_translations
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

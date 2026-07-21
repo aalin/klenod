@@ -33,7 +33,7 @@ Plugin hooks belong to different phases:
 Example: a Ruby or Haml module imports a CSS file in development:
 
 ```ruby
-Styles = import("./page.css")
+Styles = import("./+page.css")
 ```
 
 When that importing module is evaluated, Klenod asks plugins for the import value. The CSS plugin returns the class-name map from the collected CSS record. The evaluated module receives that value as `Styles`.

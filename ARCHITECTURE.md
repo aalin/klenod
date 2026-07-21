@@ -207,15 +207,15 @@ Routing is optional and plugin-owned. Core Klenod should not assume web routing.
 
 Supported route files:
 
-- `page.rb`
-- `page.haml`
-- `route.rb`
-- `layout.rb`
-- `layout.haml`
-- `error.rb`
-- `error.haml`
-- `not-found.rb`
-- `not-found.haml`
+- `+page.rb`
+- `+page.haml`
+- `+route.rb`
+- `+layout.rb`
+- `+layout.haml`
+- `+error.rb`
+- `+error.haml`
+- `+not-found.rb`
+- `+not-found.haml`
 
 Supported segment forms:
 
@@ -237,15 +237,15 @@ Generated router matches expose:
 - `match.params`
 - `match.route`
 
-A directory can contain both a page and `route.rb`. The router exposes both; the framework decides which one to use for a request.
+A directory can contain both a page and `+route.rb`. The router exposes both; the framework decides which one to use for a request.
 
 When no page route matches, the router resolves the closest `not-found` module for the URL path. When a page render raises, the example framework renders the closest `error` module for the failed route. Error and not-found pages use layouts closest to the fallback module being rendered, not necessarily layouts closest to the originally requested page.
 
 The example server follows SvelteKit-style dispatch:
 
-- `PUT`, `PATCH`, `DELETE`, and `OPTIONS` always use `route.rb`.
+- `PUT`, `PATCH`, `DELETE`, and `OPTIONS` always use `+route.rb`.
 - `GET`, `POST`, and `HEAD` render the page when `Accept` prefers `text/html`.
-- Other `GET`, `POST`, and `HEAD` requests use `route.rb`.
+- Other `GET`, `POST`, and `HEAD` requests use `+route.rb`.
 - Hybrid `GET` handler responses include `Vary: Accept`.
 
 The router should stay request-agnostic. Request dispatch belongs in the framework/server layer.

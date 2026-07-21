@@ -175,10 +175,10 @@ match = router.match("/blog/hello")
 match.params
 # => {slug: "hello"}
 match.page
-# => exports for pages/blog/[slug]/page.rb or page.haml
+# => exports for pages/blog/[slug]/+page.rb or +page.haml
 ```
 
-Only `page.rb` and `page.haml` files are route entrypoints for now. For example, `pages/page.haml` maps to `/`, and `pages/blog/page.rb` maps to `/blog`. Layouts and path params are represented structurally; layout composition and rendering stay in the framework layer.
+Only `+page.rb` and `+page.haml` files are route entrypoints for now. For example, `pages/+page.haml` maps to `/`, and `pages/blog/+page.rb` maps to `/blog`. Layouts and path params are represented structurally; layout composition and rendering stay in the framework layer.
 
 The router plugin preserves NextJS-style structure:
 

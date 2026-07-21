@@ -39,6 +39,7 @@ module Klenod
 
         RouteParam = Data.define(:name, :kind)
         PARAM_SEGMENT_KINDS = [:dynamic, :catch_all, :optional_catch_all].freeze
+        ROUTE_FILE_BASENAMES = ["+page", "+layout", "+route", "+error", "+not-found"].freeze
 
         PageRoute = Data.define(:path, :page_module_id, :handler_module_id, :segments, :layout_module_ids, :slot_layout_module_id) do
           def params
@@ -155,10 +156,39 @@ module Klenod
 
         def discover(source_dir:)
           root = Pathname.new(source_dir).expand_path
+          validate_plus_files(root)
           RouteManifest.new(routes(source_dir: root), special_views(source_dir: root))
         end
 
         private
+
+        def validate_plus_files(source_dir)
+          root = source_dir.join(pages_dir)
+          return unless root.directory?
+
+          unsupported =
+            root
+              .glob("**/+*")
+              .select(&:file?)
+              .reject { |path| supported_plus_file?(path) }
+          return if unsupported.empty?
+
+          matches = unsupported.map { |path| relative_path_for(source_dir, path) }.sort.join(", ")
+          raise ResolveError, "Unsupported router file #{matches}. Supported router files are +page, +layout, +route, +error, and +not-found."
+        end
+
+        def supported_plus_file?(path)
+          basename = path.basename.to_s
+          return true if basename == "+route.rb"
+
+          ROUTE_FILE_BASENAMES.any? do |route_basename|
+            next false if route_basename == "+route"
+
+            extensions.any? { |extension| basename == "#{route_basename}#{extension}" } ||
+              basename == "#{route_basename}.css" ||
+              basename.match?(/\A#{Regexp.escape(route_basename)}\.intl\.[^\/]+\.toml\z/)
+          end
+        end
 
         def routes(source_dir:)
           route_files(source_dir)
@@ -172,8 +202,8 @@ module Klenod
           return [] unless root.directory?
 
           [
-            *extensions.flat_map { |extension| root.glob("**/page#{extension}") },
-            *root.glob("**/route.rb")
+            *extensions.flat_map { |extension| root.glob("**/+page#{extension}") },
+            *root.glob("**/+route.rb")
           ].select(&:file?)
         end
 
@@ -190,8 +220,8 @@ module Klenod
 
           extensions.flat_map do |extension|
             [
-              *root.glob("**/not-found#{extension}"),
-              *root.glob("**/error#{extension}")
+              *root.glob("**/+not-found#{extension}"),
+              *root.glob("**/+error#{extension}")
             ]
           end.select(&:file?).reject { |path| route_segments_for(source_dir, path).any? { |segment| segment.kind == :parallel } }
         end
@@ -217,8 +247,8 @@ module Klenod
 
         def special_view_kind_for(path)
           name = path.basename(path.extname).to_s
-          return :not_found if name == "not-found"
-          return :error if name == "error"
+          return :not_found if name == "+not-found"
+          return :error if name == "+error"
 
           raise ResolveError, "Unsupported special view #{path}"
         end
@@ -226,13 +256,13 @@ module Klenod
         def watched_patterns(module_id)
           patterns = extensions.flat_map do |extension|
             [
-              WatchedPattern.new(module_id, "#{pages_dir}/**/page#{extension}", :router_page, {}),
-              WatchedPattern.new(module_id, "#{pages_dir}/**/layout#{extension}", :router_layout, {}),
-              WatchedPattern.new(module_id, "#{pages_dir}/**/not-found#{extension}", :router_not_found, {}),
-              WatchedPattern.new(module_id, "#{pages_dir}/**/error#{extension}", :router_error, {})
+              WatchedPattern.new(module_id, "#{pages_dir}/**/+page#{extension}", :router_page, {}),
+              WatchedPattern.new(module_id, "#{pages_dir}/**/+layout#{extension}", :router_layout, {}),
+              WatchedPattern.new(module_id, "#{pages_dir}/**/+not-found#{extension}", :router_not_found, {}),
+              WatchedPattern.new(module_id, "#{pages_dir}/**/+error#{extension}", :router_error, {})
             ]
           end
-          patterns + [WatchedPattern.new(module_id, "#{pages_dir}/**/route.rb", :router_route, {})]
+          patterns + [WatchedPattern.new(module_id, "#{pages_dir}/**/+route.rb", :router_route, {})]
         end
 
         def route_for(source_dir, paths)
@@ -323,7 +353,7 @@ module Klenod
 
         def layout_path_for(dir)
           matches = extensions.filter_map do |extension|
-            path = dir.join("layout#{extension}")
+            path = dir.join("+layout#{extension}")
             path if path.file?
           end
           return nil if matches.empty?
@@ -852,7 +882,7 @@ module Klenod
 
         def route_handler_module_id?(module_id, context)
           return false unless module_id.path.start_with?("#{pages_dir}/")
-          return false unless module_id.path.end_with?("/route.rb")
+          return false unless module_id.path.end_with?("/+route.rb")
 
           route_handler_module_ids(context.source_dir).include?(module_id)
         end
@@ -862,7 +892,7 @@ module Klenod
         end
 
         def route_handler_path?(path)
-          path.basename.to_s == "route.rb"
+          path.basename.to_s == "+route.rb"
         end
 
         def route_handler_source(source)
