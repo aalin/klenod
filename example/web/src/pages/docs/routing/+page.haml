@@ -1,0 +1,67 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+
+%article
+  %PageHeader{
+    kicker: "Docs",
+    title: "Router Plugin",
+    summary: "RouterPlugin is an optional, framework-agnostic plugin that discovers filesystem routes and generates a virtual router module."
+  }
+
+  %section
+    %h2 Configure The Router
+    :markdown
+      Add `RouterPlugin` to the build context and import its virtual module.
+
+      ```ruby
+      router_plugin = Klenod::Build::Plugins::RouterPlugin.new(
+        specifier: "virtual:router",
+        pages_dir: "pages"
+      )
+
+      context = Klenod::Build::Context.new(
+        source_dir: "src",
+        plugins: [
+          Klenod::Build::Plugins::RubyPlugin.new,
+          router_plugin
+        ]
+      )
+
+      router = context.entry("virtual:router").exports::Default
+      match = router.match("/blog/hello")
+      ```
+
+  %section
+    %h2 Supported Files And Segments
+    :markdown
+      The router discovers `+page.rb`, `+page.haml`, `+route.rb`, `+layout.rb`, `+layout.haml`, `+error.rb`, `+error.haml`, `+not-found.rb`, and `+not-found.haml`.
+
+      Supported segment forms include:
+
+      - `[id]` dynamic segments.
+      - `[...slug]` catch-all segments.
+      - `[[...slug]]` optional catch-all segments.
+      - `(marketing)` route groups.
+      - `@modal` parallel route slots.
+      - `(.)photo`, `(..)profile`, and `(...)login` intercepted route segments.
+
+  %section
+    %h2 Match Results
+    :markdown
+      A route match exposes the selected modules and structural metadata:
+
+      ```ruby
+      match.page
+      match.handler
+      match.layouts
+      match.slots
+      match.params
+      match.route
+      ```
+
+      Generated router modules use `lazy_import` so matching a route can load only the selected page, handler, layouts, and slots.
+
+  %section
+    %h2 Framework Boundary
+    :markdown
+      RouterPlugin does not decide request dispatch or rendering policy. Hybrid directories can contain both a page and `+route.rb`; the router exposes both and the consuming framework decides which one to use for a request.

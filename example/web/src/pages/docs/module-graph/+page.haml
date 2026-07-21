@@ -1,0 +1,53 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+
+%article
+  %PageHeader{
+    kicker: "Docs",
+    title: "Module Graph And Imports",
+    summary: "Klenod collects modules into a graph first, then evaluates Ruby code only when an entry or import value needs it."
+  }
+
+  %section
+    %h2 Collection Versus Evaluation
+    :markdown
+      Collection reads source, resolves imports, transforms modules, records dependencies, emits assets, stores metadata, and creates a `ModuleRecord`. Evaluation instantiates a `Klenod::Runtime::Mod`, runs transformed Ruby source, and exposes exports.
+
+      `context.entry(...)` and `context.collect(...)` collect without evaluating. `entry.exports`, `entry.call(...)`, `context.exports(...)`, and `context.evaluate(...)` evaluate on demand.
+
+      Build mode depends on this split: it can serialize collected records without running app top-level code.
+
+  %section
+    %h2 Module Identifiers
+    :markdown
+      Module ids are source-root-relative by default.
+
+      ```ruby
+      import("./Card")
+      import("/components/Card")
+      import("virtual:router")
+      ```
+
+      Relative imports resolve from the importer. Leading slash imports resolve from the configured source directory. Virtual modules use explicit schemes such as `virtual:`.
+
+  %section
+    %h2 Eager, Lazy, And Glob Imports
+    :markdown
+      `import("...")` creates an eager dependency. `lazy_import("...")` records a dependency but loads the value only when called.
+
+      ```ruby
+      Details = lazy_import("./details")
+
+      def self.render_details
+        Details.call::Default.new.render
+      end
+      ```
+
+      `import_glob("...")` returns a deterministic hash of matched imports. It is eager by default and can be made lazy with `eager: false`.
+
+      ```ruby
+      Images = import_glob("./gallery/*.{jpg,png}?width=320&format=webp")
+      Pages = import_glob("./pages/*.rb", eager: false)
+      ```
+
+      Eager import cycles are errors. Use `lazy_import` for deferred or cyclic branches.

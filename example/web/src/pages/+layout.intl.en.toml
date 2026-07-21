@@ -4,4 +4,5 @@ label = "example"
 [nav]
 label = "Primary"
 overview = "Overview"
+docs = "Docs"
 demo = "Demo"

@@ -1,0 +1,64 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+
+%article
+  %PageHeader{
+    kicker: "Docs",
+    title: "Haml And Markdown",
+    summary: "Haml and Markdown modules compile to Ruby component classes while leaving rendering policy to the consuming application."
+  }
+
+  %section
+    %h2 HamlPlugin
+    :markdown
+      `HamlPlugin` is an adapter, not a renderer. The application supplies a component base class and an HTML/component factory.
+
+      ```ruby
+      Klenod::Build::Plugins::HamlPlugin.new(
+        component_base_class: "App::Component",
+        factory: "App::H"
+      )
+      ```
+
+      Haml files transform into Ruby component classes exported as `Default`. Importing Haml from Ruby or Haml returns that component class.
+
+  %section
+    %h2 Haml Features
+    :markdown
+      Haml modules support imports, component references such as `%Card`, Ruby filters, inline CSS filters, and `:markdown` filters.
+
+      Companion files are tracked automatically:
+
+      - `Component.css` is imported as `Styles` when present.
+      - `Component.intl.*.toml` files are watched and exposed as translations.
+      - Adding, editing, or removing companions invalidates the owning Haml module.
+
+      Generated Ruby includes source map marks so runtime errors can be rewritten back to original Haml source lines.
+
+  %section
+    %h2 MarkdownPlugin
+    :markdown
+      `MarkdownPlugin` handles `.md` modules and Haml `:markdown` filters through `kramdown` with the GFM parser.
+
+      ```ruby
+      Article = import("./article.md")
+      ```
+
+      Markdown files transform into Ruby component classes exported as `Default`. Markdown renders elements as factory calls rather than raw HTML strings, including raw HTML elements in the Markdown source.
+
+  %section
+    %h2 Markdown Components
+    :markdown
+      If `/markdown-components.rb` exists, Markdown rendering uses its `Default` hash to map tags to components.
+
+      ```ruby
+      Heading = import("/components/MarkdownHeading.haml")
+      Link = import("/components/MarkdownLink.haml")
+
+      Default = {
+        h1: Heading,
+        a: Link
+      }.freeze
+      ```
+
+      Unmapped tags fall back to symbol tags such as `:p`, `:a`, and `:code`.

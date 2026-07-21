@@ -1,0 +1,55 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+
+%article
+  %PageHeader{
+    kicker: "Docs",
+    title: "Assets",
+    summary: "Plugins emit stable asset metadata for stylesheets, SVGs, raster images, generated variants, and downloaded font files."
+  }
+
+  %section
+    %h2 Asset Identity
+    :markdown
+      Klenod assets have two stable identifiers:
+
+      - `logical_name`: the source-root-relative file path without import query parameters, such as `images/hero.png`.
+      - `output_path`: the public content-hashed browser path, such as `/assets/hero.640w.abcd1234.png`.
+
+      Query parameters configure an import without changing the logical name, so overlapping generated variants can be reused.
+
+  %section
+    %h2 Lookup APIs
+    :markdown
+      The build graph and runtime bundle expose the same lookup shape.
+
+      ```ruby
+      context.asset("/assets/home.abc123.css")
+      context.assets_for("styles/home.css")
+      context.assets_for_module("pages/server.rb", type: :css)
+
+      bundle.asset("/assets/home.abc123.css")
+      bundle.assets_for_module("pages/server.rb", type: :css)
+      ```
+
+      `assets_for_module` is recursive by default. `asset_references_for_module` also includes a graph traversal index, which is useful for route-scoped CSS ordering.
+
+  %section
+    %h2 CSS, SVG, And Images
+    :markdown
+      CSS imports from Ruby or Haml return class-name maps. CSS imports from CSS become stylesheet dependencies, and CSS `url(...)` references become asset dependencies.
+
+      SVG imports emit the SVG file as a browser asset and export metadata with `src`, `width`, and `height`.
+
+      Raster image imports support `.avif`, `.gif`, `.jpeg`, `.jpg`, `.png`, and `.webp`. Import query options can request widths, formats, and quality:
+
+      ```ruby
+      Hero = import("hero.jpg?width=320,640&format=webp,jpeg&quality=82")
+      ```
+
+      Image values expose `src`, dimensions, `variants`, `srcset`, and `sizes`. Generated variants are deduplicated by source path, source hash, width, format, and quality.
+
+  %section
+    %h2 Google Fonts
+    :markdown
+      `GoogleFontsPlugin` resolves Google Fonts CSS imports, downloads the raw CSS, rewrites `fonts.gstatic.com` URLs to local emitted font assets, and emits the rewritten stylesheet as a normal CSS asset. Font files are lazy IO-generated assets so downloads can overlap with CPU-bound image generation without becoming unbounded.

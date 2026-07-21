@@ -1,0 +1,39 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+
+%article
+  %PageHeader{
+    kicker: "Documentation",
+    title: "Klenod Docs",
+    summary: "A practical guide to Klenod's build graph, runtime bundles, assets, routing, templates, data imports, and built-in plugins."
+  }
+
+  %section
+    :markdown
+      Klenod is an experimental Ruby module bundler. It reads files from a configured source directory, resolves imports, transforms modules through plugins, records a dependency graph, and can serialize a runtime-only bundle for production.
+
+      The core idea is to keep graph collection separate from Ruby module evaluation. Applications and frameworks can collect routes, templates, stylesheets, images, data files, and other dependencies without running app top-level code until an entry is actually called.
+
+  %section
+    %h2 Packages
+    :markdown
+      - `klenod-build` owns graph construction, resolving, transforms, plugins, development watching, asset generation, the CLI, and bundle writing.
+      - `klenod-runtime` owns production bundle loading, runtime module evaluation, runtime asset specs, source maps, and backtrace rewriting.
+      - `klenod-rack` owns Rack-compatible helpers for serving runtime assets.
+      - `klenod` is the compatibility gem that brings the build and Rack pieces together.
+
+  %section
+    %h2 Read Next
+    .link-grid
+      %a{ href: localized_path("/docs/getting-started") }
+        %strong Getting Started
+        %span Create a build context, import modules, build a bundle, and load it at runtime.
+      %a{ href: localized_path("/docs/module-graph") }
+        %strong Module Graph
+        %span Understand collection, evaluation, eager imports, lazy imports, and glob imports.
+      %a{ href: localized_path("/docs/assets") }
+        %strong Assets
+        %span Work with CSS, SVG, image variants, Google Fonts, and route-scoped asset lookup.
+      %a{ href: localized_path("/docs/plugins") }
+        %strong Plugin Reference
+        %span Review built-in plugins and the hook phases available to custom plugins.

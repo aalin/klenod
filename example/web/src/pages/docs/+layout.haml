@@ -1,0 +1,28 @@
+:ruby
+  Styles = import("./+layout.css")
+
+  DocsLinks = [
+    {href: "/docs", label: "Overview"},
+    {href: "/docs/getting-started", label: "Getting Started"},
+    {href: "/docs/module-graph", label: "Module Graph"},
+    {href: "/docs/assets", label: "Assets"},
+    {href: "/docs/templates", label: "Haml And Markdown"},
+    {href: "/docs/routing", label: "Router Plugin"},
+    {href: "/docs/data", label: "Data Imports"},
+    {href: "/docs/development", label: "Development Updates"},
+    {href: "/docs/build-runtime", label: "Build And Runtime"},
+    {href: "/docs/plugins", label: "Plugin Reference"}
+  ].freeze
+
+  def initialize(children:, slots: {})
+    @children = children
+  end
+
+.docs-shell
+  %aside
+    %p Docs
+    %nav{ aria: { label: "Documentation" } }
+      = DocsLinks.map do |link|
+        %a{ href: localized_path(link.fetch(:href)) }= link.fetch(:label)
+  .docs-content
+    = @children
