@@ -1,0 +1,29 @@
+:ruby
+  Article = import("./article.md")
+  PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+
+%article
+  %PageHeader{
+    kicker: "Markdown",
+    title: "Render Markdown through factory calls",
+    summary: "Markdown files and Haml :markdown filters compile into the same component-shaped output as regular Haml."
+  }
+
+  %Panel{ title: "Imported .md file" }
+    %Article
+
+  %Panel{ title: "Inline :markdown filter" }
+    :markdown
+      ## Inline Markdown
+
+      This paragraph is written inside a Haml `:markdown` filter.
+
+      - Markdown lists become factory calls.
+      - Raw HTML works too: <strong>this strong element</strong> is compiled from Markdown.
+      - Component mappings come from `src/markdown-components.rb`.
+
+      ```haml
+      :markdown
+        ## Inline Markdown
+      ```

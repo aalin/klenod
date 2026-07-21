@@ -1,0 +1,13 @@
+aside {
+  display: grid;
+  gap: var(--space-3);
+  border-inline-start: 0.25rem solid var(--color-accent);
+  background: var(--color-accent-soft);
+  padding: var(--space-4);
+}
+
+strong {
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}

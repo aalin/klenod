@@ -1,0 +1,8 @@
+pre {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  padding: var(--space-4);
+  white-space: pre-wrap;
+}

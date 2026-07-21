@@ -1,0 +1,9 @@
+:ruby
+  def initialize(children: nil, **props)
+    @children = children
+  end
+
+%aside
+  %strong Markdown component
+  %div
+    = @children
