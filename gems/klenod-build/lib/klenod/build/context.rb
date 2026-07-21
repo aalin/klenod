@@ -92,6 +92,7 @@ module Klenod
           Plugins::RubyPlugin.new,
           Plugins::IntlPlugin.new,
           Plugins::HamlPlugin.new,
+          Plugins::MarkdownPlugin.new,
           Plugins::CssPlugin.new,
           Plugins::SvgPlugin.new,
           Plugins::ImagePlugin.new,

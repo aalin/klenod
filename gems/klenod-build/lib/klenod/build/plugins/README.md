@@ -9,6 +9,7 @@ This directory contains Klenod's built-in build plugins. Plugins participate in 
 - `RubyPlugin`
 - `IntlPlugin`
 - `HamlPlugin`
+- `MarkdownPlugin`
 - `CssPlugin`
 - `SvgPlugin`
 - `ImagePlugin`
@@ -50,6 +51,7 @@ Handles `.haml` modules.
 - Transforms Haml templates into Ruby component classes exported as `Default`.
 - Rewrites Haml-side imports.
 - Supports `import_glob(...)` in Haml Ruby code and Ruby filters.
+- Supports `:markdown` filters rendered through factory calls.
 - Supports Haml component references such as `%Card`.
 - Adds companion dependencies for `Component.css` and translations from `Component.intl.*.toml`.
 - Emits source maps so runtime errors can be mapped back to Haml source.
@@ -65,6 +67,41 @@ Klenod::Build::Plugins::HamlPlugin.new(
 
 - `component_base_class`: Ruby constant path used as the generated component superclass. Defaults to `"Object"`.
 - `factory`: Ruby constant path used for generated HTML/component calls. Defaults to `"Object"`.
+
+`:markdown` filters use `MarkdownPlugin`'s source-root component map convention when `markdown-components.rb` exists.
+
+## MarkdownPlugin
+
+Handles `.md` modules and Haml `:markdown` filters through `kramdown` with the GFM parser.
+
+- Transforms Markdown files into Ruby component classes exported as `Default`.
+- Renders Markdown elements as factory calls, not raw HTML strings.
+- Converts raw HTML elements in Markdown into factory calls too.
+- Uses `/markdown-components.rb` when present to map Markdown tags to components.
+
+Configuration:
+
+```ruby
+Klenod::Build::Plugins::MarkdownPlugin.new(
+  component_base_class: "Example::Component",
+  factory: "Example::H"
+)
+```
+
+Markdown component map convention:
+
+```ruby
+# src/markdown-components.rb
+Heading = import("/components/MarkdownHeading.haml")
+Link = import("/components/MarkdownLink.haml")
+
+Default = {
+  h1: Heading,
+  a: Link
+}.freeze
+```
+
+Unmapped tags fall back to symbol tags such as `:p`, `:a`, and `:code`. Markdown modules and Haml modules with `:markdown` filters watch `markdown-components.rb`, so adding, editing, or removing the map reloads affected modules.
 
 ## IntlPlugin
 
@@ -175,7 +212,7 @@ Built-in subclasses:
 - `JsonPlugin`: `.json`, parsed with `JSON.parse`.
 - `YamlPlugin`: `.yaml`, `.yml`, parsed with `YAML.safe_load`.
 - `TomlPlugin`: `.toml`, parsed with `TomlRB.parse`.
-- `TextPlugin`: `.txt`, `.text`, `.md`, imported as strings.
+- `TextPlugin`: `.txt`, `.text`, imported as strings.
 
 Behavior:
 

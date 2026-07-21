@@ -15,6 +15,7 @@ require_relative "../ruby_import_rewriter"
 require_relative "../transform_result"
 require_relative "../watched_pattern"
 require_relative "intl_plugin"
+require_relative "markdown_compiler"
 
 module Klenod
   module Build
@@ -1101,7 +1102,8 @@ module Klenod
             translations_source:,
             styleable: false,
             profiler: nil,
-            import_rewriter: nil
+            import_rewriter: nil,
+            markdown_components_source: "{}"
           )
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
@@ -1113,10 +1115,26 @@ module Klenod
             template =
               if profiler
                 profiler.measure(:haml_compile_template, module_id: module_id.to_s) do
-                  compile_template(source, module_id: module_id, factory: factory, styleable: styleable, builder: builder, import_rewriter: import_rewriter)
+                  compile_template(
+                    source,
+                    module_id: module_id,
+                    factory: factory,
+                    styleable: styleable,
+                    builder: builder,
+                    import_rewriter: import_rewriter,
+                    markdown_components_source: markdown_components_source
+                  )
                 end
               else
-                compile_template(source, module_id: module_id, factory: factory, styleable: styleable, builder: builder, import_rewriter: import_rewriter)
+                compile_template(
+                  source,
+                  module_id: module_id,
+                  factory: factory,
+                  styleable: styleable,
+                  builder: builder,
+                  import_rewriter: import_rewriter,
+                  markdown_components_source: markdown_components_source
+                )
               end
             ast =
               if profiler
@@ -1178,7 +1196,7 @@ module Klenod
             @profiler.measure(name, module_id: @module_id.to_s) { yield }
           end
 
-          def compile_template(source, factory:, builder:, module_id: nil, styleable: false, import_rewriter: nil)
+          def compile_template(source, factory:, builder:, module_id: nil, styleable: false, import_rewriter: nil, markdown_components_source: "{}")
             parsed = measure_compile(:haml_parse_haml) { HamlPlugin.parse_haml(source, module_id: module_id) }
             render_nodes, ruby_nodes =
               measure_compile(:haml_partition_top_level_nodes) do
@@ -1190,7 +1208,11 @@ module Klenod
               else
                 measure_compile(:haml_compile_ruby_filters) { compile_ruby_filters(ruby_nodes, builder: builder, import_rewriter: import_rewriter) }
               end
-            render = measure_compile(:haml_compile_render_nodes) { compile_nodes(render_nodes, factory: factory, styleable: styleable, builder: builder) }
+            markdown_compiler = MarkdownCompiler.new(factory: factory, components_source: markdown_components_source)
+            render =
+              measure_compile(:haml_compile_render_nodes) do
+                compile_nodes(render_nodes, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
+              end
 
             Template.new(ruby, render)
           end
@@ -1214,13 +1236,16 @@ module Klenod
             [render_nodes, class_ruby_nodes]
           end
 
-          def compile_nodes(nodes, factory:, builder:, styleable: false)
-            expressions = measure_compile(:haml_compile_node_expressions) { compile_node_expressions(nodes, factory: factory, styleable: styleable, builder: builder) }
+          def compile_nodes(nodes, factory:, builder:, markdown_compiler:, styleable: false)
+            expressions =
+              measure_compile(:haml_compile_node_expressions) do
+                compile_node_expressions(nodes, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
+              end
 
             measure_compile(:haml_build_expression_list) { builder.expressions(expressions) }
           end
 
-          def compile_node_expressions(nodes, factory:, builder:, styleable: false)
+          def compile_node_expressions(nodes, factory:, builder:, markdown_compiler:, styleable: false)
             expressions = []
             previous_node = nil
             index = 0
@@ -1237,9 +1262,9 @@ module Klenod
                   index += 1
                 end
 
-                expression = compile_script_group(group, factory: factory, styleable: styleable, builder: builder)
+                expression = compile_script_group(group, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
               else
-                expression = compile_node(node, factory: factory, styleable: styleable, builder: builder)
+                expression = compile_node(node, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
                 index += 1
               end
 
@@ -1256,76 +1281,93 @@ module Klenod
               (left.type == :tag && left.value.fetch(:nuke_outer_whitespace))
           end
 
-          def compile_node(node, factory:, builder:, styleable: false)
+          def compile_node(node, factory:, builder:, markdown_compiler:, styleable: false)
             measure_compile_detail(:"haml_compile_node_#{node.type}") do
               mark = source_mark(node, builder: builder)
               expression =
                 case node.type
                 when :tag
-                  builder.marked_expression(mark, compile_tag(node, mark: mark, factory: factory, styleable: styleable, builder: builder))
+                  builder.marked_expression(mark, compile_tag(node, mark: mark, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler))
                 when :plain
                   builder.literal(node.value.fetch(:text))
                 when :script
-                  compile_script(node, factory: factory, styleable: styleable, builder: builder)
+                  compile_script(node, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
                 when :silent_script
-                  compile_silent_script(node, factory: factory, styleable: styleable, builder: builder)
+                  compile_silent_script(node, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
                 when :filter
-                  compile_filter_node(node, builder: builder)
+                  compile_filter_node(node, builder: builder, markdown_compiler: markdown_compiler)
                 end
 
               (node.type == :tag) ? expression : builder.marked_expression(mark, expression)
             end
           end
 
-          def compile_script_group(nodes, factory:, builder:, styleable: false)
-            return compile_script_branch(nodes[0], factory: factory, styleable: styleable, builder: builder) if nodes.length == 1 && branch_start?(nodes[0])
-            return compile_node(nodes[0], factory: factory, styleable: styleable, builder: builder) if nodes.length == 1
+          def compile_script_group(nodes, factory:, builder:, markdown_compiler:, styleable: false)
+            return compile_script_branch(nodes[0], factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler) if nodes.length == 1 && branch_start?(nodes[0])
+            return compile_node(nodes[0], factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler) if nodes.length == 1
 
             compile_branches(
               nodes.map { |node| [script_source(node, builder: builder), node.children] },
               factory: factory,
               styleable: styleable,
-              builder: builder
+              builder: builder,
+              markdown_compiler: markdown_compiler
             )
           end
 
-          def compile_script(node, factory:, builder:, styleable: false)
+          def compile_script(node, factory:, builder:, markdown_compiler:, styleable: false)
             source = script_source(node, builder: builder)
             return builder.parenthesized_expression(source) if node.children.empty?
 
-            builder.script_block(source, compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder), line_no: node.line)
+            builder.script_block(
+              source,
+              compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler),
+              line_no: node.line
+            )
           end
 
-          def compile_script_branch(node, factory:, builder:, styleable: false)
-            compile_branches([[script_source(node, builder: builder), node.children]], factory: factory, styleable: styleable, builder: builder)
+          def compile_script_branch(node, factory:, builder:, markdown_compiler:, styleable: false)
+            compile_branches(
+              [[script_source(node, builder: builder), node.children]],
+              factory: factory,
+              styleable: styleable,
+              builder: builder,
+              markdown_compiler: markdown_compiler
+            )
           end
 
-          def compile_silent_script(node, factory:, builder:, styleable: false)
+          def compile_silent_script(node, factory:, builder:, markdown_compiler:, styleable: false)
             source = script_source(node, builder: builder)
             return builder.silent_script(source) if node.children.empty?
             if builder.block_script?(source)
               return builder.silent_script_block(
                 source,
-                compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder),
+                compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler),
                 line_no: node.line
               )
             end
 
-            compile_silent_branches(split_silent_script_branches(node, builder: builder), factory: factory, styleable: styleable, builder: builder)
+            compile_silent_branches(
+              split_silent_script_branches(node, builder: builder),
+              factory: factory,
+              styleable: styleable,
+              builder: builder,
+              markdown_compiler: markdown_compiler
+            )
           end
 
-          def compile_branches(branches, factory:, builder:, styleable: false)
+          def compile_branches(branches, factory:, builder:, markdown_compiler:, styleable: false)
             builder.branches(
               branches.map do |source, children|
-                [source, compile_nodes(children, factory: factory, styleable: styleable, builder: builder)]
+                [source, compile_nodes(children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)]
               end
             )
           end
 
-          def compile_silent_branches(branches, factory:, builder:, styleable: false)
+          def compile_silent_branches(branches, factory:, builder:, markdown_compiler:, styleable: false)
             builder.silent_branches(
               branches.map do |source, children|
-                [source, compile_nodes(children, factory: factory, styleable: styleable, builder: builder)]
+                [source, compile_nodes(children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)]
               end
             )
           end
@@ -1364,7 +1406,7 @@ module Klenod
             node.type == :script && %w[if unless case begin].include?(node.value.fetch(:keyword))
           end
 
-          def compile_tag(node, mark:, factory:, builder:, styleable: false)
+          def compile_tag(node, mark:, factory:, builder:, markdown_compiler:, styleable: false)
             children = []
             measure_compile_detail(:haml_compile_tag_value) do
               value = node.value.fetch(:value)
@@ -1375,7 +1417,7 @@ module Klenod
             unless node.children.empty?
               children.concat(
                 measure_compile_detail(:haml_compile_tag_children) do
-                  compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder)
+                  compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
                 end
               )
             end
@@ -1436,14 +1478,19 @@ module Klenod
             builder.node_fragment(source, nil)
           end
 
-          def compile_filter_node(node, builder:)
-            raise ArgumentError, "Only :ruby Haml filters are supported" unless ruby_filter?(node)
+          def compile_filter_node(node, builder:, markdown_compiler:)
+            return builder.render_ruby_filter(compile_ruby_filter(node, builder: builder)) if ruby_filter?(node)
+            return builder.expression(markdown_compiler.compile(node.value.fetch(:text))) if markdown_filter?(node)
 
-            builder.render_ruby_filter(compile_ruby_filter(node, builder: builder))
+            raise ArgumentError, "Only :ruby and :markdown Haml filters are supported"
           end
 
           def ruby_filter?(node)
             node.type == :filter && node.value.fetch(:name) == "ruby"
+          end
+
+          def markdown_filter?(node)
+            node.type == :filter && node.value.fetch(:name) == "markdown"
           end
 
           def css_filter?(node)
@@ -1644,6 +1691,7 @@ module Klenod
           style_dependencies = []
           import_dependencies = []
           watched_patterns = []
+          markdown_filters = markdown_filter_nodes(code, module_id: module_id)
           profiler = context.respond_to?(:profiler) ? context.profiler : nil
           builder = Transformer::RubyBuilder.new(profiler: profiler)
           context.unregister_virtual_modules(module_id)
@@ -1660,6 +1708,23 @@ module Klenod
                 .with(id: "#{module_id}:companion_style")
             dependencies << dependency
             style_dependencies << dependency
+          end
+          markdown_components_dependency = nil
+          if markdown_filters.any?
+            markdown_components_id = ModuleId.new("markdown-components.rb", nil)
+            watched_patterns << WatchedPattern.new(module_id, markdown_components_id.path, :markdown_components, {})
+            if context.absolute_path(markdown_components_id).file?
+              markdown_components_dependency =
+                Dependency
+                  .create(
+                    specifier: "/markdown-components",
+                    importer_id: module_id,
+                    kind: :markdown_components,
+                    metadata: {optional: true}
+                  )
+                  .with(id: "#{module_id}:markdown_components")
+              dependencies << markdown_components_dependency
+            end
           end
           inline_css_sources(code, module_id: module_id).each_with_index do |source, index|
             virtual_module_id = ModuleId.new("#{module_id.path}.inline.#{index}.css", nil)
@@ -1706,7 +1771,8 @@ module Klenod
               translations_source: translations_source,
               styleable: !style_dependencies.empty?,
               profiler: profiler,
-              import_rewriter: import_rewriter
+              import_rewriter: import_rewriter,
+              markdown_components_source: markdown_components_dependency ? "__klenod_import__(#{markdown_components_dependency.id.inspect})::Default" : "{}"
             )
           import_rewrite =
             if !haml_result.code.include?("import(") && !haml_result.code.include?("lazy_import(") && !haml_result.code.include?("import_glob(")
@@ -1784,11 +1850,26 @@ module Klenod
         end
 
         def inline_css_sources(source, module_id: nil)
-          HamlPlugin
-            .parse_haml(source, module_id: module_id)
-            .children
-            .select { |node| node.type == :filter && node.value.fetch(:name) == "css" }
-            .map { |node| node.value.fetch(:text) }
+          filter_nodes(source, "css", module_id: module_id).map { |node| node.value.fetch(:text) }
+        end
+
+        def markdown_filter_nodes(source, module_id: nil)
+          return [] unless source.include?(":markdown")
+
+          filter_nodes(source, "markdown", module_id: module_id)
+        end
+
+        def filter_nodes(source, name, module_id: nil)
+          nodes = []
+          queue = HamlPlugin.parse_haml(source, module_id: module_id).children.dup
+
+          until queue.empty?
+            node = queue.shift
+            nodes << node if node.type == :filter && node.value.fetch(:name) == name
+            queue.concat(node.children)
+          end
+
+          nodes
         end
 
         def styles_source_for(builder, dependencies)

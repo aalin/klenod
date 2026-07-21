@@ -74,7 +74,7 @@ module Klenod
       end
 
       class TextPlugin < DataPlugin
-        extensions ".txt", ".text", ".md"
+        extensions ".txt", ".text"
 
         private
 

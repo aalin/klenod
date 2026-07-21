@@ -172,6 +172,61 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_supports_markdown_filters
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %article
+            :markdown
+              # Hello
+
+              A [link](https://example.com).
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal(
+        [
+          :article,
+          [
+            [:h1, "Hello", {"id" => "hello"}],
+            [:p, "A ", [:a, "link", {"href" => "https://example.com"}], "."]
+          ]
+        ],
+        exports::Default.new.render
+      )
+    end
+  end
+
+  def test_haml_markdown_filters_use_markdown_components_file
+    evaluate_haml(
+      {
+        "markdown-components.rb" => <<~RUBY,
+          class Heading
+            def initialize(children: nil, **props)
+              @children = children
+              @props = props
+            end
+
+            def render
+              [:heading, *@children, @props]
+            end
+          end
+
+          Default = {h1: Heading}.freeze
+        RUBY
+        "pages/page.haml" => <<~HAML
+          :markdown
+            # Hello
+        HAML
+      },
+      plugins: default_plugins_with(haml_plugin)
+    ) do |_dir, _context, record, exports|
+      assert_equal([:heading, "Hello", {"id" => "hello"}], exports::Default.new.render)
+      assert_equal(["/markdown-components"], record.dependencies.select { it.kind == :markdown_components }.map(&:specifier))
+      assert_equal(["markdown-components.rb"], record.watched_patterns.select { it.kind == :markdown_components }.map(&:glob))
+    end
+  end
+
   def test_haml_transformer_supports_parsed_inline_tag_values
     evaluate_haml(
       {

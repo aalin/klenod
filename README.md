@@ -43,6 +43,31 @@ Pages = import_glob("./pages/*.rb", eager: false)
 Pages.fetch("./pages/about.rb").call
 ```
 
+Markdown files can be imported as components when `MarkdownPlugin` is configured with the same factory as Haml:
+
+```ruby
+Article = import("./article.md")
+```
+
+Haml components can also use inline Markdown:
+
+```haml
+:markdown
+  # Hello
+
+  A paragraph with [a link](/demo).
+```
+
+If `src/markdown-components.rb` exists, Markdown rendering uses its `Default` hash to map tags to components:
+
+```ruby
+Heading = import("/components/MarkdownHeading.haml")
+
+Default = {
+  h1: Heading
+}.freeze
+```
+
 ## Entry Handles
 
 Frameworks should usually keep a loaded entry handle instead of storing raw graph records:

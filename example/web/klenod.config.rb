@@ -40,6 +40,10 @@ plugins [
     component_base_class: "Example::Component",
     factory: "Example::H"
   ),
+  Klenod::Build::Plugins::MarkdownPlugin.new(
+    component_base_class: "Example::Component",
+    factory: "Example::H"
+  ),
   Klenod::Build::Plugins::GoogleFontsPlugin.new(
     fetcher: google_fonts_fetcher,
     cache_path: google_fonts_cache_path
