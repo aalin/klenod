@@ -1,0 +1,78 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Docs",
+    title: "Haml And Scoped CSS",
+    summary: "How Haml modules become components, how companion styles are imported, and how scoped selectors attach to rendered tags."
+  }
+
+  %DocsSection{ title: "Haml Modules" }
+    :markdown
+      `HamlPlugin` transforms `.haml` files into Ruby component classes exported as `Default`.
+
+      ```haml
+      :ruby
+        Button = import("/components/Button")
+
+        def initialize(title:)
+          @title = title
+        end
+
+      %article
+        %h1= @title
+        %Button Open
+      ```
+
+      Haml component references such as `%Button` compile to factory calls using the imported component class as the tag.
+
+  %DocsSection{ title: "Ruby And Filters" }
+    :markdown
+      `=` prints a value. `-` runs Ruby silently. Ruby filters define class-level code for imports and methods, while later Ruby script blocks inside the template render method can access request-local helpers.
+
+      Haml also supports inline `:css` and `:markdown` filters. Markdown filters are handled by `MarkdownPlugin` and use `/markdown-components.rb` when that map exists.
+
+  %DocsSection{ title: "Companion Files" }
+    :markdown
+      Haml automatically imports matching CSS companions as `Styles` when present.
+
+      ```text
+      components/Card.haml
+      components/Card.css
+
+      pages/docs/+page.haml
+      pages/docs/+page.css
+      ```
+
+      It also watches `Component.intl.*.toml` translation companions. Adding, editing, or removing companion files invalidates the owning Haml module in development.
+
+  %DocsSection{ title: "Scoped CSS Maps" }
+    :markdown
+      CSS is transformed through `mayu-css`. Ruby or Haml importing CSS receives a class-name map.
+
+      ```css
+      article {
+        display: grid;
+      }
+
+      .featured {
+        border-color: var(--color-accent);
+      }
+      ```
+
+      Tag selectors use `__`-prefixed keys such as `Styles[:__article]`. Class selectors use normal keys such as `Styles[:featured]`.
+
+      Haml applies scoped tag classes automatically to matching tags. Explicit Haml classes such as `%article.featured` are joined with the matching scoped class from the same CSS module.
+
+  %DocsSection{ title: "Scope Boundaries" }
+    :markdown
+      Scoped CSS belongs to the component or page that renders the element. A selector in `pages/docs/+layout.css` can style the sidebar links rendered by `pages/docs/+layout.haml`, but it cannot reliably style paragraph or list tags rendered inside `@children` by another page or Markdown component.
+
+      Prefer smaller components for reusable styled elements. The docs pages use `DocsPage`, `DocsSection`, and `components/markdown/*` so each stylesheet owns the tags it targets.
+
+  %DocsSection{ title: "Source Maps And Errors" }
+    :markdown
+      Generated Ruby includes source map marks so runtime exceptions can be rewritten back to original Haml source lines. Parse errors show source context directly, without requiring readers to inspect generated Ruby.

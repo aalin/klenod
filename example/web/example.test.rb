@@ -212,7 +212,7 @@ class Klenod::ExampleTest < Minitest::Test
     html_by_path = {}
 
     _stdout, stderr = capture_io do
-      ["/docs", "/docs/templates", "/docs/assets"].each do |path|
+      ["/docs", "/docs/core-concepts", "/docs/configuration", "/docs/haml-css", "/docs/templates", "/docs/assets"].each do |path|
         status, headers, body = entry.call(request(path), context)
 
         assert_equal(200, status)
@@ -223,10 +223,14 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_empty(stderr)
     assert_includes(html_by_path.fetch("/docs"), "components/DocsLinkCard")
+    assert_includes(html_by_path.fetch("/docs"), "Core Concepts")
     assert_includes(html_by_path.fetch("/docs/templates"), "components/DocsPage")
     assert_includes(html_by_path.fetch("/docs/templates"), "components/DocsSection")
     assert_includes(html_by_path.fetch("/docs/templates"), "components/markdown/Paragraph")
     assert_includes(html_by_path.fetch("/docs/templates"), "components/markdown/InlineCode")
+    assert_includes(html_by_path.fetch("/docs/core-concepts"), "Collection Comes First")
+    assert_includes(html_by_path.fetch("/docs/configuration"), "Plugin Order")
+    assert_includes(html_by_path.fetch("/docs/haml-css"), "Scope Boundaries")
     assert_includes(html_by_path.fetch("/docs/assets"), "components/markdown/ListItem")
     refute_includes(html_by_path.fetch("/docs/templates"), "docs-content p")
   end

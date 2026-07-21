@@ -6,44 +6,31 @@
 %DocsPage
   %PageHeader{
     kicker: "Docs",
-    title: "Haml And Markdown",
-    summary: "Haml and Markdown modules compile to Ruby component classes while leaving rendering policy to the consuming application."
+    title: "Markdown",
+    summary: "Markdown modules and Haml markdown filters compile to Ruby component classes while leaving rendering policy to the consuming application."
   }
-
-  %DocsSection{ title: "HamlPlugin" }
-    :markdown
-      `HamlPlugin` is an adapter, not a renderer. The application supplies a component base class and an HTML/component factory.
-
-      ```ruby
-      Klenod::Build::Plugins::HamlPlugin.new(
-        component_base_class: "App::Component",
-        factory: "App::H"
-      )
-      ```
-
-      Haml files transform into Ruby component classes exported as `Default`. Importing Haml from Ruby or Haml returns that component class.
-
-  %DocsSection{ title: "Haml Features" }
-    :markdown
-      Haml modules support imports, component references such as `%Card`, Ruby filters, inline CSS filters, and `:markdown` filters.
-
-      Companion files are tracked automatically:
-
-      - `Component.css` or route companion CSS such as `+page.css` is imported as `Styles` when present.
-      - `Component.intl.*.toml` files are watched and exposed as translations.
-      - Adding, editing, or removing companions invalidates the owning Haml module.
-
-      Generated Ruby includes source map marks so runtime errors can be rewritten back to original Haml source lines.
 
   %DocsSection{ title: "MarkdownPlugin" }
     :markdown
-      `MarkdownPlugin` handles `.md` modules and Haml `:markdown` filters through `kramdown` with the GFM parser.
+      `MarkdownPlugin` handles `.md` modules through `kramdown` with the GFM parser.
 
       ```ruby
       Article = import("./article.md")
       ```
 
       Markdown files transform into Ruby component classes exported as `Default`. Markdown renders elements as factory calls rather than raw HTML strings, including raw HTML elements in the Markdown source.
+
+  %DocsSection{ title: "Haml Markdown Filters" }
+    :markdown
+      Haml `:markdown` filters use the same compiler and component map as imported Markdown files.
+
+      ```haml
+      %section
+        :markdown
+          ## Inline Markdown
+
+          This content renders through the configured factory.
+      ```
 
   %DocsSection{ title: "Markdown Components" }
     :markdown

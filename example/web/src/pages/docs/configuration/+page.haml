@@ -1,0 +1,108 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Docs",
+    title: "Configuration",
+    summary: "How a Klenod app declares its source root, entrypoints, output paths, and plugin pipeline."
+  }
+
+  %DocsSection{ title: "Config File" }
+    :markdown
+      The CLI finds the nearest `klenod.config.rb`, loads it from that directory, and builds from the config base directory.
+
+      ```ruby
+      source_dir "src"
+      entrypoint "pages/server"
+      output "dist/klenod.bundle"
+      assets_dir "dist/public"
+      mode :development
+      ```
+
+      `source_dir` is where imports are resolved from. `entrypoint` names modules to collect into the bundle. `output` is the runtime bundle path. `assets_dir` is where emitted browser assets are written during builds.
+
+  %DocsSection{ title: "Plugin Order" }
+    :markdown
+      Plugins run in order for resolving, loading, transforming, and import value hooks. Put special-purpose plugins before broad ones when they need first chance at a specifier.
+
+      The example web app configures the router first, then Ruby/Haml/Markdown/CSS/assets/data plugins:
+
+      ```ruby
+      plugins [
+        Klenod::Build::Plugins::RouterPlugin.new(
+          route_base_class: "Example::Route"
+        ),
+        Klenod::Build::Plugins::RubyPlugin.new,
+        Klenod::Build::Plugins::IntlPlugin.new,
+        Klenod::Build::Plugins::HamlPlugin.new(
+          component_base_class: "Example::Component",
+          factory: "Example::H"
+        )
+      ]
+      ```
+
+      `Context.default_plugins` is useful for small examples. Framework-style apps usually spell out plugin configuration so Haml, Markdown, images, routes, and external CSS use the right application classes and options.
+
+  %DocsSection{ title: "Template Factories" }
+    :markdown
+      Haml and Markdown plugins need a component superclass and a factory for generated element calls.
+
+      ```ruby
+      Klenod::Build::Plugins::HamlPlugin.new(
+        component_base_class: "Example::Component",
+        factory: "Example::H"
+      )
+
+      Klenod::Build::Plugins::MarkdownPlugin.new(
+        component_base_class: "Example::Component",
+        factory: "Example::H"
+      )
+      ```
+
+      The example factory accepts a tag or component class, children, and keyword props:
+
+      ```ruby
+      Example::H[tag, *children, **props]
+      ```
+
+  %DocsSection{ title: "Asset Options" }
+    :markdown
+      Image defaults can be configured once and overridden by import query strings.
+
+      ```ruby
+      Klenod::Build::Plugins::ImagePlugin.new(
+        widths: [320, 640, 960]
+      )
+      ```
+
+      Google Fonts can use a cache directory for raw Google CSS responses. That avoids fetching CSS again when the exact Google Fonts URL has already been cached.
+
+      ```ruby
+      Klenod::Build::Plugins::GoogleFontsPlugin.new(
+        cache_path: "tmp/cache/google_fonts",
+        refresh_cache: false
+      )
+      ```
+
+  %DocsSection{ title: "Build Commands" }
+    :markdown
+      Build the configured runtime bundle:
+
+      ```sh
+      bundle exec klenod build
+      ```
+
+      Build an executable bundle:
+
+      ```sh
+      bundle exec klenod build --executable
+      ```
+
+      Export Graphviz DOT for the built bundle:
+
+      ```sh
+      bundle exec klenod graph dist/klenod.bundle > graph.dot
+      ```

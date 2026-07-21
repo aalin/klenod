@@ -1,0 +1,57 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Docs",
+    title: "Core Concepts",
+    summary: "The pieces that show up everywhere in Klenod: collection, evaluation, imports, runtime bundles, and assets."
+  }
+
+  %DocsSection{ title: "Collection Comes First" }
+    :markdown
+      Klenod starts by collecting modules into a graph. Collection reads source files, resolves imports, transforms source through plugins, records dependencies, emits assets, and stores module records.
+
+      Collection should not run application top-level code. That is why route discovery, stylesheet lookup, image generation, and bundle writing can happen without rendering pages.
+
+  %DocsSection{ title: "Evaluation Is On Demand" }
+    :markdown
+      Evaluation happens when something asks for exports or calls an entry. At that point Klenod creates a `Klenod::Runtime::Mod`, evaluates the transformed Ruby source, and exposes its `Exports` module.
+
+      ```ruby
+      entry = context.entry("pages/server")
+
+      # Collected, but not evaluated yet.
+      entry.record
+
+      # Evaluates the module.
+      server = entry.exports
+      ```
+
+      Runtime bundles keep the same lazy behavior. Use `bundle.preload_entrypoints` when a production server should evaluate reachable modules at startup.
+
+  %DocsSection{ title: "Imports Are Graph Edges" }
+    :markdown
+      `import("...")` records an eager dependency. `lazy_import("...")` records a dependency but returns a callable that loads it later. `import_glob("...")` expands a literal glob into a deterministic hash of imports.
+
+      ```ruby
+      Button = import("/components/Button")
+      Details = lazy_import("./Details")
+      Icons = import_glob("./icons/*.svg")
+      ```
+
+      Relative imports resolve from the importing module. Leading slash imports resolve from the configured source root. Virtual modules use explicit schemes such as `virtual:router`.
+
+  %DocsSection{ title: "Plugins Define File Meaning" }
+    :markdown
+      A module id is just an address until plugins handle it. Plugins can resolve specifiers, load virtual source, transform code, emit assets, and decide what an import value should be in development and in runtime bundles.
+
+      This is why importing CSS returns a class-name map from Ruby or Haml, while importing that same CSS from another CSS file records a stylesheet dependency.
+
+  %DocsSection{ title: "Assets Are Graph Outputs" }
+    :markdown
+      CSS, SVG, images, font files, and generated image variants are emitted as assets. Each asset has a source-root-relative `logical_name` and a content-hashed `output_path`.
+
+      Frameworks decide how to serve those assets. The example web app uses route-scoped graph traversal to include only the stylesheets needed for the matched page, layouts, and components.
