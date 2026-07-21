@@ -12,13 +12,13 @@
 
   %DocsSection{ title: "Build Without Evaluation" }
     :markdown
-      Build mode collects entrypoints and runtime dependencies, writes emitted assets when requested, and serializes runtime module specs with `Marshal.dump`. It should not evaluate application top-level code.
+      Build mode collects entrypoints and runtime dependencies, waits for generated assets or writes them to disk when requested, and serializes runtime module specs with Klenod's JSON bundle format. It should not evaluate application top-level code.
 
       ```ruby
       bundle = context.build(
         entrypoints: ["pages/server"],
         output: "dist/klenod.bundle",
-        assets_dir: "public"
+        assets_dir: "dist/public"
       )
       ```
 
@@ -39,7 +39,7 @@
 
   %DocsSection{ title: "Runtime Loading" }
     :markdown
-      Runtime bundles contain entrypoint mappings, module specs, import specs, runtime import values, asset specs, and source-root metadata. Runtime loading evaluates modules lazily.
+      Runtime bundles contain entrypoint mappings, module specs, import specs, runtime import values, asset specs, source maps, and source-root metadata. Runtime loading evaluates modules lazily.
 
       ```ruby
       require "klenod/runtime"
@@ -47,6 +47,8 @@
       bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
       page = bundle.exports("pages/server")
       ```
+
+      Call `bundle.preload_entrypoints` to eagerly evaluate everything reachable from configured entrypoints, or `bundle.preload` to evaluate every module in the bundle.
 
       Production deployments that only load prebuilt bundles should depend on `klenod-runtime`.
 

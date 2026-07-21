@@ -17,7 +17,7 @@
       - `logical_name`: the source-root-relative file path without import query parameters, such as `images/hero.png`.
       - `output_path`: the public content-hashed browser path, such as `/assets/hero.640w.abcd1234.png`.
 
-      Query parameters configure an import without changing the logical name, so overlapping generated variants can be reused.
+      Query parameters configure an import without changing the logical name, so overlapping generated variants can be reused. Asset content is content-hashed, so production servers can cache emitted browser paths aggressively.
 
   %DocsSection{ title: "Lookup APIs" }
     :markdown
@@ -32,13 +32,13 @@
       bundle.assets_for_module("pages/server.rb", type: :css)
       ```
 
-      `assets_for_module` is recursive by default. `asset_references_for_module` also includes a graph traversal index, which is useful for route-scoped CSS ordering.
+      `assets_for_module` is recursive by default. Pass `recursive: false` for only assets directly emitted by the root module. `asset_references_for_module` also includes a graph traversal index, which is useful for route-scoped CSS ordering.
 
   %DocsSection{ title: "CSS, SVG, And Images" }
     :markdown
       CSS imports from Ruby or Haml return class-name maps. CSS imports from CSS become stylesheet dependencies, and CSS `url(...)` references become asset dependencies.
 
-      SVG imports emit the SVG file as a browser asset and export metadata with `src`, `width`, and `height`.
+      SVG imports emit the SVG file as a browser asset and export metadata with `src`, `width`, `height`, and `content_type`.
 
       Raster image imports support `.avif`, `.gif`, `.jpeg`, `.jpg`, `.png`, and `.webp`. Import query options can request widths, formats, and quality:
 
@@ -46,8 +46,8 @@
       Hero = import("hero.jpg?width=320,640&format=webp,jpeg&quality=82")
       ```
 
-      Image values expose `src`, dimensions, `variants`, `srcset`, and `sizes`. Generated variants are deduplicated by source path, source hash, width, format, and quality.
+      Image values expose `src`, dimensions, `content_type`, `variants`, `srcset`, and `sizes`. If `format` or `quality` is requested, the default `src` can also be a generated asset. Generated variants are deduplicated by source path, source hash, width, format, and quality.
 
   %DocsSection{ title: "Google Fonts" }
     :markdown
-      `GoogleFontsPlugin` resolves Google Fonts CSS imports, downloads the raw CSS, rewrites `fonts.gstatic.com` URLs to local emitted font assets, and emits the rewritten stylesheet as a normal CSS asset. Font files are lazy IO-generated assets so downloads can overlap with CPU-bound image generation without becoming unbounded.
+      `GoogleFontsPlugin` resolves Google Fonts CSS imports, downloads or reuses cached raw CSS, rewrites `fonts.gstatic.com` URLs to local emitted font assets, and emits the rewritten stylesheet as a normal CSS asset. Font files are lazy IO-generated assets so downloads can overlap with CPU-bound image generation without becoming unbounded.

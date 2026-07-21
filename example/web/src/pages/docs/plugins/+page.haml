@@ -14,7 +14,7 @@
     :markdown
       `Klenod::Build::Context.default_plugins` includes `RubyPlugin`, `IntlPlugin`, `HamlPlugin`, `MarkdownPlugin`, `CssPlugin`, `SvgPlugin`, `ImagePlugin`, `JsonPlugin`, `YamlPlugin`, `TomlPlugin`, and `TextPlugin`.
 
-      `RouterPlugin` and `GoogleFontsPlugin` are built in but opt-in.
+      `RouterPlugin` and `GoogleFontsPlugin` are built in but opt-in. The example web app configures both explicitly.
 
   %DocsSection{ title: "Hook Phases" }
     :markdown
@@ -32,11 +32,11 @@
   %DocsSection{ title: "Core Plugins" }
     :markdown
       - `RubyPlugin` handles `.rb`, rewrites `import`, `lazy_import`, and `import_glob`, and records Ruby dependencies.
-      - `HamlPlugin` handles `.haml`, generates component classes, rewrites Haml imports, tracks CSS and intl companions, and emits source maps.
-      - `MarkdownPlugin` handles `.md` modules and Haml `:markdown` filters.
+      - `HamlPlugin` handles `.haml`, generates component classes, rewrites Haml imports, tracks CSS and intl companions, supports `import_glob`, and emits source maps.
+      - `MarkdownPlugin` handles `.md` modules and Haml `:markdown` filters through `kramdown` with the GFM parser.
       - `CssPlugin` scopes CSS, emits stylesheet assets, returns class-name maps to Ruby/Haml, and records CSS dependencies.
-      - `SvgPlugin` emits SVG assets with dimensions.
-      - `ImagePlugin` emits raster source assets and generated variants.
+      - `SvgPlugin` emits SVG assets with dimensions and content type.
+      - `ImagePlugin` emits raster source assets, generated default images, and generated variants.
       - `IntlPlugin` parses Haml companion translation files.
       - `JsonPlugin`, `YamlPlugin`, `TomlPlugin`, and `TextPlugin` import structured data and text.
 
@@ -56,6 +56,7 @@
 
       ```ruby
       Klenod::Build::Plugins::GoogleFontsPlugin.new(
-        cache_path: "tmp/cache/google_fonts"
+        cache_path: "tmp/cache/google_fonts",
+        refresh_cache: false
       )
       ```

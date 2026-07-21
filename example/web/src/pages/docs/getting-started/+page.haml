@@ -12,17 +12,21 @@
 
   %DocsSection{ title: "Create A Context" }
     :markdown
-      A build context starts with a source directory. `context.entry(...)` collects the requested module and returns a reusable handle without evaluating app code.
+      A build context starts with a source directory and a plugin list. By default it includes the core file plugins, but framework-style apps usually configure Haml, Markdown, routing, CSS, and assets explicitly.
 
       ```ruby
-      context = Klenod::Build::Context.new(source_dir: "src")
+      context = Klenod::Build::Context.new(
+        source_dir: "src",
+        plugins: Klenod::Build::Context.default_plugins
+      )
+
       entry = context.entry("pages/server")
 
       exports = entry.exports
       status, headers, body = entry.call(request, context)
       ```
 
-      Use `entry.exports` or `entry.call(...)` when you want the module to evaluate. The same entry handle can be kept across development updates.
+      `context.entry(...)` collects the requested module and returns a reusable handle without evaluating app code. Use `entry.exports` or `entry.call(...)` when you want the module to evaluate.
 
   %DocsSection{ title: "Import Files" }
     :markdown
@@ -37,13 +41,13 @@
 
   %DocsSection{ title: "Configure Builds" }
     :markdown
-      The CLI reads `klenod.config.rb`, changes into the config directory, and builds from there.
+      The CLI finds the nearest `klenod.config.rb`, loads it from that directory, then builds from the config's base directory.
 
       ```ruby
       source_dir "src"
       entrypoint "pages/server"
       output "dist/klenod.bundle"
-      assets_dir "public"
+      assets_dir "dist/public"
       mode :development
       ```
 
@@ -61,3 +65,5 @@
       bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
       server = bundle.exports("pages/server")
       ```
+
+      Runtime evaluation is lazy by default. Servers that prefer startup validation can call `bundle.preload_entrypoints` after loading.

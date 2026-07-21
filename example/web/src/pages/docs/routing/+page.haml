@@ -23,7 +23,7 @@
       context = Klenod::Build::Context.new(
         source_dir: "src",
         plugins: [
-          Klenod::Build::Plugins::RubyPlugin.new,
+          *Klenod::Build::Context.default_plugins,
           router_plugin
         ]
       )
@@ -31,6 +31,8 @@
       router = context.entry("virtual:router").exports::Default
       match = router.match("/blog/hello")
       ```
+
+      In a real app, either append `router_plugin` to `Context.default_plugins` or provide the full ordered plugin list as the example app does.
 
   %DocsSection{ title: "Supported Files And Segments" }
     :markdown
@@ -59,6 +61,8 @@
       ```
 
       Generated router modules use `lazy_import` so matching a route can load only the selected page, handler, layouts, and slots.
+
+      When no page route matches, the router returns the closest `not-found` module for that URL path. The example framework also renders the closest `error` module when rendering raises.
 
   %DocsSection{ title: "Framework Boundary" }
     :markdown

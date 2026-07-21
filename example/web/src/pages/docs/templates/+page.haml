@@ -29,7 +29,7 @@
 
       Companion files are tracked automatically:
 
-      - `Component.css` is imported as `Styles` when present.
+      - `Component.css` or route companion CSS such as `+page.css` is imported as `Styles` when present.
       - `Component.intl.*.toml` files are watched and exposed as translations.
       - Adding, editing, or removing companions invalidates the owning Haml module.
 
@@ -47,7 +47,7 @@
 
   %DocsSection{ title: "Markdown Components" }
     :markdown
-      If `/markdown-components.rb` exists, Markdown rendering uses its `Default` hash to map tags to components.
+      If `/markdown-components.rb` exists, Markdown rendering uses its `Default` hash to map tags to components. Markdown files and Haml files with `:markdown` filters watch the map, so updates reload affected modules.
 
       ```ruby
       Heading = import("/components/markdown/Heading.haml")

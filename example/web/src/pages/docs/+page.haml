@@ -14,14 +14,14 @@
 
   %DocsSection
     :markdown
-      Klenod is an experimental Ruby module bundler. It reads files from a configured source directory, resolves imports, transforms modules through plugins, records a dependency graph, and can serialize a runtime-only bundle for production.
+      Klenod is an experimental Ruby module bundler. It reads files from a configured source directory, resolves imports, transforms modules through plugins, records a dependency graph, and can serialize a runtime-only JSON bundle for production.
 
       The core idea is to keep graph collection separate from Ruby module evaluation. Applications and frameworks can collect routes, templates, stylesheets, images, data files, and other dependencies without running app top-level code until an entry is actually called.
 
   %DocsSection{ title: "Packages" }
     :markdown
       - `klenod-build` owns graph construction, resolving, transforms, plugins, development watching, asset generation, the CLI, and bundle writing.
-      - `klenod-runtime` owns production bundle loading, runtime module evaluation, runtime asset specs, source maps, and backtrace rewriting.
+      - `klenod-runtime` owns runtime bundle loading, module evaluation, runtime asset specs, source maps, backtrace rewriting, and optional Ruby::Box loading.
       - `klenod-rack` owns Rack-compatible helpers for serving runtime assets.
       - `klenod` is the compatibility gem that brings the build and Rack pieces together.
 
