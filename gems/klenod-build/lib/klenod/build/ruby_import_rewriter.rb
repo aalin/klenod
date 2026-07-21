@@ -5,21 +5,22 @@ require "syntax_tree"
 
 require_relative "dependency"
 require_relative "errors"
+require_relative "watched_pattern"
 
 module Klenod
   module Build
     class RubyImportRewriter
       ImportCall =
-        Data.define(:specifier, :location, :dynamic, :method_name) do
+        Data.define(:specifier, :location, :dynamic, :method_name, :eager_override) do
           def eager
-            RubyImportRewriter::IMPORT_METHODS.fetch(method_name).fetch(:eager)
+            eager_override.nil? ? RubyImportRewriter::IMPORT_METHODS.fetch(method_name).fetch(:eager) : eager_override
           end
 
           def replacement
             RubyImportRewriter::IMPORT_METHODS.fetch(method_name).fetch(:replacement)
           end
         end
-      Result = Data.define(:code, :dependencies)
+      Result = Data.define(:code, :dependencies, :watched_patterns)
 
       IMPORT_METHODS = {
         "import" => {
@@ -29,47 +30,43 @@ module Klenod
         "lazy_import" => {
           replacement: "__klenod_lazy_import__",
           eager: false
+        },
+        "import_glob" => {
+          replacement: nil,
+          eager: true
         }
       }.freeze
-      IMPORT_SOURCE_PATTERN = /(?<![A-Za-z0-9_])(?:import|lazy_import)\s*(?:\(|["'])/
+      IMPORT_SOURCE_PATTERN = /(?<![A-Za-z0-9_])(?:import|lazy_import|import_glob)\s*(?:\(|["'])/
       FAST_LITERAL_IMPORT_PATTERN = /(?<![A-Za-z0-9_])(import|lazy_import)\s*\(\s*("(?:\\.|[^"\\#])*")\s*\)/
 
-      def initialize(module_id:, kind:, profiler: nil, dependency_id_offset: 0)
+      def initialize(module_id:, kind:, source_dir: nil, profiler: nil, dependency_id_offset: 0)
         @module_id = module_id
         @kind = kind
+        @source_dir = source_dir && Pathname.new(source_dir).expand_path
         @profiler = profiler
         @dependency_id_offset = dependency_id_offset
       end
 
       def rewrite(code)
-        return Result.new(code, []) unless import_source?(code)
+        return Result.new(code, [], []) unless import_source?(code)
         fast_result = rewrite_literal_import_calls(code)
         return fast_result if fast_result
 
         ast = measure(:ruby_import_parse) { SyntaxTree.parse(code) }
         calls = measure(:ruby_import_scan) { import_calls(ast) }
-        dependencies =
-          calls.each_with_index.map do |call, index|
-            if call.dynamic
-              raise DynamicImportError, "Only literal import(\"...\") calls are supported in #{@module_id}"
-            end
+        expanded = expand_import_calls(calls)
 
-            Dependency
-              .create(
-                specifier: call.specifier,
-                importer_id: @module_id,
-                kind: @kind,
-                loc: call.location
-              )
-              .with(eager: call.eager)
-              .with(id: "#{@module_id}:dependency:#{@dependency_id_offset + index}")
-          end
-
-        rewritten = measure(:ruby_import_rewrite_source) { rewrite_import_calls(code, calls, dependencies) }
-        Result.new(rewritten, dependencies)
+        rewritten = measure(:ruby_import_rewrite_source) { rewrite_import_calls(code, expanded) }
+        Result.new(
+          rewritten,
+          expanded.flat_map(&:dependencies),
+          expanded.flat_map(&:watched_patterns)
+        )
       end
 
       private
+
+      ExpandedImport = Data.define(:call, :dependencies, :replacement_source, :watched_patterns)
 
       def import_source?(code)
         code.match?(IMPORT_SOURCE_PATTERN)
@@ -115,7 +112,7 @@ module Klenod
               source[match.begin(0)...match.end(0)] = "#{replacement}(#{dependency.id.inspect})"
             end
 
-        Result.new(rewritten, dependencies)
+        Result.new(rewritten, dependencies, [])
       end
 
       def bare_import_tokens?(code, matches)
@@ -192,6 +189,8 @@ module Klenod
       end
 
       def build_import_from_parts(node, parts)
+        return build_import_glob_from_parts(node, parts) if node.instance_variable_get(:@message).value == "import_glob"
+
         first = unwrap_paren(parts.first)
         string_parts = first&.instance_variable_get(:@parts)
         literal =
@@ -204,8 +203,58 @@ module Klenod
           literal ? string_parts.first.value : nil,
           node.instance_variable_get(:@location),
           !literal,
-          node.instance_variable_get(:@message).value
+          node.instance_variable_get(:@message).value,
+          nil
         )
+      end
+
+      def build_import_glob_from_parts(node, parts)
+        first = unwrap_paren(parts.first)
+        string_parts = first&.instance_variable_get(:@parts)
+        literal =
+          first&.class&.name == "SyntaxTree::StringLiteral" &&
+          string_parts&.length == 1 &&
+          string_parts.first.instance_of?(::SyntaxTree::TStringContent)
+
+        eager = true
+        valid_options = true
+        if parts.length == 2
+          eager = eager_option_value(parts.fetch(1))
+          valid_options = !eager.nil?
+        elsif parts.length != 1
+          valid_options = false
+        end
+
+        ImportCall.new(
+          (literal && valid_options) ? string_parts.first.value : nil,
+          node.instance_variable_get(:@location),
+          !literal || !valid_options,
+          node.instance_variable_get(:@message).value,
+          eager
+        )
+      end
+
+      def eager_option_value(node)
+        return unless node.instance_of?(::SyntaxTree::BareAssocHash)
+
+        assocs = node.instance_variable_get(:@assocs)
+        return unless assocs.length == 1
+
+        assoc = assocs.fetch(0)
+        key = assoc.instance_variable_get(:@key)
+        return unless key.instance_of?(::SyntaxTree::Label) && key.value == "eager:"
+
+        bool_value(assoc.instance_variable_get(:@value))
+      end
+
+      def bool_value(node)
+        return unless node.instance_of?(::SyntaxTree::VarRef)
+
+        value = node.instance_variable_get(:@value)
+        return true if value.respond_to?(:value) && value.value == "true"
+        return false if value.respond_to?(:value) && value.value == "false"
+
+        nil
       end
 
       def unwrap_paren(node)
@@ -216,11 +265,128 @@ module Klenod
         (body.length == 1) ? body.first : node
       end
 
-      def rewrite_import_calls(code, calls, dependencies)
-        calls
-          .zip(dependencies)
+      def expand_import_calls(calls)
+        dependency_index = @dependency_id_offset
+
+        calls.map do |call|
+          raise_dynamic_import!(call) if call.dynamic
+
+          if call.method_name == "import_glob"
+            dependencies, watched_patterns = expand_glob_import(call, dependency_index)
+            dependency_index += dependencies.length
+            ExpandedImport.new(call, dependencies, glob_replacement_source(dependencies, eager: call.eager), watched_patterns)
+          else
+            dependency = build_dependency(call, dependency_index)
+            dependency_index += 1
+            ExpandedImport.new(call, [dependency], "#{call.replacement}(#{dependency.id.inspect})", [])
+          end
+        end
+      end
+
+      def raise_dynamic_import!(call)
+        expected = (call.method_name == "import_glob") ? "import_glob(\"...\")" : "import(\"...\")"
+        raise DynamicImportError, "Only literal #{expected} calls are supported in #{@module_id}"
+      end
+
+      def build_dependency(call, dependency_index)
+        Dependency
+          .create(
+            specifier: call.specifier,
+            importer_id: @module_id,
+            kind: @kind,
+            loc: call.location
+          )
+          .with(eager: call.eager)
+          .with(id: "#{@module_id}:dependency:#{dependency_index}")
+      end
+
+      def expand_glob_import(call, dependency_index)
+        source_dir = @source_dir || raise(DynamicImportError, "Cannot expand import_glob in #{@module_id} without a source directory")
+        path_pattern, query = call.specifier.split("?", 2)
+        absolute_pattern = absolute_pattern_for(path_pattern)
+        assert_pattern_inside_source_dir!(absolute_pattern)
+
+        matches =
+          Dir
+            .glob(absolute_pattern.to_s)
+            .select { |path| File.file?(path) }
+            .sort
+
+        dependencies =
+          matches.each_with_index.map do |absolute_path, index|
+            specifier = specifier_for_glob_match(path_pattern, absolute_path)
+            specifier = "#{specifier}?#{query}" if query
+
+            Dependency
+              .create(
+                specifier: specifier,
+                importer_id: @module_id,
+                kind: @kind,
+                loc: call.location
+              )
+              .with(eager: call.eager)
+              .with(metadata: {glob_key: specifier.split("?", 2).first})
+              .with(id: "#{@module_id}:dependency:#{dependency_index + index}")
+          end
+
+        watched_patterns = [
+          WatchedPattern.new(
+            @module_id,
+            absolute_pattern.relative_path_from(source_dir).to_s,
+            :import_glob,
+            {specifier: call.specifier}
+          )
+        ]
+
+        [dependencies, watched_patterns]
+      end
+
+      def absolute_pattern_for(path_pattern)
+        source_dir = @source_dir
+
+        if path_pattern.start_with?("/")
+          source_dir.join(path_pattern.delete_prefix("/"))
+        elsif path_pattern.start_with?(".")
+          source_dir.join(@module_id.dirname, path_pattern)
+        else
+          source_dir.join(path_pattern)
+        end.expand_path
+      end
+
+      def assert_pattern_inside_source_dir!(absolute_pattern)
+        pattern = absolute_pattern.to_s
+        source = @source_dir.to_s
+        return if pattern == source || pattern.start_with?("#{source}/")
+
+        raise DynamicImportError, "Glob import escapes source_dir: #{pattern}"
+      end
+
+      def specifier_for_glob_match(path_pattern, absolute_path)
+        relative_source_path = Pathname.new(absolute_path).relative_path_from(@source_dir).to_s
+        return "/#{relative_source_path}" if path_pattern.start_with?("/")
+        return relative_source_path unless path_pattern.start_with?(".")
+
+        importer_dir = @source_dir.join(@module_id.dirname)
+        relative = Pathname.new(absolute_path).relative_path_from(importer_dir).to_s
+        relative.start_with?(".") ? relative : "./#{relative}"
+      end
+
+      def glob_replacement_source(dependencies, eager:)
+        import_method = eager ? "__klenod_import__" : "__klenod_lazy_import__"
+        entries =
+          dependencies.map do |dependency|
+            key = dependency.metadata.fetch(:glob_key)
+            "#{key.inspect} => #{import_method}(#{dependency.id.inspect})"
+          end
+
+        "{#{entries.join(", ")}}"
+      end
+
+      def rewrite_import_calls(code, expanded)
+        expanded
           .reverse_each
-          .each_with_object(code.dup) do |(call, dependency), rewritten|
+          .each_with_object(code.dup) do |import, rewritten|
+            call = import.call
             next rewritten if call.dynamic
 
             location = call.location
@@ -229,8 +395,7 @@ module Klenod
               raise DynamicImportError, "Could not safely rewrite import at #{location.start_line}:#{location.start_column}"
             end
 
-            rewritten[location.start_char...location.end_char] =
-              "#{call.replacement}(#{dependency.id.inspect})"
+            rewritten[location.start_char...location.end_char] = import.replacement_source
           end
       end
 

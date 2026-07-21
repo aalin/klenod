@@ -29,6 +29,20 @@ Styles = import("styles/home.css")
 Hero = import("./hero.png?width=320,640&format=png")
 ```
 
+Use `import_glob("...")` to import a deterministic hash of files matched by a literal glob. It is eager by default, which is useful for image galleries and icon sets:
+
+```ruby
+Gallery = import_glob("./gallery/*.{jpg,png}?width=320,640&format=webp")
+Icons = import_glob("/components/icons/*.svg")
+```
+
+Hash keys are the matched path specifiers without query strings, such as `"./gallery/boat.jpg"`. Query strings are still applied to each imported dependency. Pass `eager: false` when you want registry-style lazy values:
+
+```ruby
+Pages = import_glob("./pages/*.rb", eager: false)
+Pages.fetch("./pages/about.rb").call
+```
+
 ## Entry Handles
 
 Frameworks should usually keep a loaded entry handle instead of storing raw graph records:

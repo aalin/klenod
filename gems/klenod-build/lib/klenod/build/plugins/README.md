@@ -24,10 +24,24 @@ This directory contains Klenod's built-in build plugins. Plugins participate in 
 Handles `.rb` modules.
 
 - Rewrites `import(...)` and `lazy_import(...)` calls into Klenod runtime imports.
+- Rewrites `import_glob(...)` calls into deterministic import hashes.
 - Collects Ruby import dependencies.
+- Records watched patterns for glob imports so file add/remove updates invalidate the importer.
 - Leaves non-Ruby files untouched.
 
 Configuration: none.
+
+Glob imports are eager by default:
+
+```ruby
+Images = import_glob("./gallery/*.{jpg,png}?width=320&format=webp")
+```
+
+The returned hash is keyed by matched path specifiers without query strings. The query string is applied to each generated dependency. Use `eager: false` for lazy values:
+
+```ruby
+Pages = import_glob("./pages/*.rb", eager: false)
+```
 
 ## HamlPlugin
 
@@ -35,6 +49,7 @@ Handles `.haml` modules.
 
 - Transforms Haml templates into Ruby component classes exported as `Default`.
 - Rewrites Haml-side imports.
+- Supports `import_glob(...)` in Haml Ruby code and Ruby filters.
 - Supports Haml component references such as `%Card`.
 - Adds companion dependencies for `Component.css` and translations from `Component.intl.*.toml`.
 - Emits source maps so runtime errors can be mapped back to Haml source.

@@ -4,7 +4,7 @@ module Klenod
   module Build
     WatchedPattern = Data.define(:importer_id, :glob, :kind, :metadata) do
       def match?(path)
-        File.fnmatch?(glob, path, File::FNM_PATHNAME)
+        File.fnmatch?(glob, path, File::FNM_PATHNAME | File::FNM_EXTGLOB)
       end
     end
   end

@@ -151,6 +151,27 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_supports_glob_imports
+    with_haml_context(
+      {
+        "pages/icons/b.txt" => "b",
+        "pages/icons/a.txt" => "a",
+        "pages/page.haml" => <<~HAML
+          :ruby
+            Icons = import_glob("./icons/*.txt")
+
+          %p= Icons.keys.join(",")
+        HAML
+      }
+    ) do |_dir, context, _plugin|
+      record = context.collect("pages/page.haml").record
+
+      assert_equal(["./icons/a.txt", "./icons/b.txt"], record.dependencies.select { it.kind == :haml_import }.map(&:specifier))
+      assert_equal(["pages/icons/*.txt"], record.watched_patterns.select { it.kind == :import_glob }.map(&:glob))
+      assert_includes(record.transformed_source, "\"./icons/a.txt\" => __klenod_import__(\"pages/page.haml:dependency:0\")")
+    end
+  end
+
   def test_haml_transformer_supports_parsed_inline_tag_values
     evaluate_haml(
       {

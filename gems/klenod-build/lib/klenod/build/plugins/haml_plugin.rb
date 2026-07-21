@@ -1643,6 +1643,7 @@ module Klenod
           dependencies = []
           style_dependencies = []
           import_dependencies = []
+          watched_patterns = []
           profiler = context.respond_to?(:profiler) ? context.profiler : nil
           builder = Transformer::RubyBuilder.new(profiler: profiler)
           context.unregister_virtual_modules(module_id)
@@ -1685,11 +1686,13 @@ module Klenod
                   .new(
                     module_id: module_id,
                     kind: :haml_import,
+                    source_dir: context.source_dir,
                     profiler: profiler,
                     dependency_id_offset: import_dependencies.length
                   )
                   .rewrite(source)
               import_dependencies.concat(result.dependencies)
+              watched_patterns.concat(result.watched_patterns)
               result.code
             end
           haml_result =
@@ -1706,14 +1709,15 @@ module Klenod
               import_rewriter: import_rewriter
             )
           import_rewrite =
-            if !haml_result.code.include?("import(") && !haml_result.code.include?("lazy_import(")
-              RubyImportRewriter::Result.new(haml_result.code, [])
+            if !haml_result.code.include?("import(") && !haml_result.code.include?("lazy_import(") && !haml_result.code.include?("import_glob(")
+              RubyImportRewriter::Result.new(haml_result.code, [], [])
             elsif profiler
               profiler.measure(:haml_import_rewrite, module_id: module_id.to_s) do
                 RubyImportRewriter
                   .new(
                     module_id: module_id,
                     kind: :haml_import,
+                    source_dir: context.source_dir,
                     profiler: profiler,
                     dependency_id_offset: import_dependencies.length
                   )
@@ -1724,17 +1728,20 @@ module Klenod
                 .new(
                   module_id: module_id,
                   kind: :haml_import,
+                  source_dir: context.source_dir,
                   dependency_id_offset: import_dependencies.length
                 )
                 .rewrite(haml_result.code)
             end
+
+          watched_patterns.concat(import_rewrite.watched_patterns)
 
           TransformResult.new(
             import_rewrite.code,
             dependencies + import_dependencies + import_rewrite.dependencies,
             haml_result.source_map,
             [],
-            companion_patterns(module_id),
+            companion_patterns(module_id) + watched_patterns,
             haml_result.metadata
           )
         end
