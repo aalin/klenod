@@ -14,6 +14,7 @@
 
   def initialize(children:, slots: {})
     @children = children
+    @current_path = request.canonical_path || request.path
   end
 
 .docs-shell
@@ -21,6 +22,9 @@
     %p Docs
     %nav{ aria: { label: "Documentation" } }
       = DocsLinks.map do |link|
-        %a{ href: localized_path(link.fetch(:href)) }= link.fetch(:label)
+        %a{
+          href: localized_path(link.fetch(:href)),
+          "aria-current" => (@current_path == link.fetch(:href)) ? "page" : nil
+        }= link.fetch(:label)
   .docs-content
     = @children

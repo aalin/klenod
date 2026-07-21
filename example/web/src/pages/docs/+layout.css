@@ -30,6 +30,22 @@ aside nav {
 aside nav a {
   display: block;
   padding: 0.45rem 0.6rem;
+  color: var(--color-muted);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-small);
+  font-weight: 750;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+aside nav a:hover {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+aside nav a[aria-current="page"] {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
 }
 
 .docs-content {
