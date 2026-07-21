@@ -1,15 +1,16 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
 
-%article
+%DocsPage
   %PageHeader{
     kicker: "Docs",
     title: "Getting Started",
     summary: "Create a Klenod build context, collect an entry, import dependencies, build a bundle, and load it with the runtime gem."
   }
 
-  %section
-    %h2 Create A Context
+  %DocsSection{ title: "Create A Context" }
     :markdown
       A build context starts with a source directory. `context.entry(...)` collects the requested module and returns a reusable handle without evaluating app code.
 
@@ -23,8 +24,7 @@
 
       Use `entry.exports` or `entry.call(...)` when you want the module to evaluate. The same entry handle can be kept across development updates.
 
-  %section
-    %h2 Import Files
+  %DocsSection{ title: "Import Files" }
     :markdown
       Ruby modules can import other modules with literal `import("...")` calls. Relative imports resolve from the importer, and leading slash imports resolve from the configured source root.
 
@@ -35,8 +35,7 @@
       Article = import("./article.md")
       ```
 
-  %section
-    %h2 Configure Builds
+  %DocsSection{ title: "Configure Builds" }
     :markdown
       The CLI reads `klenod.config.rb`, changes into the config directory, and builds from there.
 
@@ -52,8 +51,7 @@
       bundle exec klenod build
       ```
 
-  %section
-    %h2 Load Runtime Bundles
+  %DocsSection{ title: "Load Runtime Bundles" }
     :markdown
       Production code that only loads a prebuilt bundle should depend on `klenod-runtime`. It does not need build-only dependencies such as Haml, CSS, or image transformers.
 

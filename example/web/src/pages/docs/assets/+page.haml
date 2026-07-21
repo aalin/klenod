@@ -1,15 +1,16 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
 
-%article
+%DocsPage
   %PageHeader{
     kicker: "Docs",
     title: "Assets",
     summary: "Plugins emit stable asset metadata for stylesheets, SVGs, raster images, generated variants, and downloaded font files."
   }
 
-  %section
-    %h2 Asset Identity
+  %DocsSection{ title: "Asset Identity" }
     :markdown
       Klenod assets have two stable identifiers:
 
@@ -18,8 +19,7 @@
 
       Query parameters configure an import without changing the logical name, so overlapping generated variants can be reused.
 
-  %section
-    %h2 Lookup APIs
+  %DocsSection{ title: "Lookup APIs" }
     :markdown
       The build graph and runtime bundle expose the same lookup shape.
 
@@ -34,8 +34,7 @@
 
       `assets_for_module` is recursive by default. `asset_references_for_module` also includes a graph traversal index, which is useful for route-scoped CSS ordering.
 
-  %section
-    %h2 CSS, SVG, And Images
+  %DocsSection{ title: "CSS, SVG, And Images" }
     :markdown
       CSS imports from Ruby or Haml return class-name maps. CSS imports from CSS become stylesheet dependencies, and CSS `url(...)` references become asset dependencies.
 
@@ -49,7 +48,6 @@
 
       Image values expose `src`, dimensions, `variants`, `srcset`, and `sizes`. Generated variants are deduplicated by source path, source hash, width, format, and quality.
 
-  %section
-    %h2 Google Fonts
+  %DocsSection{ title: "Google Fonts" }
     :markdown
       `GoogleFontsPlugin` resolves Google Fonts CSS imports, downloads the raw CSS, rewrites `fonts.gstatic.com` URLs to local emitted font assets, and emits the rewritten stylesheet as a normal CSS asset. Font files are lazy IO-generated assets so downloads can overlap with CPU-bound image generation without becoming unbounded.

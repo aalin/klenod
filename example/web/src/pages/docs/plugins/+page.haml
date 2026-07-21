@@ -1,22 +1,22 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
 
-%article
+%DocsPage
   %PageHeader{
     kicker: "Docs",
     title: "Plugin Reference",
     summary: "Built-in plugins cover Ruby, Haml, Markdown, CSS, assets, data imports, routing, and Google Fonts."
   }
 
-  %section
-    %h2 Default Plugin Set
+  %DocsSection{ title: "Default Plugin Set" }
     :markdown
       `Klenod::Build::Context.default_plugins` includes `RubyPlugin`, `IntlPlugin`, `HamlPlugin`, `MarkdownPlugin`, `CssPlugin`, `SvgPlugin`, `ImagePlugin`, `JsonPlugin`, `YamlPlugin`, `TomlPlugin`, and `TextPlugin`.
 
       `RouterPlugin` and `GoogleFontsPlugin` are built in but opt-in.
 
-  %section
-    %h2 Hook Phases
+  %DocsSection{ title: "Hook Phases" }
     :markdown
       Plugins can implement:
 
@@ -29,8 +29,7 @@
 
       `resolve`, `load`, `transform`, and `finalize` are collection-time hooks. They must not depend on evaluated app exports. `runtime_import_value` must return serializable values or runtime instructions.
 
-  %section
-    %h2 Core Plugins
+  %DocsSection{ title: "Core Plugins" }
     :markdown
       - `RubyPlugin` handles `.rb`, rewrites `import`, `lazy_import`, and `import_glob`, and records Ruby dependencies.
       - `HamlPlugin` handles `.haml`, generates component classes, rewrites Haml imports, tracks CSS and intl companions, and emits source maps.
@@ -41,8 +40,7 @@
       - `IntlPlugin` parses Haml companion translation files.
       - `JsonPlugin`, `YamlPlugin`, `TomlPlugin`, and `TextPlugin` import structured data and text.
 
-  %section
-    %h2 Opt-In Plugins
+  %DocsSection{ title: "Opt-In Plugins" }
     :markdown
       `RouterPlugin` discovers filesystem route modules and generates `virtual:router`.
 

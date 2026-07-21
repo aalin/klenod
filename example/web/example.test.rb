@@ -205,6 +205,32 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, %(href="/sv/demo/markdown"))
   end
 
+  def test_example_app_renders_docs_pages_with_scoped_components
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    html_by_path = {}
+
+    _stdout, stderr = capture_io do
+      ["/docs", "/docs/templates", "/docs/assets"].each do |path|
+        status, headers, body = entry.call(request(path), context)
+
+        assert_equal(200, status)
+        assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+        html_by_path[path] = body.join
+      end
+    end
+
+    assert_empty(stderr)
+    assert_includes(html_by_path.fetch("/docs"), "components/DocsLinkCard")
+    assert_includes(html_by_path.fetch("/docs/templates"), "components/DocsPage")
+    assert_includes(html_by_path.fetch("/docs/templates"), "components/DocsSection")
+    assert_includes(html_by_path.fetch("/docs/templates"), "components/MarkdownParagraph")
+    assert_includes(html_by_path.fetch("/docs/templates"), "components/MarkdownInlineCode")
+    assert_includes(html_by_path.fetch("/docs/assets"), "components/MarkdownListItem")
+    refute_includes(html_by_path.fetch("/docs/templates"), "docs-content p")
+  end
+
   def test_example_app_renders_swedish_localized_routes
     config = example_config
     context = config.context

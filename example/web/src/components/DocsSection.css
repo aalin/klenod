@@ -1,0 +1,11 @@
+section {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+h2 {
+  margin: 0;
+  font-size: var(--font-size-h2);
+  line-height: 1.15;
+}

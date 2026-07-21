@@ -1,15 +1,16 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
 
-%article
+%DocsPage
   %PageHeader{
     kicker: "Docs",
     title: "Router Plugin",
     summary: "RouterPlugin is an optional, framework-agnostic plugin that discovers filesystem routes and generates a virtual router module."
   }
 
-  %section
-    %h2 Configure The Router
+  %DocsSection{ title: "Configure The Router" }
     :markdown
       Add `RouterPlugin` to the build context and import its virtual module.
 
@@ -31,8 +32,7 @@
       match = router.match("/blog/hello")
       ```
 
-  %section
-    %h2 Supported Files And Segments
+  %DocsSection{ title: "Supported Files And Segments" }
     :markdown
       The router discovers `+page.rb`, `+page.haml`, `+route.rb`, `+layout.rb`, `+layout.haml`, `+error.rb`, `+error.haml`, `+not-found.rb`, and `+not-found.haml`.
 
@@ -45,8 +45,7 @@
       - `@modal` parallel route slots.
       - `(.)photo`, `(..)profile`, and `(...)login` intercepted route segments.
 
-  %section
-    %h2 Match Results
+  %DocsSection{ title: "Match Results" }
     :markdown
       A route match exposes the selected modules and structural metadata:
 
@@ -61,7 +60,6 @@
 
       Generated router modules use `lazy_import` so matching a route can load only the selected page, handler, layouts, and slots.
 
-  %section
-    %h2 Framework Boundary
+  %DocsSection{ title: "Framework Boundary" }
     :markdown
       RouterPlugin does not decide request dispatch or rendering policy. Hybrid directories can contain both a page and `+route.rb`; the router exposes both and the consuming framework decides which one to use for a request.

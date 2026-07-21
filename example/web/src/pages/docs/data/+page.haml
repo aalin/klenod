@@ -1,15 +1,16 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
 
-%article
+%DocsPage
   %PageHeader{
     kicker: "Docs",
     title: "Data Imports",
     summary: "Built-in data plugins turn structured files and text files into Ruby modules with serializable default exports."
   }
 
-  %section
-    %h2 Built-In Data Formats
+  %DocsSection{ title: "Built-In Data Formats" }
     :markdown
       `DataPlugin` is the base for Klenod's built-in data import plugins:
 
@@ -18,8 +19,7 @@
       - `TomlPlugin` handles `.toml` with `TomlRB.parse`.
       - `TextPlugin` handles `.txt` and `.text` as strings.
 
-  %section
-    %h2 Import Values
+  %DocsSection{ title: "Import Values" }
     :markdown
       Data files transform into Ruby modules exporting `Default`. Development imports return the parsed value directly.
 
@@ -32,7 +32,6 @@
 
       In runtime bundles, parsed data is serialized directly so production loading does not need the build plugin.
 
-  %section
-    %h2 When To Use Data Imports
+  %DocsSection{ title: "When To Use Data Imports" }
     :markdown
       Use data imports for content and configuration that should participate in the dependency graph, invalidate on file changes, and serialize into runtime bundles. Use Ruby modules when the value needs Ruby behavior, dynamic computation, or explicit methods.

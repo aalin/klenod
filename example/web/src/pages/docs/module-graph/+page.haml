@@ -1,15 +1,16 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
 
-%article
+%DocsPage
   %PageHeader{
     kicker: "Docs",
     title: "Module Graph And Imports",
     summary: "Klenod collects modules into a graph first, then evaluates Ruby code only when an entry or import value needs it."
   }
 
-  %section
-    %h2 Collection Versus Evaluation
+  %DocsSection{ title: "Collection Versus Evaluation" }
     :markdown
       Collection reads source, resolves imports, transforms modules, records dependencies, emits assets, stores metadata, and creates a `ModuleRecord`. Evaluation instantiates a `Klenod::Runtime::Mod`, runs transformed Ruby source, and exposes exports.
 
@@ -17,8 +18,7 @@
 
       Build mode depends on this split: it can serialize collected records without running app top-level code.
 
-  %section
-    %h2 Module Identifiers
+  %DocsSection{ title: "Module Identifiers" }
     :markdown
       Module ids are source-root-relative by default.
 
@@ -30,8 +30,7 @@
 
       Relative imports resolve from the importer. Leading slash imports resolve from the configured source directory. Virtual modules use explicit schemes such as `virtual:`.
 
-  %section
-    %h2 Eager, Lazy, And Glob Imports
+  %DocsSection{ title: "Eager, Lazy, And Glob Imports" }
     :markdown
       `import("...")` creates an eager dependency. `lazy_import("...")` records a dependency but loads the value only when called.
 

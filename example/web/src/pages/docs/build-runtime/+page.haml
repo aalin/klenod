@@ -1,15 +1,16 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
 
-%article
+%DocsPage
   %PageHeader{
     kicker: "Docs",
     title: "Build And Runtime",
     summary: "Build mode serializes collected module records and assets; runtime mode loads the bundle without build plugins."
   }
 
-  %section
-    %h2 Build Without Evaluation
+  %DocsSection{ title: "Build Without Evaluation" }
     :markdown
       Build mode collects entrypoints and runtime dependencies, writes emitted assets when requested, and serializes runtime module specs with `Marshal.dump`. It should not evaluate application top-level code.
 
@@ -21,8 +22,7 @@
       )
       ```
 
-  %section
-    %h2 CLI And Config
+  %DocsSection{ title: "CLI And Config" }
     :markdown
       The CLI finds the nearest `klenod.config.rb` by checking the current directory and walking up parent directories. It changes into the config directory before building.
 
@@ -37,8 +37,7 @@
       dot -Tsvg graph.dot > graph.svg
       ```
 
-  %section
-    %h2 Runtime Loading
+  %DocsSection{ title: "Runtime Loading" }
     :markdown
       Runtime bundles contain entrypoint mappings, module specs, import specs, runtime import values, asset specs, and source-root metadata. Runtime loading evaluates modules lazily.
 
@@ -51,7 +50,6 @@
 
       Production deployments that only load prebuilt bundles should depend on `klenod-runtime`.
 
-  %section
-    %h2 Rack Helpers
+  %DocsSection{ title: "Rack Helpers" }
     :markdown
       `klenod-rack` provides Rack-compatible helpers for serving runtime assets. It is an optional integration layer and does not define framework routing, rendering, or request dispatch policy.

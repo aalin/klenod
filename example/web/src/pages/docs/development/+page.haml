@@ -1,15 +1,16 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
 
-%article
+%DocsPage
   %PageHeader{
     kicker: "Docs",
     title: "Development Updates",
     summary: "Klenod can watch source changes, update the collected graph, report reload failures, and keep reusable entry handles current."
   }
 
-  %section
-    %h2 Watch And Apply Updates
+  %DocsSection{ title: "Watch And Apply Updates" }
     :markdown
       Watch-mode consumers subscribe to update events and apply them to the current graph.
 
@@ -27,21 +28,18 @@
 
       `apply_update` refreshes the entry, mirrors changed assets when `assets_dir:` is provided, and returns an update object with `entry`, `exports`, `asset_write_result`, and `errors`.
 
-  %section
-    %h2 Update Results
+  %DocsSection{ title: "Update Results" }
     :markdown
       Use `update.success?`, `update.failed?`, `update.error_messages`, and `update.asset_files_changed?` for common development branches.
 
       Source changes, removed modules, changed dependencies, watched companion patterns, glob patterns, and virtual modules can all invalidate graph records.
 
-  %section
-    %h2 Failed Reloads
+  %DocsSection{ title: "Failed Reloads" }
     :markdown
       When a changed module fails to transform or collect, Klenod stores a failed `ModuleRecord` with the original error. Dependents of that failed reload are not reevaluated during the same update, which avoids repeated parse/import errors.
 
       Already evaluated dependents are evicted. A later request that needs the failed dependency re-evaluates and raises the stored error, while unrelated routes can continue using the previous good graph.
 
-  %section
-    %h2 Source Context
+  %DocsSection{ title: "Source Context" }
     :markdown
       Runtime owns source maps and backtrace rewriting so production error pages can report transformed sources without loading build plugins. Haml generated Ruby includes source map marks that let runtime errors point back to Haml source lines.

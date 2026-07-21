@@ -1,0 +1,7 @@
+code {
+  padding: var(--markdown-code-padding, 0.08rem 0.25rem);
+  background: var(--markdown-code-background, var(--color-accent-soft));
+  border-radius: var(--markdown-code-radius, var(--radius-sm));
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
