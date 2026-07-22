@@ -1,0 +1,31 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Plugin Reference",
+    title: "IntlPlugin",
+    summary: "IntlPlugin parses Haml translation companions and lets Haml components receive locale-keyed translation data."
+  }
+
+  %DocsSection{ title: "Companion Files" }
+    :markdown
+      Intl files are companions to Haml modules.
+
+      ```text
+      components/Greeting.haml
+      components/Greeting.intl.en.toml
+      components/Greeting.intl.sv.toml
+      ```
+
+      `HamlPlugin` asks the build context for a plugin that responds to `translations_for`. If `IntlPlugin` is absent, Haml still compiles and receives an empty translation map.
+
+  %DocsSection{ title: "Framework Responsibility" }
+    :markdown
+      Locale negotiation, missing-key behavior, interpolation, and helpers such as `I18n.t(:title)` are framework concerns. The example app handles that in `Example::I18n` and request-local context.
+
+  %DocsSection{ title: "Development Reloading" }
+    :markdown
+      Adding, editing, or removing intl companions invalidates the owning Haml module, even when the companion file was not already in the dependency graph.

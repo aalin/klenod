@@ -1,0 +1,30 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Plugin Reference",
+    title: "GoogleFontsPlugin",
+    summary: "GoogleFontsPlugin resolves Google Fonts CSS imports, downloads font files, and rewrites URLs to local assets."
+  }
+
+  %DocsSection{ title: "External CSS" }
+    :markdown
+      The plugin is opt-in. It handles Google Fonts URLs as plugin-owned external CSS imports and emits a local stylesheet asset.
+
+      ```ruby
+      Klenod::Build::Plugins::GoogleFontsPlugin.new(
+        cache_path: "tmp/cache/google_fonts",
+        refresh_cache: false
+      )
+      ```
+
+      Font file URLs from the returned Google CSS are downloaded and rewritten to content-hashed local asset paths.
+
+  %DocsSection{ title: "Caching" }
+    :markdown
+      A configured cache path stores the raw Google CSS response by URL hash. If the cache exists and refresh is disabled, builds can skip the network fetch and reuse the previous response.
+
+      Font downloads are IO-bound generated assets, so they can overlap with CPU-bound image work without unbounded concurrency.

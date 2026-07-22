@@ -2,6 +2,8 @@
   PageHeader = import("/components/PageHeader.haml")
   DocsPage = import("/components/DocsPage.haml")
   DocsSection = import("/components/DocsSection.haml")
+  DocsLinkGrid = import("/components/DocsLinkGrid.haml")
+  DocsLinkCard = import("/components/DocsLinkCard.haml")
 
 %DocsPage
   %PageHeader{
@@ -30,33 +32,52 @@
       `resolve`, `load`, `transform`, and `finalize` are collection-time hooks. They must not depend on evaluated app exports. `runtime_import_value` must return serializable values or runtime instructions.
 
   %DocsSection{ title: "Core Plugins" }
-    :markdown
-      - `RubyPlugin` handles `.rb`, rewrites `import`, `lazy_import`, and `import_glob`, and records Ruby dependencies.
-      - `HamlPlugin` handles `.haml`, generates component classes, rewrites Haml imports, tracks CSS and intl companions, supports `import_glob`, and emits source maps.
-      - `MarkdownPlugin` handles `.md` modules and Haml `:markdown` filters through `kramdown` with the GFM parser.
-      - `CssPlugin` scopes CSS, emits stylesheet assets, returns class-name maps to Ruby/Haml, and records CSS dependencies.
-      - `SvgPlugin` emits SVG assets with dimensions and content type.
-      - `ImagePlugin` emits raster source assets, generated default images, and generated variants.
-      - `IntlPlugin` parses Haml companion translation files.
-      - `JsonPlugin`, `YamlPlugin`, `TomlPlugin`, and `TextPlugin` import structured data and text.
+    %DocsLinkGrid
+      %DocsLinkCard{
+        href: localized_path("/docs/plugins/RubyPlugin"),
+        title: "RubyPlugin",
+        summary: "Ruby modules, import rewriting, lazy imports, glob imports, and runtime import values."
+      }
+      %DocsLinkCard{
+        href: localized_path("/docs/plugins/HamlPlugin"),
+        title: "HamlPlugin",
+        summary: "Haml components, companion CSS, intl files, source maps, filters, and component tags."
+      }
+      %DocsLinkCard{
+        href: localized_path("/docs/plugins/MarkdownPlugin"),
+        title: "MarkdownPlugin",
+        summary: "Markdown files and Haml markdown filters rendered through application components."
+      }
+      %DocsLinkCard{
+        href: localized_path("/docs/plugins/CssPlugin"),
+        title: "CssPlugin",
+        summary: "Scoped CSS, stylesheet assets, CSS imports, class maps, and URL dependencies."
+      }
+      %DocsLinkCard{
+        href: localized_path("/docs/plugins/Assets"),
+        title: "Asset Plugins",
+        summary: "SVG and raster image imports with content types, dimensions, variants, and generated files."
+      }
+      %DocsLinkCard{
+        href: localized_path("/docs/plugins/DataPlugins"),
+        title: "Data Plugins",
+        summary: "JSON, YAML, TOML, and text modules imported as Ruby values."
+      }
+      %DocsLinkCard{
+        href: localized_path("/docs/plugins/IntlPlugin"),
+        title: "IntlPlugin",
+        summary: "Translation companions for Haml modules."
+      }
 
   %DocsSection{ title: "Opt-In Plugins" }
-    :markdown
-      `RouterPlugin` discovers filesystem route modules and generates `virtual:router`.
-
-      ```ruby
-      Klenod::Build::Plugins::RouterPlugin.new(
-        specifier: "virtual:router",
-        pages_dir: "pages",
-        extensions: [".rb", ".haml"]
-      )
-      ```
-
-      `GoogleFontsPlugin` resolves Google Fonts CSS imports, rewrites font URLs to local assets, and can cache raw Google CSS responses.
-
-      ```ruby
-      Klenod::Build::Plugins::GoogleFontsPlugin.new(
-        cache_path: "tmp/cache/google_fonts",
-        refresh_cache: false
-      )
-      ```
+    %DocsLinkGrid
+      %DocsLinkCard{
+        href: localized_path("/docs/plugins/RouterPlugin"),
+        title: "RouterPlugin",
+        summary: "Filesystem routes, layouts, pages, handlers, not-found views, errors, route groups, and slots."
+      }
+      %DocsLinkCard{
+        href: localized_path("/docs/plugins/GoogleFontsPlugin"),
+        title: "GoogleFontsPlugin",
+        summary: "Google Fonts CSS imports rewritten to local generated font assets."
+      }

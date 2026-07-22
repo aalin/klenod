@@ -1,0 +1,43 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Plugin Reference",
+    title: "CssPlugin",
+    summary: "CssPlugin scopes CSS, emits stylesheet assets, records CSS dependencies, and returns class maps to Ruby and Haml."
+  }
+
+  %DocsSection{ title: "Scoped Selectors" }
+    :markdown
+      CSS is transformed through `mayu-css`. Class selectors become scoped class names, and tag selectors are exposed through `__`-prefixed keys.
+
+      ```css
+      article {
+        display: grid;
+      }
+
+      .featured {
+        border-color: var(--color-accent);
+      }
+      ```
+
+      Ruby and Haml imports receive a class-name map:
+
+      ```ruby
+      Styles = import("./Card.css")
+      Styles[:featured]
+      Styles[:__article]
+      ```
+
+  %DocsSection{ title: "CSS Imports" }
+    :markdown
+      CSS imported from Ruby or Haml returns a class map. CSS imported from CSS records stylesheet dependencies and returns transformed asset paths.
+
+      The same stylesheet should appear once in a rendered document. The example app uses route-scoped asset traversal so root and layout CSS appear before page and component CSS.
+
+  %DocsSection{ title: "Assets" }
+    :markdown
+      `url(...)` references are resolved through the graph and emitted as assets. External CSS imports can be owned by other plugins, such as `GoogleFontsPlugin`.

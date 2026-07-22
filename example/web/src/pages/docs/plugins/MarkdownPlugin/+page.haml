@@ -1,0 +1,39 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Plugin Reference",
+    title: "MarkdownPlugin",
+    summary: "MarkdownPlugin compiles Markdown files and Haml markdown filters into component-shaped Ruby output."
+  }
+
+  %DocsSection{ title: "Markdown Files" }
+    :markdown
+      `.md` files become Ruby component modules. The plugin parses Markdown with `kramdown` using the GFM parser and emits factory calls instead of raw HTML strings.
+
+      ```ruby
+      Guide = import("./guide.md")
+      ```
+
+      The imported value is the default exported component class, so consuming code can render it like any other component.
+
+  %DocsSection{ title: "Component Map" }
+    :markdown
+      If `/markdown-components.rb` exists, Markdown rendering uses its `Default` hash to map tags to components. This is similar in spirit to MDX component maps, but it stays in Ruby.
+
+      ```ruby
+      Paragraph = import("/components/markdown/Paragraph.haml")
+
+      Default = {
+        p: Paragraph
+      }
+      ```
+
+      Raw HTML nodes and Markdown nodes both go through the factory, so applications can keep styling scoped to small components.
+
+  %DocsSection{ title: "Haml Filters" }
+    :markdown
+      Haml `:markdown` filters use the same Markdown compiler and component map as imported Markdown files. Updating the component map reloads affected Markdown modules and Haml modules that use Markdown filters.

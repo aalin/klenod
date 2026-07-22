@@ -212,7 +212,24 @@ class Klenod::ExampleTest < Minitest::Test
     html_by_path = {}
 
     _stdout, stderr = capture_io do
-      ["/docs", "/docs/core-concepts", "/docs/configuration", "/docs/haml-components", "/docs/templates", "/docs/assets"].each do |path|
+      [
+        "/docs",
+        "/docs/core-concepts",
+        "/docs/configuration",
+        "/docs/haml-components",
+        "/docs/templates",
+        "/docs/assets",
+        "/docs/plugins",
+        "/docs/plugins/RubyPlugin",
+        "/docs/plugins/HamlPlugin",
+        "/docs/plugins/MarkdownPlugin",
+        "/docs/plugins/CssPlugin",
+        "/docs/plugins/RouterPlugin",
+        "/docs/plugins/Assets",
+        "/docs/plugins/DataPlugins",
+        "/docs/plugins/IntlPlugin",
+        "/docs/plugins/GoogleFontsPlugin"
+      ].each do |path|
         status, headers, body = entry.call(request(path), context)
 
         assert_equal(200, status)
@@ -236,6 +253,10 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html_by_path.fetch("/docs/haml-components"), "language-haml")
     assert_match(%r{components/markdown/InlineCode\.(k|nt|nc|s2)\?}, html_by_path.fetch("/docs/haml-components"))
     assert_includes(html_by_path.fetch("/docs/assets"), "components/markdown/ListItem")
+    assert_includes(html_by_path.fetch("/docs/plugins"), "RubyPlugin")
+    assert_includes(html_by_path.fetch("/docs/plugins/HamlPlugin"), "Translation companions use")
+    assert_includes(html_by_path.fetch("/docs/plugins/IntlPlugin"), "is absent, Haml still compiles")
+    assert_includes(html_by_path.fetch("/docs/plugins/GoogleFontsPlugin"), "cache_path")
     refute_includes(html_by_path.fetch("/docs/haml-components"), "{&quot;class&quot;")
     refute_includes(html_by_path.fetch("/docs/templates"), "docs-content p")
   end

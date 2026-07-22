@@ -1,0 +1,55 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Plugin Reference",
+    title: "HamlPlugin",
+    summary: "HamlPlugin turns `.haml` files into Ruby component classes with imports, source maps, companion styles, and optional translations."
+  }
+
+  %DocsSection{ title: "Component Output" }
+    :markdown
+      A Haml module exports a component class as `Default`. The generated class inherits from the configured component base class and renders through the configured factory.
+
+      ```ruby
+      Klenod::Build::Plugins::HamlPlugin.new(
+        component_base_class: "Example::Component",
+        factory: "Example::H"
+      )
+      ```
+
+      Imported component constants can be used directly as Haml tags. `%Button` compiles to a factory call using the imported component class as the tag.
+
+  %DocsSection{ title: "Ruby Blocks And Filters" }
+    :markdown
+      Top-level `:ruby` defines imports, constants, and methods on the generated component class. Later Ruby script blocks compile into the render method, where request-local helpers from the application framework are available.
+
+      `=` prints a value, `-` runs code silently, and printed Ruby blocks such as `= if condition` render their Haml body.
+
+      Haml `:markdown` filters are delegated to `MarkdownPlugin`. Haml `:css` filters become inline CSS sources collected from the template.
+
+  %DocsSection{ title: "Companions" }
+    :markdown
+      Haml automatically watches and imports matching CSS companions as `Styles`.
+
+      ```text
+      components/Card.haml
+      components/Card.css
+
+      pages/docs/+page.haml
+      pages/docs/+page.css
+      ```
+
+      Translation companions use `IntlPlugin`. Haml can run without `IntlPlugin`; in that case the generated component receives an empty translation map.
+
+      ```text
+      components/Card.intl.en.toml
+      components/Card.intl.sv.toml
+      ```
+
+  %DocsSection{ title: "Errors" }
+    :markdown
+      Generated Ruby includes source map marks. Runtime backtraces can be rewritten to original Haml files and parse errors show Haml source context without requiring users to inspect generated Ruby.

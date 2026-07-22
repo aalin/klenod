@@ -1,0 +1,33 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Plugin Reference",
+    title: "Asset Plugins",
+    summary: "SvgPlugin and ImagePlugin turn imported media into content-hashed browser assets with runtime-safe metadata."
+  }
+
+  %DocsSection{ title: "SvgPlugin" }
+    :markdown
+      `SvgPlugin` emits SVG assets and returns metadata with `src`, `width`, `height`, and `content_type`. Width and height come from the SVG element when available, or from the `viewBox` when they can be inferred.
+
+      ```ruby
+      Logo = import("./logo.svg")
+      ```
+
+  %DocsSection{ title: "ImagePlugin" }
+    :markdown
+      `ImagePlugin` emits raster source assets, generated default images, and generated variants. Imports can request widths, output formats, sizes, and quality.
+
+      ```ruby
+      Photo = import("./photo.jpg?width=320,640&format=webp&quality=82")
+      ```
+
+      Runtime metadata includes `src`, dimensions, `variants`, `srcset`, and `sizes`. Generated image work is queued as CPU-bound asset generation.
+
+  %DocsSection{ title: "Cache Behavior" }
+    :markdown
+      Generated assets are content-hashed and can be written as they complete during build output. Existing generated files can be skipped when their output path is already present.

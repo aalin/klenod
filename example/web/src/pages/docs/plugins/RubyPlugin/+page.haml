@@ -1,0 +1,35 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Plugin Reference",
+    title: "RubyPlugin",
+    summary: "RubyPlugin loads `.rb` modules and rewrites Klenod import helpers into graph-aware dependency records."
+  }
+
+  %DocsSection{ title: "What It Handles" }
+    :markdown
+      `RubyPlugin` is the foundation for Ruby source files. It parses Ruby modules, records import dependencies, and rewrites import helpers into values provided by the build graph or runtime bundle.
+
+      ```ruby
+      Button = import("/components/Button")
+      Chart = lazy_import("./Chart")
+      Icons = import_glob("./icons/*.svg")
+      ```
+
+      Extensionless imports use resolver defaults, currently preferring Ruby before Haml. CSS imports should be explicit.
+
+  %DocsSection{ title: "Import Helpers" }
+    :markdown
+      - `import(...)` records and loads an eager dependency.
+      - `lazy_import(...)` records a dependency but returns a callable import that loads when used.
+      - `import_glob(...)` expands matching files during collection and returns a hash of matched specifiers to imported values.
+
+      Query strings are part of the module id, so `import("./photo.jpg?width=320")` and `import("./photo.jpg?width=640")` can produce different asset metadata while still sharing generated work where possible.
+
+  %DocsSection{ title: "Runtime Values" }
+    :markdown
+      During development, `import_value` can return live build objects. In bundles, `runtime_import_value` must serialize a runtime-safe value. This keeps production runtime loading independent from build plugins.

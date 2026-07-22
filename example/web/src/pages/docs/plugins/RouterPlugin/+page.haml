@@ -1,0 +1,42 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Plugin Reference",
+    title: "RouterPlugin",
+    summary: "RouterPlugin discovers filesystem route modules and generates a lazy `virtual:router` module."
+  }
+
+  %DocsSection{ title: "Route Files" }
+    :markdown
+      The router is optional and framework-agnostic. It supports `+page.rb`, `+page.haml`, `+route.rb`, `+layout.*`, `+error.*`, and `+not-found.*`.
+
+      ```ruby
+      Klenod::Build::Plugins::RouterPlugin.new(
+        specifier: "virtual:router",
+        pages_dir: "pages",
+        extensions: [".rb", ".haml"]
+      )
+      ```
+
+      Generated router modules use lazy imports so development startup does not evaluate every page.
+
+  %DocsSection{ title: "Segments" }
+    :markdown
+      Supported segment shapes include dynamic segments, catch-all segments, optional catch-all segments, route groups, parallel routes, and intercepted routes.
+
+      ```text
+      [id]
+      [...slug]
+      [[...slug]]
+      (marketing)
+      @modal
+      (.)photo
+      ```
+
+  %DocsSection{ title: "Framework Policy" }
+    :markdown
+      Matching routes belongs to the generated router. Rendering pages, deciding hybrid `route.rb` behavior, choosing content negotiation, and turning errors into responses belongs to the framework or server.

@@ -1,0 +1,33 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Plugin Reference",
+    title: "Data Plugins",
+    summary: "JsonPlugin, YamlPlugin, TomlPlugin, and TextPlugin import structured data and plain text as Ruby values."
+  }
+
+  %DocsSection{ title: "Structured Data" }
+    :markdown
+      Data plugins parse source files during graph collection and expose runtime-safe values.
+
+      ```ruby
+      Posts = import("./posts.toml")
+      Settings = import("./settings.json")
+      Copy = import("./copy.yaml")
+      ```
+
+      These imports are useful for small content files, fixtures, route metadata, and examples that should travel with the bundle.
+
+  %DocsSection{ title: "Text" }
+    :markdown
+      `TextPlugin` imports plain text as a string.
+
+      ```ruby
+      License = import("./LICENSE.txt")
+      ```
+
+      Unsupported file types should fail with a clear resolve or load error instead of silently becoming text.
