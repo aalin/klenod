@@ -1,7 +1,7 @@
 .grid {
   interpolate-size: allow-keywords;
   display: grid;
-  grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr);
+  grid-template-columns: 10rem minmax(0, 1fr);
   gap: var(--space-6);
   align-items: start;
 }
@@ -50,6 +50,7 @@ summary {
   line-height: 1.25;
   list-style-position: outside;
   text-transform: uppercase;
+  user-select: none;
 
   &:hover {
     color: var(--color-accent);
