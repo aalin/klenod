@@ -13,14 +13,6 @@ aside {
   min-width: 0;
 }
 
-aside p {
-  margin: 0;
-  color: var(--color-accent);
-  font-size: var(--font-size-small);
-  font-weight: 850;
-  text-transform: uppercase;
-}
-
 aside nav {
   display: grid;
   gap: var(--space-2);

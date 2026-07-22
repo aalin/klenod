@@ -52,7 +52,6 @@
 
 .docs-shell
   %aside
-    %p Docs
     %nav{ aria: { label: "Documentation" } }
       = DocsSections.map do |section|
         %details{ name: "docs-section", open: section_open?(section, current_path) }
