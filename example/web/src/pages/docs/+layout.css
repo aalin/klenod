@@ -21,7 +21,7 @@ aside nav {
 
 aside details {
   display: grid;
-  gap: var(--space-1);
+  gap: 0.15rem;
 }
 
 aside summary {
@@ -42,7 +42,7 @@ aside summary:hover {
 
 aside nav a {
   display: block;
-  padding: 0.45rem 0.6rem;
+  padding: 0.42rem 0.6rem;
   color: var(--color-muted);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-small);
@@ -53,12 +53,15 @@ aside nav a {
 
 aside nav a:hover {
   color: var(--color-accent);
-  background: var(--color-accent-soft);
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.16em;
 }
 
 aside nav a[aria-current="page"] {
   color: var(--color-accent);
   background: var(--color-accent-soft);
+  text-decoration: none;
 }
 
 .docs-content {
