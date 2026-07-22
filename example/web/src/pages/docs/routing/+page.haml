@@ -32,7 +32,7 @@
       match = router.match("/blog/hello")
       ```
 
-      In a real app, either append `router_plugin` to `Context.default_plugins` or provide the full ordered plugin list as the example app does.
+      In an application config, either append `router_plugin` to `Context.default_plugins` or provide a full ordered plugin list.
 
   %DocsSection{ title: "Supported Files And Segments" }
     :markdown
@@ -62,7 +62,7 @@
 
       Generated router modules use `lazy_import` so matching a route can load only the selected page, handler, layouts, and slots.
 
-      When no page route matches, the router returns the closest `not-found` module for that URL path. The example framework also renders the closest `error` module when rendering raises.
+      When no page route matches, the router returns the closest `not-found` module for that URL path. Frameworks can use the closest `error` module when rendering raises.
 
   %DocsSection{ title: "Framework Boundary" }
     :markdown

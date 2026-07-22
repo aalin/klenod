@@ -28,7 +28,7 @@
     :markdown
       Plugins run in order for resolving, loading, transforming, and import value hooks. Put special-purpose plugins before broad ones when they need first chance at a specifier.
 
-      The example web app configures the router first, then Ruby/Haml/Markdown/CSS/assets/data plugins:
+      A framework-style app usually configures specialized plugins first, followed by Ruby/Haml/Markdown/CSS/assets/data plugins:
 
       ```ruby
       plugins [
@@ -62,7 +62,7 @@
       )
       ```
 
-      The example factory accepts a tag or component class, children, and keyword props:
+      A compatible factory accepts a tag or component class, children, and keyword props:
 
       ```ruby
       Example::H[tag, *children, **props]
