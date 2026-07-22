@@ -241,6 +241,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_empty(stderr)
     assert_includes(html_by_path.fetch("/docs"), "components/DocsLinkCard")
     assert_includes(html_by_path.fetch("/docs"), "Core Concepts")
+    assert_includes(html_by_path.fetch("/docs"), "<details")
+    assert_includes(html_by_path.fetch("/docs"), "<summary")
     assert_includes(html_by_path.fetch("/docs/templates"), "components/DocsPage")
     assert_includes(html_by_path.fetch("/docs/templates"), "components/DocsSection")
     assert_includes(html_by_path.fetch("/docs/templates"), "components/markdown/Paragraph")
@@ -257,6 +259,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html_by_path.fetch("/docs/plugins/HamlPlugin"), "Translation companions use")
     assert_includes(html_by_path.fetch("/docs/plugins/IntlPlugin"), "is absent, Haml still compiles")
     assert_includes(html_by_path.fetch("/docs/plugins/GoogleFontsPlugin"), "cache_path")
+    assert_match(/<details open[^>]*>\s*<summary[^>]*>Guides/, html_by_path.fetch("/docs/haml-components"))
+    assert_match(/<details open[^>]*>\s*<summary[^>]*>Plugins/, html_by_path.fetch("/docs/plugins/HamlPlugin"))
     refute_includes(html_by_path.fetch("/docs/haml-components"), "{&quot;class&quot;")
     refute_includes(html_by_path.fetch("/docs/templates"), "docs-content p")
   end

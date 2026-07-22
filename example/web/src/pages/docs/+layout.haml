@@ -44,22 +44,23 @@
     }
   ].freeze
 
-  def initialize(children:, slots: {})
-    @children = children
-    @current_path = request.canonical_path || request.path
+  def section_open?(section, current_path)
+    section.fetch(:links).any? { |link| link.fetch(:href) == current_path }
   end
+
+- current_path = request.canonical_path || request.path
 
 .docs-shell
   %aside
     %p Docs
     %nav{ aria: { label: "Documentation" } }
       = DocsSections.map do |section|
-        %section
-          %h2= section.fetch(:label)
+        %details{ name: "docs-section", open: section_open?(section, current_path) }
+          %summary= section.fetch(:label)
           = section.fetch(:links).map do |link|
             %a{
               href: localized_path(link.fetch(:href)),
-              "aria-current" => (@current_path == link.fetch(:href)) ? "page" : nil
+              "aria-current" => (current_path == link.fetch(:href)) ? "page" : nil
             }= link.fetch(:label)
   .docs-content
-    = @children
+    = $children
