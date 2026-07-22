@@ -212,7 +212,7 @@ class Klenod::ExampleTest < Minitest::Test
     html_by_path = {}
 
     _stdout, stderr = capture_io do
-      ["/docs", "/docs/core-concepts", "/docs/configuration", "/docs/haml-css", "/docs/templates", "/docs/assets"].each do |path|
+      ["/docs", "/docs/core-concepts", "/docs/configuration", "/docs/haml-components", "/docs/templates", "/docs/assets"].each do |path|
         status, headers, body = entry.call(request(path), context)
 
         assert_equal(200, status)
@@ -232,11 +232,11 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html_by_path.fetch("/docs/configuration"), "Plugin Order")
     assert_includes(html_by_path.fetch("/docs/configuration"), "language-ruby")
     assert_match(%r{components/markdown/InlineCode\.(k|nc|nb|s2)\?}, html_by_path.fetch("/docs/configuration"))
-    assert_includes(html_by_path.fetch("/docs/haml-css"), "Scope Boundaries")
-    assert_includes(html_by_path.fetch("/docs/haml-css"), "language-haml")
-    assert_match(%r{components/markdown/InlineCode\.(k|nt|nc|s2)\?}, html_by_path.fetch("/docs/haml-css"))
+    assert_includes(html_by_path.fetch("/docs/haml-components"), "Scope Boundaries")
+    assert_includes(html_by_path.fetch("/docs/haml-components"), "language-haml")
+    assert_match(%r{components/markdown/InlineCode\.(k|nt|nc|s2)\?}, html_by_path.fetch("/docs/haml-components"))
     assert_includes(html_by_path.fetch("/docs/assets"), "components/markdown/ListItem")
-    refute_includes(html_by_path.fetch("/docs/haml-css"), "{&quot;class&quot;")
+    refute_includes(html_by_path.fetch("/docs/haml-components"), "{&quot;class&quot;")
     refute_includes(html_by_path.fetch("/docs/templates"), "docs-content p")
   end
 
@@ -258,6 +258,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "href=\"/sv/demo/formular\"")
     assert_includes(html, "href=\"/sv/demo/blogg/graph\"")
     assert_includes(html, "href=\"/sv/demo/butik/sale/red\"")
+    assert_route_includes(entry, context, "/sv/dokument/haml-komponenter", "Haml Components")
     assert_includes(html, "Standardimport")
     assert_includes(html, "Varianter")
   end

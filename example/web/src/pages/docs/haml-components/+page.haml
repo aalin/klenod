@@ -6,8 +6,8 @@
 %DocsPage
   %PageHeader{
     kicker: "Docs",
-    title: "Haml And Scoped CSS",
-    summary: "How Haml modules become components, how companion styles are imported, and how scoped selectors attach to rendered tags."
+    title: "Haml Components",
+    summary: "How Haml modules become components, how companion files are imported, and how scoped selectors attach to rendered tags."
   }
 
   %DocsSection{ title: "Haml Modules" }
@@ -37,7 +37,7 @@
 
   %DocsSection{ title: "Companion Files" }
     :markdown
-      Haml automatically imports matching CSS companions as `Styles` when present.
+      Haml automatically imports matching CSS companions as `Styles` when present. The companion naming follows the route-file convention, so `+page.haml` pairs with `+page.css`.
 
       ```text
       components/Card.haml
@@ -48,6 +48,18 @@
       ```
 
       It also watches `Component.intl.*.toml` translation companions. Adding, editing, or removing companion files invalidates the owning Haml module in development.
+
+  %DocsSection{ title: "Translations" }
+    :markdown
+      Translation companions are powered by `IntlPlugin`. `HamlPlugin` can run without it, but then intl companion files are ignored and the generated component receives an empty translation map.
+
+      ```text
+      components/Card.haml
+      components/Card.intl.en.toml
+      components/Card.intl.sv.toml
+      ```
+
+      When `IntlPlugin` is in the build context, Haml components can expose translated content through the application component base. The example framework wraps that data in `Example::I18n`, so templates call helpers such as `I18n.t(:summary)` while request-local locale selection stays outside Klenod core.
 
   %DocsSection{ title: "Scoped CSS Maps" }
     :markdown
