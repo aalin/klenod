@@ -84,7 +84,7 @@ nav a {
   min-width: 0;
 }
 
-@media (max-width: 820px) {
+@container main (max-width: 50rem) {
   .grid {
     grid-template-columns: 1fr;
   }
