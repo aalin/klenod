@@ -50,7 +50,7 @@
 
 - current_path = request.canonical_path || request.path
 
-.docs-shell
+.grid
   %aside
     %nav{ aria: { label: "Documentation" } }
       = DocsSections.map do |section|
@@ -61,5 +61,5 @@
               href: localized_path(link.fetch(:href)),
               "aria-current" => (current_path == link.fetch(:href)) ? "page" : nil
             }= link.fetch(:label)
-  .docs-content
+  .content
     = $children
