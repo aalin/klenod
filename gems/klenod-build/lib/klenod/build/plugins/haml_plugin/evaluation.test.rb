@@ -290,8 +290,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
         [
           :article,
           [
-            [:h1, "Hello", {"id" => "hello"}],
-            [:p, "A ", [:a, "link", {"href" => "https://example.com"}], "."]
+            [:h1, "Hello", {id: "hello"}],
+            [:p, "A ", [:a, "link", {href: "https://example.com"}], "."]
           ]
         ],
         exports::Default.new.render
@@ -323,7 +323,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       },
       plugins: default_plugins_with(haml_plugin)
     ) do |_dir, _context, record, exports|
-      assert_equal([:heading, "Hello", {"id" => "hello"}], exports::Default.new.render)
+      assert_equal([:heading, "Hello", {id: "hello"}], exports::Default.new.render)
       assert_equal(["/markdown-components"], record.dependencies.select { it.kind == :markdown_components }.map(&:specifier))
       assert_equal(["markdown-components.rb"], record.watched_patterns.select { it.kind == :markdown_components }.map(&:glob))
     end

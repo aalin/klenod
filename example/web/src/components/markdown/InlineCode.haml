@@ -1,7 +1,30 @@
 :ruby
-  def initialize(children: [], **props)
-    @children = children
+  require "rouge"
+
+  SUPPORTED_LEXERS = {
+    "ruby" => Rouge::Lexer.find("ruby"),
+    "haml" => Rouge::Lexer.find("haml"),
+    "css" => Rouge::Lexer.find("css")
+  }.freeze
+
+  def highlighted_children(children, language)
+    lexer = SUPPORTED_LEXERS[language]
+    return children unless lexer
+
+    lexer.lex(children.join).map do |token, value|
+      token_class = token.shortname&.to_sym
+      next value unless token_class && Styles.key?(token_class)
+
+      Example::H[:span, value, class: Styles[token_class]]
+    end
   end
 
-%code
-  = @children
+  def language_from(class_name)
+    class_name.to_s.split.find { |name| name.start_with?("language-") }&.delete_prefix("language-")
+  end
+
+- class_name = $class
+- language = language_from(class_name)
+
+%code{ class: class_name }
+  = highlighted_children($children, language)

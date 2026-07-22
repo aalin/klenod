@@ -5,3 +5,77 @@ code {
   font-family: var(--font-mono);
   font-size: 0.9em;
 }
+
+.c,
+.cm,
+.cp,
+.c1,
+.cs {
+  color: oklch(73% 0.02 255);
+  font-style: italic;
+}
+
+.k,
+.kd,
+.kn,
+.kp,
+.kr,
+.kt,
+.kv {
+  color: oklch(78% 0.16 330);
+}
+
+.nb,
+.nc,
+.no,
+.nn,
+.nt,
+.vc,
+.vg,
+.vi {
+  color: oklch(82% 0.11 78);
+}
+
+.na,
+.nf,
+.nx {
+  color: oklch(82% 0.12 210);
+}
+
+.s,
+.sa,
+.sb,
+.sc,
+.dl,
+.sd,
+.s2,
+.se,
+.sh,
+.si,
+.sx,
+.sr,
+.s1,
+.ss {
+  color: oklch(80% 0.13 145);
+}
+
+.m,
+.mb,
+.mf,
+.mh,
+.mi,
+.il,
+.mo {
+  color: oklch(80% 0.13 50);
+}
+
+.o,
+.ow,
+.p {
+  color: oklch(88% 0.02 255);
+}
+
+.err {
+  color: oklch(92% 0.12 25);
+  background: oklch(38% 0.14 25);
+}

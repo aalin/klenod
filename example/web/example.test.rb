@@ -230,8 +230,13 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html_by_path.fetch("/docs/templates"), "components/markdown/InlineCode")
     assert_includes(html_by_path.fetch("/docs/core-concepts"), "Collection Comes First")
     assert_includes(html_by_path.fetch("/docs/configuration"), "Plugin Order")
+    assert_includes(html_by_path.fetch("/docs/configuration"), "language-ruby")
+    assert_match(%r{components/markdown/InlineCode\.(k|nc|nb|s2)\?}, html_by_path.fetch("/docs/configuration"))
     assert_includes(html_by_path.fetch("/docs/haml-css"), "Scope Boundaries")
+    assert_includes(html_by_path.fetch("/docs/haml-css"), "language-haml")
+    assert_match(%r{components/markdown/InlineCode\.(k|nt|nc|s2)\?}, html_by_path.fetch("/docs/haml-css"))
     assert_includes(html_by_path.fetch("/docs/assets"), "components/markdown/ListItem")
+    refute_includes(html_by_path.fetch("/docs/haml-css"), "{&quot;class&quot;")
     refute_includes(html_by_path.fetch("/docs/templates"), "docs-content p")
   end
 

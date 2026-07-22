@@ -85,7 +85,7 @@ module Klenod
         end
 
         def attrs_source(attrs)
-          attrs.transform_keys(&:to_s).inspect
+          attrs.transform_keys(&:to_sym).inspect
         end
       end
     end

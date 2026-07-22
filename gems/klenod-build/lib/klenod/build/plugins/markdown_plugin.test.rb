@@ -38,8 +38,8 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
       assert_operator(component, :<, FakeFramework::ComponentBase)
       assert_equal(
         [
-          [:h1, "Hello", {"id" => "hello"}],
-          [:p, "A ", [:a, "link", {"href" => "https://example.com"}], "."]
+          [:h1, "Hello", {id: "hello"}],
+          [:p, "A ", [:a, "link", {href: "https://example.com"}], "."]
         ],
         component.new.render
       )
@@ -68,7 +68,7 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
     ) do |context|
       record = context.evaluate("page.md")
 
-      assert_equal([:heading, "Hello", {"id" => "hello"}], context.exports(record)::Default.new.render)
+      assert_equal([:heading, "Hello", {id: "hello"}], context.exports(record)::Default.new.render)
       assert_equal(["/markdown-components"], record.dependencies.map(&:specifier))
     end
   end
@@ -84,7 +84,7 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
       component = context.exports(context.evaluate("page.md"))::Default
 
       assert_equal(
-        [:section, [:p, "Raw ", [:strong, "HTML"]], {"class" => "intro"}],
+        [:section, [:p, "Raw ", [:strong, "HTML"]], {class: "intro"}],
         component.new.render
       )
     end
@@ -108,7 +108,7 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
 
       assert_equal(
         [
-          [:pre, [:code, "puts 1\n", {"class" => "language-ruby"}]],
+          [:pre, [:code, "puts 1\n", {class: "language-ruby"}]],
           [
             :table,
             [:thead, [:tr, [:th, "A"], [:th, "B"]]],
@@ -129,7 +129,7 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
       context.build(entrypoints: ["page.md"], output: output)
       component = Klenod::Runtime.load_bundle(output).exports("page.md")::Default
 
-      assert_equal([:h1, "Hello", {"id" => "hello"}], component.new.render)
+      assert_equal([:h1, "Hello", {id: "hello"}], component.new.render)
     end
   end
 
@@ -139,7 +139,7 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
       context = context_for(dir)
       record = context.evaluate("page.md")
 
-      assert_equal([:h1, "Hello", {"id" => "hello"}], context.exports(record)::Default.new.render)
+      assert_equal([:h1, "Hello", {id: "hello"}], context.exports(record)::Default.new.render)
 
       File.write(
         "#{dir}/markdown-components.rb",
@@ -159,7 +159,7 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
       result = context.invalidate_paths(["#{dir}/markdown-components.rb"])
 
       assert_equal(["page.md"], result.reloaded_module_ids.map(&:to_s))
-      assert_equal([:heading, "Hello", {"id" => "hello"}], context.exports(record)::Default.new.render)
+      assert_equal([:heading, "Hello", {id: "hello"}], context.exports(record)::Default.new.render)
     end
   end
 
