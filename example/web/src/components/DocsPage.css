@@ -1,5 +1,6 @@
 article {
   display: grid;
   gap: var(--space-5);
+  margin-inline: auto;
   max-width: 78ch;
 }
