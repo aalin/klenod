@@ -283,7 +283,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "href=\"/sv/demo/formular\"")
     assert_includes(html, "href=\"/sv/demo/blogg/graph\"")
     assert_includes(html, "href=\"/sv/demo/butik/sale/red\"")
-    assert_route_includes(entry, context, "/sv/dokument/haml-komponenter", "Haml Components")
+    assert_route_includes(entry, context, "/sv/dokumentation/haml-komponenter", "Haml Components")
     assert_includes(html, "Standardimport")
     assert_includes(html, "Varianter")
   end

@@ -4,5 +4,5 @@ label = "exempel"
 [nav]
 label = "Primär"
 overview = "Översikt"
-docs = "Dokument"
+docs = "Dokumentation"
 demo = "Demo"
