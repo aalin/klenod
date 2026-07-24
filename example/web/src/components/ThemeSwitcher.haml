@@ -1,0 +1,31 @@
+:ruby
+  require "uri"
+
+  Themes = [
+    { value: "system", label: "OS Default", icon: Example::H::HtmlString.new("&#x1F313;") },
+    { value: "light", label: "Light", icon: Example::H::HtmlString.new("&#x2600;&#xFE0F;") },
+    { value: "dark", label: "Dark", icon: Example::H::HtmlString.new("&#x1F319;") }
+  ].freeze
+
+  def theme_href(value, return_to)
+    "/theme?#{URI.encode_www_form("value" => value, "return_to" => return_to)}"
+  end
+
+:ruby
+  current_theme = request.cookies.fetch(Example::THEME_COOKIE, "system")
+  current_theme = "system" unless Themes.any? { |theme| theme[:value] == current_theme }
+  return_to = request.path
+  current = Themes.find { |theme| theme[:value] == current_theme }
+
+.switcher
+  %button(type="button" popovertarget="theme-menu" popovertargetaction="toggle" title="Choose theme")
+    %span.icon(aria-hidden="true")= current[:icon]
+  #theme-menu.popover{ popover: "auto" }
+    = Themes.map do |theme|
+      - selected = theme[:value] == current_theme
+      %a{
+        href: theme_href(theme[:value], return_to),
+        "aria-current" => selected && "true"
+      }
+        %span.icon(aria-hidden="true")= theme[:icon]
+        %span= theme[:label]

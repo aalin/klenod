@@ -85,6 +85,38 @@ class Klenod::ExampleTest < Minitest::Test
     refute(paths.any? { |path| path.include?("pages_demo_assets") })
   end
 
+  def test_example_app_uses_system_theme_without_theme_cookie
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    _status, _headers, body = entry.call(request("/"), context)
+
+    assert_includes(body.join, "<html>")
+  end
+
+  def test_example_app_renders_explicit_theme_attribute_from_cookie
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    %w[light dark].each do |theme|
+      headers = HeaderList.new([["Cookie", "#{Example::THEME_COOKIE}=#{theme}"]])
+      _status, _response_headers, body = entry.call(HeaderRequest["GET", "/", headers], context)
+
+      assert_includes(body.join, "<html data-theme=\"#{theme}\">")
+    end
+  end
+
+  def test_example_app_ignores_invalid_theme_cookie
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    headers = HeaderList.new([["Cookie", "#{Example::THEME_COOKIE}=sepia"]])
+    _status, _response_headers, body = entry.call(HeaderRequest["GET", "/", headers], context)
+
+    assert_includes(body.join, "<html>")
+  end
+
   def test_example_app_links_route_scoped_css_assets
     config = example_config
     context = config.context
@@ -1035,6 +1067,44 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(302, status)
     assert_equal("/", headers.fetch("location"))
     assert_empty(body)
+  end
+
+  def test_example_app_sets_theme_cookie
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, headers, body = entry.call(request("/theme?value=dark&return_to=/docs"), context)
+
+    assert_equal(302, status)
+    assert_equal("/docs", headers.fetch("location"))
+    assert_includes(headers.fetch("set-cookie"), "#{Example::THEME_COOKIE}=dark")
+    assert_includes(headers.fetch("set-cookie"), "SameSite=Lax")
+    refute_includes(headers.fetch("set-cookie"), "HttpOnly")
+    assert_empty(body)
+  end
+
+  def test_example_app_deletes_theme_cookie_for_system_theme
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, headers, body = entry.call(request("/theme?value=system&return_to=/demo"), context)
+
+    assert_equal(302, status)
+    assert_equal("/demo", headers.fetch("location"))
+    assert_includes(headers.fetch("set-cookie"), "#{Example::THEME_COOKIE}=")
+    assert_includes(headers.fetch("set-cookie"), "Max-Age=0")
+    refute_includes(headers.fetch("set-cookie"), "HttpOnly")
+    assert_empty(body)
+  end
+
+  def test_example_app_sanitizes_theme_return_to
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, headers, _body = entry.call(request("/theme?value=dark&return_to=//example.com"), context)
+
+    assert_equal(302, status)
+    assert_equal("/", headers.fetch("location"))
   end
 
   def test_example_app_passes_route_params_to_handler_request

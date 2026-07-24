@@ -69,7 +69,7 @@ def self.render_page_response(match, request, context, raw_request: nil, status:
     Example::Response.html(
       <<~HTML,
         <!doctype html>
-        <html>
+        <html#{html_theme_attributes(request)}>
           <head>
             <title>Klenod example</title>
             #{stylesheet_links(css_asset_references)}
@@ -83,6 +83,13 @@ def self.render_page_response(match, request, context, raw_request: nil, status:
     request
   )
   response.to_a
+end
+
+def self.html_theme_attributes(request)
+  theme = request.cookies.fetch(Example::THEME_COOKIE, nil)
+  return "" unless %w[light dark].include?(theme)
+
+  %( data-theme="#{theme}")
 end
 
 def self.page_instance(page, props)
@@ -130,7 +137,7 @@ def self.stylesheet_links(asset_references)
 end
 
 def self.html_response_headers(css_asset_references, include_link: true)
-  headers = {}
+  headers = {"vary" => "Cookie"}
   link = stylesheet_preload_link_header(css_asset_references)
   headers["link"] = link if include_link && !link.empty?
   headers

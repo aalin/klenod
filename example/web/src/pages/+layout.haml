@@ -2,6 +2,7 @@
   I18n = Example::I18n.new(self)
   Logo = import("./logo.svg")
   LanguageSwitcher = import("/components/LanguageSwitcher.haml")
+  ThemeSwitcher = import("/components/ThemeSwitcher.haml")
   Links = [
     { href: "/", label: [:nav, :overview] },
     { href: "/docs", label: [:nav, :docs] },
@@ -19,6 +20,7 @@
         %nav{ aria: { label: I18n.t(:nav, :label) } }
           = Links.map do |link|
             %a{ href: link[:href] }= I18n.t(*link[:label])
+        %ThemeSwitcher
         %LanguageSwitcher
   %main
     = $children
