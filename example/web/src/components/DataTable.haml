@@ -1,16 +1,10 @@
-:ruby
-  def initialize(columns:, rows:, children: nil)
-    @columns = columns
-    @rows = rows
-  end
-
 %table
   %thead
     %tr
-      = @columns.map do |column|
+      = $columns.map do |column|
         %th= column
   %tbody
-    = @rows.map do |row|
+    = $rows.map do |row|
       %tr
         = row.map do |cell|
           %td= cell

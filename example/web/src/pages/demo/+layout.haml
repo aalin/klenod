@@ -16,11 +16,7 @@
     { href: "/demo/shop/sale/red", label: [:tabs, :catch_all] }
   ]
 
-  def initialize(children:, slots: {})
-    @children = children
-  end
-
 %article
   %NavTabs{ links: Links.map { |link| link.merge(label: I18n.t(*link[:label])) } }
   %section
-    = @children
+    = $children

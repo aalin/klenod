@@ -1,16 +1,6 @@
-:ruby
-  def initialize(image:, alt:, caption:, srcset: image&.srcset, sizes: image&.sizes, children: nil)
-    @image = image
-    @srcset = srcset
-    @sizes = sizes
-    @alt = alt
-    @caption = caption
-    @children = children
-  end
-
 %figure
-  = if @children&.any?
-    = @children
+  = if $children&.any?
+    = $children
   = else
-    %img.image{ src: @image.src, srcset: @srcset, sizes: @sizes, width: @image.width, height: @image.height, alt: @alt }
-  %figcaption= @caption
+    %img.image{ src: $image.src, srcset: $srcset || $image&.srcset, sizes: $sizes || $image&.sizes, width: $image.width, height: $image.height, alt: $alt }
+  %figcaption= $caption

@@ -2,16 +2,11 @@
   PageHeader = import("../components/PageHeader.haml")
   Panel = import("../components/Panel.haml")
 
-  def initialize(path:, status:)
-    @path = path
-    @status = status
-  end
-
 %article
   %PageHeader{
-    kicker: @status.to_s,
+    kicker: $status.to_s,
     title: "Page not found",
-    summary: "No route matched #{@path}."
+    summary: "No route matched #{$path}."
   }
   %section
     %Panel{ title: "Try another route" }

@@ -1,15 +1,6 @@
-:ruby
-  def initialize(href: nil, type: "button", command: nil, commandfor: nil, children: [])
-    @href = href
-    @type = type
-    @children = children
-    @command = command
-    @commandfor = commandfor
-  end
-
-= if @href
-  %a{ href: @href }
-    = @children
+= if $href
+  %a{ href: $href }
+    = $children
 = else
-  %button(type=@type command=@command commandfor=@commandfor)
-    = @children
+  %button{ type: $type || "button", command: $command, commandfor: $commandfor }
+    = $children

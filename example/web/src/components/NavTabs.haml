@@ -1,8 +1,3 @@
-:ruby
-  def initialize(links:, children: nil)
-    @links = links
-  end
-
 %nav
-  = @links.map do |link|
+  = $links.map do |link|
     %a{ href: link.fetch(:href) }= link.fetch(:label)

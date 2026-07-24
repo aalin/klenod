@@ -5,9 +5,6 @@
     { locale: "sv", label: "Svenska", code: "SV" }
   ]
 
-  def initialize(children: nil)
-  end
-
 :ruby
   current_path = request.canonical_path || request.path
   current_locale = request.route_locale || "en"

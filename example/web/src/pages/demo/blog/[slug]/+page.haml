@@ -7,28 +7,26 @@
     import("../posts/routing.toml")
   ]
 
-  def initialize(...)
-    super
-    @slug = request.params.fetch(:slug)
-    @post = Posts.find { |post| post.fetch("slug") == @slug }
-  end
+:ruby
+  slug = request.params.fetch(:slug)
+  post = Posts.find { |item| item.fetch("slug") == slug }
 
 %article
-  = if @post
+  = if post
     %PageHeader{
       kicker: "Dynamic TOML route",
-      title: @post.fetch("title"),
-      summary: @post.fetch("summary")
+      title: post.fetch("title"),
+      summary: post.fetch("summary")
     }
     %Panel{ title: "Post body" }
       %p
-        %time{ datetime: @post.fetch("date") }= @post.fetch("date")
-      %p= @post.fetch("body").strip
+        %time{ datetime: post.fetch("date") }= post.fetch("date")
+      %p= post.fetch("body").strip
       %p Ruby modules loaded through a dependency graph
   = else
     %PageHeader{
       kicker: "Dynamic TOML route",
-      title: "Blog post: #{@slug}",
+      title: "Blog post: #{slug}",
       summary: "No TOML post exists for this slug, but the dynamic route still rendered."
     }
     %Panel{ title: "Missing post" }

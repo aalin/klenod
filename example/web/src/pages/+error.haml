@@ -2,14 +2,6 @@
   PageHeader = import("../components/PageHeader.haml")
   Panel = import("../components/Panel.haml")
 
-  def initialize(path:, status:, error:, error_details: nil)
-    @path = path
-    @status = status
-    @error = error
-    @error_details = error_details || error.full_message
-    @backtrace_details, @source_details = split_error_details(@error_details)
-  end
-
   def split_error_details(details)
     _, separator, body = details.to_s.partition("\nBacktrace:\n")
     body = details.to_s if separator.empty?
@@ -18,28 +10,32 @@
     [backtrace.strip, sources.strip]
   end
 
+:ruby
+  error_details = $error_details || $error.full_message
+  backtrace_details, source_details = split_error_details(error_details)
+
 %article
   %PageHeader{
-    kicker: @status.to_s,
+    kicker: $status.to_s,
     title: "Something went wrong",
-    summary: "Rendering #{@path} raised #{@error.class}."
+    summary: "Rendering #{$path} raised #{$error.class}."
   }
   %section.error-details
     %Panel{ title: "Error summary" }
       .message-card
-        %span= @error.class
-        %p= @error.message
+        %span= $error.class
+        %p= $error.message
       %dl.summary-list
         %div
           %dt Status
-          %dd= @status
+          %dd= $status
         %div
           %dt Path
-          %dd= @path
+          %dd= $path
     %Panel{ title: "Backtrace" }
       %pre.trace-block
-        %code= @backtrace_details
-    = if !@source_details.empty?
+        %code= backtrace_details
+    = if !source_details.empty?
       %Panel{ title: "Source context" }
         %pre.source-block
-          %code= @source_details
+          %code= source_details

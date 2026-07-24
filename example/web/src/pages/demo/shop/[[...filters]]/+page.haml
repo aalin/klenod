@@ -8,26 +8,25 @@
     { slug: "coffee", label: "Coffee" }
   ]
 
-  def initialize(...)
-    @filters = request.params.fetch(:filters)
+  def enabled?(filter, filters)
+    filters.include?(filter.fetch(:slug))
   end
 
-  def enabled?(filter)
-    @filters.include?(filter.fetch(:slug))
-  end
-
-  def href_for(filter)
+  def href_for(filter, filters)
     slug = filter.fetch(:slug)
     selected =
-      if enabled?(filter)
-        @filters - [slug]
+      if enabled?(filter, filters)
+        filters - [slug]
       else
-        @filters + [slug]
+        filters + [slug]
       end
     next_filters = Filters.map { it.fetch(:slug) } & selected
 
     ["/demo/shop", *next_filters].join("/")
   end
+
+:ruby
+  filters = request.params.fetch(:filters)
 
 %article
   %PageHeader{
@@ -39,12 +38,12 @@
     %nav{ class: Styles[:filters], aria: { label: "Shop filters" } }
       = Filters.map do |filter|
         %a{
-          class: [Styles[:filter], enabled?(filter) ? Styles[:enabled] : nil],
-          href: href_for(filter),
-          aria: { pressed: enabled?(filter).to_s }
+          class: [Styles[:filter], enabled?(filter, filters) ? Styles[:enabled] : nil],
+          href: href_for(filter, filters),
+          aria: { pressed: enabled?(filter, filters).to_s }
         }= filter.fetch(:label)
     %p{ class: Styles[:summary] }
-      = if @filters.empty?
+      = if filters.empty?
         No filters selected
       = else
-        = "Filters: #{@filters.join(", ")}"
+        = "Filters: #{filters.join(", ")}"

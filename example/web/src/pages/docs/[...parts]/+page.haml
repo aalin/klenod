@@ -1,8 +1,5 @@
-:ruby
-  def initialize(...)
-    @parts = request.params.fetch(:parts)
-  end
+- parts = request.params.fetch(:parts)
 
 %article
   %h1 Docs catch-all
-  %p= "Path parts: #{@parts.join(" / ")}"
+  %p= "Path parts: #{parts.join(" / ")}"

@@ -7,11 +7,6 @@
     { href: "/demo", label: [:nav, :demo] }
   ]
 
-  def initialize(children:, slots: {})
-    @children = children
-    @slots = slots
-  end
-
 %body
   %header
     .header-inner
@@ -25,4 +20,4 @@
             %a{ href: link[:href] }= I18n.t(*link[:label])
         %LanguageSwitcher
   %main
-    = @children
+    = $children

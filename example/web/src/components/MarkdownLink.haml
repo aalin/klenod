@@ -1,9 +1,2 @@
-:ruby
-  def initialize(children: nil, **props)
-    @children = children
-    @href = props[:href] || props["href"]
-    @title = props[:title] || props["title"]
-  end
-
-%a{ href: @href, title: @title }
-  = @children
+%a{ href: $href, title: $title }
+  = $children
