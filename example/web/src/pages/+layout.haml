@@ -1,5 +1,6 @@
 :ruby
   I18n = Example::I18n.new(self)
+  Logo = import("./logo.svg")
   LanguageSwitcher = import("/components/LanguageSwitcher.haml")
   Links = [
     { href: "/", label: [:nav, :overview] },
@@ -14,13 +15,14 @@
 %body
   %header
     .header-inner
-      %a{ href: localized_path("/") }
+      %a{ href: "/" }
+        %img{ src: Logo.src, width: Logo.width, height: Logo.height, alt: "" }
         %span Klenod
         %span= I18n.t(:brand, :label)
       .header-actions
         %nav{ aria: { label: I18n.t(:nav, :label) } }
           = Links.map do |link|
-            %a{ href: localized_path(link[:href]) }= I18n.t(*link[:label])
+            %a{ href: link[:href] }= I18n.t(*link[:label])
         %LanguageSwitcher
   %main
     = @children

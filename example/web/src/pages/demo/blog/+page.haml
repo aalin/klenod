@@ -19,4 +19,4 @@
           %h2= post.fetch("title")
           %time{ datetime: post.fetch("date") }= post.fetch("date")
         %p= post.fetch("summary")
-        %a{ href: localized_path("/demo/blog/[slug]", slug: post.fetch("slug")) } Read post
+        %a{ href: "/demo/blog/#{post.fetch("slug")}" } Read post

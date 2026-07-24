@@ -21,6 +21,6 @@
   end
 
 %article
-  %NavTabs{ links: Links.map { |link| link.merge(href: localized_path(link[:href]), label: I18n.t(*link[:label])) } }
+  %NavTabs{ links: Links.map { |link| link.merge(label: I18n.t(*link[:label])) } }
   %section
     = @children

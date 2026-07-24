@@ -14,6 +14,6 @@
     %h2 Blog posts
     %nav(aria-label="Blog posts")
       = Posts.map do |post|
-        %a{ href: localized_path("/demo/blog/[slug]", slug: post.fetch("slug")) }= post.fetch("title")
+        %a{ href: "/demo/blog/#{post.fetch("slug")}" }= post.fetch("title")
   %section
     = @children

@@ -18,6 +18,10 @@
   #language-menu.popover{ popover: "auto" }
     = Languages.map do |language|
       - selected = language[:locale] == current_locale
-      %a{ href: localized_path(current_path, locale: language[:locale]), "aria-current" => selected ? "true" : nil }
+      %a{
+        href: current_path,
+        hreflang: language[:locale],
+        "aria-current" => selected && "true"
+      }
         %span= language[:label]
         %code= language[:code]

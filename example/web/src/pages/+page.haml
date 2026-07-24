@@ -18,5 +18,5 @@
     %Panel{ title: I18n.t(:features, :bundle, :title) }
       %p= I18n.t(:features, :bundle, :body)
   %footer
-    %Button{ href: localized_path("/demo") }= I18n.t(:actions, :demo)
-    %Button{ href: localized_path("/demo/assets") }= I18n.t(:actions, :assets)
+    %Button{ href: "/demo" }= I18n.t(:actions, :demo)
+    %Button{ href: "/demo/assets" }= I18n.t(:actions, :assets)

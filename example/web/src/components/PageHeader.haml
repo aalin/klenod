@@ -1,6 +1,4 @@
 :ruby
-  Logo = import("./logo.svg")
-
   def initialize(kicker: nil, title:, summary: nil, children: nil)
     @kicker = kicker
     @title = title
@@ -8,7 +6,6 @@
   end
 
 %header
-  %img.logo{ src: Logo.src, width: Logo.width, height: Logo.height, alt: "" }
   .content
     = if @kicker
       %p.kicker= @kicker
