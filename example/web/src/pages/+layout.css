@@ -32,11 +32,17 @@ header {
 .header-inner > a {
   display: inline-flex;
   gap: var(--space-2);
-  align-items: baseline;
+  align-items: center;
   color: var(--color-ink);
   font-weight: 850;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.header-inner > a img {
+  display: block;
+  width: 2rem;
+  height: auto;
 }
 
 .header-inner > a span:last-child {
@@ -78,12 +84,13 @@ nav a:hover {
 main {
   view-transition-name: page-content;
   contain: layout;
+  container: main / inline-size;
   width: min(var(--page-width), calc(100% - 2rem));
   margin: 0 auto;
   padding: var(--space-6) 0;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 45rem) {
   .header-inner {
     align-items: flex-start;
     flex-direction: column;

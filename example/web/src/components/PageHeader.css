@@ -1,17 +1,7 @@
 header {
   view-transition-name: page-header;
   contain: layout;
-  display: grid;
-  grid-template-columns: clamp(3rem, 7vw, 4.75rem) minmax(0, 1fr);
-  gap: var(--space-4);
-  align-items: start;
   max-width: 860px;
-}
-
-.logo {
-  display: block;
-  width: 100%;
-  height: auto;
 }
 
 .content {

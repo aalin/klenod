@@ -42,7 +42,7 @@ a {
   font-weight: 800;
 }
 
-@media (max-width: 640px) {
+@container main (max-width: 40rem) {
   article {
     grid-template-columns: 1fr;
   }

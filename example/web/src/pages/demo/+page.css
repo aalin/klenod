@@ -5,12 +5,6 @@ article {
 
 section {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   gap: var(--space-4);
-}
-
-@media (max-width: 820px) {
-  section {
-    grid-template-columns: 1fr;
-  }
 }
