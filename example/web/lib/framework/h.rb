@@ -8,7 +8,7 @@ module Example
     VOID_TAGS = %i[area base br col embed hr img input link meta param source track wbr].freeze
 
     def self.[](tag, *children, **props)
-      return tag.new(**props, children: children).render if tag.is_a?(Class)
+      return render_component(tag, **props, children: children) if tag.is_a?(Class)
 
       props = localize_anchor_props(props) if tag == :a
       rendered_attributes =
@@ -55,6 +55,14 @@ module Example
       return false if value == "/assets" || value.start_with?("/assets/")
 
       true
+    end
+
+    def self.render_component(tag, **props)
+      if tag.respond_to?(:instantiate)
+        tag.instantiate(**props).render
+      else
+        tag.new(**props).render
+      end
     end
   end
 end

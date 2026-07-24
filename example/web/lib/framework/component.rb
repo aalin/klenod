@@ -2,6 +2,19 @@
 
 module Example
   class Component
+    def self.instantiate(**props)
+      instance = allocate
+      instance.instance_variable_set(:@__props, props.freeze)
+
+      if instance.method(:initialize).parameters.empty?
+        instance.send(:initialize)
+      else
+        instance.send(:initialize, **props)
+      end
+
+      instance
+    end
+
     def context
       Context.current
     end

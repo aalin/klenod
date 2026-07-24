@@ -14,6 +14,19 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
 
   module FakeFramework
     class ComponentBase
+      def self.instantiate(**props)
+        instance = allocate
+        instance.instance_variable_set(:@__props, props.freeze)
+
+        if instance.method(:initialize).parameters.empty?
+          instance.send(:initialize)
+        else
+          instance.send(:initialize, **props)
+        end
+
+        instance
+      end
+
       def initialize(**props)
         @__props = props.freeze
       end
@@ -23,6 +36,7 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
       def self.[](tag, *children, **props)
         props = props.compact
 
+        return tag.instantiate(**props, children: children).render if tag.respond_to?(:instantiate)
         return tag.new(**props, children: children).render if tag.is_a?(Class)
 
         props.empty? ? [tag, *children] : [tag, *children, props]

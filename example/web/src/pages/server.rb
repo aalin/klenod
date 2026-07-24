@@ -61,9 +61,7 @@ def self.render_page_response(match, request, context, raw_request: nil, status:
       layouts
         .reverse_each
         .reduce(body) do |inner, layout|
-        layout
-          .new(children: [inner], slots: render_slots(match, layout, request))
-          .render
+        component_instance(layout, children: [inner], slots: render_slots(match, layout, request)).render
       end
     end
 
@@ -88,9 +86,15 @@ def self.render_page_response(match, request, context, raw_request: nil, status:
 end
 
 def self.page_instance(page, props)
-  return page.new if props.empty?
+  component_instance(page, **props)
+end
 
-  page.new(**props)
+def self.component_instance(component, **props)
+  if component.respond_to?(:instantiate)
+    component.instantiate(**props)
+  else
+    component.new(**props)
+  end
 end
 
 def self.format_render_error(error, context)

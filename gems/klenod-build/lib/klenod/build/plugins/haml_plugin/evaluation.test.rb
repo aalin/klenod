@@ -110,6 +110,33 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_global_variable_props_are_available_before_custom_initialize
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
+
+    evaluate_haml(
+      {
+        "components/card.haml" => <<~HAML,
+          :ruby
+            def initialize
+              @title = $title.upcase
+            end
+
+          %h2= @title
+        HAML
+        "pages/page.haml" => <<~HAML
+          :ruby
+            Card = import("/components/card.haml")
+
+          %Card{ title: "Hello" }
+        HAML
+      },
+      plugin: plugin,
+      plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin]
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:h2, "HELLO"], exports::Default.new.render)
+    end
+  end
+
   def test_haml_transformer_does_not_rewrite_global_variables_in_strings_or_special_globals
     plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
 
