@@ -66,10 +66,25 @@ module Example
     end
 
     def log_startup(port:, source_dir:, assets_dir:, source_label: "watching")
+      yjit_value =
+        if defined?(RubyVM::YJIT) && RubyVM::YJIT.enabled?
+          color(:value, "true")
+        else
+          color(:dim, "false")
+        end
+
+      rows = [
+        ["url", color(:value, "http://localhost:#{port}")],
+        [source_label, source_dir],
+        ["assets", assets_dir || color(:dim, "in memory")],
+        ["yjit", yjit_value]
+      ]
+      label_width = rows.map { |label, _value| label.length }.max
+
       puts color(:title, "Klenod example server")
-      puts "  #{color(:label, "url")}       #{color(:value, "http://localhost:#{port}")}"
-      puts "  #{color(:label, source_label)} #{source_dir}"
-      puts "  #{color(:label, "assets")}    #{assets_dir || color(:dim, "in memory")}"
+      rows.each do |label, value|
+        puts "  #{color(:label, format("%-#{label_width}s", label))} #{value}"
+      end
     end
   end
 end
