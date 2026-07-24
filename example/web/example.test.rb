@@ -309,7 +309,10 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "popovertarget=\"language-menu\"")
     assert_includes(html, "popovertargetaction=\"toggle\"")
     assert_includes(html, "title=\"Choose language\"")
-    assert_includes(html, "language_solid_full")
+    language_switcher_css_path =
+      stylesheet_paths(html).find { |path| path.include?("components_LanguageSwitcher_css") } ||
+        flunk("Expected LanguageSwitcher stylesheet")
+    assert_includes(context.asset(language_switcher_css_path).bytes, "language_solid_full")
     assert_includes(html, "href=\"/demo/assets\"")
     assert_includes(html, "href=\"/sv/demo/assets\"")
     assert_includes(html, "href=\"/sv/demo/formular\"")

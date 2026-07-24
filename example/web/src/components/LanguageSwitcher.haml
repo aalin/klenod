@@ -1,5 +1,4 @@
 :ruby
-  Icon = import("./language-solid-full.svg")
   Languages = [
     { locale: "en", label: "English", code: "EN" },
     { locale: "sv", label: "Svenska", code: "SV" }
@@ -10,7 +9,7 @@
   current_locale = request.route_locale || "en"
 .switcher
   %button(type="button" popovertarget="language-menu" popovertargetaction="toggle" title="Choose language")
-    %img.icon{ src: Icon.src, width: Icon.width, height: Icon.height, alt: "" }
+    %span.icon(aria-hidden="true")
     %span.code= current_locale.upcase
   #language-menu.popover{ popover: "auto" }
     = Languages.map do |language|
