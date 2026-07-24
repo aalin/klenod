@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "cgi/escape"
+require "json"
+require "securerandom"
 
 require "klenod"
 require_relative "../dev/update_logger"
@@ -11,6 +13,7 @@ require_relative "runner"
 module Example
   class DevServer
     ERROR_LOG_REPEAT_INTERVAL = 2.0
+    CHROME_DEVTOOLS_ENDPOINT = "/.well-known/appspecific/com.chrome.devtools.json"
 
     def initialize(config_path:, port: Integer(ENV.fetch("PORT", "9292")), assets_dir: ENV["ASSETS_DIR"])
       @config = Klenod::Build::ConfigLoader.load(config_path)
@@ -66,9 +69,26 @@ module Example
         ServerRunner.new(
           port: port,
           asset_app: asset_app,
-          app: ->(request) { entry.call(request, context) },
+          app: ->(request) { dev_response_for(request) || entry.call(request, context) },
           error_handler: ->(request, error) { handle_request_error(request, error) }
         )
+    end
+
+    def dev_response_for(request)
+      return unless request.path == CHROME_DEVTOOLS_ENDPOINT
+
+      [
+        200,
+        {
+          "cache-control" => "no-store",
+          "content-type" => "application/json; charset=utf-8"
+        },
+        [JSON.generate({workspace: {root: source_dir, uuid: devtools_workspace_uuid}}), "\n"]
+      ]
+    end
+
+    def devtools_workspace_uuid
+      @devtools_workspace_uuid ||= SecureRandom.uuid
     end
 
     def asset_app

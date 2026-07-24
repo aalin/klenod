@@ -547,6 +547,22 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("text/plain", response.headers["content-type"])
   end
 
+  def test_dev_server_handles_chrome_devtools_probe
+    server = Example::DevServer.allocate
+    source_dir = "/tmp/klenod_example/src"
+    server.instance_variable_set(:@source_dir, source_dir)
+    server.instance_variable_set(:@devtools_workspace_uuid, "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b")
+    status, headers, body =
+      server.send(:dev_response_for, HeaderRequest["GET", "/.well-known/appspecific/com.chrome.devtools.json", HeaderList.new([])])
+    payload = JSON.parse(body.join)
+
+    assert_equal(200, status)
+    assert_equal("application/json; charset=utf-8", headers.fetch("content-type"))
+    assert_equal("no-store", headers.fetch("cache-control"))
+    assert_equal(source_dir, payload.dig("workspace", "root"))
+    assert_equal("6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b", payload.dig("workspace", "uuid"))
+  end
+
   def test_production_server_returns_generic_error_response
     server = Example::ProductionServer.allocate
     status, headers, body = nil
