@@ -25,6 +25,8 @@
 
       Haml component references such as `%Button` compile to factory calls using the imported component class as the tag.
 
+      When `HamlPlugin` is configured with `global_variables: "@__props"`, app-style global variable reads become prop lookups. In the example above, `$title` compiles to `@__props[:title]`. This keeps templates concise while leaving the props storage object under framework control.
+
   %DocsSection{ title: "Ruby And Filters" }
     :markdown
       `=` prints a value. `-` runs Ruby silently. Ruby filters define class-level code for imports and methods, while later Ruby script blocks inside the template render method can access request-local helpers.
