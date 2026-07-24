@@ -14,6 +14,9 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
 
   module FakeFramework
     class ComponentBase
+      def initialize(**props)
+        @__props = props.freeze
+      end
     end
 
     module H

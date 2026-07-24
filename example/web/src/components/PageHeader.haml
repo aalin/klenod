@@ -1,14 +1,7 @@
-:ruby
-  def initialize(kicker: nil, title:, summary: nil, children: nil)
-    @kicker = kicker
-    @title = title
-    @summary = summary
-  end
-
 %header
   .content
-    = if @kicker
-      %p.kicker= @kicker
-    %h1= @title
-    = if @summary
-      %p.summary= @summary
+    = if $kicker
+      %p.kicker= $kicker
+    %h1= $title
+    = if $summary
+      %p.summary= $summary

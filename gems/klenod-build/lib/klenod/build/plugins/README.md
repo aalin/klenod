@@ -61,12 +61,14 @@ Configuration:
 ```ruby
 Klenod::Build::Plugins::HamlPlugin.new(
   component_base_class: "Example::Component",
-  factory: "Example::H"
+  factory: "Example::H",
+  global_variables: "@__props"
 )
 ```
 
 - `component_base_class`: Ruby constant path used as the generated component superclass. Defaults to `"Object"`.
 - `factory`: Ruby constant path used for generated HTML/component calls. Defaults to `"Object"`.
+- `global_variables`: optional Ruby expression used to rewrite app-style global variable reads in Haml Ruby code. For example, `global_variables: "@__props"` compiles `$title` to `@__props[:title]`. Built-in Ruby globals such as `$!`, `$1`, and `$LOAD_PATH` are left untouched.
 
 `:markdown` filters use `MarkdownPlugin`'s source-root component map convention when `markdown-components.rb` exists.
 

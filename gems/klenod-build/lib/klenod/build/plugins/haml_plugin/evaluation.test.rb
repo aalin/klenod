@@ -58,6 +58,81 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_rewrites_configured_global_variables_to_props
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %h1= $title
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      assert_equal([:h1, "Hello"], exports::Default.new(title: "Hello").render)
+      assert_includes(record.transformed_source, "@__props[:title]")
+    end
+  end
+
+  def test_haml_transformer_rewrites_configured_global_variables_in_dynamic_attributes
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %p{ title: $title } Hello
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:p, "Hello", {title: "Greeting"}], exports::Default.new(title: "Greeting").render)
+    end
+  end
+
+  def test_haml_transformer_rewrites_configured_global_variables_in_ruby_filters
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def title
+              $title.upcase
+            end
+
+          %h1= title
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      assert_equal([:h1, "HELLO"], exports::Default.new(title: "hello").render)
+      assert_includes(record.transformed_source, "@__props[:title].upcase")
+    end
+  end
+
+  def test_haml_transformer_does_not_rewrite_global_variables_in_strings_or_special_globals
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def title
+              ["$title", $LOAD_PATH.class.name, $1].compact.join(":")
+            end
+
+          %p= title
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      assert_equal([:p, "$title:Array"], exports::Default.new(title: "Hello").render)
+      assert_includes(record.transformed_source, '"$title"')
+      assert_includes(record.transformed_source, "$LOAD_PATH")
+      assert_includes(record.transformed_source, "$1")
+    end
+  end
+
   def test_haml_transformer_supports_simple_dynamic_attribute_hashes
     evaluate_haml(
       {

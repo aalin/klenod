@@ -166,8 +166,9 @@ module Klenod
               end
             end
 
-            def initialize(profiler: nil)
+            def initialize(profiler: nil, global_variables: nil)
               @profiler = profiler
+              @global_variables = global_variables
               @expression_cache = {}
               @statements_cache = {}
               @program_cache = {}
@@ -285,7 +286,7 @@ module Klenod
             end
 
             def expression(source, line_no: nil)
-              source = rewrite_line_constant(source, line_no)
+              source = rewrite_ruby_source(source, line_no)
               return Fragment.new(source, constant_path(source)) if source.match?(VALID_CONST_PATH)
 
               node = parse_expression(source, context: :expression)
@@ -294,7 +295,7 @@ module Klenod
             end
 
             def statements(source, line_no: nil)
-              source = rewrite_line_constant(source, line_no)
+              source = rewrite_ruby_source(source, line_no)
               node = parse_statements(source)
 
               Fragment.new(source, node)
@@ -463,7 +464,7 @@ module Klenod
             end
 
             def parenthesized_expression(source, line_no: nil)
-              source = rewrite_line_constant(source, line_no)
+              source = rewrite_ruby_source(source, line_no)
               node = parse_expression(source, context: :parenthesized_expression)
               return expression("(#{source})") unless node
 
@@ -471,7 +472,7 @@ module Klenod
             end
 
             def hash_expression(source, line_no: nil)
-              source = rewrite_line_constant(source, line_no)
+              source = rewrite_ruby_source(source, line_no)
               node = parse_expression(source, context: :hash_expression)
               return nil unless node.is_a?(SyntaxTree::HashLiteral)
 
@@ -522,17 +523,17 @@ module Klenod
             end
 
             def script_block(source, body, line_no: nil)
-              source = rewrite_line_constant(source, nil)
+              source = rewrite_ruby_source(source, nil)
               ast_script_block(source, body) || raise_ruby_parse_error(source, line_no: line_no, context: "Could not build Ruby block from Haml script")
             end
 
             def silent_script_block(source, body, line_no: nil)
-              source = rewrite_line_constant(source, nil)
+              source = rewrite_ruby_source(source, nil)
               ast_silent_script_block(source, body) || raise_ruby_parse_error(source, line_no: line_no, context: "Could not build Ruby block from Haml script")
             end
 
             def silent_script(source)
-              source = rewrite_line_constant(source, nil)
+              source = rewrite_ruby_source(source, nil)
               ast_silent_script(source) || raise(ArgumentError, "Could not build Ruby begin block from Haml script: #{source.inspect}")
             end
 
@@ -587,7 +588,7 @@ module Klenod
             end
 
             def line_rewritten_source(source, line_no)
-              rewrite_line_constant(source, line_no)
+              rewrite_ruby_source(source, line_no)
             end
 
             def block_script?(source)
@@ -598,6 +599,11 @@ module Klenod
             end
 
             private
+
+            def rewrite_ruby_source(source, line_no)
+              source = rewrite_line_constant(source, line_no)
+              rewrite_global_variables(source)
+            end
 
             def rewrite_line_constant(source, line_no)
               return source.to_s unless line_no
@@ -616,6 +622,27 @@ module Klenod
                   offset = line_offsets.fetch(line - 1) + column
                   rewritten[offset, token.length] = line_no.to_s
                 end
+            end
+
+            def rewrite_global_variables(source)
+              return source unless @global_variables
+
+              line_offsets = [0]
+              source.each_line(chomp: false) { |line| line_offsets << line_offsets.last + line.length }
+
+              Ripper
+                .lex(source)
+                .select { |(_line, _column), type, token, _state| type == :on_gvar && prop_global_variable?(token) }
+                .reverse_each
+                .each_with_object(source.dup) do |((line, column), _type, token, _state), rewritten|
+                  name = token.delete_prefix("$")
+                  offset = line_offsets.fetch(line - 1) + column
+                  rewritten[offset, token.length] = "#{@global_variables}[#{symbol_source(name)}]"
+                end
+            end
+
+            def prop_global_variable?(token)
+              token.match?(/\A\$[a-z]\w*\z/)
             end
 
             def source_expressions(expressions)
@@ -1103,11 +1130,12 @@ module Klenod
             styleable: false,
             profiler: nil,
             import_rewriter: nil,
-            markdown_components_source: "{}"
+            markdown_components_source: "{}",
+            global_variables: nil
           )
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
-            builder = RubyBuilder.new(profiler: profiler)
+            builder = RubyBuilder.new(profiler: profiler, global_variables: global_variables)
             previous_profiler = @profiler
             previous_module_id = @module_id
             @profiler = profiler
@@ -1676,10 +1704,12 @@ module Klenod
 
         def initialize(
           component_base_class: DEFAULT_COMPONENT_BASE_CLASS,
-          factory: DEFAULT_FACTORY
+          factory: DEFAULT_FACTORY,
+          global_variables: nil
         )
           @component_base_class = component_base_class
           @factory = factory
+          @global_variables = validate_global_variables(global_variables)
           @transformer = Transformer.new
         end
 
@@ -1772,7 +1802,8 @@ module Klenod
               styleable: !style_dependencies.empty?,
               profiler: profiler,
               import_rewriter: import_rewriter,
-              markdown_components_source: markdown_components_dependency ? "__klenod_import__(#{markdown_components_dependency.id.inspect})::Default" : "{}"
+              markdown_components_source: markdown_components_dependency ? "__klenod_import__(#{markdown_components_dependency.id.inspect})::Default" : "{}",
+              global_variables: @global_variables
             )
           import_rewrite =
             if !haml_result.code.include?("import(") && !haml_result.code.include?("lazy_import(") && !haml_result.code.include?("import_glob(")
@@ -1831,6 +1862,18 @@ module Klenod
         end
 
         private
+
+        def validate_global_variables(global_variables)
+          return nil if global_variables.nil?
+
+          source = global_variables.to_s
+          parsed = SyntaxTree.parse(source)&.statements&.body
+          raise ArgumentError, "global_variables must be a Ruby expression" unless parsed&.length == 1
+
+          source
+        rescue SyntaxTree::Parser::ParseError
+          raise ArgumentError, "global_variables must be a Ruby expression"
+        end
 
         def translations_for(context, module_id)
           intl_plugin = context.plugins.find { |plugin| plugin.respond_to?(:translations_for) }

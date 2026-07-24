@@ -26,7 +26,8 @@ module Example
       context.routes.localized_path(...)
     end
 
-    def initialize(...)
+    def initialize(**props)
+      @__props = props.freeze
     end
   end
 end
