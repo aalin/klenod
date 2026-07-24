@@ -194,6 +194,17 @@ class Klenod::ExampleTest < Minitest::Test
     assert_route_includes(entry, context, "/login", "Login intercept")
   end
 
+  def test_example_app_localizes_markdown_links
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    status, _headers, body = entry.call(request("/sv/demo/markdown"), context)
+    html = body.join
+
+    assert_equal(200, status)
+    assert_includes(html, %(href="/sv/demo/markdown"))
+  end
+
   def test_example_app_renders_swedish_localized_routes
     config = example_config
     context = config.context
@@ -714,6 +725,61 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("/demo/assets", routes.canonicalize_path("/sv/demo/assets").path)
   end
 
+  def test_example_h_localizes_local_anchor_hrefs
+    request = localized_request(locale: "sv")
+
+    Example::Context.with(request: request, routes: localized_routes) do
+      html = Example::H[:a, "Assets", href: "/demo/assets"]
+
+      assert_includes(html, %(href="/sv/demo/assets"))
+    end
+  end
+
+  def test_example_h_uses_hreflang_for_local_anchor_hrefs
+    request = localized_request(locale: "en")
+
+    Example::Context.with(request: request, routes: localized_routes) do
+      html = Example::H[:a, "Assets", href: "/demo/assets?from=docs#top", hreflang: "sv"]
+
+      assert_includes(html, %(href="/sv/demo/assets?from=docs#top"))
+      assert_includes(html, %(hreflang="sv"))
+    end
+  end
+
+  def test_example_h_canonicalizes_already_localized_anchor_hrefs
+    request = localized_request(locale: "sv")
+
+    Example::Context.with(request: request, routes: localized_routes) do
+      html = Example::H[:a, "Assets", href: "/sv/demo/assets"]
+
+      assert_includes(html, %(href="/sv/demo/assets"))
+      refute_includes(html, "/sv/sv/")
+    end
+  end
+
+  def test_example_h_keeps_dynamic_anchor_segments_when_localizing
+    request = localized_request(locale: "sv")
+
+    Example::Context.with(request: request, routes: localized_routes) do
+      html = Example::H[:a, "Blog post", href: "/demo/blog/shop"]
+
+      assert_includes(html, %(href="/sv/demo/blogg/shop"))
+      refute_includes(html, "/sv/demo/blogg/butik")
+    end
+  end
+
+  def test_example_h_leaves_non_app_anchor_hrefs_unchanged
+    request = localized_request(locale: "sv")
+
+    Example::Context.with(request: request, routes: localized_routes) do
+      assert_includes(Example::H[:a, "External", href: "https://example.com/demo/assets"], %(href="https://example.com/demo/assets"))
+      assert_includes(Example::H[:a, "Protocol relative", href: "//example.com/demo/assets"], %(href="//example.com/demo/assets"))
+      assert_includes(Example::H[:a, "Mail", href: "mailto:hello@example.com"], %(href="mailto:hello@example.com"))
+      assert_includes(Example::H[:a, "Fragment", href: "#intro"], %(href="#intro"))
+      assert_includes(Example::H[:a, "Asset", href: "/assets/app.css"], %(href="/assets/app.css"))
+    end
+  end
+
   def test_example_localized_routes_use_same_language_fallback
     routes = localized_routes
     localized = routes.canonicalize_path("/sv-SE/demo/assets")
@@ -735,6 +801,7 @@ class Klenod::ExampleTest < Minitest::Test
     routes = localized_routes
 
     assert_equal("/sv/demo/blogg/tillgangar", routes.localized_path("/demo/blog/[slug]", locale: "sv", slug: "tillgangar"))
+    assert_equal("/sv/demo/blogg/shop", routes.localized_href("/demo/blog/shop", locale: "sv"))
     assert_equal("/demo/blog/tillgangar", routes.canonicalize_path("/sv/demo/blogg/tillgangar").path)
   end
 
@@ -744,6 +811,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal("/fr/demo/tillgangar", localized.path)
     assert_equal("en", localized.locale)
+    assert_equal("/sv/missing", routes.localized_href("/sv/missing", locale: "sv"))
   end
 
   def test_example_localized_routes_ignore_headers_without_locale_prefix
