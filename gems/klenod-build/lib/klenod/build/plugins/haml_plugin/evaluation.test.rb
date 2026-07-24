@@ -379,6 +379,60 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_does_not_add_space_after_silent_setup_script
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          - value = "hello"
+
+          %code= value
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([nil, [:code, "hello"]], exports::Default.new.render)
+    end
+  end
+
+  def test_haml_transformer_keeps_inner_whitespace_marker_across_silent_setup_script
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def value
+              "hello"
+            end
+
+          %pre
+            before
+            - class_name = "language-text"
+            %code<= value
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:pre, "before", nil, " ", [:code, "hello"]], exports::Default.new.render)
+    end
+  end
+
+  def test_haml_transformer_keeps_outer_whitespace_marker_across_silent_setup_script
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def value
+              "hello"
+            end
+
+          %p
+            %span<> before
+            - class_name = "language-text"
+            %code= value
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:p, [:span, "before"], nil, " ", [:code, "hello"]], exports::Default.new.render)
+    end
+  end
+
   def test_haml_transformer_adds_space_before_nested_script_tag_with_inner_whitespace_marker
     evaluate_haml(
       {

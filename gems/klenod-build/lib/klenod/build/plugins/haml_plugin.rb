@@ -1296,12 +1296,16 @@ module Klenod
                 index += 1
               end
 
-              expressions << builder.literal(" ") if previous_node && whitespace_between?(previous_node, node)
+              expressions << builder.literal(" ") if previous_node && whitespace_boundary_node?(node) && whitespace_between?(previous_node, node)
               expressions << expression
-              previous_node = node
+              previous_node = node if whitespace_boundary_node?(node)
             end
 
             expressions
+          end
+
+          def whitespace_boundary_node?(node)
+            !(node.type == :silent_script && node.children.empty?)
           end
 
           def whitespace_between?(left, right)
