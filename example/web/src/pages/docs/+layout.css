@@ -44,7 +44,7 @@ summary {
   padding: 0.35rem 0.6rem;
   color: var(--color-muted);
   cursor: pointer;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 850;
   letter-spacing: 0.08em;
   line-height: 1.25;
@@ -62,7 +62,6 @@ nav a {
   padding: 0.42rem 0.6rem;
   color: var(--color-muted);
   border-radius: var(--radius-sm);
-  font-size: var(--font-size-small);
   font-weight: 750;
   line-height: 1.25;
   text-decoration: none;
