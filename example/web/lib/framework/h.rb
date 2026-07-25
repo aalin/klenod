@@ -6,6 +6,7 @@ module Example
   module H
     HtmlString = Class.new(String)
     VOID_TAGS = %i[area base br col embed hr img input link meta param source track wbr].freeze
+    HTML_ESCAPE_PATTERN = /[&"<>]/
 
     def self.[](tag, *children, **props)
       return render_component(tag, **props, children: children) if tag.is_a?(Class)
@@ -36,7 +37,10 @@ module Example
     def self.escape_html(value)
       return value.to_s if value.is_a?(HtmlString)
 
-      CGI.escapeHTML(value.to_s)
+      string = value.to_s
+      return string unless string.match?(HTML_ESCAPE_PATTERN)
+
+      CGI.escapeHTML(string)
     end
 
     def self.rendered_attributes(props)
