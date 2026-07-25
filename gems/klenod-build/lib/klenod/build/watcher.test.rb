@@ -58,6 +58,43 @@ class Klenod::Build::Watcher::Test < Minitest::Test
     assert_equal(asset_updates, event.asset_updates)
   end
 
+  def test_pending_changes_coalesces_paths_by_final_filesystem_state
+    Dir.mktmpdir do |dir|
+      kept_path = "#{dir}/kept.rb"
+      removed_path = "#{dir}/removed.rb"
+      restored_path = "#{dir}/restored.rb"
+      File.write(kept_path, "kept\n")
+      File.write(removed_path, "removed\n")
+
+      changes = Klenod::Build::Watcher::PendingChanges.new
+      changes.add([kept_path, removed_path], [])
+      File.delete(removed_path)
+      changes.add([], [removed_path, restored_path])
+      File.write(restored_path, "restored\n")
+
+      changed_paths, removed_paths = changes.normalized
+
+      assert_equal([kept_path, restored_path].sort, changed_paths.sort)
+      assert_equal([removed_path], removed_paths)
+    end
+  end
+
+  def test_pending_changes_keeps_latest_event_when_file_state_matches
+    Dir.mktmpdir do |dir|
+      path = "#{dir}/page.rb"
+
+      changes = Klenod::Build::Watcher::PendingChanges.new
+      changes.add([], [path])
+      File.write(path, "page\n")
+      changes.add([path], [])
+
+      changed_paths, removed_paths = changes.normalized
+
+      assert_equal([path], changed_paths)
+      assert_equal([], removed_paths)
+    end
+  end
+
   def test_update_event_reports_added_companion_css_assets
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
