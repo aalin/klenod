@@ -11,21 +11,30 @@ module Example
       path, query_string = raw_path.split("?", 2)
       headers = headers_from(raw)
       cookies = parse_cookies(headers.fetch("cookie", nil))
+      form = parse_form(read_body(raw))
 
       self[
-        raw&.method.to_s.empty? ? "GET" : raw.method.to_s.upcase,
+        request_method(raw, form),
         path.empty? ? "/" : path,
         params,
         parse_query(query_string),
         headers,
         cookies,
-        parse_form(read_body(raw)),
+        form,
         Session.new(SessionCookie.decode(cookies[SESSION_COOKIE])),
         raw,
         localized&.path || (path.empty? ? "/" : path),
         localized&.locale,
         localized&.route_locale
       ]
+    end
+
+    def self.request_method(raw, form)
+      method = raw&.method.to_s.empty? ? "GET" : raw.method.to_s.upcase
+      return method unless method == "POST"
+
+      override = form.fetch("_method", "").to_s.upcase
+      %w[PUT PATCH DELETE].include?(override) ? override : method
     end
 
     def self.parse_query(query_string)

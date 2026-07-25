@@ -5,20 +5,32 @@
   line-height: 1;
 }
 
-.popover a {
+.popover form {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.popover button {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: var(--space-3);
   align-items: center;
+  width: 100%;
   padding: 0.55rem 0.65rem;
+  appearance: none;
   color: var(--color-ink);
+  background: transparent;
+  border: 0;
   border-radius: var(--radius-sm);
+  font: inherit;
   font-weight: 750;
   text-decoration: none;
+  text-align: left;
+  cursor: pointer;
 }
 
-.popover a:hover,
-.popover a[aria-current="true"] {
+.popover button:hover,
+.popover button[aria-current="true"] {
   color: var(--color-accent);
   background: var(--color-accent-soft);
 }

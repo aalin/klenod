@@ -174,13 +174,21 @@ end
 def self.call_route_handler(handler, request, vary_accept: false)
   method_name = request_method(request)
   return Example::Response.text("Method not allowed\n", status: 405).to_a unless handler.method_defined?(method_name)
-  return Example::Response.text("Invalid CSRF token\n", status: 403).to_a unless Example::CSRF.valid?(request)
+
+  route_handler = handler.new
+  return Example::Response.text("Invalid CSRF token\n", status: 403).to_a unless csrf_valid_for_route?(route_handler, request)
 
   response =
     Example::Context.with(request: request, routes: Routes) do
-      normalize_response(handler.new.public_send(method_name, request), request)
+      normalize_response(route_handler.public_send(method_name, request), request)
     end
   vary_accept ? with_vary_accept(response) : response
+end
+
+def self.csrf_valid_for_route?(route_handler, request)
+  return true if route_handler.respond_to?(:verify_csrf?) && !route_handler.verify_csrf?
+
+  Example::CSRF.valid?(request)
 end
 
 def self.request_method(request)

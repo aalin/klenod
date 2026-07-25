@@ -1,16 +1,10 @@
 :ruby
-  require "uri"
-
   PopoverButton = import("/components/PopoverButton.haml")
   Themes = [
     { value: "system", label: "OS Default", icon: Example::H::HtmlString.new("&#x1F313;") },
     { value: "light", label: "Light", icon: Example::H::HtmlString.new("&#x2600;&#xFE0F;") },
     { value: "dark", label: "Dark", icon: Example::H::HtmlString.new("&#x1F319;") }
   ].freeze
-
-  def theme_href(value, return_to)
-    "/theme?#{URI.encode_www_form("value" => value, "return_to" => return_to)}"
-  end
 
 :ruby
   current_theme = request.cookies.fetch(Example::THEME_COOKIE, "system")
@@ -27,11 +21,16 @@
     Example::H[:span, current[:icon], class: Styles[:icon], :"aria-hidden" => true]
   ]
 }
-  = Themes.map do |theme|
-    - selected = theme[:value] == current_theme
-    %a{
-      href: theme_href(theme[:value], return_to),
-      "aria-current" => selected && "true"
-    }
-      %span.icon(aria-hidden="true")= theme[:icon]
-      %span= theme[:label]
+  %form{ method: "post", action: "/theme" }
+    %input{ type: "hidden", name: "_method", value: "put" }
+    %input{ type: "hidden", name: "return_to", value: return_to }
+    = Themes.map do |theme|
+      - selected = theme[:value] == current_theme
+      %button{
+        type: "submit",
+        name: "value",
+        value: theme[:value],
+        "aria-current" => selected && "true"
+      }
+        %span.icon(aria-hidden="true")= theme[:icon]
+        %span= theme[:label]
