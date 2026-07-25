@@ -1,14 +1,14 @@
 code {
-  --syntax-text: light-dark(oklch(25% 0.024 252), oklch(91% 0.018 248));
-  --syntax-comment: light-dark(oklch(50% 0.024 255), oklch(73% 0.02 255));
-  --syntax-keyword: light-dark(oklch(45% 0.17 324), oklch(78% 0.16 330));
-  --syntax-name: light-dark(oklch(42% 0.12 68), oklch(82% 0.11 78));
-  --syntax-tag: light-dark(oklch(43% 0.14 210), oklch(82% 0.12 210));
-  --syntax-string: light-dark(oklch(42% 0.13 145), oklch(80% 0.13 145));
-  --syntax-number: light-dark(oklch(45% 0.14 46), oklch(80% 0.13 50));
-  --syntax-operator: light-dark(oklch(36% 0.024 252), oklch(88% 0.02 255));
-  --syntax-error: light-dark(oklch(42% 0.18 25), oklch(92% 0.12 25));
-  --syntax-error-background: light-dark(oklch(94% 0.045 25), oklch(38% 0.14 25));
+  --syntax-text: light-dark(#5c6773, #bfbdb6);
+  --syntax-comment: light-dark(#abb0b6, #626a73);
+  --syntax-keyword: light-dark(#fa8d3e, #ff8f40);
+  --syntax-name: light-dark(#a37acc, #d2a6ff);
+  --syntax-tag: light-dark(#55b4d4, #39bae6);
+  --syntax-string: light-dark(#86b300, #aad94c);
+  --syntax-number: light-dark(#a37acc, #d2a6ff);
+  --syntax-operator: light-dark(#ed9366, #f29668);
+  --syntax-error: light-dark(#f07171, #f07178);
+  --syntax-error-background: light-dark(#fce4e4, #3d1518);
 
   padding: var(--markdown-code-padding, 0.08rem 0.25rem);
   background: var(--markdown-code-background, var(--color-accent-soft));

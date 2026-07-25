@@ -1,11 +1,12 @@
 pre {
-  --markdown-code-block-background: light-dark(oklch(20% 0.028 252), oklch(14% 0.022 252));
-  --markdown-code-block-foreground: light-dark(oklch(94% 0.014 248), oklch(92% 0.018 248));
+  --markdown-code-block-background: light-dark(#f8f9fa, #11141c);
+  --markdown-code-block-foreground: light-dark(#5c6773, #bfbdb6);
   --markdown-code-background: transparent;
   --markdown-code-padding: 0;
   --markdown-code-radius: 0;
 
   overflow-x: auto;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--markdown-code-block-background);
   color: var(--markdown-code-block-foreground);
