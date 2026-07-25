@@ -1,4 +1,6 @@
 section {
+  display: grid;
+  gap: var(--space-3);
   min-width: 0;
   padding: var(--space-4);
   background: var(--color-surface);
@@ -8,6 +10,12 @@ section {
 }
 
 h2 {
-  margin: 0 0 var(--space-3);
+  margin: 0;
   font-size: 1.05rem;
+}
+
+.content {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
 }
