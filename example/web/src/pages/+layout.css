@@ -1,6 +1,8 @@
 @import "./root.css";
 
 body {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   margin: 0;
   background: var(--color-page);
@@ -85,6 +87,7 @@ nav a:hover {
 }
 
 main {
+  flex: 1;
   view-transition-name: page-content;
   contain: layout;
   container: main / inline-size;
