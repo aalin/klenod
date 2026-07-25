@@ -6,3 +6,6 @@ label = "Primary"
 overview = "Overview"
 docs = "Docs"
 demo = "Demo"
+
+[footer]
+summary = "An experimental Ruby module bundler and web framework playground."

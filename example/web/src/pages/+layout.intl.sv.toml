@@ -6,3 +6,6 @@ label = "Primär"
 overview = "Översikt"
 docs = "Dokumentation"
 demo = "Demo"
+
+[footer]
+summary = "En experimentell Ruby-modulbundlare och lekplats för webbramverk."

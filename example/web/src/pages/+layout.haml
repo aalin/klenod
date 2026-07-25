@@ -1,6 +1,7 @@
 :ruby
   I18n = Example::I18n.new(self)
   Logo = import("./logo.svg")
+  Homepage = Gem::Specification.find_by_name("klenod-runtime").homepage
   LanguageSwitcher = import("/components/LanguageSwitcher.haml")
   ThemeSwitcher = import("/components/ThemeSwitcher.haml")
   Links = [
@@ -24,3 +25,10 @@
         %LanguageSwitcher
   %main
     = $children
+  %footer
+    .footer-inner
+      .footer-copy
+        %strong Klenod
+        %span= I18n.t(:footer, :summary)
+      .footer-links
+        %a{ href: Homepage, target: "_blank", rel: "noreferrer" } GitHub
