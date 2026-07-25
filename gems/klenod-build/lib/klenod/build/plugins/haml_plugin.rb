@@ -2023,22 +2023,23 @@ module Klenod
                 return nil if classes.empty?
 
                 styles = component_class.const_defined?(:Styles, false) ? component_class::Styles : {}
-                resolved_classes =
-                  classes.map do |value|
-                    if value.is_a?(Symbol)
-                      name = value.to_s
-                      styles[value] || (name.start_with?("__") ? nil : name)
-                    else
-                      value
-                    end
+                class_names = []
+                classes.each do |value|
+                  if value.is_a?(Symbol)
+                    name = value.to_s
+                    collect_output_class_names(class_names, styles[value] || (name.start_with?("__") ? nil : name))
+                  else
+                    collect_output_class_names(class_names, value)
                   end
+                end
+                return nil if class_names.empty?
 
-                class_names(resolved_classes)
+                class_names.join(" ")
               end
 
               def self.class_names(*values)
                 classes = []
-                collect_output_class_names(classes, values)
+                values.each { |value| collect_output_class_names(classes, value) }
                 return nil if classes.empty?
 
                 classes.join(" ")
