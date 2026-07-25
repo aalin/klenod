@@ -1,6 +1,7 @@
 :ruby
   require "uri"
 
+  PopoverButton = import("/components/PopoverButton.haml")
   Themes = [
     { value: "system", label: "OS Default", icon: Example::H::HtmlString.new("&#x1F313;") },
     { value: "light", label: "Light", icon: Example::H::HtmlString.new("&#x2600;&#xFE0F;") },
@@ -17,15 +18,20 @@
   return_to = request.path
   current = Themes.find { |theme| theme[:value] == current_theme }
 
-.switcher
-  %button(type="button" popovertarget="theme-menu" popovertargetaction="toggle" title="Choose theme")
-    %span.icon(aria-hidden="true")= current[:icon]
-  #theme-menu.popover{ popover: "auto" }
-    = Themes.map do |theme|
-      - selected = theme[:value] == current_theme
-      %a{
-        href: theme_href(theme[:value], return_to),
-        "aria-current" => selected && "true"
-      }
-        %span.icon(aria-hidden="true")= theme[:icon]
-        %span= theme[:label]
+%PopoverButton{
+  id: "theme-menu",
+  anchor: "theme-switcher",
+  title: "Choose theme",
+  popover_class: Styles[:popover],
+  button: [
+    Example::H[:span, current[:icon], class: Styles[:icon], :"aria-hidden" => true]
+  ]
+}
+  = Themes.map do |theme|
+    - selected = theme[:value] == current_theme
+    %a{
+      href: theme_href(theme[:value], return_to),
+      "aria-current" => selected && "true"
+    }
+      %span.icon(aria-hidden="true")= theme[:icon]
+      %span= theme[:label]

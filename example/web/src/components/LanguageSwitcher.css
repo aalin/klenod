@@ -1,29 +1,5 @@
-.switcher {
-  display: inline-flex;
-}
-
-button {
-  anchor-name: --language-switcher;
-  display: inline-flex;
-  gap: var(--space-2);
-  align-items: center;
+.button {
   min-width: 2.7rem;
-  padding: 0.45rem 0.7rem;
-  color: var(--color-ink);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font: inherit;
-  font-weight: 800;
-  line-height: 1.2;
-  cursor: pointer;
-}
-
-.button:hover,
-.button:focus-visible {
-  color: var(--color-accent);
-  background: var(--color-accent-soft);
-  outline: none;
 }
 
 .icon {
@@ -40,61 +16,6 @@ button {
 .code {
   min-width: 1.3rem;
   text-align: left;
-}
-
-.popover {
-  --popover-transition-duration: 160ms;
-
-  position: absolute;
-  position-anchor: --language-switcher;
-  top: anchor(bottom);
-  left: auto;
-  right: anchor(right);
-  min-width: 11rem;
-  margin: var(--space-2) 0 0;
-  padding: var(--space-2);
-  color: var(--color-ink);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  opacity: 0;
-  box-shadow: var(--shadow-soft);
-  transform: translateY(-0.25rem);
-  transition:
-    display var(--popover-transition-duration) ease allow-discrete,
-    overlay var(--popover-transition-duration) ease allow-discrete,
-    opacity var(--popover-transition-duration) ease,
-    transform var(--popover-transition-duration) ease;
-}
-
-.popover:popover-open {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-@starting-style {
-  .popover:popover-open {
-    opacity: 0;
-    transform: translateY(-0.25rem);
-  }
-}
-
-.popover::backdrop {
-  background-color: oklch(from var(--color-backdrop) l c h / 0%);
-  transition:
-    display var(--popover-transition-duration) ease allow-discrete,
-    overlay var(--popover-transition-duration) ease allow-discrete,
-    background-color var(--popover-transition-duration) ease;
-}
-
-.popover:popover-open::backdrop {
-  background-color: var(--color-backdrop);
-}
-
-@starting-style {
-  .popover:popover-open::backdrop {
-    background-color: oklch(from var(--color-backdrop) l c h / 0%);
-  }
 }
 
 .popover a {

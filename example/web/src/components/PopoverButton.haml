@@ -1,0 +1,18 @@
+- anchor_name = "--#{$anchor || $id}"
+.switcher{ class: $class }
+  %button.button{
+    type: "button",
+    popovertarget: $id,
+    popovertargetaction: "toggle",
+    title: $title,
+    style: "anchor-name: #{anchor_name};",
+    class: $button_class
+  }
+    = $button
+  %div.popover{
+    id: $id,
+    popover: "auto",
+    style: "position-anchor: #{anchor_name};",
+    class: $popover_class
+  }
+    = $children
