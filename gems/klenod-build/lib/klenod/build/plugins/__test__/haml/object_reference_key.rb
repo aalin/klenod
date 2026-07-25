@@ -24,13 +24,11 @@ class ObjectReferenceKey < TestFramework::ComponentBase
     TestFramework::H[
       :div,
       "Hello",
-      **{
-        key:
-          begin
-            # SourceMapMark:5
-            [@user, :greeting]
-          end
-      }
+      key:
+        begin
+          # SourceMapMark:5
+          [@user, :greeting]
+        end
     ]
   end
 end

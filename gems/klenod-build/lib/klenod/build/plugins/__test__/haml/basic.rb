@@ -24,13 +24,11 @@ class Basic < TestFramework::ComponentBase
         # SourceMapMark:3
         TestFramework::H[:p, ("From Ruby")]
       end,
-      **{
-        class:
-          begin
-            # SourceMapMark:1
-            "shell".upcase
-          end
-      }
+      class:
+        begin
+          # SourceMapMark:1
+          "shell".upcase
+        end
     ]
   end
 end

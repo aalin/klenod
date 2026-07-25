@@ -19,13 +19,11 @@ class InlineCssFilter < TestFramework::ComponentBase
     TestFramework::H[
       :h1,
       "Hello",
-      **{
-        class:
-          begin
-            # SourceMapMark:6
-            HamlHelper.class_names(Styles[:title] || "title")
-          end
-      }
+      class:
+        begin
+          # SourceMapMark:6
+          HamlHelper.class_names(Styles[:title] || "title")
+        end
     ]
   end
 end

@@ -45,22 +45,18 @@ class LineConstants < TestFramework::ComponentBase
         # SourceMapMark:11
         TestFramework::H[
           :section,
-          **{
-            key:
-              begin
-                # SourceMapMark:11
-                11
-              end
-          }
+          key:
+            begin
+              # SourceMapMark:11
+              11
+            end
         ]
       end,
-      **{
-        data_line:
-          begin
-            # SourceMapMark:6
-            6
-          end
-      }
+      data_line:
+        begin
+          # SourceMapMark:6
+          6
+        end
     ]
   end
 end

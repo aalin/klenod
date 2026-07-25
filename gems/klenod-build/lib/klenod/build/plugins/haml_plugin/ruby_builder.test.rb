@@ -18,7 +18,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_includes(fragment.source, "#{self.class.name}::FakeFramework::H[")
     assert_includes(fragment.source, ":p")
     assert_includes(fragment.source, '"Hello"')
-    assert_includes(fragment.source, '**{ class: "intro" }')
+    assert_includes(fragment.source, 'class: "intro"')
   end
 
   def test_ruby_builder_preserves_source_map_marks_when_composing_factory_calls
@@ -37,7 +37,6 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_nil(fragment.node)
     assert_includes(fragment.source, "# SourceMapMark:1")
     assert_includes(fragment.source, "# SourceMapMark:2")
-    assert_includes(fragment.source, "**{")
     assert_includes(fragment.source, "class:")
     assert_includes(fragment.source, '"intro"')
   end

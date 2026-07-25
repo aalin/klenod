@@ -26,13 +26,11 @@ class WhitespaceMarkers < TestFramework::ComponentBase
         TestFramework::H[
           :a,
           "link",
-          **{
-            href:
-              begin
-                # SourceMapMark:3
-                "#"
-              end
-          }
+          href:
+            begin
+              # SourceMapMark:3
+              "#"
+            end
         ]
       end,
       " ",

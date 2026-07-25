@@ -26,13 +26,11 @@ class RubyFilter < TestFramework::ComponentBase
     TestFramework::H[
       :button,
       "Click me",
-      **{
-        onclick:
-          begin
-            # SourceMapMark:6
-            handle_click
-          end
-      }
+      onclick:
+        begin
+          # SourceMapMark:6
+          handle_click
+        end
     ]
   end
 end

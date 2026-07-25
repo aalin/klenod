@@ -901,12 +901,9 @@ module Klenod
             def keyword_props_source(props, mark:)
               return [] if props.empty?
 
-              props_source =
-                props.map do |name, value|
-                  "#{prop_key_source(name)} #{argument_source(value, mark: mark)}"
-                end
-
-              ["**{ #{props_source.join(", ")} }"]
+              props.map do |name, value|
+                "#{prop_key_source(name)} #{argument_source(value, mark: mark)}"
+              end
             end
 
             def prop_key_source(name)

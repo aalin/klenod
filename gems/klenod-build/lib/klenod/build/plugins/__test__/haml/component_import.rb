@@ -25,13 +25,11 @@ class ComponentImport < TestFramework::ComponentBase
         # SourceMapMark:5
         TestFramework::H[:p, "Lorem ipsum"]
       end,
-      **{
-        summary:
-          begin
-            # SourceMapMark:4
-            "More information"
-          end
-      }
+      summary:
+        begin
+          # SourceMapMark:4
+          "More information"
+        end
     ]
   end
 end
