@@ -88,7 +88,6 @@ nav a:hover {
 
 main {
   flex: 1;
-  view-transition-name: page-content;
   contain: layout;
   container: main / inline-size;
   width: min(var(--page-width), calc(100% - 2rem));

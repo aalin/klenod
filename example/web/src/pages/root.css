@@ -2,10 +2,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
 
-@view-transition {
-  navigation: auto;
-}
-
 :root {
   color-scheme: light dark;
 
@@ -39,13 +35,6 @@
   --font-size-body: 1rem;
   --font-size-h1: clamp(2rem, 3vw, 3.15rem);
   --font-size-h2: clamp(1.35rem, 2vw, 2rem);
-  --transition-page: 180ms;
-  --transition-page-out: 110ms;
-  --transition-header: 360ms;
-  --transition-header-out: 140ms;
-  --transition-ease: ease-in-out;
-  --transition-fade-ease: var(--transition-ease);
-  --transition-header-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   background: var(--color-page);
   overflow-y: scroll;
@@ -64,91 +53,4 @@
 
 *, *::before, *::after {
   box-sizing: border-box;
-}
-
-::view-transition-group(root) {
-  animation-duration: var(--transition-page);
-  animation-timing-function: var(--transition-fade-ease);
-}
-
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-}
-
-::view-transition-group(page-header) {
-  animation-duration: var(--transition-header);
-  animation-timing-function: var(--transition-header-ease);
-}
-
-::view-transition-group(page-header-title) {
-  animation-duration: var(--transition-header);
-  animation-timing-function: var(--transition-header-ease);
-}
-
-::view-transition-old(page-header),
-::view-transition-new(page-header) {
-  animation-duration: var(--transition-header-out);
-  animation-timing-function: var(--transition-fade-ease);
-  animation-fill-mode: both;
-  width: 100%;
-  height: 100%;
-  object-fit: none;
-  object-position: left top;
-  mix-blend-mode: normal;
-}
-
-::view-transition-old(page-header-title),
-::view-transition-new(page-header-title) {
-  width: 100%;
-  height: 100%;
-  object-fit: none;
-  object-position: left top;
-  mix-blend-mode: normal;
-}
-
-::view-transition-old(page-header) {
-  animation-name: fade-out;
-}
-
-::view-transition-new(page-header) {
-  animation: none;
-}
-
-::view-transition-old(page-header-title) {
-  animation: none;
-  opacity: 0;
-}
-
-::view-transition-new(page-header-title) {
-  animation: none;
-  opacity: 1;
-}
-
-::view-transition-old(page-content) {
-  animation: fade-out var(--transition-page-out) var(--transition-fade-ease) both;
-  mix-blend-mode: normal;
-}
-
-::view-transition-new(page-content) {
-  animation: none;
-  mix-blend-mode: normal;
-}
-
-@keyframes fade-out {
-  0% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :global(::view-transition-group(*)),
-  :global(::view-transition-old(*)),
-  :global(::view-transition-new(*)) {
-    animation-duration: 1ms;
-  }
 }

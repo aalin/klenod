@@ -1,5 +1,4 @@
 header {
-  view-transition-name: page-header;
   contain: layout;
   max-width: 860px;
 }
@@ -20,7 +19,6 @@ header {
 }
 
 h1 {
-  view-transition-name: page-header-title;
   width: fit-content;
   max-width: 100%;
   margin: 0;
