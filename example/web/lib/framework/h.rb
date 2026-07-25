@@ -5,7 +5,7 @@ require "cgi/escape"
 module Example
   module H
     HtmlString = Class.new(String)
-    VOID_TAGS = %i[area base br col embed hr img input link meta param source track wbr].freeze
+    VOID_TAGS = %i[area base br col embed hr img input link meta param source track wbr].to_set.freeze
     HTML_ESCAPE_PATTERN = /[&"<>]/
 
     def self.[](tag, *children, **props)
@@ -35,7 +35,7 @@ module Example
     end
 
     def self.escape_html(value)
-      return value.to_s if value.is_a?(HtmlString)
+      return value if value.is_a?(HtmlString)
 
       string = value.to_s
       return string unless string.match?(HTML_ESCAPE_PATTERN)
@@ -50,15 +50,15 @@ module Example
       props.each do |name, value|
         next if value.nil? || value == false
 
-        output << rendered_attribute(name, value)
+        output << " "
+        output << (name.is_a?(Symbol) ? name.to_s : escape_html(name))
+        next if value == true
+
+        output << '="'
+        output << escape_html(value)
+        output << '"'
       end
       output
-    end
-
-    def self.rendered_attribute(name, value)
-      return " #{escape_html(name)}" if value == true
-
-      %( #{escape_html(name)}="#{escape_html(value)}")
     end
 
     def self.localize_anchor_props(props)
