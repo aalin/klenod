@@ -11,23 +11,44 @@ module Example
       return render_component(tag, **props, children: children) if tag.is_a?(Class)
 
       props = localize_anchor_props(props) if tag == :a
-      rendered_attributes =
-        props
-          .compact
-          .reject { |_name, value| value == false }
-          .map { |name, value| rendered_attribute(name, value) }
-          .join
+      rendered_attributes = rendered_attributes(props)
 
       return HtmlString.new("<#{tag}#{rendered_attributes}>") if VOID_TAGS.include?(tag)
 
-      rendered_children = children.flatten.compact.map { |child| escape_html(child) }.join
+      rendered_children = +""
+      append_children(rendered_children, children)
       HtmlString.new("<#{tag}#{rendered_attributes}>#{rendered_children}</#{tag}>")
+    end
+
+    def self.append_children(output, children)
+      children.each do |child|
+        case child
+        when nil
+          next
+        when Array
+          append_children(output, child)
+        else
+          output << escape_html(child)
+        end
+      end
     end
 
     def self.escape_html(value)
       return value.to_s if value.is_a?(HtmlString)
 
       CGI.escapeHTML(value.to_s)
+    end
+
+    def self.rendered_attributes(props)
+      return "" if props.empty?
+
+      output = +""
+      props.each do |name, value|
+        next if value.nil? || value == false
+
+        output << rendered_attribute(name, value)
+      end
+      output
     end
 
     def self.rendered_attribute(name, value)
@@ -45,7 +66,8 @@ module Example
       return props unless routes
 
       locale = props[:hreflang] || Context.current&.request&.locale
-      props.merge(href: "#{routes.localized_href(path, locale: locale)}#{suffix}")
+      props[:href] = "#{routes.localized_href(path, locale: locale)}#{suffix}"
+      props
     end
 
     def self.localizable_href?(href)

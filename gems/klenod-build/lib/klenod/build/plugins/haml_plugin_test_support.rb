@@ -34,29 +34,59 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
 
     module HamlHelper
       def self.merge_props(component_class, *sources)
-        result =
-          sources.compact.reduce({}) do |props, source|
-            props.merge(source) do |key, old_value, new_value|
-              (key == :class) ? [old_value, new_value].flatten : new_value
+        result = {}
+        classes = []
+
+        sources.each do |source|
+          next unless source
+
+          source.each do |key, value|
+            key = normalize_prop_key(key)
+            if key == :class
+              collect_class_values(classes, value)
+            else
+              result[key] = value
+            end
+          end
+        end
+
+        class_name = class_name(component_class, classes)
+        result[:class] = class_name if class_name
+        result
+      end
+
+      def self.normalize_prop_key(key)
+        return key if key.is_a?(Symbol) && !key.to_s.include?("-")
+
+        key.to_s.tr("-", "_").to_sym
+      end
+
+      def self.collect_class_values(classes, value)
+        case value
+        when nil, false
+          nil
+        when Array
+          value.each { |item| collect_class_values(classes, item) }
+        else
+          classes << value
+        end
+      end
+
+      def self.class_name(component_class, classes)
+        return nil if classes.empty?
+
+        styles = component_class.const_defined?(:Styles, false) ? component_class::Styles : {}
+        class_names =
+          classes.map do |value|
+            if value.is_a?(Symbol)
+              name = value.to_s
+              styles[value] || (name.start_with?("__") ? nil : name)
+            else
+              value
             end
           end
 
-        if result.key?(:class)
-          classes = Array(result.delete(:class)).compact
-          styles = component_class.const_defined?(:Styles, false) ? component_class::Styles : {}
-          class_names =
-            classes.map do |class_name|
-              if class_name.is_a?(Symbol)
-                name = class_name.to_s
-                styles[class_name] || (name.start_with?("__") ? nil : name)
-              else
-                class_name
-              end
-            end.compact
-          result[:class] = Klenod::Runtime.class_names(class_names) unless class_names.empty?
-        end
-
-        result.transform_keys { it.to_s.tr("-", "_").to_sym }
+        Klenod::Runtime.class_names(class_names)
       end
     end
 
