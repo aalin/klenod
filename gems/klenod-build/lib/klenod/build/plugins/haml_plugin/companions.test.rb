@@ -195,6 +195,24 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_joins_static_and_dynamic_class_names_without_css
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.haml", "%h1.title{ class: [\"lead\", { active: true, hidden: false }, nil] } Hello\n")
+
+      plugin = haml_plugin
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      haml_record = context.evaluate("pages/page.haml")
+      rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
+
+      assert_equal(
+        [ModuleId.new("virtual:klenod/haml_helper.rb", nil)],
+        haml_record.resolved_dependencies.map(&:module_id)
+      )
+      assert_equal("title lead active", rendered.fetch(2).fetch(:class))
+    end
+  end
+
   def test_haml_joins_duplicate_class_names_from_companion_and_inline_css
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

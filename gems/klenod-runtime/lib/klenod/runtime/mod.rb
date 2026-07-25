@@ -7,24 +7,6 @@ module Klenod
     module Generated
     end
 
-    def self.class_names(*values)
-      classes =
-        values.flat_map do |value|
-          case value
-          when nil, false
-            []
-          when Array
-            class_names(*value)&.split || []
-          when Hash
-            value.filter_map { |class_name, enabled| class_name if enabled }
-          else
-            value.to_s.split
-          end
-        end
-
-      classes.empty? ? nil : classes.join(" ")
-    end
-
     class LazyImport
       def initialize(&loader)
         @loader = loader

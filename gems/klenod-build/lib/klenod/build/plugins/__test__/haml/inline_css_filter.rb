@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
+HamlHelper =
+  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class InlineCssFilter < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -21,7 +23,7 @@ class InlineCssFilter < TestFramework::ComponentBase
         class:
           begin
             # SourceMapMark:6
-            Klenod::Runtime.class_names(Styles[:title] || "title")
+            HamlHelper.class_names(Styles[:title] || "title")
           end
       }
     ]

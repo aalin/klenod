@@ -148,7 +148,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_kind_of(SyntaxTree::CallNode, class_names.node)
 
     formatted = builder.fragment(class_names.node).source
-    assert_includes(formatted, "Klenod::Runtime.class_names(")
+    assert_includes(formatted, "HamlHelper.class_names(")
     assert_includes(formatted, "Styles[:__p]")
     assert_includes(formatted, 'Styles[:"article-card"] || "article-card"')
     assert_includes(formatted, "dynamic_class")

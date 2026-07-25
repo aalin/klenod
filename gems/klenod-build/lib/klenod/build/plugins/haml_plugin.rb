@@ -130,6 +130,7 @@ module Klenod
         DEFAULT_FACTORY = "Object"
         HAML_HELPER_SPECIFIER = "virtual:klenod/haml_helper"
         HAML_HELPER_MODULE_ID = ModuleId.new("#{HAML_HELPER_SPECIFIER}.rb", nil)
+        STATIC_CLASS_SOURCE_PATTERN = /^[ \t]*(?:%[-:\w]+)?(?:#[\w-]+)?\.[\w-]|[({][^)}\n]*\bclass\s*=/m
 
         def self.parse_haml(source, module_id: nil)
           SyntaxTree::Haml.parse(source)
@@ -462,9 +463,9 @@ module Klenod
               fragments = values.map { |value| expression_fragment(value) }
 
               Fragment.new(
-                "Klenod::Runtime.class_names(#{fragments.map(&:source).join(", ")})",
+                "HamlHelper.class_names(#{fragments.map(&:source).join(", ")})",
                 CallNode(
-                  constant_path("Klenod::Runtime"),
+                  constant_path("HamlHelper"),
                   Period("."),
                   Ident("class_names"),
                   ArgParen(Args(fragments.map { |fragment| node_for(fragment) }))
@@ -1852,7 +1853,8 @@ module Klenod
             style_dependencies << dependency
           end
           styles_source = styles_source_for(builder, style_dependencies)
-          haml_helper_dependency = haml_helper_dependency(module_id) unless style_dependencies.empty?
+          haml_helper_needed = haml_helper_needed?(code, styleable: !style_dependencies.empty?)
+          haml_helper_dependency = haml_helper_dependency(module_id) if haml_helper_needed
           dependencies << haml_helper_dependency if haml_helper_dependency
           translations_source = builder.frozen_literal(translations_for(context, module_id)).source
           component_class_name = component_class_name(module_id)
@@ -2021,7 +2023,7 @@ module Klenod
                 return nil if classes.empty?
 
                 styles = component_class.const_defined?(:Styles, false) ? component_class::Styles : {}
-                class_names =
+                resolved_classes =
                   classes.map do |value|
                     if value.is_a?(Symbol)
                       name = value.to_s
@@ -2031,10 +2033,37 @@ module Klenod
                     end
                   end
 
-                Klenod::Runtime.class_names(class_names)
+                class_names(resolved_classes)
+              end
+
+              def self.class_names(*values)
+                classes = []
+                collect_output_class_names(classes, values)
+                return nil if classes.empty?
+
+                classes.join(" ")
+              end
+
+              def self.collect_output_class_names(classes, value)
+                case value
+                when nil, false
+                  nil
+                when Array
+                  value.each { |item| collect_output_class_names(classes, item) }
+                when Hash
+                  value.each { |class_name, enabled| collect_output_class_names(classes, class_name) if enabled }
+                else
+                  value.to_s.split.each { |class_name| classes << class_name }
+                end
               end
             end
           RUBY
+        end
+
+        def haml_helper_needed?(source, styleable:)
+          return true if styleable
+
+          source.match?(STATIC_CLASS_SOURCE_PATTERN)
         end
 
         def component_class_name(module_id)

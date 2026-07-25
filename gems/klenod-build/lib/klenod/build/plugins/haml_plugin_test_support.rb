@@ -76,7 +76,7 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
         return nil if classes.empty?
 
         styles = component_class.const_defined?(:Styles, false) ? component_class::Styles : {}
-        class_names =
+        resolved_classes =
           classes.map do |value|
             if value.is_a?(Symbol)
               name = value.to_s
@@ -86,7 +86,28 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
             end
           end
 
-        Klenod::Runtime.class_names(class_names)
+        class_names(resolved_classes)
+      end
+
+      def self.class_names(*values)
+        classes = []
+        collect_output_class_names(classes, values)
+        return nil if classes.empty?
+
+        classes.join(" ")
+      end
+
+      def self.collect_output_class_names(classes, value)
+        case value
+        when nil, false
+          nil
+        when Array
+          value.each { |item| collect_output_class_names(classes, item) }
+        when Hash
+          value.each { |class_name, enabled| collect_output_class_names(classes, class_name) if enabled }
+        else
+          value.to_s.split.each { |class_name| classes << class_name }
+        end
       end
     end
 
@@ -124,9 +145,22 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
         styles_source: styles_source,
         translations_source: "{}.freeze",
         styleable: styleable,
-        haml_helper_source: ("HamlHelper = #{self.class.name}::FakeFramework::HamlHelper" if styleable)
+        haml_helper_source: ("HamlHelper = #{self.class.name}::FakeFramework::HamlHelper" if styleable || fixture_needs_haml_helper?(path))
       )
       .then { |result| format_generated_ruby(result.code) }
+  end
+
+  def fixture_needs_haml_helper?(path)
+    queue = Klenod::Build::Plugins::HamlPlugin.parse_haml(File.read(path)).children.dup
+
+    until queue.empty?
+      node = queue.shift
+      return true if node.type == :tag && !node.value.fetch(:attributes).fetch("class", "").empty?
+
+      queue.concat(node.children)
+    end
+
+    false
   end
 
   def format_generated_ruby(source)
