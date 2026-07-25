@@ -317,7 +317,7 @@ module Klenod
           @profiler.count(:load_module_cache_miss)
 
           transform = loaded_source.transform || transform_module_source(module_id, source)
-          resolved_dependencies = resolve_transform_dependencies(transform)
+          resolved_dependencies = resolve_transform_dependencies(module_id, transform)
           dependency_records = load_eager_dependency_records(resolved_dependencies)
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
           assert_supported_transform!(module_id, source, transform)
@@ -372,7 +372,7 @@ module Klenod
           @profiler.count(:collect_module_cache_miss)
 
           transform = loaded_source.transform || transform_module_source(module_id, source)
-          resolved_dependencies = resolve_transform_dependencies(transform)
+          resolved_dependencies = resolve_transform_dependencies(module_id, transform)
           dependency_records = collect_eager_dependency_records(resolved_dependencies)
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
           assert_supported_transform!(module_id, source, transform)
@@ -528,10 +528,26 @@ module Klenod
         end
       end
 
-      def resolve_transform_dependencies(transform)
+      def resolve_transform_dependencies(module_id, transform)
         @profiler.measure(:dependency_resolution, count: transform.dependencies.length) do
-          transform.dependencies.map { |dependency| resolve_dependency(dependency) }
+          transform.dependencies.map do |dependency|
+            resolve_dependency(dependency)
+          rescue ResolveError => error
+            raise ResolveError, dependency_resolution_error_message(module_id, dependency, error.message)
+          end
         end
+      end
+
+      def dependency_resolution_error_message(module_id, dependency, message)
+        details = [
+          "while resolving #{dependency.specifier.inspect}",
+          "for #{module_id}",
+          "from #{dependency.importer_id || "unknown importer"}"
+        ]
+        details << "kind: #{dependency.kind}" if dependency.kind
+        details << "at #{dependency.loc}" if dependency.loc
+
+        "#{message} (#{details.join(", ")})"
       end
 
       def load_eager_dependency_records(resolved_dependencies)

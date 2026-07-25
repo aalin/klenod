@@ -777,6 +777,27 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
+  def test_virtual_router_updates_when_route_file_is_removed
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/language")
+      File.write("#{dir}/pages/+page.rb", "NAME = :root\n")
+      route_path = "#{dir}/pages/language/+route.rb"
+      File.write(route_path, "def PUT(_request)\n  :language\nend\n")
+
+      context = router_context(dir, mode: :development)
+      router = context.entry("virtual:router").exports::Default
+
+      assert(router.match("/language").handler)
+
+      File.delete(route_path)
+      result = context.invalidate_paths([], removed_paths: [route_path])
+      router = context.exports("virtual:router.rb")::Default
+
+      assert_includes(result.reloaded_module_ids.map(&:to_s), "virtual:router.rb")
+      assert_nil(router.match("/language"))
+    end
+  end
+
   def test_bundle_loads_router_and_all_pages
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/about")
