@@ -16,7 +16,7 @@
 
       ```ruby
       bundle = context.build(
-        entrypoints: ["pages/server"],
+        entrypoints: ["routes/server"],
         output: "dist/klenod.bundle",
         assets_dir: "dist/public"
       )
@@ -45,7 +45,7 @@
       require "klenod/runtime"
 
       bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
-      page = bundle.exports("pages/server")
+      page = bundle.exports("routes/server")
       ```
 
       Call `bundle.preload_entrypoints` to eagerly evaluate everything reachable from configured entrypoints, or `bundle.preload` to evaluate every module in the bundle.

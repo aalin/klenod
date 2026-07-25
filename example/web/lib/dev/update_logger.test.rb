@@ -37,10 +37,10 @@ class Example::UpdateLogger::Test < Minitest::Test
       err = StringIO.new
       event =
         event(
-          changed_paths: ["#{dir}/pages/+page.haml"],
+          changed_paths: ["#{dir}/routes/+page.haml"],
           result: result(
-            reloaded: ["pages/+page.haml"],
-            reevaluated: ["pages/server.rb"],
+            reloaded: ["routes/+page.haml"],
+            reevaluated: ["routes/server.rb"],
             added_assets: ["/assets/new.css"],
             changed_assets: ["/assets/current.css"],
             removed_assets: ["/assets/old.css"]
@@ -58,10 +58,10 @@ class Example::UpdateLogger::Test < Minitest::Test
       assert_includes(text, "Update #4 completed")
       assert_includes(text, "(12.0000ms)")
       assert_includes(text, "changed files:")
-      assert_includes(text, "pages/+page.haml")
+      assert_includes(text, "routes/+page.haml")
       assert_includes(text, "reloaded:")
       assert_includes(text, "reevaluated:")
-      assert_includes(text, "pages/server.rb")
+      assert_includes(text, "routes/server.rb")
       assert_includes(text, "+")
       assert_includes(text, "/assets/new.css")
       assert_includes(text, "~")
@@ -78,15 +78,15 @@ class Example::UpdateLogger::Test < Minitest::Test
       out = StringIO.new
       event =
         event(
-          removed_paths: ["#{dir}/pages/old.haml"],
-          result: result(removed: ["pages/old.haml"])
+          removed_paths: ["#{dir}/routes/old.haml"],
+          result: result(removed: ["routes/old.haml"])
         )
 
       logger(dir, out: out).log(event: event, update: FakeUpdate.new([], nil), duration: "1.0000ms")
 
       assert_includes(out.string, "removed files:")
       assert_includes(out.string, "removed modules:")
-      assert_includes(out.string, "pages/old.haml")
+      assert_includes(out.string, "routes/old.haml")
     end
   end
 
@@ -112,8 +112,8 @@ class Example::UpdateLogger::Test < Minitest::Test
       out = StringIO.new
       err = StringIO.new
       error = StandardError.new("broken")
-      event = event(changed_paths: ["#{dir}/pages/+page.haml"], result: result(errors: [["pages/+page.haml", error]]))
-      update = FakeUpdate.new([["pages/+page.haml", error]], nil)
+      event = event(changed_paths: ["#{dir}/routes/+page.haml"], result: result(errors: [["routes/+page.haml", error]]))
+      update = FakeUpdate.new([["routes/+page.haml", error]], nil)
 
       logger(dir, out:, err:).log(event: event, update: update, duration: "3.5000ms") do |module_id, update_error|
         "#{module_id}: #{update_error.message}\nSource:\n> 1 | %"
@@ -122,8 +122,8 @@ class Example::UpdateLogger::Test < Minitest::Test
       assert_empty(out.string)
       assert_includes(err.string, "Update #4 failed")
       assert_includes(err.string, "changed files:")
-      assert_includes(err.string, "pages/+page.haml")
-      assert_includes(err.string, "  pages/+page.haml: broken")
+      assert_includes(err.string, "routes/+page.haml")
+      assert_includes(err.string, "  routes/+page.haml: broken")
       assert_includes(err.string, "  Source:")
     end
   end

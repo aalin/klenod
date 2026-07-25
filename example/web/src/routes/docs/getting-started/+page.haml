@@ -20,7 +20,7 @@
         plugins: Klenod::Build::Context.default_plugins
       )
 
-      entry = context.entry("pages/server")
+      entry = context.entry("routes/server")
 
       exports = entry.exports
       status, headers, body = entry.call(request, context)
@@ -45,7 +45,7 @@
 
       ```ruby
       source_dir "src"
-      entrypoint "pages/server"
+      entrypoint "routes/server"
       output "dist/klenod.bundle"
       assets_dir "dist/public"
       mode :development
@@ -63,7 +63,7 @@
       require "klenod/runtime"
 
       bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
-      server = bundle.exports("pages/server")
+      server = bundle.exports("routes/server")
       ```
 
       Runtime evaluation is lazy by default. Servers that prefer startup validation can call `bundle.preload_entrypoints` after loading.

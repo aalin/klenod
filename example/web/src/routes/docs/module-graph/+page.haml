@@ -48,7 +48,7 @@
 
       ```ruby
       Images = import_glob("./gallery/*.{jpg,png}?width=320&format=webp")
-      Pages = import_glob("./pages/*.rb", eager: false)
+      Pages = import_glob("./routes/*.rb", eager: false)
       ```
 
       Eager import cycles are errors. Use `lazy_import` for deferred or cyclic branches.

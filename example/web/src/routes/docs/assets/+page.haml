@@ -26,10 +26,10 @@
       ```ruby
       context.asset("/assets/home.abc123.css")
       context.assets_for("styles/home.css")
-      context.assets_for_module("pages/server.rb", type: :css)
+      context.assets_for_module("routes/server.rb", type: :css)
 
       bundle.asset("/assets/home.abc123.css")
-      bundle.assets_for_module("pages/server.rb", type: :css)
+      bundle.assets_for_module("routes/server.rb", type: :css)
       ```
 
       `assets_for_module` is recursive by default. Pass `recursive: false` for only assets directly emitted by the root module. `asset_references_for_module` also includes a graph traversal index, which is useful for route-scoped CSS ordering.

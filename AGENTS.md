@@ -263,7 +263,7 @@ Current framework pieces live under `example/web/lib/framework.rb` and `example/
 
 The framework is intentionally minimal; avoid moving too much framework behavior into Klenod core.
 
-Pages are under `example/web/src/pages`.
+Routes are under `example/web/src/routes`.
 
 Important routes:
 

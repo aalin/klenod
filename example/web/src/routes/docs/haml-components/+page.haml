@@ -41,8 +41,8 @@
       components/Card.haml
       components/Card.css
 
-      pages/docs/+page.haml
-      pages/docs/+page.css
+      routes/docs/+page.haml
+      routes/docs/+page.css
       ```
 
       It also watches `Component.intl.*.toml` translation companions. Adding, editing, or removing companion files invalidates the owning Haml module in development.
@@ -79,7 +79,7 @@
 
   %DocsSection{ title: "Scope Boundaries" }
     :markdown
-      Scoped CSS belongs to the component or page that renders the element. A selector in `pages/docs/+layout.css` can style the sidebar links rendered by `pages/docs/+layout.haml`, but it cannot reliably style paragraph or list tags rendered inside `$children` by another page or Markdown component.
+      Scoped CSS belongs to the component or page that renders the element. A selector in `routes/docs/+layout.css` can style the sidebar links rendered by `routes/docs/+layout.haml`, but it cannot reliably style paragraph or list tags rendered inside `$children` by another page or Markdown component.
 
       Prefer smaller components for reusable styled elements. If a layout renders child content from another module, style that child content through components owned by the child module rather than through broad parent selectors.
 

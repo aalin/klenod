@@ -4,7 +4,7 @@ require_relative "lib/framework"
 require "klenod"
 
 source_dir "src"
-entrypoint "pages/server"
+entrypoint "routes/server"
 output "dist/klenod.bundle"
 assets_dir "dist/public"
 
@@ -32,6 +32,7 @@ google_fonts_cache_path = File.expand_path("tmp/cache/google_fonts", __dir__) un
 
 plugins [
   Klenod::Build::Plugins::RouterPlugin.new(
+    pages_dir: "routes",
     route_base_class: "Example::Route"
   ),
   Klenod::Build::Plugins::RubyPlugin.new,

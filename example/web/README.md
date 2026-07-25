@@ -60,9 +60,9 @@ The server entry imports the virtual router:
 Router = import("virtual:router")
 ```
 
-Pages import their own assets. For example, `src/pages/+page.haml` imports an image with query-driven variants.
+Pages import their own assets. For example, `src/routes/+page.haml` imports an image with query-driven variants.
 
-`Router::Default.match(path).page` returns the matched component class. `Router::Default.match(path).handler` returns a matched `+route.rb` handler class. The server entry wraps rendered pages through `match.layouts`, passing the current HTML as `children: [inner]`, renders named parallel routes from `match.slots`, and dispatches route handlers through the example `Example::Route` base class. The nested route `src/pages/demo/blog/[slug]/+page.haml` demonstrates dynamic params at `/demo/blog/graph`.
+`Router::Default.match(path).page` returns the matched component class. `Router::Default.match(path).handler` returns a matched `+route.rb` handler class. The server entry wraps rendered pages through `match.layouts`, passing the current HTML as `children: [inner]`, renders named parallel routes from `match.slots`, and dispatches route handlers through the example `Example::Route` base class. The nested route `src/routes/demo/blog/[slug]/+page.haml` demonstrates dynamic params at `/demo/blog/graph`.
 
 The example includes a small route gallery:
 
@@ -75,6 +75,6 @@ The example includes a small route gallery:
 - `/feed/photo`, `/profile`, and `/login` demonstrate intercepted route segment metadata.
 - `/demo/routing` reads `Router::Default.tree` and displays structural route metadata.
 
-`framework.rb` defines the example `Example::H` factory used by the Haml plugin. `src/pages/+page.haml` renders through that factory, imports `src/components/Figure.haml`, and automatically imports its companion `src/pages/+page.css` as `Styles`.
+`framework.rb` defines the example `Example::H` factory used by the Haml plugin. `src/routes/+page.haml` renders through that factory, imports `src/components/Figure.haml`, and automatically imports its companion `src/routes/+page.css` as `Styles`.
 
 The example uses explicit extensions for page imports. If both `+page.rb` and `+page.haml` exist, an extensionless import like `import("./+page")` is ambiguous and Klenod asks for `import("./+page.haml")` or `import("./+page.rb")`. A `+route.rb` handler can live in the same directory as a page. For hybrid routes, browser-style `GET`, `POST`, and `HEAD` requests that prefer `text/html` render the page; API-style requests and `PUT`, `PATCH`, `DELETE`, and `OPTIONS` requests use `+route.rb`.

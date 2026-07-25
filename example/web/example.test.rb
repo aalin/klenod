@@ -101,15 +101,15 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Build Ruby modules like a modern frontend graph")
     assert_includes(html, "Transform source files")
     assert_includes(html, "Explore demos")
-    assert_includes(html, "/assets/pages_layout_css")
-    assert_includes(html, "/assets/pages_page_css")
+    assert_includes(html, "/assets/routes_layout_css")
+    assert_includes(html, "/assets/routes_page_css")
     paths = stylesheet_paths(html)
     assert_stylesheet_indexes_present(html)
     assert_stylesheet_paths_unique(paths)
     assert_linked_stylesheets_do_not_import_linked_stylesheets(context, paths)
-    assert_stylesheet_order(paths, "pages_root_css", "pages_layout_css", "pages_page_css", "components_Button_css")
-    refute(paths.any? { |path| path.include?("pages_demo_dashboard") })
-    refute(paths.any? { |path| path.include?("pages_demo_assets") })
+    assert_stylesheet_order(paths, "routes_root_css", "routes_layout_css", "routes_page_css", "components_Button_css")
+    refute(paths.any? { |path| path.include?("routes_demo_dashboard") })
+    refute(paths.any? { |path| path.include?("routes_demo_assets") })
   end
 
   def test_example_app_uses_system_theme_without_theme_cookie
@@ -155,17 +155,17 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(200, status)
     assert_stylesheet_indexes_present(html)
     assert_stylesheet_paths_unique(paths)
-    assert(paths.any? { |path| path.include?("pages_demo_dashboard_page_css") })
+    assert(paths.any? { |path| path.include?("routes_demo_dashboard_page_css") })
     assert(paths.any? { |path| path.include?("components_MetricCard_css") })
-    refute(paths.any? { |path| path.include?("pages_page_css") })
-    refute(paths.any? { |path| path.include?("pages_demo_assets_page_css") })
+    refute(paths.any? { |path| path.include?("routes_page_css") })
+    refute(paths.any? { |path| path.include?("routes_demo_assets_page_css") })
     assert_stylesheet_order(
       paths,
-      "pages_root_css",
-      "pages_layout_css",
-      "pages_demo_layout_css",
-      "pages_demo_dashboard_layout_css",
-      "pages_demo_dashboard_page_css",
+      "routes_root_css",
+      "routes_layout_css",
+      "routes_demo_layout_css",
+      "routes_demo_dashboard_layout_css",
+      "routes_demo_dashboard_page_css",
       "components_MetricCard_css"
     )
   end
@@ -264,7 +264,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, %(href="/sv/demo/markdown"))
   end
 
-  def test_example_app_renders_docs_pages_with_scoped_components
+  def test_example_app_renders_docs_routes_with_scoped_components
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
@@ -388,7 +388,7 @@ class Klenod::ExampleTest < Minitest::Test
     context = config.context
 
     context.entry(config.entrypoints.fetch(0))
-    server_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("pages/server.rb", nil))
+    server_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("routes/server.rb", nil))
     specifiers = server_record.dependencies.map(&:specifier)
 
     assert_includes(specifiers, "/routes.intl.en.toml")
@@ -412,23 +412,23 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(stdout, "PATH")
     assert_includes(stdout, "SOURCE")
     assert_includes(stdout, "GET      /demo/blog/:slug")
-    assert_includes(stdout, "pages/demo/blog/[slug]/+page.haml")
+    assert_includes(stdout, "routes/demo/blog/[slug]/+page.haml")
     assert_includes(stdout, "POST     /demo/forms/submit")
-    assert_includes(stdout, "pages/demo/forms/submit/+route.rb")
+    assert_includes(stdout, "routes/demo/forms/submit/+route.rb")
     assert_includes(stdout, "GET      /demo/hybrid")
     assert_includes(stdout, "OPTIONS  /demo/hybrid")
     assert_includes(stdout, "Route tree")
     assert_includes(stdout, "GET /demo/blog/:slug (page)")
-    assert_includes(stdout, "layout pages/demo/blog/[slug]/+layout.haml")
-    assert_includes(stdout, "page pages/demo/blog/[slug]/+page.haml")
-    assert_includes(stdout, "slot @modal pages/demo/dashboard/@modal/+page.haml")
-    assert_includes(stdout, "slot @sidebar pages/demo/dashboard/@sidebar/+page.haml")
+    assert_includes(stdout, "layout routes/demo/blog/[slug]/+layout.haml")
+    assert_includes(stdout, "page routes/demo/blog/[slug]/+page.haml")
+    assert_includes(stdout, "slot @modal routes/demo/dashboard/@modal/+page.haml")
+    assert_includes(stdout, "slot @sidebar routes/demo/dashboard/@sidebar/+page.haml")
     assert_includes(stdout, "POST /demo/forms/submit (handler)")
-    assert_includes(stdout, "handler pages/demo/forms/submit/+route.rb:3")
+    assert_includes(stdout, "handler routes/demo/forms/submit/+route.rb:3")
     assert_includes(stdout, "GET,PUT,OPTIONS /demo/hybrid (page+handler)")
-    assert_includes(stdout, "handler pages/demo/hybrid/+route.rb:1")
-    assert_includes(stdout, "└─ layout pages/+layout.haml\n   page pages/feed/(.)photo/+page.haml")
-    assert_includes(stdout, "└─ layout pages/+layout.haml\n   └─ layout pages/demo/+layout.haml\n      └─ layout pages/demo/dashboard/+layout.haml\n         page pages/demo/dashboard/settings/+page.haml")
+    assert_includes(stdout, "handler routes/demo/hybrid/+route.rb:1")
+    assert_includes(stdout, "└─ layout routes/+layout.haml\n   page routes/feed/(.)photo/+page.haml")
+    assert_includes(stdout, "└─ layout routes/+layout.haml\n   └─ layout routes/demo/+layout.haml\n      └─ layout routes/demo/dashboard/+layout.haml\n         page routes/demo/dashboard/settings/+page.haml")
   end
 
   def test_example_app_renders_router_tree_metadata
@@ -493,9 +493,9 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "RuntimeError")
     assert_includes(html, "Backtrace")
     assert_includes(stderr, "RuntimeError: Demo render failure")
-    assert_includes(stderr, "pages/demo/error/+page.haml")
-    assert(paths.any? { |path| path.include?("pages_layout_css") })
-    refute(paths.any? { |path| path.include?("pages_demo_layout_css") })
+    assert_includes(stderr, "routes/demo/error/+page.haml")
+    assert(paths.any? { |path| path.include?("routes_layout_css") })
+    refute(paths.any? { |path| path.include?("routes_demo_layout_css") })
   end
 
   def test_example_server_formats_haml_parse_errors_without_backtrace
@@ -1166,9 +1166,9 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(200, status)
     assert_includes(html, "srcset=")
-    assert(context.assets_for("pages/demo/assets/coffee.jpg").any? { |asset| asset.metadata[:type] == :image_variant })
-    assert(context.assets_for("pages/demo/assets/sailing-boat.jpg").any? { |asset| asset.metadata[:type] == :image_variant })
-    assert(context.assets_for("pages/demo/assets/vegetables.jpg").any? { |asset| asset.metadata[:type] == :image_variant })
+    assert(context.assets_for("routes/demo/assets/coffee.jpg").any? { |asset| asset.metadata[:type] == :image_variant })
+    assert(context.assets_for("routes/demo/assets/sailing-boat.jpg").any? { |asset| asset.metadata[:type] == :image_variant })
+    assert(context.assets_for("routes/demo/assets/vegetables.jpg").any? { |asset| asset.metadata[:type] == :image_variant })
   end
 
   def test_example_app_builds_and_loads_runtime_bundle
@@ -1185,7 +1185,7 @@ class Klenod::ExampleTest < Minitest::Test
 
       assert_equal(200, status)
       assert_includes(body.join, "<main")
-      assert_equal("/app/src/pages/server.rb", page.module_path)
+      assert_equal("/app/src/routes/server.rb", page.module_path)
       assert_equal(bundle.assets.keys.sort, loaded.assets.keys.sort)
       loaded.each_asset do |asset|
         disk_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))
