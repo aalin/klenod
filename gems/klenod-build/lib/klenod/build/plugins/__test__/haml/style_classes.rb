@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
+HamlHelper =
+  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class StyleClasses < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -25,16 +27,16 @@ class StyleClasses < TestFramework::ComponentBase
               begin
                 # SourceMapMark:2
                 "/assets/fish.png"
-              end,
-            class:
-              begin
-                # SourceMapMark:2
-                Klenod::Runtime.class_names(
-                  Styles[:__img],
-                  Styles[:image] || "image"
-                )
               end
-          }
+          },
+          **begin
+            # SourceMapMark:2
+            HamlHelper.merge_props(
+              self.class,
+              { class: :__img },
+              { class: :image }
+            )
+          end
         ]
       end,
       begin
@@ -42,25 +44,20 @@ class StyleClasses < TestFramework::ComponentBase
         TestFramework::H[
           :figcaption,
           "Fresh smoke",
-          **{
-            class:
-              begin
-                # SourceMapMark:3
-                Klenod::Runtime.class_names(Styles[:__figcaption])
-              end
-          }
+          **begin
+            # SourceMapMark:3
+            HamlHelper.merge_props(self.class, { class: :__figcaption })
+          end
         ]
       end,
-      **{
-        class:
-          begin
-            # SourceMapMark:1
-            Klenod::Runtime.class_names(
-              Styles[:__figure],
-              Styles[:card] || "card"
-            )
-          end
-      }
+      **begin
+        # SourceMapMark:1
+        HamlHelper.merge_props(
+          self.class,
+          { class: :__figure },
+          { class: :card }
+        )
+      end
     ]
   end
 end

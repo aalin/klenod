@@ -8,10 +8,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       FileUtils.mkdir_p("#{dir}/pages")
       File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
 
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
+      plugin = haml_plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       record = context.evaluate("pages/page.haml")
 
@@ -29,10 +26,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       FileUtils.mkdir_p("#{dir}/pages")
       File.write("#{dir}/pages/+page.haml", "%h1 Hello\n")
 
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
+      plugin = haml_plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
 
       record = context.evaluate("pages/+page.haml")
@@ -85,10 +79,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       css_path = "#{dir}/pages/page.css"
       File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
 
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
+      plugin = haml_plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       haml_record = context.evaluate("pages/page.haml")
 
@@ -120,10 +111,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
         RUBY
       )
 
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
+      plugin = haml_plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       context.evaluate("entry")
 
@@ -136,7 +124,10 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
 
       assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
       assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
-      assert_equal([ModuleId.new("pages/page.css", nil)], haml_record.resolved_dependencies.map(&:module_id))
+      assert_equal(
+        [ModuleId.new("pages/page.css", nil), ModuleId.new("virtual:klenod/haml_helper.rb", nil)],
+        haml_record.resolved_dependencies.map(&:module_id)
+      )
       assert_match(%r{\A/assets/pages_page_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
     end
   end
@@ -160,7 +151,10 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       css_record = context.graph.records.fetch(virtual_css_id)
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
 
-      assert_equal([virtual_css_id], haml_record.resolved_dependencies.map(&:module_id))
+      assert_equal(
+        [virtual_css_id, ModuleId.new("virtual:klenod/haml_helper.rb", nil)],
+        haml_record.resolved_dependencies.map(&:module_id)
+      )
       assert_match(/title/, styles.fetch(:title))
       assert_equal(1, css_record.assets.length)
       assert_match(%r{\A/assets/pages_page_haml_inline_0_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
@@ -174,10 +168,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       File.write("#{dir}/pages/page.css", "figure { margin: 0; }\n")
       File.write("#{dir}/pages/page.haml", "%figure Hello\n")
 
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
+      plugin = haml_plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       haml_record = context.evaluate("pages/page.haml")
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
@@ -194,10 +185,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       File.write("#{dir}/pages/page.css", ".image { display: block; }\nimg { width: 100%; }\n")
       File.write("#{dir}/pages/page.haml", "%img.image\n")
 
-      plugin =
-        Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
-        )
+      plugin = haml_plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       haml_record = context.evaluate("pages/page.haml")
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
@@ -227,7 +215,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       title_classes = styles.fetch(:title).split
 
       assert_equal(
-        [ModuleId.new("pages/page.css", nil), ModuleId.new("pages/page.haml.inline.0.css", nil)],
+        [ModuleId.new("pages/page.css", nil), ModuleId.new("pages/page.haml.inline.0.css", nil), ModuleId.new("virtual:klenod/haml_helper.rb", nil)],
         haml_record.resolved_dependencies.map(&:module_id)
       )
       assert_equal(2, title_classes.length)

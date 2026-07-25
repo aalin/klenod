@@ -32,6 +32,34 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
       end
     end
 
+    module HamlHelper
+      def self.merge_props(component_class, *sources)
+        result =
+          sources.compact.reduce({}) do |props, source|
+            props.merge(source) do |key, old_value, new_value|
+              (key == :class) ? [old_value, new_value].flatten : new_value
+            end
+          end
+
+        if result.key?(:class)
+          classes = Array(result.delete(:class)).compact
+          styles = component_class.const_defined?(:Styles, false) ? component_class::Styles : {}
+          class_names =
+            classes.map do |class_name|
+              if class_name.is_a?(Symbol)
+                name = class_name.to_s
+                styles[class_name] || (name.start_with?("__") ? nil : name)
+              else
+                class_name
+              end
+            end.compact
+          result[:class] = Klenod::Runtime.class_names(class_names) unless class_names.empty?
+        end
+
+        result.transform_keys { it.to_s.tr("-", "_").to_sym }
+      end
+    end
+
     module H
       def self.[](tag, *children, **props)
         props = props.compact
@@ -53,6 +81,7 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
       else
         "{}.freeze"
       end
+    styleable = basename == "style_classes"
 
     Klenod::Build::Plugins::HamlPlugin::Transformer
       .new
@@ -64,7 +93,8 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
         factory: "TestFramework::H",
         styles_source: styles_source,
         translations_source: "{}.freeze",
-        styleable: basename == "style_classes"
+        styleable: styleable,
+        haml_helper_source: ("HamlHelper = #{self.class.name}::FakeFramework::HamlHelper" if styleable)
       )
       .then { |result| format_generated_ruby(result.code) }
   end
@@ -81,7 +111,9 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
 
   def haml_plugin(**options)
     Klenod::Build::Plugins::HamlPlugin.new(
-      factory: "#{self.class.name}::FakeFramework::H", **options
+      component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
+      factory: "#{self.class.name}::FakeFramework::H",
+      **options
     )
   end
 

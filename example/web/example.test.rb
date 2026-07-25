@@ -59,6 +59,33 @@ class Klenod::ExampleTest < Minitest::Test
     end
   end
 
+  def test_haml_helper_merges_scoped_and_external_classes
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/component.css", "button { color: red; }\n.button { display: block; }\n")
+      File.write("#{dir}/component.haml", "%button.button{class: $button_class} Press\n")
+
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            Klenod::Build::Plugins::HamlPlugin.new(
+              component_base_class: "Example::Component",
+              factory: "Example::H",
+              global_variables: "@__props"
+            ),
+            Klenod::Build::Plugins::CssPlugin.new
+          ]
+        )
+      record = context.evaluate("component.haml")
+      component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default
+      rendered = component.instantiate(button_class: "external").render.to_s
+
+      assert_match(/class="[^"]*\bexternal\b[^"]*"/, rendered)
+      assert_match(/class="[^"]*\bcomponent_button\?/, rendered)
+      assert_match(/class="[^"]*\bcomponent\.button\?/, rendered)
+    end
+  end
+
   def test_example_app_loads_renders_and_emits_assets
     config = example_config
     context = config.context
@@ -310,8 +337,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "popovertargetaction=\"toggle\"")
     assert_includes(html, "title=\"Choose language\"")
     language_switcher_css_path =
-      stylesheet_paths(html).find { |path| path.include?("components_LanguageSwitcher_css") } ||
-        flunk("Expected LanguageSwitcher stylesheet")
+      stylesheet_paths(html).find { |path| path.include?("components_LanguageSwitcher_css") }
+    flunk("Expected LanguageSwitcher stylesheet") unless language_switcher_css_path
     assert_includes(context.asset(language_switcher_css_path).bytes, "language_solid_full")
     assert_includes(html, "href=\"/demo/assets\"")
     assert_includes(html, "href=\"/sv/demo/assets\"")

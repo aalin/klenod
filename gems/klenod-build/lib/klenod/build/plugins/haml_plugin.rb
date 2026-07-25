@@ -124,8 +124,12 @@ module Klenod
           end
         end
 
+        KeywordSplat = Data.define(:fragment)
+
         DEFAULT_COMPONENT_BASE_CLASS = "Object"
         DEFAULT_FACTORY = "Object"
+        HAML_HELPER_SPECIFIER = "virtual:klenod/haml_helper"
+        HAML_HELPER_MODULE_ID = ModuleId.new("#{HAML_HELPER_SPECIFIER}.rb", nil)
 
         def self.parse_haml(source, module_id: nil)
           SyntaxTree::Haml.parse(source)
@@ -181,7 +185,8 @@ module Klenod
               translations_source:,
               ruby_source:,
               render_source:,
-              styles_source:
+              styles_source:,
+              haml_helper_source: nil
             )
               component_program(
                 component_class_name: component_class_name,
@@ -189,7 +194,8 @@ module Klenod
                 translations_source: translations_source,
                 ruby_source: ruby_source,
                 render_source: render_source,
-                styles_source: styles_source
+                styles_source: styles_source,
+                haml_helper_source: haml_helper_source
               ).source
             end
 
@@ -199,7 +205,8 @@ module Klenod
               translations_source:,
               ruby_source:,
               render_source:,
-              styles_source:
+              styles_source:,
+              haml_helper_source: nil
             )
               component_class_name = expression_fragment(component_class_name)
               component_base_class = expression_fragment(component_base_class)
@@ -207,14 +214,16 @@ module Klenod
               ruby_source = statements_fragment(ruby_source)
               render_source = expression_fragment(render_source)
               styles_source = expression_fragment(styles_source)
+              haml_helper_source = statements_fragment(haml_helper_source) if haml_helper_source
 
               header = [
                 Fragment.new("# frozen_string_literal: true", comment_node("# frozen_string_literal: true")),
                 constant_assignment(
                   "KlenodImport",
                   call(receiver: nil, name: "method", arguments: [symbol("__klenod_import__")])
-                )
-              ]
+                ),
+                haml_helper_source
+              ].compact
               component_class =
                 component_class_fragment(
                   component_class_name: component_class_name,
@@ -463,6 +472,24 @@ module Klenod
               )
             end
 
+            def merge_props(*values)
+              fragments = values.map { |value| expression_fragment(value) }
+
+              Fragment.new(
+                "HamlHelper.merge_props(self.class, #{fragments.map(&:source).join(", ")})",
+                nil
+              )
+            end
+
+            def prop_hash(name, value)
+              value = expression_fragment(value)
+              Fragment.new("{ #{prop_key_source(name)} #{argument_source(value)} }", nil)
+            end
+
+            def keyword_splat(fragment)
+              KeywordSplat.new(expression_fragment(fragment))
+            end
+
             def parenthesized_expression(source, line_no: nil)
               source = rewrite_ruby_source(source, line_no)
               node = parse_expression(source, context: :parenthesized_expression)
@@ -666,7 +693,7 @@ module Klenod
               source_parts = [
                 to_source(tag),
                 *children.map { |child| argument_source(child) },
-                keyword_props_source(props, mark: mark)
+                *keyword_props_source(props, mark: mark)
               ].compact
               Fragment.new("#{to_source(factory)}[#{source_parts.join(", ")}]", nil)
             end
@@ -882,14 +909,27 @@ module Klenod
             end
 
             def keyword_props_source(props, mark:)
-              return nil if props.empty?
+              return [] if props.empty?
+
+              keyword_splats = []
+              regular_props = {}
+              props.each do |name, value|
+                if value.is_a?(KeywordSplat)
+                  keyword_splats << value.fragment
+                else
+                  regular_props[name] = value
+                end
+              end
 
               props_source =
-                props.map do |name, value|
+                regular_props.map do |name, value|
                   "#{prop_key_source(name)} #{argument_source(value, mark: mark)}"
                 end
 
-              "**{ #{props_source.join(", ")} }"
+              [
+                ("**{ #{props_source.join(", ")} }" unless props_source.empty?),
+                *keyword_splats.map { |fragment| "**#{argument_source(fragment, mark: mark)}" }
+              ].compact
             end
 
             def prop_key_source(name)
@@ -1131,11 +1171,13 @@ module Klenod
             profiler: nil,
             import_rewriter: nil,
             markdown_components_source: "{}",
-            global_variables: nil
+            global_variables: nil,
+            haml_helper_source: nil
           )
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
             builder = RubyBuilder.new(profiler: profiler, global_variables: global_variables)
+            haml_helper_source ||= builder.constant_assignment("HamlHelper", "Object") if styleable
             previous_profiler = @profiler
             previous_module_id = @module_id
             @profiler = profiler
@@ -1173,7 +1215,8 @@ module Klenod
                     translations_source: translations_source,
                     ruby_source: template.ruby,
                     render_source: template.render,
-                    styles_source: styles_source
+                    styles_source: styles_source,
+                    haml_helper_source: haml_helper_source
                   )
                 end
               else
@@ -1183,7 +1226,8 @@ module Klenod
                   translations_source: translations_source,
                   ruby_source: template.ruby,
                   render_source: template.render,
-                  styles_source: styles_source
+                  styles_source: styles_source,
+                  haml_helper_source: haml_helper_source
                 )
               end
             if profiler
@@ -1631,28 +1675,40 @@ module Klenod
             return unless styleable || !static_class_source.empty? || dynamic_class
 
             measure_compile(:haml_compile_class_attributes) do
-              static_classes = static_class_source.empty? ? [] : static_class_lookups(static_class_source, builder: builder)
-              unless styleable || !static_classes.empty?
+              unless styleable
+                static_classes = static_class_source.empty? ? [] : static_class_lookups(static_class_source, builder: builder)
+                if static_classes.empty?
+                  props[:class] = dynamic_class if dynamic_class
+                  return
+                end
+
+                values = [*static_classes, dynamic_class].compact
+                return if values.empty?
+
+                props[:class] = builder.class_names(values)
+                return
+              end
+
+              props.delete(:class)
+              class_props = [
+                tag_class_prop(node, builder: builder),
+                *static_class_symbols(static_class_source, builder: builder).map { |class_name| builder.prop_hash(:class, class_name) },
+                (builder.prop_hash(:class, dynamic_class) if dynamic_class)
+              ].compact
+              unless class_props.any?
                 props[:class] = dynamic_class if dynamic_class
                 return
               end
 
-              values = [
-                (tag_class_lookup(node, builder: builder) if styleable),
-                *static_classes,
-                dynamic_class
-              ].compact
-              return if values.empty?
-
-              props[:class] = builder.class_names(values)
+              props[:__klenod_class_props] = builder.keyword_splat(builder.merge_props(*class_props))
             end
           end
 
-          def tag_class_lookup(node, builder:)
+          def tag_class_prop(node, builder:)
             tag_name = node.value.fetch(:name)
             return nil if constant_tag_name?(tag_name)
 
-            builder.styles_lookup("__#{tag_name}")
+            builder.prop_hash(:class, builder.symbol("__#{tag_name}"))
           end
 
           def constant_tag_name?(tag_name)
@@ -1664,6 +1720,14 @@ module Klenod
             source
               .split
               .map { |class_name| builder.class_name_lookup(class_name) }
+          end
+
+          def static_class_symbols(source, builder:)
+            return [] if source.empty?
+
+            source
+              .split
+              .map { |class_name| builder.symbol(class_name) }
           end
 
           def object_ref_attributes(node, builder:, props:)
@@ -1715,6 +1779,18 @@ module Klenod
           @factory = factory
           @global_variables = validate_global_variables(global_variables)
           @transformer = Transformer.new
+        end
+
+        def resolve(dependency, _context)
+          return nil unless dependency.specifier == HAML_HELPER_SPECIFIER
+
+          ResolvedDependency.new(dependency, HAML_HELPER_MODULE_ID, {virtual: true})
+        end
+
+        def load(module_id, _context)
+          return nil unless module_id.scheme == :virtual && module_id == HAML_HELPER_MODULE_ID
+
+          LoadResult.new(haml_helper_source, nil, TransformResult.new(haml_helper_source, [], nil, [], [], {}))
         end
 
         def transform(module_id, code, context)
@@ -1776,6 +1852,8 @@ module Klenod
             style_dependencies << dependency
           end
           styles_source = styles_source_for(builder, style_dependencies)
+          haml_helper_dependency = haml_helper_dependency(module_id) unless style_dependencies.empty?
+          dependencies << haml_helper_dependency if haml_helper_dependency
           translations_source = builder.frozen_literal(translations_for(context, module_id)).source
           component_class_name = component_class_name(module_id)
           import_rewriter =
@@ -1803,6 +1881,7 @@ module Klenod
               factory: @factory,
               styles_source: styles_source,
               translations_source: translations_source,
+              haml_helper_source: haml_helper_dependency && builder.constant_assignment("HamlHelper", "#{builder.import_call(haml_helper_dependency.id).source}::Default"),
               styleable: !style_dependencies.empty?,
               profiler: profiler,
               import_rewriter: import_rewriter,
@@ -1882,6 +1961,50 @@ module Klenod
         def translations_for(context, module_id)
           intl_plugin = context.plugins.find { |plugin| plugin.respond_to?(:translations_for) }
           intl_plugin ? intl_plugin.translations_for(context, module_id) : {}
+        end
+
+        def haml_helper_dependency(module_id)
+          Dependency
+            .create(
+              specifier: HAML_HELPER_SPECIFIER,
+              importer_id: module_id,
+              kind: :haml_helper
+            )
+            .with(id: "#{module_id}:haml_helper")
+        end
+
+        def haml_helper_source
+          <<~RUBY
+            # frozen_string_literal: true
+
+            module Default
+              def self.merge_props(component_class, *sources)
+                result =
+                  sources.compact.reduce({}) do |props, source|
+                    props.merge(source) do |key, old_value, new_value|
+                      (key == :class) ? [old_value, new_value].flatten : new_value
+                    end
+                  end
+
+                if result.key?(:class)
+                  classes = Array(result.delete(:class)).compact
+                  styles = component_class.const_defined?(:Styles, false) ? component_class::Styles : {}
+                  class_names =
+                    classes.map do |class_name|
+                      if class_name.is_a?(Symbol)
+                        name = class_name.to_s
+                        styles[class_name] || (name.start_with?("__") ? nil : name)
+                      else
+                        class_name
+                      end
+                    end.compact
+                  result[:class] = Klenod::Runtime.class_names(class_names) unless class_names.empty?
+                end
+
+                result.transform_keys { it.to_s.tr("-", "_").to_sym }
+              end
+            end
+          RUBY
         end
 
         def component_class_name(module_id)
