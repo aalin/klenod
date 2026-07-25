@@ -124,8 +124,6 @@ module Klenod
           end
         end
 
-        KeywordSplat = Data.define(:fragment)
-
         DEFAULT_COMPONENT_BASE_CLASS = "Object"
         DEFAULT_FACTORY = "Object"
         HAML_HELPER_SPECIFIER = "virtual:klenod/haml_helper"
@@ -473,22 +471,13 @@ module Klenod
               )
             end
 
-            def merge_props(*values)
+            def scoped_class_name(values)
               fragments = values.map { |value| expression_fragment(value) }
 
               Fragment.new(
-                "HamlHelper.merge_props(self.class, #{fragments.map(&:source).join(", ")})",
+                "HamlHelper.class_name(self.class, [#{fragments.map(&:source).join(", ")}])",
                 nil
               )
-            end
-
-            def prop_hash(name, value)
-              value = expression_fragment(value)
-              Fragment.new("{ #{prop_key_source(name)} #{argument_source(value)} }", nil)
-            end
-
-            def keyword_splat(fragment)
-              KeywordSplat.new(expression_fragment(fragment))
             end
 
             def parenthesized_expression(source, line_no: nil)
@@ -912,25 +901,12 @@ module Klenod
             def keyword_props_source(props, mark:)
               return [] if props.empty?
 
-              keyword_splats = []
-              regular_props = {}
-              props.each do |name, value|
-                if value.is_a?(KeywordSplat)
-                  keyword_splats << value.fragment
-                else
-                  regular_props[name] = value
-                end
-              end
-
               props_source =
-                regular_props.map do |name, value|
+                props.map do |name, value|
                   "#{prop_key_source(name)} #{argument_source(value, mark: mark)}"
                 end
 
-              [
-                ("**{ #{props_source.join(", ")} }" unless props_source.empty?),
-                *keyword_splats.map { |fragment| "**#{argument_source(fragment, mark: mark)}" }
-              ].compact
+              ["**{ #{props_source.join(", ")} }"]
             end
 
             def prop_key_source(name)
@@ -1690,26 +1666,25 @@ module Klenod
                 return
               end
 
-              props.delete(:class)
-              class_props = [
-                tag_class_prop(node, builder: builder),
-                *static_class_symbols(static_class_source, builder: builder).map { |class_name| builder.prop_hash(:class, class_name) },
-                (builder.prop_hash(:class, dynamic_class) if dynamic_class)
+              class_values = [
+                tag_class_symbol(node, builder: builder),
+                *static_class_symbols(static_class_source, builder: builder),
+                dynamic_class
               ].compact
-              unless class_props.any?
+              unless class_values.any?
                 props[:class] = dynamic_class if dynamic_class
                 return
               end
 
-              props[:__klenod_class_props] = builder.keyword_splat(builder.merge_props(*class_props))
+              props[:class] = builder.scoped_class_name(class_values)
             end
           end
 
-          def tag_class_prop(node, builder:)
+          def tag_class_symbol(node, builder:)
             tag_name = node.value.fetch(:name)
             return nil if constant_tag_name?(tag_name)
 
-            builder.prop_hash(:class, builder.symbol("__#{tag_name}"))
+            builder.symbol("__#{tag_name}")
           end
 
           def constant_tag_name?(tag_name)
