@@ -13,6 +13,31 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
   HAML_FIXTURE_DIR = File.join(TEST_FIXTURE_DIR, "haml")
 
   module FakeFramework
+    class Children
+      include Enumerable
+
+      def initialize(slots, name = nil)
+        @slots = slots
+        @name = name
+      end
+
+      def [](name)
+        self.class.new(@slots, name&.to_sym)
+      end
+
+      def each(&)
+        to_a.each(&)
+      end
+
+      def empty?
+        to_a.empty?
+      end
+
+      def to_a
+        @slots.fetch(@name, [])
+      end
+    end
+
     class ComponentBase
       attr_reader :__slots
 
@@ -21,18 +46,31 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
         instance.instance_variable_set(:@__props, props.freeze)
         instance.instance_variable_set(:@__slots, props.fetch(:slots, {}).freeze)
 
-        if instance.method(:initialize).parameters.empty?
+        parameters = instance.method(:initialize).parameters
+        if parameters.empty?
           instance.send(:initialize)
         else
-          instance.send(:initialize, **props)
+          instance.send(:initialize, **initialize_props(props, parameters))
         end
 
         instance
       end
 
+      def self.initialize_props(props, parameters)
+        props = props.except(:slots)
+        return props if parameters.any? { |kind, _name| kind == :keyrest }
+
+        accepted = parameters.filter_map { |kind, name| name if %i[key keyreq].include?(kind) }
+        props.slice(*accepted)
+      end
+
       def initialize(**props)
-        @__props = props.freeze
-        @__slots = props.fetch(:slots, {}).freeze
+        @__props = (@__props || {}).merge(props).freeze
+        @__slots = (@__slots || props.fetch(:slots, {})).freeze
+      end
+
+      def children
+        @__props[:children]
       end
     end
 
@@ -94,8 +132,12 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
       end
 
       def self.render_slot(component, name = nil, fallback = nil)
-        slots = component.respond_to?(:__slots) ? component.__slots : {}
-        children = slots[name&.to_sym]
+        children =
+          if component.respond_to?(:children)
+            name ? component.children[name] : component.children
+          elsif component.respond_to?(:__slots)
+            component.__slots[name&.to_sym]
+          end
         return children if children && !children.empty?
 
         fallback
@@ -118,11 +160,26 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
     module H
       def self.[](tag, *children, **props)
         props = props.compact
+        children = normalize_children(children)
 
-        return tag.instantiate(**props, children: children).render if tag.respond_to?(:instantiate)
-        return tag.new(**props, children: children).render if tag.is_a?(Class)
+        if tag.respond_to?(:instantiate)
+          slots = {nil => children}
+          return tag.instantiate(**props, children: Children.new(slots), slots: slots).render
+        end
+        if tag.is_a?(Class)
+          slots = {nil => children}
+          parameters = tag.instance_method(:initialize).parameters
+          props = ComponentBase.initialize_props(props.merge(children: Children.new(slots), slots: slots), parameters)
+          return tag.new(**props).render
+        end
 
         props.empty? ? [tag, *children] : [tag, *children, props]
+      end
+
+      def self.normalize_children(children)
+        children.map do |child|
+          child.is_a?(Children) ? child.to_a : child
+        end
       end
     end
   end

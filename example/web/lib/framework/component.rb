@@ -9,13 +9,22 @@ module Example
       instance.instance_variable_set(:@__props, props.freeze)
       instance.instance_variable_set(:@__slots, props.fetch(:slots, {}).freeze)
 
-      if instance.method(:initialize).parameters.empty?
+      parameters = instance.method(:initialize).parameters
+      if parameters.empty?
         instance.send(:initialize)
       else
-        instance.send(:initialize, **props)
+        instance.send(:initialize, **initialize_props(props, parameters))
       end
 
       instance
+    end
+
+    def self.initialize_props(props, parameters)
+      props = props.except(:slots)
+      return props if parameters.any? { |kind, _name| kind == :keyrest }
+
+      accepted = parameters.filter_map { |kind, name| name if %i[key keyreq].include?(kind) }
+      props.slice(*accepted)
     end
 
     def context
@@ -42,9 +51,13 @@ module Example
       context.routes.localized_path(...)
     end
 
+    def children
+      @__props[:children]
+    end
+
     def initialize(**props)
-      @__props = props.freeze
-      @__slots = props.fetch(:slots, {}).freeze
+      @__props = (@__props || {}).merge(props).freeze
+      @__slots = (@__slots || props.fetch(:slots, {})).freeze
     end
   end
 end

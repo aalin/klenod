@@ -84,7 +84,9 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
         HAML
       }
     ) do |_dir, _context, record, exports|
-      assert_equal([:nav, ["Button"], ["Default"]], exports::Default.new(children: ["Default"], slots: {:button => ["Button"], nil => ["Default"]}).render)
+      slots = {:button => ["Button"], nil => ["Default"]}
+      children = FakeFramework::Children.new(slots)
+      assert_equal([:nav, ["Button"], ["Default"]], exports::Default.new(children: children, slots: slots).render)
       assert_includes(record.transformed_source, "HamlHelper.render_slot(self, \"button\")")
       assert_includes(record.transformed_source, "HamlHelper.render_slot(self, nil)")
     end

@@ -2084,9 +2084,12 @@ module Klenod
               end
 
               def self.render_slot(component, name = nil, fallback = nil)
-                slots = component.respond_to?(:__slots) ? component.__slots : {}
-                slot_name = name&.to_sym
-                children = slots[slot_name]
+                children =
+                  if component.respond_to?(:children)
+                    name ? component.children[name] : component.children
+                  elsif component.respond_to?(:__slots)
+                    component.__slots[name&.to_sym]
+                  end
 
                 return children if children && !children.empty?
 

@@ -9,6 +9,50 @@ module Example
     Comment = Data.define(:value)
     Fragment = Data.define(:key, :slot, :children)
 
+    class Children
+      include Enumerable
+
+      def initialize(slots, name = nil)
+        @slots = slots
+        @name = name
+      end
+
+      def [](name)
+        self.class.new(@slots, name&.to_sym)
+      end
+
+      def each(&)
+        nodes.each(&)
+      end
+
+      def empty?
+        nodes.empty?
+      end
+
+      def any?(...)
+        nodes.any?(...)
+      end
+
+      def length
+        nodes.length
+      end
+      alias_method :size, :length
+
+      def to_a
+        nodes
+      end
+
+      def text_content
+        H.text_content(nodes)
+      end
+
+      private
+
+      def nodes
+        @slots.fetch(@name, [])
+      end
+    end
+
     VOID_TAGS = %i[area base br col embed hr img input link meta param source track wbr].to_set.freeze
     HTML_ESCAPE_PATTERN = /[&"<>]/
 
@@ -45,7 +89,7 @@ module Example
       case child
       when nil, false
         []
-      when Element, Text, Comment, Fragment
+      when Element, Text, Comment, Fragment, Children
         [child]
       when Array
         normalize_children(child)
@@ -75,6 +119,8 @@ module Example
         output << "-->"
       when Fragment
         value.children.each { |child| append_rendered(output, child) }
+      when Children
+        value.each { |child| append_rendered(output, child) }
       when Array
         value.each { |child| append_rendered(output, child) }
       else
@@ -92,6 +138,8 @@ module Example
         output << value.value.to_s
       when Comment
         nil
+      when Children
+        value.each { |child| append_text_content(output, child) }
       when Array
         value.each { |child| append_text_content(output, child) }
       else
@@ -154,7 +202,8 @@ module Example
     def self.render_component(tag, **props)
       child_slots = partition_slots(props.delete(:children) || [])
       slots = merge_slots(props.delete(:slots), child_slots)
-      props = props.merge(children: slots.fetch(nil, []), slots: slots)
+      children = Children.new(slots)
+      props = props.merge(children: children, slots: slots)
 
       if tag.respond_to?(:instantiate)
         tag.instantiate(**props).render
