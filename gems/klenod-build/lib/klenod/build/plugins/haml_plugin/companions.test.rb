@@ -224,6 +224,24 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_keeps_old_style_static_class_attributes_literal
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.css", ".foo { color: red; }\n")
+      File.write("#{dir}/pages/page.haml", "%section.foo{ class: \"bar\" } Hello\n")
+
+      plugin = haml_plugin
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      haml_record = context.evaluate("pages/page.haml")
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
+      class_names = rendered.fetch(2).fetch(:class).split
+
+      assert_includes(class_names, styles.fetch(:foo))
+      assert_includes(class_names, "bar")
+    end
+  end
+
   def test_haml_joins_static_and_dynamic_class_names_without_css
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -261,6 +279,8 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
 
       context = Klenod::Build::Context.new(source_dir: dir)
       haml_record = context.evaluate("pages/page.haml")
+      companion_css_record = context.graph.records.fetch(ModuleId.new("pages/page.css", nil))
+      inline_css_record = context.graph.records.fetch(ModuleId.new("pages/page.haml.inline.0.css", nil))
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
       title_classes = styles.fetch(:title).split
 
@@ -276,6 +296,9 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       assert_equal(2, title_classes.length)
       assert(title_classes.all? { |class_name| class_name.include?("title") })
       assert_equal(title_classes.uniq, title_classes)
+      assert_equal(1, companion_css_record.assets.length)
+      assert_equal(1, inline_css_record.assets.length)
+      refute_equal(companion_css_record.assets.first.output_path, inline_css_record.assets.first.output_path)
     end
   end
 

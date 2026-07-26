@@ -134,9 +134,76 @@ module Klenod
         STATIC_CLASS_SOURCE_PATTERN = /^[ \t]*(?:%[-:\w]+)?(?:#[\w-]+)?\.[\w-]|[({][^)}\n]*\bclass\s*=/m
 
         def self.parse_haml(source, module_id: nil)
-          SyntaxTree::Haml.parse(source)
+          parser = ParserWithMetadata.new({})
+          parser.call(source)
         rescue Haml::SyntaxError => error
           raise ParseError.new(error, source: source, module_id: module_id)
+        end
+
+        class ParserWithMetadata < Haml::Parser
+          def initialize(...)
+            @tag_metadata_by_line = Hash.new { |hash, key| hash[key] = [] }
+            super
+          end
+
+          def call(source)
+            root = super
+            annotate_tag_nodes(root)
+            root
+          end
+
+          private
+
+          def parse_tag(text)
+            result = super
+            _, shorthand_attributes, attribute_hashes = result
+            @tag_metadata_by_line[@line.index + 1] << class_metadata(shorthand_attributes, attribute_hashes)
+            result
+          end
+
+          def annotate_tag_nodes(root)
+            queue = root.children.dup
+            until queue.empty?
+              node = queue.shift
+              if node.type == :tag
+                metadata = @tag_metadata_by_line.fetch(node.line, []).shift
+                node.value[:klenod_class_metadata] = metadata if metadata
+              end
+              queue.concat(node.children)
+            end
+          end
+
+          def class_metadata(shorthand_attributes, attribute_hashes)
+            shorthand = Haml::Parser.parse_class_and_id(shorthand_attributes).fetch("class", "").split
+            literal = []
+
+            if (new_attributes = attribute_hashes[:new])
+              literal.concat(Array(new_attributes.fetch(0)["class"]).flat_map { it.to_s.split })
+            end
+
+            if (old_attributes = attribute_hashes[:old])
+              literal.concat(literal_class_names_from_old_attributes(old_attributes))
+            end
+
+            {shorthand: shorthand, literal: literal}
+          end
+
+          def literal_class_names_from_old_attributes(source)
+            parsed = Haml::AttributeParser.parse(source)
+            return [] unless parsed&.key?("class")
+
+            value = static_string_literal_value(parsed.fetch("class"))
+            value ? value.split : []
+          end
+
+          def static_string_literal_value(source)
+            case Ripper.sexp(source)
+            in [:program, [[:string_literal, [:string_content, [:@tstring_content, String => value, _location]]]]]
+              value
+            else
+              nil
+            end
+          end
         end
 
         class Transformer
@@ -1156,10 +1223,8 @@ module Klenod
             haml_helper_source ||= builder.constant_assignment("HamlHelper", "Object") if styleable
             previous_profiler = @profiler
             previous_module_id = @module_id
-            previous_source_lines = @source_lines
             @profiler = profiler
             @module_id = module_id
-            @source_lines = source.lines
             template =
               if profiler
                 profiler.measure(:haml_compile_template, module_id: module_id.to_s) do
@@ -1228,7 +1293,6 @@ module Klenod
           ensure
             @profiler = previous_profiler
             @module_id = previous_module_id
-            @source_lines = previous_source_lines
           end
 
           private
@@ -1654,12 +1718,9 @@ module Klenod
             return unless styleable || !static_class_source.empty? || dynamic_class
 
             measure_compile(:haml_compile_class_attributes) do
-              literal_static_classes = literal_static_class_names(node)
-              scoped_static_classes = static_class_source.split
-              literal_static_classes.each do |class_name|
-                index = scoped_static_classes.index(class_name)
-                scoped_static_classes.delete_at(index) if index
-              end
+              class_metadata = node.value.fetch(:klenod_class_metadata, {})
+              literal_static_classes = class_metadata.fetch(:literal, [])
+              scoped_static_classes = class_metadata.fetch(:shorthand, static_class_source.split)
               class_values = [
                 tag_class_symbol(node, builder: builder),
                 *scoped_static_classes.map { |class_name| builder.symbol(class_name) },
@@ -1673,13 +1734,6 @@ module Klenod
 
               props[:class] = builder.scoped_class_name(class_values)
             end
-          end
-
-          def literal_static_class_names(node)
-            source = @source_lines&.fetch(node.line - 1, nil)
-            return [] unless source
-
-            source.scan(/\bclass\s*=\s*(["'])(.*?)\1/).flat_map { |(_quote, value)| value.split }
           end
 
           def tag_class_symbol(node, builder:)

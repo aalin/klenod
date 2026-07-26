@@ -130,8 +130,11 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
     styles_runtime_dependency_id = "virtual:klenod/styles"
     styles_runtime = "__klenod_import__(#{styles_runtime_dependency_id.inspect})"
     styles_source =
-      if basename == "style_classes"
+      case basename
+      when "style_classes"
         "#{styles_runtime}.new({__figure: \"figure_hash\", __img: \"img_hash\", card: \"card_hash\", image: \"image_hash\"}.freeze)"
+      when "inline_css_filter"
+        "#{styles_runtime}.new({title: \"title_hash\"}.freeze)"
       else
         "#{styles_runtime}.new({}.freeze)"
       end

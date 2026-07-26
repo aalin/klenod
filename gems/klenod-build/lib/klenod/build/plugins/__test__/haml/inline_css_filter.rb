@@ -28,6 +28,9 @@ class InlineCssFilter < TestFramework::ComponentBase
   end
 end
 Default = InlineCssFilter
-Styles = __klenod_import__("virtual:klenod/styles").new({}.freeze)
+Styles =
+  __klenod_import__("virtual:klenod/styles").new(
+    { title: "title_hash" }.freeze
+  )
 Default.const_set(:Styles, Styles)
 Translations = Default::Translations
