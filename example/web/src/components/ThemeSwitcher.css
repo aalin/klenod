@@ -5,9 +5,8 @@
   line-height: 1;
 }
 
-.popover form {
-  display: grid;
-  gap: 0.1rem;
+form {
+  display: contents;
 }
 
 .popover button {

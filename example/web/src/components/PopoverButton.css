@@ -28,6 +28,9 @@
 .popover {
   --popover-transition-duration: 160ms;
 
+  display: grid;
+  gap: var(--space-1);
+
   position: absolute;
   top: anchor(bottom);
   left: auto;
