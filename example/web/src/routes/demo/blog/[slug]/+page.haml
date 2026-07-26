@@ -1,29 +1,30 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
-  Posts = import_glob("../_posts/*.toml").values
+  Posts = import_glob("../_posts/*.md").values
 
 :ruby
   slug = request.params.fetch(:slug)
-  post = Posts.find { |item| item.fetch("slug") == slug }
+  post = Posts.find { |item| item::Frontmatter.fetch("slug") == slug }
+  frontmatter = post && post::Frontmatter
 
 %article
   = if post
     %PageHeader{
-      kicker: "Dynamic TOML route",
-      title: post.fetch("title"),
-      summary: post.fetch("summary")
+      kicker: "Dynamic Markdown route",
+      title: frontmatter.fetch("title"),
+      summary: frontmatter.fetch("summary")
     }
     %Panel{ title: "Post body" }
       %p
-        %time{ datetime: post.fetch("date") }= post.fetch("date")
-      %p= post.fetch("body").strip
+        %time{ datetime: frontmatter.fetch("date") }= frontmatter.fetch("date")
+      = post.instantiate.render
       %p Ruby modules loaded through a dependency graph
   = else
     %PageHeader{
-      kicker: "Dynamic TOML route",
+      kicker: "Dynamic Markdown route",
       title: "Blog post: #{slug}",
-      summary: "No TOML post exists for this slug, but the dynamic route still rendered."
+      summary: "No Markdown post exists for this slug, but the dynamic route still rendered."
     }
     %Panel{ title: "Missing post" }
       %p Ruby modules loaded through a dependency graph

@@ -1,11 +1,12 @@
 :ruby
-  Posts = import_glob("../_posts/*.toml").values.sort_by { it.fetch("date") }.reverse
+  Posts = import_glob("../_posts/*.md").values.sort_by { it::Frontmatter["date"] }.reverse
 
 %article
   %aside
     %h2 Blog posts
     %nav(aria-label="Blog posts")
       = Posts.map do |post|
-        %a{ href: "/demo/blog/#{post.fetch("slug")}" }= post.fetch("title")
+        - frontmatter = post::Frontmatter
+        %a{ href: "/demo/blog/#{frontmatter["slug"]}" }= frontmatter["title"]
   %section
     = $children

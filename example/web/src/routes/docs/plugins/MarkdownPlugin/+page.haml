@@ -20,6 +20,24 @@
 
       The imported value is the default exported component class, so consuming code can render it like any other component.
 
+  %DocsSection{ title: "Frontmatter" }
+    :markdown
+      Markdown files can start with YAML frontmatter. The frontmatter is removed from the rendered body and exposed on the component class as `Frontmatter`.
+
+      ```markdown
+      ---
+      title: Hello
+      date: 2026-07-25
+      ---
+
+      # Hello
+      ```
+
+      ```ruby
+      Article = import("./article.md")
+      Article::Frontmatter.fetch("title")
+      ```
+
   %DocsSection{ title: "Component Map" }
     :markdown
       If `/markdown-components.rb` exists, Markdown rendering uses its `Default` hash to map tags to components. This is similar in spirit to MDX component maps, but it stays in Ruby.

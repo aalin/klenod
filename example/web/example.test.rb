@@ -228,7 +228,7 @@ class Klenod::ExampleTest < Minitest::Test
     entry = context.entry(config.entrypoints.fetch(0))
 
     assert_route_includes(entry, context, "/demo", "Explore Klenod features")
-    assert_route_includes(entry, context, "/demo/blog", "Blog posts loaded from data files")
+    assert_route_includes(entry, context, "/demo/blog", "Blog posts loaded from Markdown files")
     assert_route_includes(entry, context, "/demo/blog/assets", "Generated assets as imports")
     assert_route_includes(entry, context, "/demo/data", "Imported from a plain text file.")
     assert_route_includes(entry, context, "/demo/hybrid", "Hybrid page and route handler")
@@ -359,7 +359,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(200, status)
     assert_includes(html, "Blog post: tillgangar")
-    assert_includes(html, "No TOML post exists for this slug")
+    assert_includes(html, "No Markdown post exists for this slug")
     assert_includes(html, "href=\"/sv-SE/demo/blogg/graph\"")
   end
 

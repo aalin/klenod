@@ -1,18 +1,19 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
-  Posts = import_glob("./_posts/*.toml").values.sort_by { |post| post.fetch("date") }.reverse
+  Posts = import_glob("./_posts/*.md").values.sort_by { |post| post::Frontmatter.fetch("date") }.reverse
 
 %article
   %PageHeader{
-    kicker: "TOML content",
-    title: "Blog posts loaded from data files",
-    summary: "This route imports a few TOML files and renders them as ordinary Ruby hashes."
+    kicker: "Markdown content",
+    title: "Blog posts loaded from Markdown files",
+    summary: "This route imports Markdown posts and reads metadata from frontmatter."
   }
   %section
     = Posts.map do |post|
+      - frontmatter = post::Frontmatter
       %article
         %header
-          %h2= post.fetch("title")
-          %time{ datetime: post.fetch("date") }= post.fetch("date")
-        %p= post.fetch("summary")
-        %a{ href: "/demo/blog/#{post.fetch("slug")}" } Read post
+          %h2= frontmatter.fetch("title")
+          %time{ datetime: frontmatter.fetch("date") }= frontmatter.fetch("date")
+        %p= frontmatter.fetch("summary")
+        %a{ href: "/demo/blog/#{frontmatter.fetch("slug")}" } Read post

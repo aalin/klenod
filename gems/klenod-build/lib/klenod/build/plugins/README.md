@@ -77,6 +77,7 @@ Klenod::Build::Plugins::HamlPlugin.new(
 Handles `.md` modules and Haml `:markdown` filters through `kramdown` with the GFM parser.
 
 - Transforms Markdown files into Ruby component classes exported as `Default`.
+- Parses optional YAML frontmatter and exposes it as `Default::Frontmatter`.
 - Renders Markdown elements as factory calls, not raw HTML strings.
 - Converts raw HTML elements in Markdown into factory calls too.
 - Uses `/markdown-components.rb` when present to map Markdown tags to components.

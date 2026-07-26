@@ -46,6 +46,47 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
     end
   end
 
+  def test_markdown_import_exposes_frontmatter_on_component_class
+    with_context(
+      {
+        "post.md" => <<~MARKDOWN
+          ---
+          title: Hello
+          slug: hello
+          date: 2026-07-25
+          tags:
+            - ruby
+            - markdown
+          ---
+
+          # Hello
+        MARKDOWN
+      }
+    ) do |context|
+      record = context.evaluate("post.md")
+      component = context.exports(record)::Default
+
+      assert_equal(
+        {
+          "title" => "Hello",
+          "slug" => "hello",
+          "date" => "2026-07-25",
+          "tags" => ["ruby", "markdown"]
+        },
+        component::Frontmatter
+      )
+      assert_equal([:h1, "Hello", {id: "hello"}], component.new.render)
+    end
+  end
+
+  def test_markdown_import_exposes_empty_frontmatter_without_frontmatter_block
+    with_context({"post.md" => "# Hello\n"}) do |context|
+      component = context.exports(context.evaluate("post.md"))::Default
+
+      assert_equal({}, component::Frontmatter)
+    end
+  end
+
   def test_markdown_uses_markdown_components_file_when_present
     with_context(
       {
