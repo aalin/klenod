@@ -41,16 +41,40 @@ details {
 }
 
 summary {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
   padding: 0.35rem 0.6rem;
   color: var(--color-muted);
   cursor: pointer;
   font-size: 0.82rem;
-  font-weight: 850;
+  font-weight: 900;
   letter-spacing: 0.08em;
   line-height: 1.25;
-  list-style-position: outside;
   text-transform: uppercase;
   user-select: none;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 1em;
+    aspect-ratio: 1;
+    background: currentcolor;
+    mask-image: url("./caret-right-solid-full.svg");
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: 150%;
+    transition: transform 140ms ease;
+  }
+
+    details[open] &::before {
+      transform: rotate(90deg);
+    }
 
   &:hover {
     color: var(--color-accent);
