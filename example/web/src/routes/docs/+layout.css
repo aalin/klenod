@@ -83,10 +83,11 @@ summary {
 
 nav a {
   display: block;
-  padding: 0.42rem 0.6rem;
+  padding-inline: 1.5em 0.6rem;
+  padding-block: 0.42rem;
   color: var(--color-muted);
   border-radius: var(--radius-sm);
-  font-weight: 750;
+  font-weight: 400;
   line-height: 1.25;
   text-decoration: none;
 
