@@ -1,11 +1,10 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
-  Panel = import("/components/Panel.haml")
   Posts = import_glob("../_posts/*.md").values
 
 :ruby
   slug = request.params.fetch(:slug)
-  post = Posts.find { |item| item::Frontmatter.fetch("slug") == slug }
+  post = Posts.find { it::Frontmatter.fetch("slug") == slug }
   frontmatter = post && post::Frontmatter
 
 %article
@@ -15,16 +14,15 @@
       title: frontmatter.fetch("title"),
       summary: frontmatter.fetch("summary")
     }
-    %Panel{ title: "Post body" }
-      %p
+    %section.post
+      %header
         %time{ datetime: frontmatter.fetch("date") }= frontmatter.fetch("date")
-      = post.instantiate.render
-      %p Ruby modules loaded through a dependency graph
+        %span Markdown post
+      .body
+        = Example::H[post]
   = else
     %PageHeader{
       kicker: "Dynamic Markdown route",
       title: "Blog post: #{slug}",
       summary: "No Markdown post exists for this slug, but the dynamic route still rendered."
     }
-    %Panel{ title: "Missing post" }
-      %p Ruby modules loaded through a dependency graph

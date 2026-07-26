@@ -216,7 +216,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "<body")
     assert_includes(html, "Klenod example")
     assert_includes(html, "Building a lazy module graph")
-    assert_includes(html, "Ruby modules loaded through a dependency graph")
+    assert_includes(html, "Klenod can collect dependencies without evaluating every module immediately")
     assert_includes(html, "Blog posts")
     assert_includes(html, "Generated assets as imports")
     assert_includes(html, "href=\"/demo/blog/routing\"")
