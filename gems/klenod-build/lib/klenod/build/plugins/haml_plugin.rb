@@ -16,13 +16,13 @@ require_relative "../transform_result"
 require_relative "../watched_pattern"
 require_relative "intl_plugin"
 require_relative "markdown_compiler"
-require_relative "styles_runtime"
+require_relative "class_names_runtime"
 
 module Klenod
   module Build
     module Plugins
       class HamlPlugin < Plugin
-        include StylesRuntime
+        include ClassNamesRuntime
 
         class ParseError < StandardError
           attr_reader :module_id, :source, :line, :column, :cause
@@ -303,8 +303,8 @@ module Klenod
                 )
               footer = [
                 constant_assignment("Default", component_class_name),
-                constant_assignment("Styles", styles_source),
-                call(receiver: "Default", name: "const_set", arguments: [symbol("Styles"), "Styles"]),
+                constant_assignment("ClassNames", styles_source),
+                call(receiver: "Default", name: "const_set", arguments: [symbol("ClassNames"), "ClassNames"]),
                 constant_assignment("Translations", "Default::Translations")
               ]
 
@@ -512,8 +512,8 @@ module Klenod
               name = name.to_s
 
               Fragment.new(
-                "Styles[#{symbol_source(name)}]",
-                ARef(VarRef(Const("Styles")), Args([symbol_node(name)]))
+                "ClassNames[#{symbol_source(name)}]",
+                ARef(VarRef(Const("ClassNames")), Args([symbol_node(name)]))
               )
             end
 
@@ -521,8 +521,8 @@ module Klenod
               name = name.to_s
 
               Fragment.new(
-                "Styles[#{symbol_source(name)}]",
-                ARef(VarRef(Const("Styles")), Args([symbol_node(name)]))
+                "ClassNames[#{symbol_source(name)}]",
+                ARef(VarRef(Const("ClassNames")), Args([symbol_node(name)]))
               )
             end
 
@@ -530,9 +530,9 @@ module Klenod
               fragments = values.map { |value| expression_fragment(value) }
 
               Fragment.new(
-                "Styles.class_name(#{fragments.map(&:source).join(", ")})",
+                "ClassNames.class_name(#{fragments.map(&:source).join(", ")})",
                 CallNode(
-                  constant_path("Styles"),
+                  constant_path("ClassNames"),
                   Period("."),
                   Ident("class_name"),
                   ArgParen(Args(fragments.map { |fragment| node_for(fragment) }))
@@ -544,7 +544,7 @@ module Klenod
               fragments = values.map { |value| expression_fragment(value) }
 
               Fragment.new(
-                "Styles.class_name(#{fragments.map(&:source).join(", ")})",
+                "ClassNames.class_name(#{fragments.map(&:source).join(", ")})",
                 nil
               )
             end
@@ -1800,7 +1800,7 @@ module Klenod
         end
 
         def resolve(dependency, _context)
-          styles_dependency = resolve_styles_runtime(dependency)
+          styles_dependency = resolve_class_names_runtime(dependency)
           return styles_dependency if styles_dependency
 
           return nil unless dependency.specifier == HAML_HELPER_SPECIFIER
@@ -1809,7 +1809,7 @@ module Klenod
         end
 
         def load(module_id, _context)
-          styles_load = load_styles_runtime(module_id)
+          styles_load = load_class_names_runtime(module_id)
           return styles_load if styles_load
 
           return nil unless module_id.scheme == :virtual && module_id == HAML_HELPER_MODULE_ID
@@ -1875,9 +1875,9 @@ module Klenod
             dependencies << dependency
             style_dependencies << dependency
           end
-          styles_runtime_dependency = styles_runtime_dependency(module_id)
-          dependencies << styles_runtime_dependency
-          styles_source = styles_source_for(builder, style_dependencies, styles_runtime_dependency: styles_runtime_dependency)
+          class_names_runtime_dependency = class_names_runtime_dependency(module_id)
+          dependencies << class_names_runtime_dependency
+          styles_source = styles_source_for(builder, style_dependencies, class_names_runtime_dependency: class_names_runtime_dependency)
           haml_helper_needed = haml_helper_needed?(code, styleable: !style_dependencies.empty?)
           haml_helper_dependency = haml_helper_dependency(module_id) if haml_helper_needed
           dependencies << haml_helper_dependency if haml_helper_dependency
@@ -1954,7 +1954,7 @@ module Klenod
         end
 
         def import_value(resolved_dependency, record, context)
-          styles_import = styles_runtime_import_value(resolved_dependency, record, context)
+          styles_import = class_names_runtime_import_value(resolved_dependency, record, context)
           return styles_import if styles_import
           return nil unless record.id.extname == ".haml"
 
@@ -1962,7 +1962,7 @@ module Klenod
         end
 
         def runtime_import_value(resolved_dependency, record, _context)
-          styles_import = styles_runtime_runtime_import_value(resolved_dependency, record)
+          styles_import = class_names_runtime_runtime_import_value(resolved_dependency, record)
           return styles_import if styles_import
           return Runtime::DefaultImport.new(:Default) if record.id.extname == ".haml"
 
@@ -2051,7 +2051,7 @@ module Klenod
               def self.class_name(component_class, classes)
                 return nil if classes.empty?
 
-                styles = component_class.const_defined?(:Styles, false) ? component_class::Styles : nil
+                styles = component_class.const_defined?(:ClassNames, false) ? component_class::ClassNames : nil
                 return nil unless styles.respond_to?(:class_name)
 
                 styles.class_name(*classes)
@@ -2101,15 +2101,15 @@ module Klenod
           nodes
         end
 
-        def styles_source_for(builder, dependencies, styles_runtime_dependency:)
-          styles_runtime = builder.import_call(styles_runtime_dependency.id).source
+        def styles_source_for(builder, dependencies, class_names_runtime_dependency:)
+          class_names_runtime = builder.import_call(class_names_runtime_dependency.id).source
           imports = dependencies.map { |dependency| builder.import_call(dependency.id) }
-          return "#{styles_runtime}.new({}.freeze)" if imports.empty?
+          return "#{class_names_runtime}.new({}.freeze)" if imports.empty?
           return imports.fetch(0).source if imports.length == 1
 
           builder
             .expression(
-              "#{styles_runtime}.merge(#{imports.map(&:source).join(", ")})"
+              "#{class_names_runtime}.merge(#{imports.map(&:source).join(", ")})"
             )
             .source
         end

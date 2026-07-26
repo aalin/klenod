@@ -439,7 +439,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         assets.map(&:logical_name)
       )
       assert_equal(assets, asset_references.map(&:asset))
-      assert_equal([1, 2, 4, 6], asset_references.map(&:index))
+      assert_equal([2, 3, 5, 7], asset_references.map(&:index))
       assert_equal(["styles/layout.css", "styles/page.css"], context.assets_for_module(["styles/layout.css", "styles/page.css"], type: :css, recursive: false).map(&:logical_name))
       assert_equal([0, 1], context.asset_references_for_module(["styles/layout.css", "styles/page.css"], type: :css, recursive: false).map(&:index))
     end

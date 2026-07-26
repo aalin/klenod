@@ -16,7 +16,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
         ["pages/page.css", "pages/page.intl.*.toml"],
         record.watched_patterns.map(&:glob)
       )
-      assert_empty(context.graph.mods.fetch(record.id).const_get(:Exports)::Styles.keys)
+      assert_empty(context.graph.mods.fetch(record.id).const_get(:Exports)::ClassNames.keys)
       assert_equal({}, context.graph.mods.fetch(record.id).const_get(:Exports)::Translations)
     end
   end
@@ -83,11 +83,11 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       haml_record = context.evaluate("pages/page.haml")
 
-      assert_empty(context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles.keys)
+      assert_empty(context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames.keys)
 
       File.write(css_path, ".title { color: red; }\n")
       result = context.invalidate_paths([css_path])
-      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
 
       assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
       assert_match(/title/, styles.fetch(:title))
@@ -127,7 +127,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       assert_equal(
         [
           ModuleId.new("pages/page.css", nil),
-          ModuleId.new("virtual:klenod/styles.rb", nil),
+          ModuleId.new("virtual:klenod/class_names.rb", nil),
           ModuleId.new("virtual:klenod/haml_helper.rb", nil)
         ],
         haml_record.resolved_dependencies.map(&:module_id)
@@ -153,12 +153,12 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       haml_record = context.evaluate("pages/page.haml")
       virtual_css_id = ModuleId.new("pages/page.haml.inline.0.css", nil)
       css_record = context.graph.records.fetch(virtual_css_id)
-      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
 
       assert_equal(
         [
           virtual_css_id,
-          ModuleId.new("virtual:klenod/styles.rb", nil),
+          ModuleId.new("virtual:klenod/class_names.rb", nil),
           ModuleId.new("virtual:klenod/haml_helper.rb", nil)
         ],
         haml_record.resolved_dependencies.map(&:module_id)
@@ -179,7 +179,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       plugin = haml_plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       haml_record = context.evaluate("pages/page.haml")
-      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
       rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
 
       assert_match(/figure/, styles.fetch(:__figure))
@@ -196,7 +196,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       plugin = haml_plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       haml_record = context.evaluate("pages/page.haml")
-      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
       rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
 
       assert_equal([styles.fetch(:__img), styles.fetch(:image)].join(" "), rendered.fetch(1).fetch(:class))
@@ -212,7 +212,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       plugin = haml_plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       haml_record = context.evaluate("pages/page.haml")
-      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
       rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
       class_names = rendered.fetch(2).fetch(:class).split
 
@@ -233,7 +233,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       plugin = haml_plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       haml_record = context.evaluate("pages/page.haml")
-      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
       rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
       class_names = rendered.fetch(2).fetch(:class).split
 
@@ -254,7 +254,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
 
       assert_equal(
         [
-          ModuleId.new("virtual:klenod/styles.rb", nil),
+          ModuleId.new("virtual:klenod/class_names.rb", nil),
           ModuleId.new("virtual:klenod/haml_helper.rb", nil)
         ],
         haml_record.resolved_dependencies.map(&:module_id)
@@ -281,14 +281,14 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       haml_record = context.evaluate("pages/page.haml")
       companion_css_record = context.graph.records.fetch(ModuleId.new("pages/page.css", nil))
       inline_css_record = context.graph.records.fetch(ModuleId.new("pages/page.haml.inline.0.css", nil))
-      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
       title_classes = styles.fetch(:title).split
 
       assert_equal(
         [
           ModuleId.new("pages/page.css", nil),
           ModuleId.new("pages/page.haml.inline.0.css", nil),
-          ModuleId.new("virtual:klenod/styles.rb", nil),
+          ModuleId.new("virtual:klenod/class_names.rb", nil),
           ModuleId.new("virtual:klenod/haml_helper.rb", nil)
         ],
         haml_record.resolved_dependencies.map(&:module_id)
@@ -324,7 +324,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
 
       File.write(haml_path, "%h1 Hello\n")
       result = context.invalidate_paths([haml_path])
-      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
 
       assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
       refute(context.graph.records.key?(virtual_css_id))
@@ -359,11 +359,11 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       context = Klenod::Build::Context.new(source_dir: dir)
       haml_record = context.evaluate("pages/page.haml")
       old_asset_path = context.graph.records.fetch(ModuleId.new("pages/page.css", nil)).assets.first.output_path
-      old_styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      old_styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
 
       File.write(css_path, ".heading { color: blue; }\n")
       result = context.invalidate_paths([css_path])
-      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
       css_record = context.graph.records.fetch(ModuleId.new("pages/page.css", nil))
 
       assert_equal(["pages/page.css", "pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
@@ -443,11 +443,11 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       context = Klenod::Build::Context.new(source_dir: dir)
       haml_record = context.evaluate("pages/page.haml")
 
-      assert_match(/title/, context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles.fetch(:title))
+      assert_match(/title/, context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames.fetch(:title))
 
       File.delete(css_path)
       result = context.invalidate_paths([], removed_paths: [css_path])
-      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
 
       assert_equal(["pages/page.css"], result.removed_module_ids.map(&:to_s))
       assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))

@@ -30,7 +30,7 @@ class StyleClasses < TestFramework::ComponentBase
           class:
             begin
               # SourceMapMark:2
-              Styles.class_name(:__img, :image)
+              ClassNames.class_name(:__img, :image)
             end
         ]
       end,
@@ -42,21 +42,21 @@ class StyleClasses < TestFramework::ComponentBase
           class:
             begin
               # SourceMapMark:3
-              Styles.class_name(:__figcaption)
+              ClassNames.class_name(:__figcaption)
             end
         ]
       end,
       class:
         begin
           # SourceMapMark:1
-          Styles.class_name(:__figure, :card)
+          ClassNames.class_name(:__figure, :card)
         end
     ]
   end
 end
 Default = StyleClasses
-Styles =
-  __klenod_import__("virtual:klenod/styles").new(
+ClassNames =
+  __klenod_import__("virtual:klenod/class_names").new(
     {
       __figure: "figure_hash",
       __img: "img_hash",
@@ -64,5 +64,5 @@ Styles =
       image: "image_hash"
     }.freeze
   )
-Default.const_set(:Styles, Styles)
+Default.const_set(:ClassNames, ClassNames)
 Translations = Default::Translations

@@ -110,7 +110,8 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
       record = context.evaluate("page.md")
 
       assert_equal([:heading, "Hello", {id: "hello"}], context.exports(record)::Default.new.render)
-      assert_equal(["/markdown-components"], record.dependencies.map(&:specifier))
+      assert_equal(["/markdown-components", "virtual:klenod/class_names"], record.dependencies.map(&:specifier))
+      assert_empty(context.exports(record)::Default::ClassNames.keys)
     end
   end
 

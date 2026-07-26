@@ -35,7 +35,7 @@
 
   %DocsSection{ title: "Companion Files" }
     :markdown
-      Haml automatically imports matching CSS companions as `Styles` when present. The companion naming follows the route-file convention, so `+page.haml` pairs with `+page.css`.
+      Haml automatically imports matching CSS companions as `ClassNames` when present. The companion naming follows the route-file convention, so `+page.haml` pairs with `+page.css`.
 
       ```text
       components/Card.haml
@@ -73,7 +73,7 @@
       }
       ```
 
-      Tag selectors use `__`-prefixed keys such as `Styles[:__article]`. Class selectors use normal keys such as `Styles[:featured]`.
+      Tag selectors use `__`-prefixed keys such as `ClassNames[:__article]`. Class selectors use normal keys such as `ClassNames[:featured]`.
 
       Haml applies scoped tag classes automatically to matching tags. Explicit Haml classes such as `%article.featured` are joined with the matching scoped class from the same CSS module.
 

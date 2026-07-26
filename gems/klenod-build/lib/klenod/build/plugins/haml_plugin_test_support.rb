@@ -75,19 +75,10 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
       def self.class_name(component_class, classes)
         return nil if classes.empty?
 
-        styles = component_class.const_defined?(:Styles, false) ? component_class::Styles : {}
-        class_names = []
-        classes.each do |value|
-          if value.is_a?(Symbol)
-            name = value.to_s
-            collect_output_class_names(class_names, styles[value] || (name.start_with?("__") ? nil : name))
-          else
-            collect_output_class_names(class_names, value)
-          end
-        end
-        return nil if class_names.empty?
+        class_names = component_class.const_defined?(:ClassNames, false) ? component_class::ClassNames : nil
+        return nil unless class_names.respond_to?(:class_name)
 
-        class_names.join(" ")
+        class_names.class_name(*classes)
       end
 
       def self.class_names(*values)
@@ -127,16 +118,16 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
   def transform_haml_fixture(path)
     basename = File.basename(path, ".haml")
     module_id = ModuleId.new("__test__/haml/#{File.basename(path)}", nil)
-    styles_runtime_dependency_id = "virtual:klenod/styles"
-    styles_runtime = "__klenod_import__(#{styles_runtime_dependency_id.inspect})"
+    class_names_runtime_dependency_id = "virtual:klenod/class_names"
+    class_names_runtime = "__klenod_import__(#{class_names_runtime_dependency_id.inspect})"
     styles_source =
       case basename
       when "style_classes"
-        "#{styles_runtime}.new({__figure: \"figure_hash\", __img: \"img_hash\", card: \"card_hash\", image: \"image_hash\"}.freeze)"
+        "#{class_names_runtime}.new({__figure: \"figure_hash\", __img: \"img_hash\", card: \"card_hash\", image: \"image_hash\"}.freeze)"
       when "inline_css_filter"
-        "#{styles_runtime}.new({title: \"title_hash\"}.freeze)"
+        "#{class_names_runtime}.new({title: \"title_hash\"}.freeze)"
       else
-        "#{styles_runtime}.new({}.freeze)"
+        "#{class_names_runtime}.new({}.freeze)"
       end
     styleable = basename == "style_classes"
 

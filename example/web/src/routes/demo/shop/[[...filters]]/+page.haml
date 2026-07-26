@@ -35,14 +35,14 @@
     summary: "Optional catch-all segments can match the base route or any number of nested filter parts."
   }
   %Panel{ title: "Available filters" }
-    %nav{ class: Styles[:filters], aria: { label: "Shop filters" } }
+    %nav{ class: ClassNames[:filters], aria: { label: "Shop filters" } }
       = Filters.map do |filter|
         %a{
-          class: [Styles[:filter], enabled?(filter, filters) ? Styles[:enabled] : nil],
+          class: [ClassNames[:filter], enabled?(filter, filters) ? ClassNames[:enabled] : nil],
           href: href_for(filter, filters),
           aria: { pressed: enabled?(filter, filters).to_s }
         }= filter.fetch(:label)
-    %p{ class: Styles[:summary] }
+    %p{ class: ClassNames[:summary] }
       = if filters.empty?
         No filters selected
       = else

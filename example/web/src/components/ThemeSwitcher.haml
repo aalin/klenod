@@ -16,9 +16,9 @@
   id: "theme-menu",
   anchor: "theme-switcher",
   title: "Choose theme",
-  popover_class: Styles[:popover],
+  popover_class: ClassNames[:popover],
   button: [
-    Example::H[:span, current[:icon], class: Styles[:icon], :"aria-hidden" => true]
+    Example::H[:span, current[:icon], class: ClassNames[:icon], :"aria-hidden" => true]
   ]
 }
   %form{ method: "post", action: "/api/theme" }

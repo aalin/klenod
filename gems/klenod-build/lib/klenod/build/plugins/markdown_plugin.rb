@@ -10,12 +10,15 @@ require_relative "../plugin"
 require_relative "../transform_result"
 require_relative "../watched_pattern"
 require_relative "haml_plugin"
+require_relative "class_names_runtime"
 require_relative "markdown_compiler"
 
 module Klenod
   module Build
     module Plugins
       class MarkdownPlugin < Plugin
+        include ClassNamesRuntime
+
         DEFAULT_COMPONENT_BASE_CLASS = HamlPlugin::DEFAULT_COMPONENT_BASE_CLASS
         DEFAULT_FACTORY = HamlPlugin::DEFAULT_FACTORY
         COMPONENTS_MODULE_ID = ModuleId.new("markdown-components.rb", nil)
@@ -29,15 +32,25 @@ module Klenod
           @factory = factory
         end
 
+        def resolve(dependency, _context)
+          resolve_class_names_runtime(dependency)
+        end
+
+        def load(module_id, _context)
+          load_class_names_runtime(module_id)
+        end
+
         def transform(module_id, code, context)
           return super unless module_id.extname == ".md"
 
           frontmatter, markdown_source = parse_frontmatter(code)
           builder = HamlPlugin::Transformer::RubyBuilder.new(profiler: context.respond_to?(:profiler) ? context.profiler : nil)
           dependency = markdown_components_dependency(module_id, context)
+          class_names_dependency = class_names_runtime_dependency(module_id)
           components_source = components_source_for(dependency)
           render_source = MarkdownCompiler.new(factory: @factory, components_source: components_source).compile(markdown_source)
           component_class_name = component_class_name(module_id)
+          class_names_source = "#{builder.import_call(class_names_dependency.id).source}.new({}.freeze)"
           generated =
             builder.component_source(
               component_class_name: component_class_name,
@@ -45,13 +58,13 @@ module Klenod
               translations_source: "{}.freeze",
               ruby_source: "",
               render_source: render_source,
-              styles_source: "{}.freeze"
+              styles_source: class_names_source
             )
           generated = "#{generated}\nDefault.const_set(:Frontmatter, #{frontmatter.inspect}.freeze)\n"
 
           TransformResult.new(
             generated,
-            [dependency].compact,
+            [dependency, class_names_dependency].compact,
             Runtime::SourceMap::SourceMap.parse(code, generated),
             [],
             [WatchedPattern.new(module_id, COMPONENTS_MODULE_ID.path, :markdown_components, {})],
@@ -59,13 +72,17 @@ module Klenod
           )
         end
 
-        def import_value(_resolved_dependency, record, context)
+        def import_value(resolved_dependency, record, context)
+          class_names_import = class_names_runtime_import_value(resolved_dependency, record, context)
+          return class_names_import if class_names_import
           return nil unless record.id.extname == ".md"
 
           context.mods.fetch(record.id).const_get(:Exports)::Default
         end
 
-        def runtime_import_value(_resolved_dependency, record, _context)
+        def runtime_import_value(resolved_dependency, record, _context)
+          class_names_import = class_names_runtime_runtime_import_value(resolved_dependency, record)
+          return class_names_import if class_names_import
           return Runtime::DefaultImport.new(:Default) if record.id.extname == ".md"
 
           super

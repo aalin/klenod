@@ -19,7 +19,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
 
       assert_operator(exports::Default, :<, FakeFramework::ComponentBase)
       assert_equal([:h1, "Hello"], exports::Default.new.render)
-      assert_equal(exports::Default::Styles, exports::Styles)
+      assert_equal(exports::Default::ClassNames, exports::ClassNames)
       assert_equal(exports::Default::Translations, exports::Translations)
     end
   end

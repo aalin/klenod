@@ -22,15 +22,15 @@ class InlineCssFilter < TestFramework::ComponentBase
       class:
         begin
           # SourceMapMark:6
-          Styles.class_name(:__h1, :title)
+          ClassNames.class_name(:__h1, :title)
         end
     ]
   end
 end
 Default = InlineCssFilter
-Styles =
-  __klenod_import__("virtual:klenod/styles").new(
+ClassNames =
+  __klenod_import__("virtual:klenod/class_names").new(
     { title: "title_hash" }.freeze
   )
-Default.const_set(:Styles, Styles)
+Default.const_set(:ClassNames, ClassNames)
 Translations = Default::Translations

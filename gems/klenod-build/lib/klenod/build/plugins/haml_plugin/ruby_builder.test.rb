@@ -141,15 +141,15 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     class_names = builder.class_names([tag_lookup, class_lookup, builder.expression("dynamic_class")])
 
     assert_kind_of(SyntaxTree::ARef, tag_lookup.node)
-    assert_equal("Styles[:__p]", tag_lookup.source)
+    assert_equal("ClassNames[:__p]", tag_lookup.source)
     assert_kind_of(SyntaxTree::ARef, class_lookup.node)
-    assert_equal('Styles[:"article-card"]', class_lookup.source)
+    assert_equal('ClassNames[:"article-card"]', class_lookup.source)
     assert_kind_of(SyntaxTree::CallNode, class_names.node)
 
     formatted = builder.fragment(class_names.node).source
-    assert_includes(formatted, "Styles.class_name(")
-    assert_includes(formatted, "Styles[:__p]")
-    assert_includes(formatted, 'Styles[:"article-card"]')
+    assert_includes(formatted, "ClassNames.class_name(")
+    assert_includes(formatted, "ClassNames[:__p]")
+    assert_includes(formatted, 'ClassNames[:"article-card"]')
     assert_includes(formatted, "dynamic_class")
   end
 
@@ -164,12 +164,12 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
   def test_ruby_builder_builds_method_calls_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     bare_call = builder.call(receiver: nil, name: "method", arguments: [builder.symbol("__klenod_import__")])
-    receiver_call = builder.call(receiver: "Default", name: "const_set", arguments: [builder.symbol("Styles"), "Styles"])
+    receiver_call = builder.call(receiver: "Default", name: "const_set", arguments: [builder.symbol("ClassNames"), "ClassNames"])
 
     assert_kind_of(SyntaxTree::CallNode, bare_call.node)
     assert_equal("method(:__klenod_import__)", builder.fragment(bare_call.node).source)
     assert_kind_of(SyntaxTree::CallNode, receiver_call.node)
-    assert_equal("Default.const_set(:Styles, Styles)", builder.fragment(receiver_call.node).source)
+    assert_equal("Default.const_set(:ClassNames, ClassNames)", builder.fragment(receiver_call.node).source)
   end
 
   def test_ruby_builder_builds_method_definitions_from_syntax_tree_nodes

@@ -8,50 +8,50 @@ require_relative "../transform_result"
 module Klenod
   module Build
     module Plugins
-      module StylesRuntime
-        STYLES_SPECIFIER = "virtual:klenod/styles"
-        STYLES_MODULE_ID = ModuleId.new("virtual:klenod/styles.rb", nil)
+      module ClassNamesRuntime
+        CLASS_NAMES_SPECIFIER = "virtual:klenod/class_names"
+        CLASS_NAMES_MODULE_ID = ModuleId.new("virtual:klenod/class_names.rb", nil)
 
-        def resolve_styles_runtime(dependency)
-          return nil unless dependency.specifier == STYLES_SPECIFIER
+        def resolve_class_names_runtime(dependency)
+          return nil unless dependency.specifier == CLASS_NAMES_SPECIFIER
 
-          ResolvedDependency.new(dependency, STYLES_MODULE_ID, {virtual: true})
+          ResolvedDependency.new(dependency, CLASS_NAMES_MODULE_ID, {virtual: true})
         end
 
-        def load_styles_runtime(module_id)
-          return nil unless module_id.scheme == :virtual && module_id == STYLES_MODULE_ID
+        def load_class_names_runtime(module_id)
+          return nil unless module_id.scheme == :virtual && module_id == CLASS_NAMES_MODULE_ID
 
-          source = styles_runtime_source
+          source = class_names_runtime_source
           LoadResult.new(source, nil, TransformResult.new(source, [], nil, [], [], {}))
         end
 
-        def styles_runtime_dependency(module_id)
+        def class_names_runtime_dependency(module_id)
           Dependency
             .create(
-              specifier: STYLES_SPECIFIER,
+              specifier: CLASS_NAMES_SPECIFIER,
               importer_id: module_id,
-              kind: :styles_runtime
+              kind: :class_names_runtime
             )
-            .with(id: STYLES_SPECIFIER)
+            .with(id: CLASS_NAMES_SPECIFIER)
         end
 
-        def styles_runtime_import_value(resolved_dependency, record, context)
-          return nil unless resolved_dependency.dependency.kind == :styles_runtime
+        def class_names_runtime_import_value(resolved_dependency, record, context)
+          return nil unless resolved_dependency.dependency.kind == :class_names_runtime
 
           context.mods.fetch(record.id).const_get(:Exports)::Default
         end
 
-        def styles_runtime_runtime_import_value(resolved_dependency, _record)
-          return nil unless resolved_dependency.dependency.kind == :styles_runtime
+        def class_names_runtime_runtime_import_value(resolved_dependency, _record)
+          return nil unless resolved_dependency.dependency.kind == :class_names_runtime
 
           Runtime::DefaultImport.new(:Default)
         end
 
-        def styles_runtime_source
+        def class_names_runtime_source
           <<~RUBY
             # frozen_string_literal: true
 
-            class Styles
+            class ClassNames
               def self.merge(*sources)
                 classes = sources.each_with_object({}) do |source, result|
                   source.each_pair do |name, class_name|
@@ -116,7 +116,7 @@ module Klenod
               end
             end
 
-            Default = Styles
+            Default = ClassNames
           RUBY
         end
       end

@@ -108,7 +108,7 @@ class Klenod::Build::Watcher::Test < Minitest::Test
 
       File.write(css_path, ".title { color: red; }\n")
       event = emit_update(context, [css_path], [], 1)
-      styles = context.graph.mods.fetch(Klenod::Build::ModuleId.new("pages/page.haml", nil)).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(Klenod::Build::ModuleId.new("pages/page.haml", nil)).const_get(:Exports)::ClassNames
       added_update = event.asset_updates.fetch(0)
 
       assert_same(event, events.fetch(0))
@@ -134,7 +134,7 @@ class Klenod::Build::Watcher::Test < Minitest::Test
 
       File.delete(css_path)
       event = emit_update(context, [], [css_path], 1)
-      styles = context.graph.mods.fetch(Klenod::Build::ModuleId.new("pages/page.haml", nil)).const_get(:Exports)::Styles
+      styles = context.graph.mods.fetch(Klenod::Build::ModuleId.new("pages/page.haml", nil)).const_get(:Exports)::ClassNames
       removed_update = event.asset_updates.fetch(0)
 
       assert_equal(["pages/page.css"], event.result.removed_module_ids.map(&:to_s))
@@ -143,7 +143,7 @@ class Klenod::Build::Watcher::Test < Minitest::Test
       assert(removed_update.removed?)
       assert_equal(old_asset, removed_update.previous_asset)
       assert_nil(removed_update.current_asset)
-      assert_equal({}, styles)
+      assert_empty(styles.keys)
     end
   end
 
