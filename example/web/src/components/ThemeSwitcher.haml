@@ -21,7 +21,7 @@
     Example::H[:span, current[:icon], class: Styles[:icon], :"aria-hidden" => true]
   ]
 }
-  %form{ method: "post", action: "/theme" }
+  %form{ method: "post", action: "/api/theme" }
     %input{ type: "hidden", name: "_method", value: "put" }
     %input{ type: "hidden", name: "return_to", value: return_to }
     = Themes.map do |theme|

@@ -1099,7 +1099,7 @@ class Klenod::ExampleTest < Minitest::Test
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
     form = URI.encode_www_form("_method" => "put", "value" => "dark", "return_to" => "/docs")
-    status, headers, body = entry.call(BodyRequest["POST", "/theme", HeaderList.new([]), form], context)
+    status, headers, body = entry.call(BodyRequest["POST", "/api/theme", HeaderList.new([]), form], context)
 
     assert_equal(302, status)
     assert_equal("/docs", headers.fetch("location"))
@@ -1114,7 +1114,7 @@ class Klenod::ExampleTest < Minitest::Test
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
     form = URI.encode_www_form("_method" => "put", "value" => "system", "return_to" => "/demo")
-    status, headers, body = entry.call(BodyRequest["POST", "/theme", HeaderList.new([]), form], context)
+    status, headers, body = entry.call(BodyRequest["POST", "/api/theme", HeaderList.new([]), form], context)
 
     assert_equal(302, status)
     assert_equal("/demo", headers.fetch("location"))
@@ -1129,7 +1129,7 @@ class Klenod::ExampleTest < Minitest::Test
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
     form = URI.encode_www_form("_method" => "put", "value" => "dark", "return_to" => "//example.com")
-    status, headers, _body = entry.call(BodyRequest["POST", "/theme", HeaderList.new([]), form], context)
+    status, headers, _body = entry.call(BodyRequest["POST", "/api/theme", HeaderList.new([]), form], context)
 
     assert_equal(302, status)
     assert_equal("/", headers.fetch("location"))
