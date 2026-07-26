@@ -1,11 +1,7 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
-  Posts = [
-    import("../posts/graph.toml"),
-    import("../posts/assets.toml"),
-    import("../posts/routing.toml")
-  ]
+  Posts = import_glob("../_posts/*.toml").values
 
 :ruby
   slug = request.params.fetch(:slug)

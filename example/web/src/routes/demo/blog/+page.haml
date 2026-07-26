@@ -1,10 +1,6 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
-  Posts = [
-    import("./posts/graph.toml"),
-    import("./posts/assets.toml"),
-    import("./posts/routing.toml")
-  ].sort_by { |post| post.fetch("date") }.reverse
+  Posts = import_glob("./_posts/*.toml").values.sort_by { |post| post.fetch("date") }.reverse
 
 %article
   %PageHeader{
