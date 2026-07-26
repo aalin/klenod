@@ -512,11 +512,10 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_server_returns_pretty_html_error_response_for_html_requests
-    server = Example::DevServer.allocate
+    error_page = Example::DevelopmentErrorPage.new(config: nil, context: nil)
     error = RuntimeError.new("<broken>")
     status, headers, body =
-      server.send(
-        :error_response_for,
+      error_page.response_for(
         HeaderRequest["GET", "/demo/data", HeaderList.new([["Accept", "text/html"]])],
         error,
         "\e[31mRuntimeError: <broken>\e[0m"
@@ -532,8 +531,8 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_server_formats_haml_parse_error_html_as_sections
-    server = Example::DevServer.allocate
-    server.instance_variable_set(:@config, example_config)
+    config = example_config
+    error_page = Example::DevelopmentErrorPage.new(config: config, context: config.context)
     error = Klenod::Build::Plugins::HamlPlugin::ParseError.new(
       Klenod::Build::Plugins::HamlPlugin::RubyParseError.new(
         "Could not build Ruby block from Haml script: \"@columns.map do |column| }\"\n\nErrors:\n  Unmatched `}', missing `{' ?\n  Unmatched keyword, missing `end' ?",
@@ -543,8 +542,7 @@ class Klenod::ExampleTest < Minitest::Test
       module_id: Klenod::Build::ModuleId.new("components/DataTable.haml", nil)
     )
     status, _headers, body =
-      server.send(
-        :error_response_for,
+      error_page.response_for(
         HeaderRequest["GET", "/demo/data", HeaderList.new([["Accept", "text/html"]])],
         error,
         Example::ServerErrors.format_exception(error, nil)
@@ -562,10 +560,9 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_server_keeps_plain_error_response_for_non_html_requests
-    server = Example::DevServer.allocate
+    error_page = Example::DevelopmentErrorPage.new(config: nil, context: nil)
     status, headers, body =
-      server.send(
-        :error_response_for,
+      error_page.response_for(
         HeaderRequest["GET", "/demo/data", HeaderList.new([["Accept", "application/json"]])],
         RuntimeError.new("broken"),
         "\e[31mRuntimeError: broken\e[0m"
@@ -610,12 +607,10 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_dev_server_handles_chrome_devtools_probe
-    server = Example::DevServer.allocate
     source_dir = "/tmp/klenod_example/src"
-    server.instance_variable_set(:@source_dir, source_dir)
-    server.instance_variable_set(:@devtools_workspace_uuid, "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b")
+    probe = Example::ChromeDevtoolsProbe.new(source_dir: source_dir, uuid: "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b")
     status, headers, body =
-      server.send(:dev_response_for, HeaderRequest["GET", "/.well-known/appspecific/com.chrome.devtools.json", HeaderList.new([])])
+      probe.response_for(HeaderRequest["GET", "/.well-known/appspecific/com.chrome.devtools.json", HeaderList.new([])])
     payload = JSON.parse(body.join)
 
     assert_equal(200, status)
@@ -641,33 +636,33 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_server_tracks_logged_update_errors
-    server = Example::DevServer.allocate
+    recent_errors = Example::RecentErrorLog.new
     error = RuntimeError.new("broken module")
 
-    refute(server.send(:logged_error?, error))
-    server.send(:remember_logged_error, error)
-    assert(server.send(:logged_error?, error))
-    server.send(:clear_logged_errors)
-    refute(server.send(:logged_error?, error))
+    refute(recent_errors.include?(error))
+    recent_errors.remember(error)
+    assert(recent_errors.include?(error))
+    recent_errors.clear
+    refute(recent_errors.include?(error))
   end
 
   def test_example_server_suppresses_recent_logged_update_errors
-    server = Example::DevServer.allocate
+    recent_errors = Example::RecentErrorLog.new
     error = RuntimeError.new("broken module")
 
-    server.send(:remember_logged_error, error, logged_at: 10.0)
+    recent_errors.remember(error, logged_at: 10.0)
 
-    assert(server.send(:recently_logged_error?, RuntimeError.new("broken module"), now: 11.0))
-    refute(server.send(:recently_logged_error?, RuntimeError.new("broken module"), now: 13.0))
+    assert(recent_errors.recent?(RuntimeError.new("broken module"), now: 11.0))
+    refute(recent_errors.recent?(RuntimeError.new("broken module"), now: 13.0))
   end
 
   def test_example_server_logs_repeated_errors_after_interval
-    server = Example::DevServer.allocate
+    recent_errors = Example::RecentErrorLog.new
     error = RuntimeError.new("broken module")
 
-    server.send(:remember_logged_error, error, logged_at: -Example::DevServer::ERROR_LOG_REPEAT_INTERVAL)
+    recent_errors.remember(error, logged_at: -Example::RecentErrorLog::DEFAULT_REPEAT_INTERVAL)
 
-    _stdout, stderr = capture_io { server.send(:log_error_unless_recent, RuntimeError.new("broken module"), "formatted error") }
+    _stdout, stderr = capture_io { recent_errors.warn_unless_recent(RuntimeError.new("broken module"), "formatted error") }
 
     assert_equal("formatted error\n", stderr)
   end

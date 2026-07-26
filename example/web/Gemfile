@@ -14,3 +14,5 @@ group :development do
 end
 
 gem "rouge", "~> 5.0"
+
+gem "http-accept", "~> 2.2"

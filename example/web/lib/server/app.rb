@@ -1,19 +1,17 @@
 # frozen_string_literal: true
 
-require "cgi/escape"
-require "json"
-require "securerandom"
-
 require "klenod"
 require_relative "../dev/update_logger"
+require_relative "chrome_devtools_probe"
+require_relative "development_error_page"
 require_relative "errors"
 require_relative "formatting"
+require_relative "recent_error_log"
 require_relative "runner"
 
 module Example
   class DevServer
-    ERROR_LOG_REPEAT_INTERVAL = 2.0
-    CHROME_DEVTOOLS_ENDPOINT = "/.well-known/appspecific/com.chrome.devtools.json"
+    ERROR_LOG_REPEAT_INTERVAL = RecentErrorLog::DEFAULT_REPEAT_INTERVAL
 
     def initialize(config_path:, port: Integer(ENV.fetch("PORT", "9292")), assets_dir: ENV["ASSETS_DIR"])
       @config = Klenod::Build::ConfigLoader.load(config_path)
@@ -75,20 +73,7 @@ module Example
     end
 
     def dev_response_for(request)
-      return unless request.path == CHROME_DEVTOOLS_ENDPOINT
-
-      [
-        200,
-        {
-          "cache-control" => "no-store",
-          "content-type" => "application/json; charset=utf-8"
-        },
-        [JSON.generate({workspace: {root: source_dir, uuid: devtools_workspace_uuid}}), "\n"]
-      ]
-    end
-
-    def devtools_workspace_uuid
-      @devtools_workspace_uuid ||= SecureRandom.uuid
+      chrome_devtools_probe.response_for(request)
     end
 
     def asset_app
@@ -102,6 +87,18 @@ module Example
       @update_logger ||= UpdateLogger.new(source_dir: source_dir)
     end
 
+    def chrome_devtools_probe
+      @chrome_devtools_probe ||= ChromeDevtoolsProbe.new(source_dir: source_dir)
+    end
+
+    def error_page
+      @error_page ||= DevelopmentErrorPage.new(config: config, context: context)
+    end
+
+    def recent_error_log
+      @recent_error_log ||= RecentErrorLog.new
+    end
+
     def install_update_handler
       context.on_update do |event|
         start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -112,221 +109,17 @@ module Example
         end
 
         if update.failed?
-          update.each_error { |_module_id, error| remember_logged_error(error) }
+          update.each_error { |_module_id, error| recent_error_log.remember(error) }
         else
-          clear_logged_errors
+          recent_error_log.clear
         end
       end
     end
 
     def handle_request_error(request, error)
       formatted = ServerErrors.format_exception(error, context)
-      log_error_unless_recent(error, formatted)
-      error_response_for(request, error, formatted)
-    end
-
-    def error_response_for(request, error, formatted)
-      return plain_error_response(formatted) unless accepts_html?(request)
-
-      [
-        500,
-        {"content-type" => "text/html; charset=utf-8"},
-        [error_page_html(request, error, formatted)]
-      ]
-    end
-
-    def plain_error_response(formatted)
-      [500, {"content-type" => "text/plain; charset=utf-8"}, [ServerFormatting.strip_ansi(formatted), "\n"]]
-    end
-
-    def error_page_html(request, error, formatted)
-      values = error_template_values(request, error, formatted)
-      error_template.gsub(/\{\{([A-Z_]+)\}\}/) { values.fetch(Regexp.last_match(1), "") }
-    end
-
-    def error_template
-      @error_template ||= File.read(File.join(__dir__, "error_template.html"))
-    end
-
-    def error_template_values(request, error, formatted)
-      if error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError)
-        parse_error_template_values(request, error)
-      else
-        generic_error_template_values(request, error, formatted)
-      end
-    end
-
-    def parse_error_template_values(request, error)
-      cause = error.cause
-      title, details = parse_error_details(cause.message)
-      location = parse_error_location(error)
-      label = location ? "#{location}: Haml parse error" : "Haml parse error"
-
-      {
-        "ERROR_LABEL" => escape_html(label),
-        "ERROR_TITLE" => escape_html(title),
-        "ERROR_CLASS" => escape_html(error.class.name),
-        "REQUEST_PATH" => escape_html(request_path(request)),
-        "ERROR_LIST" => error_list_html(details),
-        "SOURCE_SECTION" => source_section_html(error.source, error.line),
-        "BACKTRACE_SECTION" => ""
-      }
-    end
-
-    def generic_error_template_values(request, error, formatted)
-      {
-        "ERROR_LABEL" => escape_html(error.class.name),
-        "ERROR_TITLE" => escape_html(error.message),
-        "ERROR_CLASS" => escape_html(error.class.name),
-        "REQUEST_PATH" => escape_html(request_path(request)),
-        "ERROR_LIST" => "",
-        "SOURCE_SECTION" => "",
-        "BACKTRACE_SECTION" => pre_section_html("Backtrace", ServerFormatting.strip_ansi(formatted))
-      }
-    end
-
-    def parse_error_details(message)
-      sections = message.split(/\n\n+/)
-      title = sections.shift.to_s
-      details =
-        sections.flat_map do |section|
-          _heading, *lines = section.lines.map(&:chomp)
-          lines.map(&:strip).reject(&:empty?)
-        end
-
-      [title, details]
-    end
-
-    def parse_error_location(error)
-      return nil unless error.module_id && error.line
-
-      "#{display_path_for_module(error.module_id)}:#{error.line}"
-    end
-
-    def display_path_for_module(module_id)
-      source_path = context.graph.absolute_path(module_id)
-      Pathname(source_path).relative_path_from(Pathname(config.base_dir)).to_s
-    rescue ArgumentError
-      module_id.to_s
-    end
-
-    def error_list_html(items)
-      return "" if items.empty?
-
-      list_items = items.map { |item| "<li>#{escape_html(item)}</li>" }.join
-      "<ul class=\"error-list\">#{list_items}</ul>"
-    end
-
-    def source_section_html(source, line)
-      return "" unless source && line
-
-      pre_section_html("Source", source_excerpt(source, line))
-    end
-
-    def source_excerpt(source, line)
-      lines = source.lines
-      index = line - 1
-      first = [index - 2, 0].max
-      last = [index + 2, lines.length - 1].min
-      width = (last + 1).to_s.length
-
-      (first..last).map do |line_index|
-        marker = (line_index == index) ? ">" : " "
-        number = (line_index + 1).to_s.rjust(width)
-        "#{marker} #{number} | #{lines.fetch(line_index).chomp}"
-      end.join("\n")
-    end
-
-    def pre_section_html(title, content)
-      <<~HTML
-        <section class="panel">
-          <h2>#{escape_html(title)}</h2>
-          <pre><code>#{escape_html(content)}</code></pre>
-        </section>
-      HTML
-    end
-
-    def accepts_html?(request)
-      accept = request_headers(request).fetch("accept", "").to_s
-      return true if accept.empty?
-
-      ["text/html", "*/*"].include?(preferred_accept_type(accept))
-    end
-
-    def request_headers(request)
-      headers = request&.headers
-      return {} unless headers
-
-      index = {}
-      headers.each { |name, value| index[name.to_s.downcase] = value }
-      index
-    end
-
-    def preferred_accept_type(accept)
-      accept
-        .split(",")
-        .map
-        .with_index { |entry, index| accept_entry(entry, index) }
-        .compact
-        .max_by { |entry| [entry.fetch(:quality), -entry.fetch(:index)] }
-        &.fetch(:type, nil)
-    end
-
-    def accept_entry(entry, index)
-      type, *params = entry.strip.split(";").map(&:strip)
-      return nil if type.empty?
-
-      quality =
-        params
-          .find { |param| param.start_with?("q=") }
-          &.delete_prefix("q=")
-          &.to_f || 1.0
-      {type:, quality:, index:}
-    end
-
-    def request_path(request)
-      path = request&.path.to_s
-      path.empty? ? "/" : path
-    end
-
-    def escape_html(value)
-      CGI.escapeHTML(value.to_s)
-    end
-
-    def remember_logged_error(error, logged_at: current_time)
-      logged_errors[error_log_key(error)] = logged_at
-    end
-
-    def logged_error?(error)
-      logged_errors.key?(error_log_key(error))
-    end
-
-    def recently_logged_error?(error, now: current_time)
-      logged_at = logged_errors[error_log_key(error)]
-      logged_at && (now - logged_at) < ERROR_LOG_REPEAT_INTERVAL
-    end
-
-    def clear_logged_errors
-      logged_errors.clear
-    end
-
-    def logged_errors
-      @logged_errors ||= {}
-    end
-
-    def error_log_key(error)
-      [error.class.name, ServerFormatting.strip_ansi(error.message)]
-    end
-
-    def log_error_unless_recent(error, formatted)
-      return if recently_logged_error?(error)
-
-      warn formatted
-      remember_logged_error(error)
-    end
-
-    def current_time
-      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      recent_error_log.warn_unless_recent(error, formatted)
+      error_page.response_for(request, error, formatted)
     end
   end
 
