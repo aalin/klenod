@@ -55,6 +55,37 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_css_import_returns_styles_object_with_class_name_helper
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", ".button { color: red; }\n.enabled { color: green; }\n")
+      File.write(
+        "#{dir}/pages/home.rb",
+        <<~RUBY
+          Styles = import("../styles/home.css")
+          MISSING = Styles[:missing]
+          BUTTON = Styles[:button]
+          CLASSES = Styles.class_name(:button, "literal extra", {enabled: true, hidden: false, "plain" => true, missing: true})
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.evaluate("pages/home")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_nil(exports::MISSING)
+      assert_match(/button/, exports::BUTTON)
+      assert_includes(exports::CLASSES, exports::BUTTON)
+      assert_includes(exports::CLASSES, "literal")
+      assert_includes(exports::CLASSES, "extra")
+      assert_includes(exports::CLASSES, "plain")
+      assert_match(/enabled/, exports::CLASSES)
+      refute_includes(exports::CLASSES, "hidden")
+      refute_includes(exports::CLASSES, "missing")
+    end
+  end
+
   def test_css_dependencies_remove_local_imports_and_replace_url_placeholders
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
@@ -100,7 +131,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       css = record.assets.first.bytes
 
       assert_includes(css, font_url)
-      assert_equal(["styles/home.css"], context.graph.records.keys.map(&:to_s))
+      assert_equal(["styles/home.css"], context.graph.records.keys.map(&:to_s).grep_v(/\Avirtual:/))
     end
   end
 

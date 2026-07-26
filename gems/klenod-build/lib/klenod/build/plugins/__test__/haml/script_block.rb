@@ -40,6 +40,6 @@ class ScriptBlock < TestFramework::ComponentBase
   end
 end
 Default = ScriptBlock
-Styles = {}.freeze
+Styles = __klenod_import__("virtual:klenod/styles").new({}.freeze)
 Default.const_set(:Styles, Styles)
 Translations = Default::Translations

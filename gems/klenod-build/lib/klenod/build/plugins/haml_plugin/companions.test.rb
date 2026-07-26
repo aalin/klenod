@@ -16,7 +16,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
         ["pages/page.css", "pages/page.intl.*.toml"],
         record.watched_patterns.map(&:glob)
       )
-      assert_equal({}, context.graph.mods.fetch(record.id).const_get(:Exports)::Styles)
+      assert_empty(context.graph.mods.fetch(record.id).const_get(:Exports)::Styles.keys)
       assert_equal({}, context.graph.mods.fetch(record.id).const_get(:Exports)::Translations)
     end
   end
@@ -83,7 +83,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
       haml_record = context.evaluate("pages/page.haml")
 
-      assert_equal({}, context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles)
+      assert_empty(context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles.keys)
 
       File.write(css_path, ".title { color: red; }\n")
       result = context.invalidate_paths([css_path])
@@ -125,7 +125,11 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
       assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
       assert_equal(
-        [ModuleId.new("pages/page.css", nil), ModuleId.new("virtual:klenod/haml_helper.rb", nil)],
+        [
+          ModuleId.new("pages/page.css", nil),
+          ModuleId.new("virtual:klenod/styles.rb", nil),
+          ModuleId.new("virtual:klenod/haml_helper.rb", nil)
+        ],
         haml_record.resolved_dependencies.map(&:module_id)
       )
       assert_match(%r{\A/assets/pages_page_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
@@ -152,7 +156,11 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
 
       assert_equal(
-        [virtual_css_id, ModuleId.new("virtual:klenod/haml_helper.rb", nil)],
+        [
+          virtual_css_id,
+          ModuleId.new("virtual:klenod/styles.rb", nil),
+          ModuleId.new("virtual:klenod/haml_helper.rb", nil)
+        ],
         haml_record.resolved_dependencies.map(&:module_id)
       )
       assert_match(/title/, styles.fetch(:title))
@@ -195,6 +203,27 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_merges_scoped_literal_and_conditional_class_values
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.css", "section { display: block; }\n.foo { color: red; }\n.baz { color: blue; }\n")
+      File.write("#{dir}/pages/page.haml", "%section.foo(class=\"bar\"){ class: { baz: true, missing: true } } Hello\n")
+
+      plugin = haml_plugin
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      haml_record = context.evaluate("pages/page.haml")
+      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Styles
+      rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
+      class_names = rendered.fetch(2).fetch(:class).split
+
+      assert_includes(class_names, styles.fetch(:__section))
+      assert_includes(class_names, styles.fetch(:foo))
+      assert_includes(class_names, "bar")
+      assert_includes(class_names, styles.fetch(:baz))
+      refute_includes(class_names, "missing")
+    end
+  end
+
   def test_haml_joins_static_and_dynamic_class_names_without_css
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -206,10 +235,13 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
 
       assert_equal(
-        [ModuleId.new("virtual:klenod/haml_helper.rb", nil)],
+        [
+          ModuleId.new("virtual:klenod/styles.rb", nil),
+          ModuleId.new("virtual:klenod/haml_helper.rb", nil)
+        ],
         haml_record.resolved_dependencies.map(&:module_id)
       )
-      assert_equal("title lead active", rendered.fetch(2).fetch(:class))
+      assert_equal("lead", rendered.fetch(2).fetch(:class))
     end
   end
 
@@ -233,7 +265,12 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       title_classes = styles.fetch(:title).split
 
       assert_equal(
-        [ModuleId.new("pages/page.css", nil), ModuleId.new("pages/page.haml.inline.0.css", nil), ModuleId.new("virtual:klenod/haml_helper.rb", nil)],
+        [
+          ModuleId.new("pages/page.css", nil),
+          ModuleId.new("pages/page.haml.inline.0.css", nil),
+          ModuleId.new("virtual:klenod/styles.rb", nil),
+          ModuleId.new("virtual:klenod/haml_helper.rb", nil)
+        ],
         haml_record.resolved_dependencies.map(&:module_id)
       )
       assert_equal(2, title_classes.length)
@@ -268,7 +305,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
 
       assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
       refute(context.graph.records.key?(virtual_css_id))
-      assert_equal({}, styles)
+      assert_empty(styles.keys)
     end
   end
 
@@ -391,7 +428,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
 
       assert_equal(["pages/page.css"], result.removed_module_ids.map(&:to_s))
       assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
-      assert_equal({}, styles)
+      assert_empty(styles.keys)
     end
   end
 end

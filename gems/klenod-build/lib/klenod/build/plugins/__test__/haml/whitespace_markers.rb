@@ -42,6 +42,6 @@ class WhitespaceMarkers < TestFramework::ComponentBase
   end
 end
 Default = WhitespaceMarkers
-Styles = {}.freeze
+Styles = __klenod_import__("virtual:klenod/styles").new({}.freeze)
 Default.const_set(:Styles, Styles)
 Translations = Default::Translations

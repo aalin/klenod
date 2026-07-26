@@ -27,12 +27,12 @@ class Basic < TestFramework::ComponentBase
       class:
         begin
           # SourceMapMark:1
-          "shell".upcase
+          Styles.class_name(:__main, "shell".upcase)
         end
     ]
   end
 end
 Default = Basic
-Styles = {}.freeze
+Styles = __klenod_import__("virtual:klenod/styles").new({}.freeze)
 Default.const_set(:Styles, Styles)
 Translations = Default::Translations

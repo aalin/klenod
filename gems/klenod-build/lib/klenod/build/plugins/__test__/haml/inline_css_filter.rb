@@ -22,12 +22,12 @@ class InlineCssFilter < TestFramework::ComponentBase
       class:
         begin
           # SourceMapMark:6
-          HamlHelper.class_names(Styles[:title] || "title")
+          Styles.class_name(:__h1, :title)
         end
     ]
   end
 end
 Default = InlineCssFilter
-Styles = {}.freeze
+Styles = __klenod_import__("virtual:klenod/styles").new({}.freeze)
 Default.const_set(:Styles, Styles)
 Translations = Default::Translations

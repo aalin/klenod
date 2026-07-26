@@ -8,26 +8,38 @@ require_relative "../dependency"
 require_relative "../errors"
 require_relative "../hashing"
 require_relative "../plugin"
+require_relative "styles_runtime"
 require_relative "../transform_result"
 
 module Klenod
   module Build
     module Plugins
       class CssPlugin < Plugin
+        include StylesRuntime
+
         CSS_DEPENDENCY_TYPES = {
           Mayu::CSS::ImportDependency => :css_import,
           Mayu::CSS::UrlDependency => :asset_url
         }.freeze
+
+        def resolve(dependency, _context)
+          resolve_styles_runtime(dependency)
+        end
+
+        def load(module_id, _context)
+          load_styles_runtime(module_id)
+        end
 
         def transform(module_id, code, context)
           return super unless module_id.extname == ".css"
 
           result = Mayu::CSS.transform(module_id.path, code, minify: false)
           css_dependencies = build_dependencies(module_id, result.dependencies, context)
+          styles_dependency = styles_runtime_dependency(module_id)
 
           TransformResult.new(
-            ruby_module_source(css_selectors(result), nil),
-            css_dependencies.dependencies,
+            ruby_module_source(css_selectors(result), nil, styles_dependency: styles_dependency),
+            [styles_dependency, *css_dependencies.dependencies],
             nil,
             [],
             [],
@@ -64,19 +76,27 @@ module Klenod
             )
 
           result.with(
-            code: ruby_module_source(result.metadata[:css_classes], output_path),
+            code: ruby_module_source(result.metadata[:css_classes], output_path, styles_dependency: result.dependencies.fetch(0)),
             assets: [asset, *result.assets],
             metadata: result.metadata.merge(css_asset_path: output_path)
           )
         end
 
-        def import_value(_resolved_dependency, record, _context)
+        def import_value(resolved_dependency, record, context)
+          styles_import = styles_runtime_import_value(resolved_dependency, record, context)
+          return styles_import if styles_import
           return nil unless record.id.extname == ".css"
 
-          record.assets.first.metadata.fetch(:classes)
+          context.mods.fetch(record.id).const_get(:Exports)::Default
         end
 
-        alias_method :runtime_import_value, :import_value
+        def runtime_import_value(resolved_dependency, record, _context)
+          styles_import = styles_runtime_runtime_import_value(resolved_dependency, record)
+          return styles_import if styles_import
+          return Runtime::DefaultImport.new(:Default) if record.id.extname == ".css"
+
+          super
+        end
 
         private
 
@@ -119,9 +139,11 @@ module Klenod
 
         def replace_dependencies(css_result, resolved_dependencies, dependency_records, external_dependencies)
           dependencies_by_placeholder =
-            resolved_dependencies.to_h do |resolved_dependency|
+            resolved_dependencies.filter_map do |resolved_dependency|
+              next unless resolved_dependency.dependency.metadata.key?(:placeholder)
+
               [resolved_dependency.dependency.metadata.fetch(:placeholder), resolved_dependency]
-            end
+            end.to_h
 
           css_result.replace_dependencies do |css_dependency|
             next external_dependencies.fetch(css_dependency.placeholder) if external_dependencies.key?(css_dependency.placeholder)
@@ -160,10 +182,12 @@ module Klenod
           false
         end
 
-        def ruby_module_source(classes, asset_path)
+        def ruby_module_source(classes, asset_path, styles_dependency:)
           <<~RUBY
+            Styles = __klenod_import__(#{styles_dependency.id.inspect})
             CSS_CLASSES = #{classes.inspect}.freeze
             CSS_ASSET_PATH = #{asset_path.inspect}
+            Default = Styles.new(CSS_CLASSES)
           RUBY
         end
 

@@ -30,7 +30,7 @@ class StyleClasses < TestFramework::ComponentBase
           class:
             begin
               # SourceMapMark:2
-              HamlHelper.class_name(self.class, %i[__img image])
+              Styles.class_name(:__img, :image)
             end
         ]
       end,
@@ -42,24 +42,27 @@ class StyleClasses < TestFramework::ComponentBase
           class:
             begin
               # SourceMapMark:3
-              HamlHelper.class_name(self.class, [:__figcaption])
+              Styles.class_name(:__figcaption)
             end
         ]
       end,
       class:
         begin
           # SourceMapMark:1
-          HamlHelper.class_name(self.class, %i[__figure card])
+          Styles.class_name(:__figure, :card)
         end
     ]
   end
 end
 Default = StyleClasses
-Styles = {
-  __figure: "figure_hash",
-  __img: "img_hash",
-  card: "card_hash",
-  image: "image_hash"
-}.freeze
+Styles =
+  __klenod_import__("virtual:klenod/styles").new(
+    {
+      __figure: "figure_hash",
+      __img: "img_hash",
+      card: "card_hash",
+      image: "image_hash"
+    }.freeze
+  )
 Default.const_set(:Styles, Styles)
 Translations = Default::Translations

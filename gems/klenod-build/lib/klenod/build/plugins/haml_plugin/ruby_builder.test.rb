@@ -142,14 +142,14 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
 
     assert_kind_of(SyntaxTree::ARef, tag_lookup.node)
     assert_equal("Styles[:__p]", tag_lookup.source)
-    assert_kind_of(SyntaxTree::Binary, class_lookup.node)
-    assert_equal('Styles[:"article-card"] || "article-card"', class_lookup.source)
+    assert_kind_of(SyntaxTree::ARef, class_lookup.node)
+    assert_equal('Styles[:"article-card"]', class_lookup.source)
     assert_kind_of(SyntaxTree::CallNode, class_names.node)
 
     formatted = builder.fragment(class_names.node).source
-    assert_includes(formatted, "HamlHelper.class_names(")
+    assert_includes(formatted, "Styles.class_name(")
     assert_includes(formatted, "Styles[:__p]")
-    assert_includes(formatted, 'Styles[:"article-card"] || "article-card"')
+    assert_includes(formatted, 'Styles[:"article-card"]')
     assert_includes(formatted, "dynamic_class")
   end
 

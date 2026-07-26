@@ -127,11 +127,13 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
   def transform_haml_fixture(path)
     basename = File.basename(path, ".haml")
     module_id = ModuleId.new("__test__/haml/#{File.basename(path)}", nil)
+    styles_runtime_dependency_id = "virtual:klenod/styles"
+    styles_runtime = "__klenod_import__(#{styles_runtime_dependency_id.inspect})"
     styles_source =
       if basename == "style_classes"
-        "{__figure: \"figure_hash\", __img: \"img_hash\", card: \"card_hash\", image: \"image_hash\"}.freeze"
+        "#{styles_runtime}.new({__figure: \"figure_hash\", __img: \"img_hash\", card: \"card_hash\", image: \"image_hash\"}.freeze)"
       else
-        "{}.freeze"
+        "#{styles_runtime}.new({}.freeze)"
       end
     styleable = basename == "style_classes"
 

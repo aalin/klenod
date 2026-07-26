@@ -16,11 +16,14 @@ require_relative "../transform_result"
 require_relative "../watched_pattern"
 require_relative "intl_plugin"
 require_relative "markdown_compiler"
+require_relative "styles_runtime"
 
 module Klenod
   module Build
     module Plugins
       class HamlPlugin < Plugin
+        include StylesRuntime
+
         class ParseError < StandardError
           attr_reader :module_id, :source, :line, :column, :cause
 
@@ -449,11 +452,10 @@ module Klenod
 
             def class_name_lookup(name)
               name = name.to_s
-              lookup = styles_lookup(name)
 
               Fragment.new(
-                "#{lookup.source} || #{literal_source(name)}",
-                Binary(lookup.node, :"||", literal_node(name))
+                "Styles[#{symbol_source(name)}]",
+                ARef(VarRef(Const("Styles")), Args([symbol_node(name)]))
               )
             end
 
@@ -461,11 +463,11 @@ module Klenod
               fragments = values.map { |value| expression_fragment(value) }
 
               Fragment.new(
-                "HamlHelper.class_names(#{fragments.map(&:source).join(", ")})",
+                "Styles.class_name(#{fragments.map(&:source).join(", ")})",
                 CallNode(
-                  constant_path("HamlHelper"),
+                  constant_path("Styles"),
                   Period("."),
-                  Ident("class_names"),
+                  Ident("class_name"),
                   ArgParen(Args(fragments.map { |fragment| node_for(fragment) }))
                 )
               )
@@ -475,7 +477,7 @@ module Klenod
               fragments = values.map { |value| expression_fragment(value) }
 
               Fragment.new(
-                "HamlHelper.class_name(self.class, [#{fragments.map(&:source).join(", ")}])",
+                "Styles.class_name(#{fragments.map(&:source).join(", ")})",
                 nil
               )
             end
@@ -1154,8 +1156,10 @@ module Klenod
             haml_helper_source ||= builder.constant_assignment("HamlHelper", "Object") if styleable
             previous_profiler = @profiler
             previous_module_id = @module_id
+            previous_source_lines = @source_lines
             @profiler = profiler
             @module_id = module_id
+            @source_lines = source.lines
             template =
               if profiler
                 profiler.measure(:haml_compile_template, module_id: module_id.to_s) do
@@ -1224,6 +1228,7 @@ module Klenod
           ensure
             @profiler = previous_profiler
             @module_id = previous_module_id
+            @source_lines = previous_source_lines
           end
 
           private
@@ -1649,23 +1654,16 @@ module Klenod
             return unless styleable || !static_class_source.empty? || dynamic_class
 
             measure_compile(:haml_compile_class_attributes) do
-              unless styleable
-                static_classes = static_class_source.empty? ? [] : static_class_lookups(static_class_source, builder: builder)
-                if static_classes.empty?
-                  props[:class] = dynamic_class if dynamic_class
-                  return
-                end
-
-                values = [*static_classes, dynamic_class].compact
-                return if values.empty?
-
-                props[:class] = builder.class_names(values)
-                return
+              literal_static_classes = literal_static_class_names(node)
+              scoped_static_classes = static_class_source.split
+              literal_static_classes.each do |class_name|
+                index = scoped_static_classes.index(class_name)
+                scoped_static_classes.delete_at(index) if index
               end
-
               class_values = [
                 tag_class_symbol(node, builder: builder),
-                *static_class_symbols(static_class_source, builder: builder),
+                *scoped_static_classes.map { |class_name| builder.symbol(class_name) },
+                *literal_static_classes.map { |class_name| builder.literal(class_name) },
                 dynamic_class
               ].compact
               unless class_values.any?
@@ -1675,6 +1673,13 @@ module Klenod
 
               props[:class] = builder.scoped_class_name(class_values)
             end
+          end
+
+          def literal_static_class_names(node)
+            source = @source_lines&.fetch(node.line - 1, nil)
+            return [] unless source
+
+            source.scan(/\bclass\s*=\s*(["'])(.*?)\1/).flat_map { |(_quote, value)| value.split }
           end
 
           def tag_class_symbol(node, builder:)
@@ -1687,20 +1692,6 @@ module Klenod
           def constant_tag_name?(tag_name)
             first = tag_name.getbyte(0)
             first && first >= 65 && first <= 90
-          end
-
-          def static_class_lookups(source, builder:)
-            source
-              .split
-              .map { |class_name| builder.class_name_lookup(class_name) }
-          end
-
-          def static_class_symbols(source, builder:)
-            return [] if source.empty?
-
-            source
-              .split
-              .map { |class_name| builder.symbol(class_name) }
           end
 
           def object_ref_attributes(node, builder:, props:)
@@ -1755,12 +1746,18 @@ module Klenod
         end
 
         def resolve(dependency, _context)
+          styles_dependency = resolve_styles_runtime(dependency)
+          return styles_dependency if styles_dependency
+
           return nil unless dependency.specifier == HAML_HELPER_SPECIFIER
 
           ResolvedDependency.new(dependency, HAML_HELPER_MODULE_ID, {virtual: true})
         end
 
         def load(module_id, _context)
+          styles_load = load_styles_runtime(module_id)
+          return styles_load if styles_load
+
           return nil unless module_id.scheme == :virtual && module_id == HAML_HELPER_MODULE_ID
 
           LoadResult.new(haml_helper_source, nil, TransformResult.new(haml_helper_source, [], nil, [], [], {}))
@@ -1824,7 +1821,9 @@ module Klenod
             dependencies << dependency
             style_dependencies << dependency
           end
-          styles_source = styles_source_for(builder, style_dependencies)
+          styles_runtime_dependency = styles_runtime_dependency(module_id)
+          dependencies << styles_runtime_dependency
+          styles_source = styles_source_for(builder, style_dependencies, styles_runtime_dependency: styles_runtime_dependency)
           haml_helper_needed = haml_helper_needed?(code, styleable: !style_dependencies.empty?)
           haml_helper_dependency = haml_helper_dependency(module_id) if haml_helper_needed
           dependencies << haml_helper_dependency if haml_helper_dependency
@@ -1900,13 +1899,17 @@ module Klenod
           )
         end
 
-        def import_value(_resolved_dependency, record, context)
+        def import_value(resolved_dependency, record, context)
+          styles_import = styles_runtime_import_value(resolved_dependency, record, context)
+          return styles_import if styles_import
           return nil unless record.id.extname == ".haml"
 
           context.mods.fetch(record.id).const_get(:Exports)::Default
         end
 
-        def runtime_import_value(_resolved_dependency, record, _context)
+        def runtime_import_value(resolved_dependency, record, _context)
+          styles_import = styles_runtime_runtime_import_value(resolved_dependency, record)
+          return styles_import if styles_import
           return Runtime::DefaultImport.new(:Default) if record.id.extname == ".haml"
 
           super
@@ -1994,40 +1997,10 @@ module Klenod
               def self.class_name(component_class, classes)
                 return nil if classes.empty?
 
-                styles = component_class.const_defined?(:Styles, false) ? component_class::Styles : {}
-                class_names = []
-                classes.each do |value|
-                  if value.is_a?(Symbol)
-                    name = value.to_s
-                    collect_output_class_names(class_names, styles[value] || (name.start_with?("__") ? nil : name))
-                  else
-                    collect_output_class_names(class_names, value)
-                  end
-                end
-                return nil if class_names.empty?
+                styles = component_class.const_defined?(:Styles, false) ? component_class::Styles : nil
+                return nil unless styles.respond_to?(:class_name)
 
-                class_names.join(" ")
-              end
-
-              def self.class_names(*values)
-                classes = []
-                values.each { |value| collect_output_class_names(classes, value) }
-                return nil if classes.empty?
-
-                classes.join(" ")
-              end
-
-              def self.collect_output_class_names(classes, value)
-                case value
-                when nil, false
-                  nil
-                when Array
-                  value.each { |item| collect_output_class_names(classes, item) }
-                when Hash
-                  value.each { |class_name, enabled| collect_output_class_names(classes, class_name) if enabled }
-                else
-                  value.to_s.split.each { |class_name| classes << class_name }
-                end
+                styles.class_name(*classes)
               end
             end
           RUBY
@@ -2074,16 +2047,15 @@ module Klenod
           nodes
         end
 
-        def styles_source_for(builder, dependencies)
+        def styles_source_for(builder, dependencies, styles_runtime_dependency:)
+          styles_runtime = builder.import_call(styles_runtime_dependency.id).source
           imports = dependencies.map { |dependency| builder.import_call(dependency.id) }
-          return builder.frozen_literal({}).source if imports.empty?
+          return "#{styles_runtime}.new({}.freeze)" if imports.empty?
           return imports.fetch(0).source if imports.length == 1
 
           builder
             .expression(
-              "[#{imports.map(&:source).join(", ")}].reduce({}) do |classes, styles|\n" \
-                "  classes.merge(styles) { |_name, *class_names| class_names.join(\" \") }\n" \
-                "end.freeze"
+              "#{styles_runtime}.merge(#{imports.map(&:source).join(", ")})"
             )
             .source
         end
