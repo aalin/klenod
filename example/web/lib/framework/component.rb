@@ -2,9 +2,12 @@
 
 module Example
   class Component
+    attr_reader :__slots
+
     def self.instantiate(**props)
       instance = allocate
       instance.instance_variable_set(:@__props, props.freeze)
+      instance.instance_variable_set(:@__slots, props.fetch(:slots, {}).freeze)
 
       if instance.method(:initialize).parameters.empty?
         instance.send(:initialize)
@@ -41,6 +44,7 @@ module Example
 
     def initialize(**props)
       @__props = props.freeze
+      @__slots = props.fetch(:slots, {}).freeze
     end
   end
 end

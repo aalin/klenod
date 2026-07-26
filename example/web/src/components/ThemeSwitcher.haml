@@ -1,9 +1,9 @@
 :ruby
   PopoverButton = import("/components/PopoverButton.haml")
   Themes = [
-    { value: "system", label: "OS Default", icon: Example::H::HtmlString.new("&#x1F313;") },
-    { value: "light", label: "Light", icon: Example::H::HtmlString.new("&#x2600;&#xFE0F;") },
-    { value: "dark", label: "Dark", icon: Example::H::HtmlString.new("&#x1F319;") }
+    { value: "system", label: "OS Default", icon: "\u{1F313}" },
+    { value: "light", label: "Light", icon: "\u{2600}\u{FE0F}" },
+    { value: "dark", label: "Dark", icon: "\u{1F319}" }
   ].freeze
 
 :ruby
@@ -16,11 +16,10 @@
   id: "theme-menu",
   anchor: "theme-switcher",
   title: "Choose theme",
-  popover_class: ClassNames[:popover],
-  button: [
-    Example::H[:span, current[:icon], class: ClassNames[:icon], :"aria-hidden" => true]
-  ]
+  popover_class: ClassNames[:popover]
 }
+  %span.icon(slot="button" aria-hidden="true")= current[:icon]
+
   %form{ method: "post", action: "/api/theme" }
     %input{ type: "hidden", name: "_method", value: "put" }
     %input{ type: "hidden", name: "return_to", value: return_to }

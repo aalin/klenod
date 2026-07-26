@@ -11,7 +11,7 @@
     lexer = SUPPORTED_LEXERS[language]
     return children unless lexer
 
-    lexer.lex(children.join).map do |token, value|
+    lexer.lex(Example::H.text_content(children)).map do |token, value|
       token_class = token.shortname&.to_sym
       next value unless token_class && ClassNames.key?(token_class)
 

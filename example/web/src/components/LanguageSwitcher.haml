@@ -14,12 +14,11 @@
   anchor: "language-switcher",
   title: "Choose language",
   button_class: ClassNames[:button],
-  popover_class: ClassNames[:popover],
-  button: [
-    Example::H[:span, class: ClassNames[:icon], :"aria-hidden" => true],
-    Example::H[:span, current_locale.upcase, class: ClassNames[:code]]
-  ]
+  popover_class: ClassNames[:popover]
 }
+  %span.icon(slot="button" aria-hidden="true")
+  %span.code(slot="button")= current_locale.upcase
+
   = Languages.map do |language|
     - selected = language[:locale] == current_locale
     %a{

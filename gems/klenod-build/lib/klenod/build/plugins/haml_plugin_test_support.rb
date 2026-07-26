@@ -14,9 +14,12 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
 
   module FakeFramework
     class ComponentBase
+      attr_reader :__slots
+
       def self.instantiate(**props)
         instance = allocate
         instance.instance_variable_set(:@__props, props.freeze)
+        instance.instance_variable_set(:@__slots, props.fetch(:slots, {}).freeze)
 
         if instance.method(:initialize).parameters.empty?
           instance.send(:initialize)
@@ -29,6 +32,7 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
 
       def initialize(**props)
         @__props = props.freeze
+        @__slots = props.fetch(:slots, {}).freeze
       end
     end
 
@@ -87,6 +91,14 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
         return nil if classes.empty?
 
         classes.join(" ")
+      end
+
+      def self.render_slot(component, name = nil, fallback = nil)
+        slots = component.respond_to?(:__slots) ? component.__slots : {}
+        children = slots[name&.to_sym]
+        return children if children && !children.empty?
+
+        fallback
       end
 
       def self.collect_output_class_names(classes, value)
@@ -153,6 +165,7 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
     until queue.empty?
       node = queue.shift
       return true if node.type == :tag && !node.value.fetch(:attributes).fetch("class", "").empty?
+      return true if node.type == :tag && node.value.fetch(:name) == "slot"
 
       queue.concat(node.children)
     end

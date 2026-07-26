@@ -55,14 +55,15 @@ def self.render_page_response(match, request, context, raw_request: nil, status:
 
   body =
     Example::Context.with(request: request, routes: Routes) do
-      body =
+      body_node =
         page_instance(page, props)
           .render
-      layouts
+      body_node = layouts
         .reverse_each
-        .reduce(body) do |inner, layout|
+        .reduce(body_node) do |inner, layout|
         component_instance(layout, children: [inner], slots: render_slots(match, layout, request)).render
       end
+      Example::H.render(body_node)
     end
 
   response = commit_session(

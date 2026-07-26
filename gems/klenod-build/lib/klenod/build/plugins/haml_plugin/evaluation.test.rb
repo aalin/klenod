@@ -74,6 +74,22 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_renders_named_and_default_slots
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %nav
+            %slot(name="button")
+            %slot
+        HAML
+      }
+    ) do |_dir, _context, record, exports|
+      assert_equal([:nav, ["Button"], ["Default"]], exports::Default.new(children: ["Default"], slots: {:button => ["Button"], nil => ["Default"]}).render)
+      assert_includes(record.transformed_source, "HamlHelper.render_slot(self, \"button\")")
+      assert_includes(record.transformed_source, "HamlHelper.render_slot(self, nil)")
+    end
+  end
+
   def test_haml_transformer_rewrites_configured_global_variables_in_dynamic_attributes
     plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
 

@@ -8,11 +8,11 @@
     style: "anchor-name: #{anchor_name};",
     class: $button_class
   }
-    = $button
+    %slot(name="button")
   %div.popover{
     id: $id,
     popover: "auto",
     style: "position-anchor: #{anchor_name};",
     class: $popover_class
   }
-    = $children
+    %slot

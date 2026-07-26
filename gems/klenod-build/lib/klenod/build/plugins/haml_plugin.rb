@@ -608,6 +608,12 @@ module Klenod
               source_factory_call(factory: factory, tag: tag, children: children, props: props, mark: mark)
             end
 
+            def slot_call(name:, fallback:)
+              arguments = ["self", name ? argument_source(name) : "nil"]
+              arguments << argument_source(fallback) if fallback
+              expression("HamlHelper.render_slot(#{arguments.join(", ")})")
+            end
+
             def script_block(source, body, line_no: nil)
               source = rewrite_ruby_source(source, nil)
               ast_script_block(source, body) || raise_ruby_parse_error(source, line_no: line_no, context: "Could not build Ruby block from Haml script")
@@ -1406,7 +1412,11 @@ module Klenod
               expression =
                 case node.type
                 when :tag
-                  builder.marked_expression(mark, compile_tag(node, mark: mark, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler))
+                  if slot_tag?(node)
+                    builder.marked_expression(mark, compile_slot(node, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler))
+                  else
+                    builder.marked_expression(mark, compile_tag(node, mark: mark, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler))
+                  end
                 when :plain
                   builder.literal(node.value.fetch(:text))
                 when :script
@@ -1542,6 +1552,22 @@ module Klenod
             end
 
             measure_compile(:haml_compile_factory_call) { compile_factory_call(node, children, mark: mark, factory: factory, styleable: styleable, builder: builder) }
+          end
+
+          def slot_tag?(node)
+            node.value.fetch(:name) == "slot"
+          end
+
+          def compile_slot(node, factory:, builder:, markdown_compiler:, styleable: false)
+            props = attributes(node, styleable: false, builder: builder)
+            name = props.delete(:name)
+            fallback =
+              if node.children.empty?
+                nil
+              else
+                compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
+              end
+            builder.slot_call(name: name, fallback: fallback)
           end
 
           def compile_factory_call(node, children, mark:, factory:, builder:, styleable: false)
@@ -2056,6 +2082,16 @@ module Klenod
 
                 styles.class_name(*classes)
               end
+
+              def self.render_slot(component, name = nil, fallback = nil)
+                slots = component.respond_to?(:__slots) ? component.__slots : {}
+                slot_name = name&.to_sym
+                children = slots[slot_name]
+
+                return children if children && !children.empty?
+
+                fallback
+              end
             end
           RUBY
         end
@@ -2063,7 +2099,7 @@ module Klenod
         def haml_helper_needed?(source, styleable:)
           return true if styleable
 
-          source.match?(STATIC_CLASS_SOURCE_PATTERN)
+          source.match?(STATIC_CLASS_SOURCE_PATTERN) || source.match?(/^\s*%slot\b/)
         end
 
         def component_class_name(module_id)

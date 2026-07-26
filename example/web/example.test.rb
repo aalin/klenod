@@ -59,6 +59,40 @@ class Klenod::ExampleTest < Minitest::Test
     end
   end
 
+  def test_example_h_builds_descriptors_and_escapes_when_rendering
+    node = Example::H[:p, "Fish & chips", title: %("quoted")]
+
+    assert_instance_of(Example::H::Element, node)
+    assert_equal(:p, node.tag)
+    assert_equal([Example::H::Text["Fish & chips"]], node.children)
+    assert_equal(%(<p title="&quot;quoted&quot;">Fish &amp; chips</p>), Example::H.render(node))
+  end
+
+  def test_example_h_partitions_component_slots
+    component =
+      Class.new(Example::Component) do
+        def render
+          Example::H[
+            :section,
+            Example::H[:button, *__slots[:button]],
+            Example::H[:div, *@__props[:children]]
+          ]
+        end
+      end
+
+    node =
+      Example::H[
+        component,
+        Example::H[:span, "Button", slot: "button"],
+        Example::H[:p, "Default"]
+      ]
+    html = Example::H.render(node)
+
+    assert_includes(html, "<button><span>Button</span></button>")
+    assert_includes(html, "<div><p>Default</p></div>")
+    refute_includes(html, "slot=")
+  end
+
   def test_haml_helper_merges_scoped_and_external_classes
     Dir.mktmpdir do |dir|
       File.write("#{dir}/component.css", "button { color: red; }\n.button { display: block; }\n")
@@ -78,7 +112,7 @@ class Klenod::ExampleTest < Minitest::Test
         )
       record = context.evaluate("component.haml")
       component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default
-      rendered = component.instantiate(button_class: "external").render.to_s
+      rendered = Example::H.render(component.instantiate(button_class: "external").render)
 
       assert_match(/class="[^"]*\bexternal\b[^"]*"/, rendered)
       assert_match(/class="[^"]*\bcomponent_button\?/, rendered)
@@ -863,7 +897,7 @@ class Klenod::ExampleTest < Minitest::Test
     request = localized_request(locale: "sv")
 
     Example::Context.with(request: request, routes: localized_routes) do
-      html = Example::H[:a, "Assets", href: "/demo/assets"]
+      html = Example::H.render(Example::H[:a, "Assets", href: "/demo/assets"])
 
       assert_includes(html, %(href="/sv/demo/assets"))
     end
@@ -873,7 +907,7 @@ class Klenod::ExampleTest < Minitest::Test
     request = localized_request(locale: "en")
 
     Example::Context.with(request: request, routes: localized_routes) do
-      html = Example::H[:a, "Assets", href: "/demo/assets?from=docs#top", hreflang: "sv"]
+      html = Example::H.render(Example::H[:a, "Assets", href: "/demo/assets?from=docs#top", hreflang: "sv"])
 
       assert_includes(html, %(href="/sv/demo/assets?from=docs#top"))
       assert_includes(html, %(hreflang="sv"))
@@ -884,7 +918,7 @@ class Klenod::ExampleTest < Minitest::Test
     request = localized_request(locale: "sv")
 
     Example::Context.with(request: request, routes: localized_routes) do
-      html = Example::H[:a, "Assets", href: "/sv/demo/assets"]
+      html = Example::H.render(Example::H[:a, "Assets", href: "/sv/demo/assets"])
 
       assert_includes(html, %(href="/sv/demo/assets"))
       refute_includes(html, "/sv/sv/")
@@ -895,7 +929,7 @@ class Klenod::ExampleTest < Minitest::Test
     request = localized_request(locale: "sv")
 
     Example::Context.with(request: request, routes: localized_routes) do
-      html = Example::H[:a, "Blog post", href: "/demo/blog/shop"]
+      html = Example::H.render(Example::H[:a, "Blog post", href: "/demo/blog/shop"])
 
       assert_includes(html, %(href="/sv/demo/blogg/shop"))
       refute_includes(html, "/sv/demo/blogg/butik")
@@ -906,11 +940,11 @@ class Klenod::ExampleTest < Minitest::Test
     request = localized_request(locale: "sv")
 
     Example::Context.with(request: request, routes: localized_routes) do
-      assert_includes(Example::H[:a, "External", href: "https://example.com/demo/assets"], %(href="https://example.com/demo/assets"))
-      assert_includes(Example::H[:a, "Protocol relative", href: "//example.com/demo/assets"], %(href="//example.com/demo/assets"))
-      assert_includes(Example::H[:a, "Mail", href: "mailto:hello@example.com"], %(href="mailto:hello@example.com"))
-      assert_includes(Example::H[:a, "Fragment", href: "#intro"], %(href="#intro"))
-      assert_includes(Example::H[:a, "Asset", href: "/assets/app.css"], %(href="/assets/app.css"))
+      assert_includes(Example::H.render(Example::H[:a, "External", href: "https://example.com/demo/assets"]), %(href="https://example.com/demo/assets"))
+      assert_includes(Example::H.render(Example::H[:a, "Protocol relative", href: "//example.com/demo/assets"]), %(href="//example.com/demo/assets"))
+      assert_includes(Example::H.render(Example::H[:a, "Mail", href: "mailto:hello@example.com"]), %(href="mailto:hello@example.com"))
+      assert_includes(Example::H.render(Example::H[:a, "Fragment", href: "#intro"]), %(href="#intro"))
+      assert_includes(Example::H.render(Example::H[:a, "Asset", href: "/assets/app.css"]), %(href="/assets/app.css"))
     end
   end
 
