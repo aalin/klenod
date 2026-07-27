@@ -117,7 +117,8 @@ module KlenodPerformance
             Klenod::Build::Plugins::RubyPlugin.new,
             Klenod::Build::Plugins::HamlPlugin.new(
               component_base_class: "Example::Component",
-              factory: "Example::H"
+              factory: "Example::H",
+              cache_static_subtrees: true
             ),
             Klenod::Build::Plugins::CssPlugin.new,
             Klenod::Build::Plugins::SvgPlugin.new,

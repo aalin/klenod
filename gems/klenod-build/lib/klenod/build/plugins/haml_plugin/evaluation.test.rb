@@ -39,6 +39,83 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_can_cache_static_subtree_descriptors
+    plugin = haml_plugin(cache_static_subtrees: true)
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %article
+            %h1 Hello
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      first = exports::Default.new.render
+      second = exports::Default.new.render
+
+      assert_equal([:article, [:h1, "Hello"]], first)
+      assert_same(first, second)
+      assert_predicate(first, :frozen?)
+      assert_predicate(first.fetch(1), :frozen?)
+      assert_raises(FrozenError) { first << "mutated" }
+      assert_includes(record.transformed_source, "STATIC_SUBTREE_0")
+      assert_includes(record.transformed_source, "HamlHelper.freeze_static")
+    end
+  end
+
+  def test_haml_transformer_caches_static_children_inside_dynamic_parent
+    plugin = haml_plugin(cache_static_subtrees: true)
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %main
+            %header
+              %h1 Static
+            %p= "Dynamic"
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      first = exports::Default.new.render
+      second = exports::Default.new.render
+
+      assert_equal([:main, [:header, [:h1, "Static"]], [:p, "Dynamic"]], first)
+      assert_same(first.fetch(1), second.fetch(1))
+      refute_same(first, second)
+      assert_predicate(first.fetch(1), :frozen?)
+      assert_includes(record.transformed_source, "STATIC_SUBTREE_0")
+    end
+  end
+
+  def test_haml_transformer_does_not_cache_classed_or_dynamic_subtrees
+    plugin = haml_plugin(cache_static_subtrees: true)
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def title
+              "Hello"
+            end
+
+          %article
+            %h1.title Heading
+            %p= title
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      first = exports::Default.new.render
+      second = exports::Default.new.render
+
+      assert_equal([:article, [:h1, "Heading"], [:p, "Hello"]], first)
+      refute_same(first, second)
+      refute_includes(record.transformed_source, "STATIC_SUBTREE_")
+    end
+  end
+
   def test_haml_transformer_supports_dynamic_attribute_fragments
     evaluate_haml(
       {

@@ -255,7 +255,8 @@ module Klenod
               ruby_source:,
               render_source:,
               styles_source:,
-              haml_helper_source: nil
+              haml_helper_source: nil,
+              static_constants: []
             )
               component_program(
                 component_class_name: component_class_name,
@@ -264,7 +265,8 @@ module Klenod
                 ruby_source: ruby_source,
                 render_source: render_source,
                 styles_source: styles_source,
-                haml_helper_source: haml_helper_source
+                haml_helper_source: haml_helper_source,
+                static_constants: static_constants
               ).source
             end
 
@@ -275,7 +277,8 @@ module Klenod
               ruby_source:,
               render_source:,
               styles_source:,
-              haml_helper_source: nil
+              haml_helper_source: nil,
+              static_constants: []
             )
               component_class_name = expression_fragment(component_class_name)
               component_base_class = expression_fragment(component_base_class)
@@ -299,7 +302,8 @@ module Klenod
                   component_base_class: component_base_class,
                   translations_source: translations_source,
                   ruby_source: ruby_source,
-                  render_source: render_source
+                  render_source: render_source,
+                  static_constants: static_constants
                 )
               footer = [
                 constant_assignment("Default", component_class_name),
@@ -316,7 +320,8 @@ module Klenod
               component_base_class:,
               translations_source:,
               ruby_source:,
-              render_source:
+              render_source:,
+              static_constants: []
             )
               skeleton = class_skeleton_fragment(component_class_name, component_base_class)
               body_fragments =
@@ -336,6 +341,7 @@ module Klenod
                     body: call(receiver: "self.class", name: "__klenod_import__", arguments: ["dependency_id"])
                   ),
                   ruby_source,
+                  *static_constants,
                   public_method_definition("render", body: render_source)
                 ]
               body =
@@ -612,6 +618,10 @@ module Klenod
               arguments = ["self", name ? argument_source(name) : "nil"]
               arguments << argument_source(fallback) if fallback
               expression("HamlHelper.render_slot(#{arguments.join(", ")})")
+            end
+
+            def freeze_static(value)
+              expression("HamlHelper.freeze_static(#{argument_source(value)})")
             end
 
             def script_block(source, body, line_no: nil)
@@ -1221,16 +1231,21 @@ module Klenod
             import_rewriter: nil,
             markdown_components_source: "{}",
             global_variables: nil,
-            haml_helper_source: nil
+            haml_helper_source: nil,
+            cache_static_subtrees: false
           )
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
             builder = RubyBuilder.new(profiler: profiler, global_variables: global_variables)
-            haml_helper_source ||= builder.constant_assignment("HamlHelper", "Object") if styleable
+            haml_helper_source ||= builder.constant_assignment("HamlHelper", "Object") if styleable || cache_static_subtrees
             previous_profiler = @profiler
             previous_module_id = @module_id
+            previous_static_constants = @static_constants
+            previous_cache_static_subtrees = @cache_static_subtrees
             @profiler = profiler
             @module_id = module_id
+            @static_constants = []
+            @cache_static_subtrees = cache_static_subtrees
             template =
               if profiler
                 profiler.measure(:haml_compile_template, module_id: module_id.to_s) do
@@ -1265,7 +1280,8 @@ module Klenod
                     ruby_source: template.ruby,
                     render_source: template.render,
                     styles_source: styles_source,
-                    haml_helper_source: haml_helper_source
+                    haml_helper_source: haml_helper_source,
+                    static_constants: template.static_constants
                   )
                 end
               else
@@ -1276,7 +1292,8 @@ module Klenod
                   ruby_source: template.ruby,
                   render_source: template.render,
                   styles_source: styles_source,
-                  haml_helper_source: haml_helper_source
+                  haml_helper_source: haml_helper_source,
+                  static_constants: template.static_constants
                 )
               end
             if profiler
@@ -1299,11 +1316,13 @@ module Klenod
           ensure
             @profiler = previous_profiler
             @module_id = previous_module_id
+            @static_constants = previous_static_constants
+            @cache_static_subtrees = previous_cache_static_subtrees
           end
 
           private
 
-          Template = Data.define(:ruby, :render)
+          Template = Data.define(:ruby, :render, :static_constants)
 
           def measure_compile(name)
             return yield unless @profiler
@@ -1335,7 +1354,7 @@ module Klenod
                 compile_nodes(render_nodes, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
               end
 
-            Template.new(ruby, render)
+            Template.new(ruby, render, @static_constants)
           end
 
           def partition_top_level_nodes(nodes)
@@ -1406,6 +1425,53 @@ module Klenod
               (left.type == :tag && left.value.fetch(:nuke_outer_whitespace))
           end
 
+          def cache_static_subtree?(node, styleable:)
+            @cache_static_subtrees && static_subtree?(node, styleable: styleable)
+          end
+
+          def register_static_subtree(builder, expression)
+            name = "STATIC_SUBTREE_#{@static_constants.length}"
+            @static_constants << builder.constant_assignment(name, builder.freeze_static(expression))
+            builder.expression(name)
+          end
+
+          def static_subtree?(node, styleable:)
+            return false unless node.type == :tag
+            return false if styleable
+            return false if slot_tag?(node)
+            return false if constant_tag_name?(node.value.fetch(:name))
+            return false unless static_tag_value?(node)
+            return false unless static_tag_attributes?(node)
+
+            node.children.all? { |child| static_child_node?(child, styleable: styleable) }
+          end
+
+          def static_child_node?(node, styleable:)
+            case node.type
+            when :plain
+              true
+            when :tag
+              static_subtree?(node, styleable: styleable)
+            else
+              false
+            end
+          end
+
+          def static_tag_value?(node)
+            value = node.value.fetch(:value)
+            !node.value.fetch(:parse) || value.nil? || value.empty?
+          end
+
+          def static_tag_attributes?(node)
+            value = node.value
+            dynamic = value.fetch(:dynamic_attributes)
+            return false if dynamic.old || dynamic.new
+            return false if value.fetch(:object_ref).is_a?(String)
+            return false if value.fetch(:attributes).key?("class")
+
+            true
+          end
+
           def compile_node(node, factory:, builder:, markdown_compiler:, styleable: false)
             measure_compile_detail(:"haml_compile_node_#{node.type}") do
               mark = source_mark(node, builder: builder)
@@ -1414,6 +1480,9 @@ module Klenod
                 when :tag
                   if slot_tag?(node)
                     builder.marked_expression(mark, compile_slot(node, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler))
+                  elsif cache_static_subtree?(node, styleable: styleable)
+                    tag_expression = builder.marked_expression(mark, compile_tag(node, mark: mark, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler))
+                    builder.marked_expression(mark, register_static_subtree(builder, tag_expression))
                   else
                     builder.marked_expression(mark, compile_tag(node, mark: mark, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler))
                   end
@@ -1817,11 +1886,13 @@ module Klenod
         def initialize(
           component_base_class: DEFAULT_COMPONENT_BASE_CLASS,
           factory: DEFAULT_FACTORY,
-          global_variables: nil
+          global_variables: nil,
+          cache_static_subtrees: false
         )
           @component_base_class = component_base_class
           @factory = factory
           @global_variables = validate_global_variables(global_variables)
+          @cache_static_subtrees = cache_static_subtrees
           @transformer = Transformer.new
         end
 
@@ -1904,7 +1975,7 @@ module Klenod
           class_names_runtime_dependency = class_names_runtime_dependency(module_id)
           dependencies << class_names_runtime_dependency
           styles_source = styles_source_for(builder, style_dependencies, class_names_runtime_dependency: class_names_runtime_dependency)
-          haml_helper_needed = haml_helper_needed?(code, styleable: !style_dependencies.empty?)
+          haml_helper_needed = @cache_static_subtrees || haml_helper_needed?(code, styleable: !style_dependencies.empty?)
           haml_helper_dependency = haml_helper_dependency(module_id) if haml_helper_needed
           dependencies << haml_helper_dependency if haml_helper_dependency
           translations_source = builder.frozen_literal(translations_for(context, module_id)).source
@@ -1939,7 +2010,8 @@ module Klenod
               profiler: profiler,
               import_rewriter: import_rewriter,
               markdown_components_source: markdown_components_dependency ? "__klenod_import__(#{markdown_components_dependency.id.inspect})::Default" : "{}",
-              global_variables: @global_variables
+              global_variables: @global_variables,
+              cache_static_subtrees: @cache_static_subtrees
             )
           import_rewrite =
             if !haml_result.code.include?("import(") && !haml_result.code.include?("lazy_import(") && !haml_result.code.include?("import_glob(")
@@ -2094,6 +2166,31 @@ module Klenod
                 return children if children && !children.empty?
 
                 fallback
+              end
+
+              def self.freeze_static(value, seen = {})
+                return value if value.nil? || value == true || value == false || value.is_a?(Symbol) || value.is_a?(Numeric)
+
+                object_id = value.object_id
+                return value if seen[object_id]
+
+                seen[object_id] = true
+
+                case value
+                when String
+                  nil
+                when Array
+                  value.each { |child| freeze_static(child, seen) }
+                when Hash
+                  value.each do |key, child|
+                    freeze_static(key, seen)
+                    freeze_static(child, seen)
+                  end
+                else
+                  value.deconstruct.each { |child| freeze_static(child, seen) } if value.respond_to?(:deconstruct)
+                end
+
+                value.freeze
               end
             end
           RUBY

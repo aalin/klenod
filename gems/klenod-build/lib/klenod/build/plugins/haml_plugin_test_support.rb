@@ -151,6 +151,31 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
         fallback
       end
 
+      def self.freeze_static(value, seen = {})
+        return value if value.nil? || value == true || value == false || value.is_a?(Symbol) || value.is_a?(Numeric)
+
+        object_id = value.object_id
+        return value if seen[object_id]
+
+        seen[object_id] = true
+
+        case value
+        when String
+          nil
+        when Array
+          value.each { |child| freeze_static(child, seen) }
+        when Hash
+          value.each do |key, child|
+            freeze_static(key, seen)
+            freeze_static(child, seen)
+          end
+        else
+          value.deconstruct.each { |child| freeze_static(child, seen) } if value.respond_to?(:deconstruct)
+        end
+
+        value.freeze
+      end
+
       def self.collect_output_class_names(classes, value)
         case value
         when nil, false
