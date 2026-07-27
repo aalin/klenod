@@ -33,6 +33,41 @@
 
       Haml also supports inline `:css` and `:markdown` filters. Markdown filters are handled by `MarkdownPlugin` and use `/markdown-components.rb` when that map exists.
 
+  %DocsSection{ title: "Children And Slots" }
+    :markdown
+      Component children are exposed through `$children`. Named slots are still children; they are selected by slot name from the same object.
+
+      ```haml
+      %PopoverButton{ title: "Choose language" }
+        %span.icon(slot="button")
+        %span.code(slot="button") EN
+
+        %a(href="/") English
+        %a(href="/sv") Svenska
+      ```
+
+      A receiving component can render the default slot with `$children` and a named slot with `$children[:button]`.
+
+      ```haml
+      %button
+        = $children[:button]
+
+      %div(popover)
+        = $children
+      ```
+
+      Components can also use `%slot` when they want declarative insertion points:
+
+      ```haml
+      %button
+        %slot(name="button")
+
+      %div(popover)
+        %slot
+      ```
+
+      The example framework wraps children in a small object, so components can ask `$children.empty?`, `$children.any?`, `$children.to_a`, or `$children.text_content` without reaching into framework internals.
+
   %DocsSection{ title: "Companion Files" }
     :markdown
       Haml automatically imports matching CSS companions as `ClassNames` when present. The companion naming follows the route-file convention, so `+page.haml` pairs with `+page.css`.
