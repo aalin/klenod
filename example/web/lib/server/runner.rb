@@ -42,7 +42,7 @@ module Example
     end
 
     def response_tuple_for(request)
-      if (asset_response = @asset_app.response_for(request.path))
+      if (asset_response = @asset_app.response_for(request.path, rack_env_for(request)))
         [asset_response.status, asset_response.headers, [asset_response.body]]
       else
         @app.call(request)
@@ -50,7 +50,26 @@ module Example
     end
 
     def protocol_response(status, headers, body)
+      headers = headers.reject { |name, _value| name.to_s.downcase == "content-length" }
       Protocol::HTTP::Response[status, headers, body]
+    end
+
+    def rack_env_for(request)
+      {
+        "HTTP_ACCEPT_ENCODING" => header_value(request, "accept-encoding")
+      }
+    end
+
+    def header_value(request, name)
+      headers = request.headers if request.respond_to?(:headers)
+      return "" unless headers&.respond_to?(:each)
+
+      values = []
+      headers.each do |header|
+        header_name, value = header
+        values << value.to_s if header_name.to_s.downcase == name
+      end
+      values.join(", ")
     end
   end
 end

@@ -611,24 +611,28 @@ class Klenod::ExampleTest < Minitest::Test
 
   def test_server_runner_serves_assets_before_app
     asset_response = Klenod::Rack::Response.new(200, {"content-type" => "text/css"}, "body {}")
-    asset_app = Data.define(:response) do
-      def response_for(_path) = response
-    end.new(asset_response)
+    asset_app = Data.define(:response, :env) do
+      def response_for(_path, env = {})
+        self.env.merge!(env)
+        response
+      end
+    end.new(asset_response, {})
     app = ->(_request) { raise "app should not be called" }
     runner = Example::ServerRunner.new(port: 9292, asset_app: asset_app, app: app, error_handler: ->(_request, error) { raise error })
 
     response = nil
     capture_io do
-      response = runner.response_for(HeaderRequest["GET", "/assets/app.css", HeaderList.new([])])
+      response = runner.response_for(HeaderRequest["GET", "/assets/app.css", HeaderList.new([["Accept-Encoding", "gzip, br"]])])
     end
 
     assert_equal(200, response.status)
     assert_equal("text/css", response.headers["content-type"])
+    assert_equal("gzip, br", asset_app.env.fetch("HTTP_ACCEPT_ENCODING"))
   end
 
   def test_server_runner_dispatches_non_asset_requests_to_app
     asset_app = Data.define(:response) do
-      def response_for(_path) = response
+      def response_for(_path, _env = {}) = response
     end.new(nil)
     app = ->(_request) { [201, {"content-type" => "text/plain"}, ["ok"]] }
     runner = Example::ServerRunner.new(port: 9292, asset_app: asset_app, app: app, error_handler: ->(_request, error) { raise error })
@@ -640,6 +644,21 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(201, response.status)
     assert_equal("text/plain", response.headers["content-type"])
+  end
+
+  def test_server_runner_leaves_content_length_to_protocol_http
+    asset_response = Klenod::Rack::Response.new(200, {"content-type" => "text/css", "content-length" => "7"}, "body {}")
+    asset_app = Data.define(:response) do
+      def response_for(_path, _env = {}) = response
+    end.new(asset_response)
+    runner = Example::ServerRunner.new(port: 9292, asset_app: asset_app, app: ->(_request) { raise "unused" }, error_handler: ->(_request, error) { raise error })
+
+    response = nil
+    capture_io do
+      response = runner.response_for(HeaderRequest["GET", "/assets/app.css", HeaderList.new([])])
+    end
+
+    refute_includes(response.headers, "content-length")
   end
 
   def test_dev_server_handles_chrome_devtools_probe
