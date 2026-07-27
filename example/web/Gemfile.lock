@@ -22,6 +22,7 @@ PATH
   remote: ../../gems/klenod-rack
   specs:
     klenod-rack (0.0.1)
+      http-accept (~> 2.2)
       klenod-runtime (= 0.0.1)
 
 PATH

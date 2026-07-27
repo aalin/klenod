@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "http/accept"
+
 module Klenod
   module Rack
     Response = Data.define(:status, :headers, :body) do
@@ -81,13 +83,13 @@ module Klenod
       end
 
       def accepts_brotli?(header)
-        header.to_s.split(",").any? do |part|
-          encoding, *parameters = part.strip.split(";").map(&:strip)
-          next false unless encoding == "br"
+        return false if header.to_s.strip.empty?
 
-          q = parameters.find { |parameter| parameter.start_with?("q=") }&.delete_prefix("q=")
-          !q || q.to_f.positive?
+        HTTP::Accept::Encodings.parse(header.to_s).any? do |encoding|
+          %w[br *].include?(encoding.encoding) && encoding.quality_factor.positive?
         end
+      rescue HTTP::Accept::ParseError
+        false
       end
 
       def brotli_asset_bytes(asset)

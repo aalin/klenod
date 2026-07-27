@@ -26,4 +26,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "klenod-runtime", "= #{version}"
+  spec.add_dependency "http-accept", "~> 2.2"
 end
