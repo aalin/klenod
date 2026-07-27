@@ -21,7 +21,7 @@
       Evaluation happens when something asks for exports or calls an entry. At that point Klenod creates a `Klenod::Runtime::Mod`, evaluates the transformed Ruby source, and exposes its `Exports` module.
 
       ```ruby
-      entry = context.entry("routes/server")
+      entry = context.entry("entrypoint")
 
       # Collected, but not evaluated yet.
       entry.record

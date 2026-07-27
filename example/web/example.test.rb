@@ -424,7 +424,7 @@ class Klenod::ExampleTest < Minitest::Test
     context = config.context
 
     context.entry(config.entrypoints.fetch(0))
-    server_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("routes/server.rb", nil))
+    server_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("entrypoint.rb", nil))
     specifiers = server_record.dependencies.map(&:specifier)
 
     assert_includes(specifiers, "/routes.intl.en.toml")
@@ -1235,7 +1235,7 @@ class Klenod::ExampleTest < Minitest::Test
 
       assert_equal(200, status)
       assert_includes(body.join, "<main")
-      assert_equal("/app/src/routes/server.rb", page.module_path)
+      assert_equal("/app/src/entrypoint.rb", page.module_path)
       assert_equal(bundle.assets.keys.sort, loaded.assets.keys.sort)
       loaded.each_asset do |asset|
         disk_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))

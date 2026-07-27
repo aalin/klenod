@@ -40,7 +40,7 @@ class Example::UpdateLogger::Test < Minitest::Test
           changed_paths: ["#{dir}/routes/+page.haml"],
           result: result(
             reloaded: ["routes/+page.haml"],
-            reevaluated: ["routes/server.rb"],
+            reevaluated: ["entrypoint.rb"],
             added_assets: ["/assets/new.css"],
             changed_assets: ["/assets/current.css"],
             removed_assets: ["/assets/old.css"]
@@ -61,7 +61,7 @@ class Example::UpdateLogger::Test < Minitest::Test
       assert_includes(text, "routes/+page.haml")
       assert_includes(text, "reloaded:")
       assert_includes(text, "reevaluated:")
-      assert_includes(text, "routes/server.rb")
+      assert_includes(text, "entrypoint.rb")
       assert_includes(text, "+")
       assert_includes(text, "/assets/new.css")
       assert_includes(text, "~")

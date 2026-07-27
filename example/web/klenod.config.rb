@@ -4,7 +4,7 @@ require_relative "lib/framework"
 require "klenod"
 
 source_dir "src"
-entrypoint "routes/server"
+entrypoint "/entrypoint.rb"
 output "dist/klenod.bundle"
 assets_dir "dist/public"
 
