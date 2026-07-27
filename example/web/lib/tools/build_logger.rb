@@ -44,6 +44,11 @@ module Example
       log "  #{color(:written, "written")} #{path}"
     end
 
+    def completed(duration)
+      log ""
+      log "#{color(:success, "Build completed")} #{color(:dim, "(#{format_duration(duration)})")}"
+    end
+
     def skipped(path)
       log "  #{color(:dim, "skipped")} #{path}"
     end
@@ -60,6 +65,14 @@ module Example
       details = [asset.metadata[:type], asset.queue_kind].compact
       details = [asset.metadata[:type]].compact unless include_queue
       details.empty? ? "" : "(#{details.join(", ")})"
+    end
+
+    def format_duration(duration)
+      if duration < 1
+        format("%.4fms", duration * 1000)
+      else
+        format("%.4fs", duration)
+      end
     end
 
     def color(name, value)

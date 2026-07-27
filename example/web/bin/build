@@ -11,6 +11,7 @@ config = Klenod::Build::ConfigLoader.load(File.expand_path("../klenod.config.rb"
 output = config.output_path
 assets_dir = config.assets_path
 logger = Example::BuildLogger.new
+build_start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
 FileUtils.mkdir_p(File.dirname(output))
 
@@ -38,3 +39,4 @@ end
 logger.step("Writing bundle")
 File.binwrite(output, Klenod::Runtime::BundleFormat.dump(bundle))
 logger.written(output)
+logger.completed(Process.clock_gettime(Process::CLOCK_MONOTONIC) - build_start)
