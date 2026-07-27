@@ -40,7 +40,8 @@ plugins [
   Klenod::Build::Plugins::HamlPlugin.new(
     component_base_class: "Example::Component",
     factory: "Example::H",
-    global_variables: "@__props"
+    global_variables: "@__props",
+    cache_static_subtrees: false
   ),
   Klenod::Build::Plugins::MarkdownPlugin.new(
     component_base_class: "Example::Component",

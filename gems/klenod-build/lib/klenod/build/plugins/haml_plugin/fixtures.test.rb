@@ -19,5 +19,14 @@ class Klenod::Build::Plugins::HamlPlugin::FixturesTest < Klenod::Build::Plugins:
 
       assert_equal(File.read(expected_path), actual, "Expected #{expected_path} to match #{fixture_path}")
     end
+
+    cached_expected_path = fixture_path.delete_suffix(".haml") + ".cached.rb"
+    if File.exist?(cached_expected_path)
+      define_method("#{test_name}_with_static_subtree_cache") do
+        actual = transform_haml_fixture(fixture_path, cache_static_subtrees: true)
+
+        assert_equal(File.read(cached_expected_path), actual, "Expected #{cached_expected_path} to match #{fixture_path}")
+      end
+    end
   end
 end

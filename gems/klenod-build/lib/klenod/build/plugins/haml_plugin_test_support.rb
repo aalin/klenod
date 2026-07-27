@@ -217,7 +217,7 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
     end
   end
 
-  def transform_haml_fixture(path)
+  def transform_haml_fixture(path, cache_static_subtrees: false)
     basename = File.basename(path, ".haml")
     module_id = ModuleId.new("__test__/haml/#{File.basename(path)}", nil)
     class_names_runtime_dependency_id = "virtual:klenod/class_names"
@@ -244,7 +244,8 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
         styles_source: styles_source,
         translations_source: "{}.freeze",
         styleable: styleable,
-        haml_helper_source: ("HamlHelper = #{self.class.name}::FakeFramework::HamlHelper" if styleable || fixture_needs_haml_helper?(path))
+        haml_helper_source: ("HamlHelper = #{self.class.name}::FakeFramework::HamlHelper" if styleable || cache_static_subtrees || fixture_needs_haml_helper?(path)),
+        cache_static_subtrees: cache_static_subtrees
       )
       .then { |result| format_generated_ruby(result.code) }
   end
