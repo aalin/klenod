@@ -20,6 +20,9 @@ module Example
         server = Async::HTTP::Server.for(endpoint) { |request| response_for(request) }
         server.run.wait
       end
+    rescue Interrupt
+      puts
+      ServerFormatting.log_shutdown
     end
 
     def response_for(request)

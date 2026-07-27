@@ -55,6 +55,10 @@ module Example
       puts line
     end
 
+    def log_shutdown
+      puts color(:dim, "Stopping server")
+    end
+
     def suppress_io_buffer_experimental_warning
       return unless defined?(IO::Buffer)
 
