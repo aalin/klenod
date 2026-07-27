@@ -72,9 +72,11 @@ class Klenod::ExampleTest < Minitest::Test
     component =
       Class.new(Example::Component) do
         def render
+          raise "slots leaked into props" if @__props.key?(:slots)
+
           Example::H[
             :section,
-            Example::H[:button, *__slots[:button]],
+            Example::H[:button, *children[:button]],
             Example::H[:div, *@__props[:children]]
           ]
         end

@@ -42,9 +42,17 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
       attr_reader :__slots
 
       def self.instantiate(**props)
+        slots = props.delete(:slots) || {}
+        if (props.key?(:children) || !slots.empty?) && !props[:children].is_a?(Children)
+          slots = {nil => Array(props[:children])}.merge(slots) do |_name, existing, added|
+            existing + added
+          end
+          props[:children] = Children.new(slots)
+        end
+
         instance = allocate
         instance.instance_variable_set(:@__props, props.freeze)
-        instance.instance_variable_set(:@__slots, props.fetch(:slots, {}).freeze)
+        instance.instance_variable_set(:@__slots, slots.freeze)
 
         parameters = instance.method(:initialize).parameters
         if parameters.empty?
@@ -66,7 +74,7 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
 
       def initialize(**props)
         @__props = (@__props || {}).merge(props).freeze
-        @__slots = (@__slots || props.fetch(:slots, {})).freeze
+        @__slots = (@__slots || {}).freeze
       end
 
       def children
@@ -169,7 +177,7 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
         if tag.is_a?(Class)
           slots = {nil => children}
           parameters = tag.instance_method(:initialize).parameters
-          props = ComponentBase.initialize_props(props.merge(children: Children.new(slots), slots: slots), parameters)
+          props = ComponentBase.initialize_props(props.merge(children: Children.new(slots)), parameters)
           return tag.new(**props).render
         end
 

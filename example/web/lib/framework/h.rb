@@ -203,12 +203,11 @@ module Example
       child_slots = partition_slots(props.delete(:children) || [])
       slots = merge_slots(props.delete(:slots), child_slots)
       children = Children.new(slots)
-      props = props.merge(children: children, slots: slots)
 
       if tag.respond_to?(:instantiate)
-        tag.instantiate(**props).render
+        tag.instantiate(**props, children: children, slots: slots).render
       else
-        tag.new(**props).render
+        tag.new(**props, children: children).render
       end
     end
 

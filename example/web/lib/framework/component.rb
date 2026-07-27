@@ -5,9 +5,17 @@ module Example
     attr_reader :__slots
 
     def self.instantiate(**props)
+      slots = props.delete(:slots) || {}
+      if (props.key?(:children) || !slots.empty?) && !props[:children].is_a?(H::Children)
+        slots = {nil => Array(props[:children])}.merge(slots) do |_name, existing, added|
+          existing + added
+        end
+        props[:children] = H::Children.new(slots)
+      end
+
       instance = allocate
       instance.instance_variable_set(:@__props, props.freeze)
-      instance.instance_variable_set(:@__slots, props.fetch(:slots, {}).freeze)
+      instance.instance_variable_set(:@__slots, slots.freeze)
 
       parameters = instance.method(:initialize).parameters
       if parameters.empty?
@@ -57,7 +65,7 @@ module Example
 
     def initialize(**props)
       @__props = (@__props || {}).merge(props).freeze
-      @__slots = (@__slots || props.fetch(:slots, {})).freeze
+      @__slots = (@__slots || {}).freeze
     end
   end
 end

@@ -2,14 +2,14 @@
   Button = import("/components/Button.haml")
 
 %article
-  = if $slots[:sidebar]
+  = if $children[:sidebar].any?
     %aside
-      = $slots[:sidebar]
+      = $children[:sidebar]
   %section
     = $children
-  = if $slots[:modal]
+  = if $children[:modal].any?
     %Button(type="button" commandfor="dashboard-modal" command="show-modal") Open showcase notice
     %dialog(id="dashboard-modal")
-      = $slots[:modal]
+      = $children[:modal]
       %footer
         %Button(type="button" commandfor="dashboard-modal" command="close") Close
