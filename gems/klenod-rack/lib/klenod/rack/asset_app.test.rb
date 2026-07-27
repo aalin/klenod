@@ -104,4 +104,58 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
       assert_equal("runtime bytes", response.body)
     end
   end
+
+  def test_serves_brotli_sidecar_when_accepted
+    Dir.mktmpdir do |dir|
+      assets_dir = "#{dir}/public"
+      FileUtils.mkdir_p("#{assets_dir}/assets")
+      File.binwrite("#{assets_dir}/assets/home.abc123.css", "runtime bytes")
+      File.binwrite("#{assets_dir}/assets/home.abc123.css.br", "brotli bytes")
+      asset =
+        Klenod::Runtime::AssetSpec.new(
+          "styles/home.css",
+          "abc123",
+          "/assets/home.abc123.css",
+          "text/css",
+          {type: :css}
+        )
+      bundle = Klenod::Runtime::Bundle.new({}, {}, {asset.output_path => asset})
+      app = Klenod::Rack::AssetApp.new(bundle, assets_dir: assets_dir)
+
+      response = app.response_for("/assets/home.abc123.css", {"HTTP_ACCEPT_ENCODING" => "gzip, br"})
+
+      assert_equal(200, response.status)
+      assert_equal("brotli bytes", response.body)
+      assert_equal("br", response.headers.fetch("content-encoding"))
+      assert_equal("Accept-Encoding", response.headers.fetch("vary"))
+      assert_equal("text/css", response.headers.fetch("content-type"))
+      assert_equal("12", response.headers.fetch("content-length"))
+    end
+  end
+
+  def test_serves_original_asset_when_brotli_is_not_accepted
+    Dir.mktmpdir do |dir|
+      assets_dir = "#{dir}/public"
+      FileUtils.mkdir_p("#{assets_dir}/assets")
+      File.binwrite("#{assets_dir}/assets/home.abc123.css", "runtime bytes")
+      File.binwrite("#{assets_dir}/assets/home.abc123.css.br", "brotli bytes")
+      asset =
+        Klenod::Runtime::AssetSpec.new(
+          "styles/home.css",
+          "abc123",
+          "/assets/home.abc123.css",
+          "text/css",
+          {type: :css}
+        )
+      bundle = Klenod::Runtime::Bundle.new({}, {}, {asset.output_path => asset})
+      app = Klenod::Rack::AssetApp.new(bundle, assets_dir: assets_dir)
+
+      response = app.response_for("/assets/home.abc123.css", {"HTTP_ACCEPT_ENCODING" => "gzip, br;q=0"})
+
+      assert_equal(200, response.status)
+      assert_equal("runtime bytes", response.body)
+      refute_includes(response.headers, "content-encoding")
+      assert_equal("Accept-Encoding", response.headers.fetch("vary"))
+    end
+  end
 end

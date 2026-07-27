@@ -27,26 +27,33 @@ module Klenod
       attr_reader :source, :app, :assets_dir, :path_prefix
 
       def call(env)
-        response = response_for(env.fetch("PATH_INFO", ""))
+        response = response_for(env.fetch("PATH_INFO", ""), env)
         return response.rack_response if response
         return app.call(env) if app
 
         not_found.rack_response
       end
 
-      def response_for(path)
+      def response_for(path, env = {})
         return nil unless asset_path?(path)
 
         asset = source.asset(path)
-        body = asset_bytes(asset)
+        brotli_available = brotli_asset_available?(asset)
+        compressed = brotli_available && accepts_brotli?(env.fetch("HTTP_ACCEPT_ENCODING", ""))
+        body = compressed ? brotli_asset_bytes(asset) : asset_bytes(asset)
+        headers = {
+          "content-type" => asset.content_type,
+          "content-length" => body.bytesize.to_s,
+          "cache-control" => CACHE_CONTROL
+        }
+        headers["vary"] = "Accept-Encoding" if brotli_available
+        if compressed
+          headers["content-encoding"] = "br"
+        end
 
         Response.new(
           200,
-          {
-            "content-type" => asset.content_type,
-            "content-length" => body.bytesize.to_s,
-            "cache-control" => CACHE_CONTROL
-          },
+          headers,
           body
         )
       rescue KeyError, Errno::ENOENT
@@ -65,6 +72,30 @@ module Klenod
         else
           File.binread(asset_disk_path(asset.output_path))
         end
+      end
+
+      def brotli_asset_available?(asset)
+        return false unless assets_dir
+
+        File.file?(brotli_asset_disk_path(asset.output_path))
+      end
+
+      def accepts_brotli?(header)
+        header.to_s.split(",").any? do |part|
+          encoding, *parameters = part.strip.split(";").map(&:strip)
+          next false unless encoding == "br"
+
+          q = parameters.find { |parameter| parameter.start_with?("q=") }&.delete_prefix("q=")
+          !q || q.to_f.positive?
+        end
+      end
+
+      def brotli_asset_bytes(asset)
+        File.binread(brotli_asset_disk_path(asset.output_path))
+      end
+
+      def brotli_asset_disk_path(output_path)
+        "#{asset_disk_path(output_path)}.br"
       end
 
       def asset_disk_path(output_path)

@@ -9,6 +9,7 @@ require_relative "loaded_module"
 require_relative "plugin"
 require_relative "plugins"
 require_relative "config"
+require_relative "asset_compression"
 
 module Klenod
   module Build
@@ -295,6 +296,7 @@ module Klenod
         status = asset.write_to(output_path) do |event, event_asset, event_path|
           block&.call(event, event_asset, event_path)
         end
+        AssetCompression.write_sidecar(asset, output_path.to_s)
         block&.call(status, asset, output_path.to_s)
 
         [status, output_path.to_s]
@@ -323,6 +325,7 @@ module Klenod
         path = asset_disk_path(output_path, assets_root)
 
         FileUtils.rm_f(path)
+        AssetCompression.remove_sidecar(path.to_s)
         path.to_s
       end
 

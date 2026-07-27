@@ -1169,6 +1169,47 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_write_assets_writes_brotli_sidecars_for_compressible_assets
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      assets_dir = "#{dir}/public"
+      File.write("#{dir}/styles/home.css", ".title { color: red; }\n" * 100)
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("entry")
+      asset = context.assets_for("styles/home.css").first
+
+      result = context.write_assets(assets_dir)
+      disk_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))
+      brotli_path = "#{disk_path}.br"
+
+      assert_equal([disk_path], result.written_paths)
+      assert_path_exists(brotli_path)
+      assert_operator(File.size(brotli_path), :<, File.size(disk_path))
+      assert_equal(asset.bytes, Brotli.inflate(File.binread(brotli_path)))
+    end
+  end
+
+  def test_write_assets_does_not_write_brotli_sidecars_for_binary_assets
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      assets_dir = "#{dir}/public"
+      File.binwrite("#{dir}/images/logo.png", generated_png_bytes(width: 2, height: 2))
+      File.write("#{dir}/entry.rb", "Logo = import(\"images/logo.png\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("entry")
+      asset = context.assets_for("images/logo.png").find { |candidate| candidate.content_type == "image/png" }
+
+      context.write_assets(assets_dir)
+      disk_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))
+
+      assert_path_exists(disk_path)
+      refute_path_exists("#{disk_path}.br")
+    end
+  end
+
   def test_write_assets_skips_existing_generated_asset_files
     Dir.mktmpdir do |dir|
       assets_dir = "#{dir}/public"
@@ -1243,6 +1284,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal([old_disk_path], update_write_result.removed_paths)
       assert_equal(new_asset.bytes, File.binread(new_disk_path))
       refute(File.exist?(old_disk_path))
+      refute(File.exist?("#{old_disk_path}.br"))
     end
   end
 
