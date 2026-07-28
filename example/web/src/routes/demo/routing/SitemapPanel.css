@@ -1,0 +1,150 @@
+p,
+ol {
+  margin: 0;
+}
+
+.summary {
+  color: var(--color-muted);
+}
+
+.sitemap {
+  display: grid;
+  gap: var(--space-1);
+  padding: 0;
+  list-style: none;
+}
+
+.sitemap-heading,
+.route-row {
+  display: grid;
+  grid-template-columns:
+    minmax(11rem, 1.2fr)
+    minmax(5.5rem, 0.45fr)
+    minmax(13rem, 1.2fr)
+    minmax(7rem, 0.7fr)
+    minmax(10rem, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+}
+
+.sitemap-heading {
+  font-size: 0.78em;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.route-row {
+  border-radius: var(--radius-sm);
+}
+
+.route-row:nth-child(odd) {
+  background: var(--color-raised);
+}
+
+.route-path-cell,
+.route-kind-cell,
+.route-module-cell,
+.route-param-cell,
+.route-layout-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.route-path {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+span.route-path {
+  color: var(--color-ink);
+}
+
+.route-kind {
+  width: fit-content;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border-radius: 999px;
+}
+
+.module-path,
+.empty {
+  overflow-wrap: anywhere;
+  color: var(--color-muted);
+}
+
+code {
+  padding: 0.05rem 0.35rem;
+  font-family: var(--font-mono);
+  color: var(--color-ink);
+  background: var(--color-raised);
+  border-radius: 0.35rem;
+}
+
+.route-row:nth-child(odd) code {
+  background: var(--color-page);
+}
+
+@container main (max-width: 50rem) {
+  .sitemap-heading {
+    display: none;
+  }
+
+  .route-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  .route-path-cell,
+  .route-kind-cell,
+  .route-module-cell,
+  .route-param-cell,
+  .route-layout-cell {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    align-items: baseline;
+  }
+
+  .route-path-cell::before {
+    content: "Path";
+  }
+
+  .route-kind-cell::before {
+    content: "Kind";
+  }
+
+  .route-module-cell::before {
+    content: "Module";
+  }
+
+  .route-param-cell::before {
+    content: "Params";
+  }
+
+  .route-layout-cell::before {
+    content: "Layouts";
+  }
+
+  .route-path-cell::before,
+  .route-kind-cell::before,
+  .route-module-cell::before,
+  .route-param-cell::before,
+  .route-layout-cell::before {
+    font-size: 0.86em;
+    font-weight: 700;
+    color: var(--color-muted);
+  }
+}

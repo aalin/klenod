@@ -1,0 +1,59 @@
+p,
+ul {
+  margin: 0;
+}
+
+.manifest-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+h3 {
+  margin: 0 0 var(--space-3);
+}
+
+.compact-list {
+  display: grid;
+  gap: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.route-path {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.route-kind {
+  width: fit-content;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border-radius: 999px;
+}
+
+code {
+  padding: 0.05rem 0.35rem;
+  font-family: var(--font-mono);
+  color: var(--color-ink);
+  background: var(--color-raised);
+  border-radius: 0.35rem;
+}
+
+@container main (max-width: 45rem) {
+  .manifest-grid {
+    grid-template-columns: 1fr;
+  }
+}

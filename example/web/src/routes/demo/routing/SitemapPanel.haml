@@ -1,0 +1,52 @@
+:ruby
+  Panel = import("/components/Panel.haml")
+
+  def module_label(module_id)
+    module_id&.sub(/\Aroutes\//, "")
+  end
+
+  def linkable_path?(path)
+    !path.include?(":") && !path.include?("*")
+  end
+
+  def route_kind(route)
+    route.kind.to_s.tr("_", " ")
+  end
+
+  def route_modules(route)
+    [route.page_module_id, route.handler_module_id].compact
+  end
+
+%Panel{ title: "Sitemap" }
+  %p.summary= "#{$routes.length} primary routes discovered from the route tree."
+  %ol.sitemap
+    %li.sitemap-heading{ "aria-hidden": true }
+      %span Path
+      %span Kind
+      %span Module
+      %span Params
+      %span Layouts
+    = $routes.map do |route|
+      %li.route-row
+        .route-path-cell
+          = if linkable_path?(route.path)
+            %a.route-path{ href: route.path }= route.path
+          = else
+            %span.route-path= route.path
+        .route-kind-cell
+          %span.route-kind= route_kind(route)
+        .route-module-cell
+          = route_modules(route).map do |module_id|
+            %span.module-path= module_label(module_id)
+        .route-param-cell
+          = if route.params.any?
+            = route.params.map do |param|
+              %code= "#{param.name}:#{param.kind}"
+          = else
+            %span.empty -
+        .route-layout-cell
+          = if route.layout_module_ids.any?
+            = route.layout_module_ids.map do |module_id|
+              %code= module_label(module_id)
+          = else
+            %span.empty -

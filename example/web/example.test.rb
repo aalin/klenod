@@ -475,11 +475,14 @@ class Klenod::ExampleTest < Minitest::Test
     html = body.join
 
     assert_equal(200, status)
-    assert_includes(html, "Route examples")
-    assert_includes(html, "Parallel slots: modal, sidebar")
-    assert_includes(html, "(.)photo:intercept_current")
-    assert_includes(html, "(..)profile:intercept_parent")
-    assert_includes(html, "(...)login:intercept_root")
+    assert_includes(html, "Route sitemap")
+    assert_includes(html, "Sitemap")
+    assert_includes(html, "/demo/blog/:slug")
+    assert_includes(html, "demo/blog/[slug]/+page.haml")
+    assert_includes(html, "Parallel slots")
+    assert_includes(html, "@modal")
+    assert_includes(html, "Error boundaries")
+    assert_includes(html, "+not-found.haml")
   end
 
   def test_example_app_renders_not_found_page

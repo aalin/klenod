@@ -1,0 +1,34 @@
+:ruby
+  Panel = import("/components/Panel.haml")
+
+  def route_kind(route)
+    route.kind.to_s.tr("_", " ")
+  end
+
+  def segment_label(segment)
+    case segment.kind
+    when :dynamic then ":#{segment.param_name}"
+    when :catch_all then "*#{segment.param_name}"
+    when :optional_catch_all then "*#{segment.param_name}?"
+    when :group then "(#{segment.name.delete_prefix("(").delete_suffix(")")})"
+    when :parallel then "@#{segment.param_name}"
+    when :intercept_current then "(.)#{segment.path_part}"
+    when :intercept_parent then "(..)#{segment.path_part}"
+    when :intercept_root then "(...)#{segment.path_part}"
+    else segment.path_part || segment.name
+    end
+  end
+
+%Panel{ title: "Route tree" }
+  %ol.tree
+    = $entries.map do |entry|
+      - node = entry.fetch(:node)
+      - route = node.route
+      %li{ style: "--depth: #{entry.fetch(:depth)}" }
+        %span.segment= segment_label(node.segment)
+        %span.path= node.path
+        .badges
+          = if entry.fetch(:slot)
+            %span.slot= "@#{entry.fetch(:slot)}"
+          = if route
+            %span.route-kind= route_kind(route)

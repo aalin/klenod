@@ -1,0 +1,39 @@
+:ruby
+  Panel = import("/components/Panel.haml")
+
+  def module_label(module_id)
+    module_id&.sub(/\Aroutes\//, "")
+  end
+
+  def view_kind(view)
+    view.kind.to_s.tr("_", " ")
+  end
+
+  def slot_name(route)
+    route.segments.find { it.kind == :parallel }.param_name
+  end
+
+%Panel{ title: "Special views and slots" }
+  .manifest-grid
+    %section
+      %h3 Parallel slots
+      = if $slot_routes.empty?
+        %p None
+      = else
+        %ul.compact-list
+          = $slot_routes.map do |route|
+            %li
+              %span.route-path= route.path
+              %code= "@#{slot_name(route)}"
+              %span= module_label(route.page_module_id)
+    %section
+      %h3 Error boundaries
+      = if $special_views.empty?
+        %p None
+      = else
+        %ul.compact-list
+          = $special_views.map do |view|
+            %li
+              %span.route-kind= view_kind(view)
+              %span.route-path= view.path
+              %span= module_label(view.module_id)

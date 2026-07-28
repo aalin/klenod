@@ -1,26 +1,42 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
-  Panel = import("/components/Panel.haml")
+  SitemapPanel = import("./SitemapPanel.haml")
+  RouteTreePanel = import("./RouteTreePanel.haml")
+  SpecialViewsPanel = import("./SpecialViewsPanel.haml")
   Router = import("virtual:router")
 
-:ruby
-  tree = Router::Default.tree
-  demo = tree.children.find { |node| node.segment&.name == "demo" }
-  dashboard = demo&.children&.find { |node| node.segment&.name == "dashboard" }
-  feed = demo&.children&.find { |node| node.segment&.name == "feed" }
-  slots = dashboard&.slots&.keys || []
-  intercepts =
-    feed
-      &.children
-      &.select { |node| node.segment.kind.to_s.start_with?("intercept_") }
-      &.map { |node| "#{node.segment.name}:#{node.segment.kind}" } || []
+  def initialize
+    super
+
+    @routes = Router::Default.routes
+    @main_routes = @routes.reject(&:slot_layout_module_id).sort_by(&:path)
+    @slot_routes = @routes.select(&:slot_layout_module_id).sort_by { [it.path, it.slot_layout_module_id.to_s] }
+    @special_views = [*Router::Default.not_found_views, *Router::Default.error_views].sort_by { [it.path, it.kind.to_s] }
+    @route_tree = route_tree_entries(Router::Default.tree)
+  end
+
+  def route_tree_entries(root)
+    entries = []
+    collect_route_tree_entries(root, entries)
+    entries
+  end
+
+  def collect_route_tree_entries(node, entries, depth: 0, slot: nil)
+    entries << { node:, depth:, slot: } unless node.root?
+
+    node.children.sort_by(&:path).each do |child|
+      slot_name = node.slots.key(child)
+      collect_route_tree_entries(child, entries, depth: depth + 1, slot: slot_name || slot)
+    end
+  end
 
 %article
   %PageHeader{
     kicker: "Routing",
-    title: "Route examples",
-    summary: "Dynamic params, catch-all routes, parallel branches, and intercepted routes are all discovered by the router plugin."
+    title: "Route sitemap",
+    summary: "The generated router exposes enough metadata to inspect public routes, route modules, layouts, params, parallel slots, and error boundaries."
   }
-  %Panel{ title: "Manifest details" }
-    %p= "Parallel slots: #{slots.sort.join(", ")}"
-    %p= "Intercepted routes: #{intercepts.sort.join(", ")}"
+
+  %SitemapPanel{ routes: @main_routes }
+  %RouteTreePanel{ entries: @route_tree }
+  %SpecialViewsPanel{ slot_routes: @slot_routes, special_views: @special_views }
