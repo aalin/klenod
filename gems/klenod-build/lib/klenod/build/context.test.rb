@@ -1575,6 +1575,30 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_invalidate_paths_retries_failed_importer_when_missing_dependency_is_created
+    Dir.mktmpdir do |dir|
+      entry_path = "#{dir}/entry.rb"
+      dep_path = "#{dir}/dep.rb"
+      File.write(entry_path, "VALUE = 1\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("entry.rb")
+
+      File.write(entry_path, "Dep = import(\"./dep.rb\")\nVALUE = Dep::VALUE\n")
+      failed_result = context.invalidate_paths([entry_path])
+
+      assert_equal(["entry.rb"], failed_result.errors.map { |module_id, _error| module_id.to_s })
+      assert_raises(Klenod::Build::ResolveError) { context.evaluate("entry.rb") }
+
+      File.write(dep_path, "VALUE = 2\n")
+      recovered_result = context.invalidate_paths([dep_path])
+
+      assert_empty(recovered_result.errors)
+      assert_equal(["entry.rb"], recovered_result.reloaded_module_ids.map(&:to_s))
+      assert_equal(2, context.exports("entry.rb")::VALUE)
+    end
+  end
+
   private
 
   def fake_task(&block)

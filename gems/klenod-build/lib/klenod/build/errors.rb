@@ -5,7 +5,19 @@ module Klenod
 
   module Build
     class Error < Klenod::Error; end
-    class ResolveError < Error; end
+
+    class ResolveError < Error
+      attr_reader :unresolved_path, :dependency, :importer_id
+
+      def initialize(message, unresolved_path: nil, dependency: nil, importer_id: nil)
+        @unresolved_path = unresolved_path
+        @dependency = dependency
+        @importer_id = importer_id
+
+        super(message)
+      end
+    end
+
     class DynamicImportError < Error; end
     class UnsupportedFileError < Error; end
 

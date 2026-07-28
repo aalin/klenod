@@ -77,7 +77,8 @@ module Klenod
           return candidate if File.file?(candidate)
         end
 
-        raise ResolveError, "Could not resolve #{relative_source_path(path)}"
+        relative = relative_source_path(path)
+        raise ResolveError.new("Could not resolve #{relative}", unresolved_path: relative)
       end
 
       def assert_inside_source_dir!(path)

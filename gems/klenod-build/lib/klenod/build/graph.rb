@@ -472,7 +472,12 @@ module Klenod
           transform.dependencies.map do |dependency|
             resolve_dependency(dependency)
           rescue ResolveError => error
-            raise ResolveError, dependency_resolution_error_message(module_id, dependency, error.message)
+            raise ResolveError.new(
+              dependency_resolution_error_message(module_id, dependency, error.message),
+              unresolved_path: error.unresolved_path,
+              dependency: dependency,
+              importer_id: module_id
+            )
           end
         end
       end
