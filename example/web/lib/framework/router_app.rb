@@ -60,15 +60,8 @@ module Example
 
       body =
         Context.with(request: request, routes: routes) do
-          body_node =
-            page_instance(page, props)
-              .render
-          body_node = layouts
-            .reverse_each
-            .reduce(body_node) do |inner, layout|
-            component_instance(layout, children: [inner], slots: render_slots(match, layout, request)).render
-          end
-          H.render(body_node)
+          body_node = render_descriptor_tree(match, page, layouts, request, props)
+          render_html_string(body_node)
         end
 
       response = commit_session(
@@ -108,6 +101,21 @@ module Example
       else
         component.new(**props)
       end
+    end
+
+    def render_descriptor_tree(match, page, layouts, request, props)
+      body_node =
+        page_instance(page, props)
+          .render
+      layouts
+        .reverse_each
+        .reduce(body_node) do |inner, layout|
+        component_instance(layout, children: [inner], slots: render_slots(match, layout, request)).render
+      end
+    end
+
+    def render_html_string(body_node)
+      H.render(body_node)
     end
 
     def format_render_error(error, context)
