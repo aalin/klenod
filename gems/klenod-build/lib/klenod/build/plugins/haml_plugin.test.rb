@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require_relative "haml_plugin/errors.test"
+require_relative "haml_plugin/parser.test"
+require_relative "haml_plugin/helper_source.test"
 require_relative "haml_plugin/fixtures.test"
-require_relative "haml_plugin/ruby_builder.test"
+require_relative "haml_plugin/transformer/ruby_builder.test"
 require_relative "haml_plugin/transformer.test"
 require_relative "haml_plugin/evaluation.test"
 require_relative "haml_plugin/backtrace.test"
