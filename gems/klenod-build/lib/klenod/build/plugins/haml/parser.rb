@@ -6,15 +6,15 @@ require "syntax_tree/haml"
 module Klenod
   module Build
     module Plugins
-      class HamlPlugin < Plugin
+      module Haml
         def self.parse_haml(source, module_id: nil)
           parser = ParserWithMetadata.new({})
           parser.call(source)
-        rescue Haml::SyntaxError => error
+        rescue ::Haml::SyntaxError => error
           raise ParseError.new(error, source: source, module_id: module_id)
         end
 
-        class ParserWithMetadata < Haml::Parser
+        class ParserWithMetadata < ::Haml::Parser
           def initialize(...)
             @tag_metadata_by_line = Hash.new { |hash, key| hash[key] = [] }
             super
@@ -48,7 +48,7 @@ module Klenod
           end
 
           def class_metadata(shorthand_attributes, attribute_hashes)
-            shorthand = Haml::Parser.parse_class_and_id(shorthand_attributes).fetch("class", "").split
+            shorthand = ::Haml::Parser.parse_class_and_id(shorthand_attributes).fetch("class", "").split
             literal = []
 
             if (new_attributes = attribute_hashes[:new])
@@ -63,7 +63,7 @@ module Klenod
           end
 
           def literal_class_names_from_old_attributes(source)
-            parsed = Haml::AttributeParser.parse(source)
+            parsed = ::Haml::AttributeParser.parse(source)
             return [] unless parsed&.key?("class")
 
             value = static_string_literal_value(parsed.fetch("class"))

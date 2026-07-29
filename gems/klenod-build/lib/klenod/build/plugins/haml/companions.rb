@@ -3,7 +3,7 @@
 module Klenod
   module Build
     module Plugins
-      class HamlPlugin < Plugin
+      module Haml
         module Companions
           private
 

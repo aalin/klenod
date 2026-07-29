@@ -5,7 +5,7 @@ require "klenod/runtime/source_map"
 module Klenod
   module Build
     module Plugins
-      class HamlPlugin < Plugin
+      module Haml
         class ParseError < StandardError
           attr_reader :module_id, :source, :line, :column, :cause
 
@@ -96,7 +96,7 @@ module Klenod
           end
         end
 
-        HamlTransformResult = Data.define(:code, :source_map, :metadata, :ast) do
+        HamlTransformResult = ::Data.define(:code, :source_map, :metadata, :ast) do
           def self.from_ast(ast, source:, metadata:)
             code = ast.source
 

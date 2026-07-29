@@ -6,19 +6,21 @@ This directory contains Klenod's built-in build plugins. Plugins participate in 
 
 `Klenod::Build::Context.default_plugins` includes:
 
-- `RubyPlugin`
-- `IntlPlugin`
-- `HamlPlugin`
-- `MarkdownPlugin`
-- `CssPlugin`
-- `SvgPlugin`
-- `ImagePlugin`
-- `JsonPlugin`
-- `YamlPlugin`
-- `TomlPlugin`
-- `TextPlugin`
+- `Ruby::Plugin`
+- `Intl::Plugin`
+- `Haml::Plugin`
+- `Markdown::Plugin`
+- `Css::Plugin`
+- `Svg::Plugin`
+- `Image::Plugin`
+- `Data::JsonPlugin`
+- `Data::YamlPlugin`
+- `Data::TomlPlugin`
+- `Data::TextPlugin`
 
-`GoogleFontsPlugin` and `RouterPlugin` are built in but opt-in; the example web app configures both explicitly.
+`GoogleFonts::Plugin` and `Router::Plugin` are built in but opt-in; the example web app configures both explicitly.
+
+The old flat constants, such as `HamlPlugin` and `CssPlugin`, remain as compatibility aliases.
 
 ## RubyPlugin
 
@@ -59,7 +61,7 @@ Handles `.haml` modules.
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::HamlPlugin.new(
+Klenod::Build::Plugins::Haml::Plugin.new(
   component_base_class: "Example::Component",
   factory: "Example::H",
   global_variables: "@__props",
@@ -72,7 +74,7 @@ Klenod::Build::Plugins::HamlPlugin.new(
 - `global_variables`: optional Ruby expression used to rewrite app-style global variable reads in Haml Ruby code. For example, `global_variables: "@__props"` compiles `$title` to `@__props[:title]`. Built-in Ruby globals such as `$!`, `$1`, and `$LOAD_PATH` are left untouched.
 - `cache_static_subtrees`: optional experimental optimization. When enabled, fully static Haml tag subtrees are compiled once into frozen constants and reused across renders. Defaults to `false`.
 
-`:markdown` filters use `MarkdownPlugin`'s source-root component map convention when `markdown-components.rb` exists.
+`:markdown` filters use `Markdown::Plugin`'s source-root component map convention when `markdown-components.rb` exists.
 
 ## MarkdownPlugin
 
@@ -87,7 +89,7 @@ Handles `.md` modules and Haml `:markdown` filters through `kramdown` with the G
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::MarkdownPlugin.new(
+Klenod::Build::Plugins::Markdown::Plugin.new(
   component_base_class: "Example::Component",
   factory: "Example::H"
 )
@@ -116,7 +118,7 @@ Provides translation helpers for Haml companion files.
 - Parses them with `toml-rb`.
 - Returns translations keyed by locale.
 
-Configuration: none. This plugin is used by `HamlPlugin`; it does not transform standalone modules.
+Configuration: none. This plugin is used by `Haml::Plugin`; it does not transform standalone modules.
 
 ## CssPlugin
 
@@ -132,7 +134,7 @@ Handles `.css` modules through `mayu-css`.
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::CssPlugin.new(
+Klenod::Build::Plugins::Css::Plugin.new(
   source_maps: :development
 )
 ```
@@ -153,7 +155,7 @@ Handles Google Fonts CSS imports such as `https://fonts.googleapis.com/css2?...`
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::GoogleFontsPlugin.new(
+Klenod::Build::Plugins::GoogleFonts::Plugin.new(
   fetcher: nil,
   cache_path: nil,
   refresh_cache: false
@@ -198,7 +200,7 @@ Behavior:
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::ImagePlugin.new(
+Klenod::Build::Plugins::Image::Plugin.new(
   widths: [320, 640, 960],
   formats: ["webp", "jpeg"]
 )
@@ -248,7 +250,7 @@ Generates an optional virtual router module.
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::RouterPlugin.new(
+Klenod::Build::Plugins::Router::Plugin.new(
   specifier: "virtual:router",
   pages_dir: "pages",
   extensions: [".rb", ".haml"],

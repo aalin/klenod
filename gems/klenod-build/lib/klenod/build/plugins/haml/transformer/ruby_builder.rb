@@ -9,12 +9,12 @@ require "syntax_suggest/explain_syntax"
 module Klenod
   module Build
     module Plugins
-      class HamlPlugin < Plugin
+      module Haml
         class Transformer
           class RubyBuilder
             include SyntaxTree::DSL
 
-            Fragment = Data.define(:source, :node) do
+            Fragment = ::Data.define(:source, :node) do
               def node?
                 !node.nil?
               end

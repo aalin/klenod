@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../haml_plugin_test_support"
+require_relative "../haml_test_support"
 
 class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::HamlPlugin::TestSupport
   def test_parse_haml_adds_static_class_metadata_to_tag_nodes

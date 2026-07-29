@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../haml_plugin_test_support"
+require_relative "../haml_test_support"
 
 class Klenod::Build::Plugins::HamlPlugin::BacktraceTest < Klenod::Build::Plugins::HamlPlugin::TestSupport
   def test_haml_transformer_rewrites_error_backtraces_to_haml_lines

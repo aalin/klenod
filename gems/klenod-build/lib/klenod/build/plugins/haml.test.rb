@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "haml_plugin/errors.test"
-require_relative "haml_plugin/parser.test"
-require_relative "haml_plugin/helper_source.test"
-require_relative "haml_plugin/fixtures.test"
-require_relative "haml_plugin/transformer/ruby_builder.test"
-require_relative "haml_plugin/transformer.test"
-require_relative "haml_plugin/evaluation.test"
-require_relative "haml_plugin/backtrace.test"
-require_relative "haml_plugin/companions.test"
+require_relative "haml/errors.test"
+require_relative "haml/parser.test"
+require_relative "haml/helper_source.test"
+require_relative "haml/fixtures.test"
+require_relative "haml/transformer/ruby_builder.test"
+require_relative "haml/transformer.test"
+require_relative "haml/evaluation.test"
+require_relative "haml/backtrace.test"
+require_relative "haml/companions.test"
 
 module Klenod
   module Build

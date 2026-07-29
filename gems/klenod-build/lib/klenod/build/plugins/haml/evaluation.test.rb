@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../haml_plugin_test_support"
+require_relative "../haml_test_support"
 
 class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugins::HamlPlugin::TestSupport
   def test_haml_generates_configured_component_class
@@ -294,7 +294,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       {
         "pages/page.haml" => <<~HAML
           :ruby
-            User = Data.define(:id)
+            User = ::Data.define(:id)
 
             def initialize
               @user = User.new(15)
@@ -328,7 +328,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
         "page.haml" => <<~HAML
           :ruby
             Card = import("components/card.haml")
-            User = Data.define(:id)
+            User = ::Data.define(:id)
 
             def initialize
               @user = User.new(15)
@@ -625,7 +625,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       {
         "pages/list.haml" => <<~HAML
           :ruby
-            Item = Data.define(:name)
+            Item = ::Data.define(:name)
 
             def initialize
               @items = [Item.new("A"), Item.new("B")]
@@ -652,7 +652,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       {
         "pages/list.haml" => <<~HAML
           :ruby
-            Item = Data.define(:name)
+            Item = ::Data.define(:name)
 
             def initialize
               @items = [Item.new("A"), Item.new("B")]
@@ -679,7 +679,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       {
         "pages/list.haml" => <<~HAML
           :ruby
-            Item = Data.define(:name)
+            Item = ::Data.define(:name)
 
             def initialize
               @items = [Item.new("A"), Item.new("B")]
@@ -715,7 +715,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       {
         "pages/list.haml" => <<~HAML
           :ruby
-            Item = Data.define(:name)
+            Item = ::Data.define(:name)
 
             def initialize
               @items = [Item.new("A"), Item.new("B")]

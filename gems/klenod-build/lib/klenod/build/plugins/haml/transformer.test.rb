@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../haml_plugin_test_support"
+require_relative "../haml_test_support"
 
 class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugins::HamlPlugin::TestSupport
   def test_haml_transformer_result_exposes_component_program_ast

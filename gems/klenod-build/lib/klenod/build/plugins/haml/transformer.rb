@@ -4,15 +4,16 @@ require "syntax_tree"
 
 require "klenod/runtime/source_map"
 require_relative "../markdown_compiler"
+require_relative "parser"
 
 module Klenod
   module Build
     module Plugins
-      class HamlPlugin < Plugin
+      module Haml
         class Transformer
           VALID_CONST_PATH = /\A[A-Z]\w*(?:::[A-Z]\w*)*\z/
 
-          ConstPath = Data.define(:value) do
+          ConstPath = ::Data.define(:value) do
             def self.parse(value, name:)
               path = value.to_s
               raise ArgumentError, "#{name} must be a Ruby constant path" unless path.match?(VALID_CONST_PATH)
@@ -130,7 +131,7 @@ module Klenod
 
           private
 
-          Template = Data.define(:ruby, :render, :static_constants)
+          Template = ::Data.define(:ruby, :render, :static_constants)
 
           def measure_compile(name)
             return yield unless @profiler
@@ -145,7 +146,7 @@ module Klenod
           end
 
           def compile_template(source, factory:, builder:, module_id: nil, styleable: false, import_rewriter: nil, markdown_components_source: "{}")
-            parsed = measure_compile(:haml_parse_haml) { HamlPlugin.parse_haml(source, module_id: module_id) }
+            parsed = measure_compile(:haml_parse_haml) { Haml.parse_haml(source, module_id: module_id) }
             render_nodes, ruby_nodes =
               measure_compile(:haml_partition_top_level_nodes) do
                 partition_top_level_nodes(parsed.children)
