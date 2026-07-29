@@ -1,10 +1,33 @@
 :ruby
-  require "rouge"
+  require "pathname"
+  require "set"
+  require "strscan"
+  require "uri"
+
+  Object.const_set(:Rouge, Module.new) unless Object.const_defined?(:Rouge)
+
+  require "rouge/version"
+  require "rouge/util"
+  require "rouge/text_analyzer"
+  require "rouge/token"
+  require "rouge/lexer"
+  require "rouge/regex_lexer"
+  require "rouge/template_lexer"
+  require "rouge/lexers/plain_text"
+  require "rouge/lexers/xml"
+  require "rouge/lexers/css"
+  require "rouge/lexers/html"
+  require "rouge/lexers/javascript"
+  require "rouge/lexers/erb"
+  require "rouge/lexers/markdown"
+  require "rouge/lexers/sass"
+  require "rouge/lexers/ruby"
+  require "rouge/lexers/haml"
 
   SUPPORTED_LEXERS = {
-    "ruby" => Rouge::Lexer.find("ruby"),
-    "haml" => Rouge::Lexer.find("haml"),
-    "css" => Rouge::Lexer.find("css")
+    "ruby" => ::Rouge::Lexer.find("ruby"),
+    "haml" => ::Rouge::Lexer.find("haml"),
+    "css" => ::Rouge::Lexer.find("css")
   }.freeze
   HIGHLIGHT_CACHE = {}
 
