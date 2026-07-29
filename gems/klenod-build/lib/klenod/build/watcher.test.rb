@@ -130,16 +130,17 @@ class Klenod::Build::Watcher::Test < Minitest::Test
 
       context = Klenod::Build::Context.new(source_dir: dir)
       context.evaluate("pages/page.haml")
-      old_asset = context.assets_for("pages/page.css").fetch(0)
+      old_assets = context.assets_for("pages/page.css")
+      old_asset = old_assets.find { |asset| asset.metadata[:type] == :css }
 
       File.delete(css_path)
       event = emit_update(context, [], [css_path], 1)
       styles = context.graph.mods.fetch(Klenod::Build::ModuleId.new("pages/page.haml", nil)).const_get(:Exports)::ClassNames
-      removed_update = event.asset_updates.fetch(0)
+      removed_update = event.asset_updates.find { |update| update.output_path == old_asset.output_path }
 
       assert_equal(["pages/page.css"], event.result.removed_module_ids.map(&:to_s))
       assert_equal(["pages/page.haml"], event.result.reloaded_module_ids.map(&:to_s))
-      assert_equal([old_asset.output_path], event.asset_changes.removed)
+      assert_equal(old_assets.map(&:output_path).sort, event.asset_changes.removed.sort)
       assert(removed_update.removed?)
       assert_equal(old_asset, removed_update.previous_asset)
       assert_nil(removed_update.current_asset)

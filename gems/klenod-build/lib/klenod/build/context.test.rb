@@ -995,7 +995,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(page_css_paths, loaded.assets_for("pages/page.css").map(&:output_path))
       assert_equal(card_css_paths, loaded.assets_for("components/Card.css").map(&:output_path))
       assert_equal(image_paths, loaded.assets_for("images/logo.png").map(&:output_path))
-      assert_equal(1, loaded.assets_for("styles/base.css").length)
+      assert_equal(1, loaded.assets_for("styles/base.css").count { |asset| asset.metadata[:type] == :css })
       loaded.each_asset do |asset|
         disk_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))
 
@@ -1022,7 +1022,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(asset.bytes, File.binread(written_path))
       assert_equal("text/css", runtime_asset.content_type)
       assert_equal(context.asset(asset_path), context.assets.fetch(asset_path))
-      assert_equal([asset.logical_name], context.assets_for("styles/home.css").map(&:logical_name))
+      assert_equal([asset.logical_name], context.assets_for("styles/home.css").select { |asset| asset.metadata[:type] == :css }.map(&:logical_name))
       assert_includes(context.each_asset.to_a.map(&:output_path), asset_path)
     end
   end
@@ -1178,14 +1178,17 @@ class Klenod::Build::Context::Test < Minitest::Test
 
       context = Klenod::Build::Context.new(source_dir: dir)
       context.evaluate("entry")
-      asset = context.assets_for("styles/home.css").first
+      asset = context.assets_for("styles/home.css").find { |candidate| candidate.metadata[:type] == :css }
+      map_asset = context.assets_for("styles/home.css").find { |candidate| candidate.metadata[:type] == :css_source_map }
 
       result = context.write_assets(assets_dir)
       disk_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))
+      map_disk_path = File.join(assets_dir, map_asset.output_path.delete_prefix("/"))
       brotli_path = "#{disk_path}.br"
 
-      assert_equal([disk_path], result.written_paths)
+      assert_equal([disk_path, map_disk_path].sort, result.written_paths.sort)
       assert_path_exists(brotli_path)
+      assert_path_exists(map_disk_path)
       assert_operator(File.size(brotli_path), :<, File.size(disk_path))
       assert_equal(asset.bytes, Brotli.inflate(File.binread(brotli_path)))
     end
@@ -1243,33 +1246,39 @@ class Klenod::Build::Context::Test < Minitest::Test
 
       context = Klenod::Build::Context.new(source_dir: dir)
       context.evaluate("styles/home.css")
-      old_asset = context.assets_for("styles/home.css").first
+      old_assets = context.assets_for("styles/home.css")
+      old_asset = old_assets.find { |asset| asset.metadata[:type] == :css }
       old_asset_path = old_asset.output_path
+      old_asset_paths = old_assets.map(&:output_path)
       old_disk_path = File.join(assets_dir, old_asset_path.delete_prefix("/"))
+      old_disk_paths = old_asset_paths.map { |path| File.join(assets_dir, path.delete_prefix("/")) }
 
       write_result = context.write_assets(assets_dir)
 
-      assert_equal([old_disk_path], write_result.written_paths)
+      assert_equal(old_disk_paths.sort, write_result.written_paths.sort)
       assert_equal([], write_result.removed_paths)
       assert_equal(old_asset.bytes, File.binread(old_disk_path))
 
       File.write(css_path, ".title { color: blue; }\n")
       result = context.invalidate_paths([css_path])
-      new_asset = context.assets_for("styles/home.css").first
+      new_assets = context.assets_for("styles/home.css")
+      new_asset = new_assets.find { |asset| asset.metadata[:type] == :css }
       new_asset_path = new_asset.output_path
+      new_asset_paths = new_assets.map(&:output_path)
       new_disk_path = File.join(assets_dir, new_asset_path.delete_prefix("/"))
+      new_disk_paths = new_asset_paths.map { |path| File.join(assets_dir, path.delete_prefix("/")) }
 
-      assert_equal([new_asset_path], result.added_assets)
-      assert_equal([old_asset_path], result.removed_assets)
+      assert_equal(new_asset_paths.sort, result.added_assets.sort)
+      assert_equal(old_asset_paths.sort, result.removed_assets.sort)
       assert_equal([], result.changed_assets)
-      assert_equal([new_asset_path], result.asset_changes.added)
-      assert_equal([old_asset_path], result.asset_changes.removed)
+      assert_equal(new_asset_paths.sort, result.asset_changes.added.sort)
+      assert_equal(old_asset_paths.sort, result.asset_changes.removed.sort)
       assert_equal([], result.asset_changes.changed)
-      assert_equal([new_asset_path, old_asset_path], result.asset_changes.paths)
+      assert_equal((new_asset_paths + old_asset_paths).sort, result.asset_changes.paths.sort)
       refute(result.asset_changes.empty?)
 
-      added_update = result.asset_updates.find(&:added?)
-      removed_update = result.asset_updates.find(&:removed?)
+      added_update = result.asset_updates.find { |update| update.added? && update.output_path == new_asset_path }
+      removed_update = result.asset_updates.find { |update| update.removed? && update.output_path == old_asset_path }
 
       assert_equal(new_asset_path, added_update.output_path)
       assert_nil(added_update.previous_asset)
@@ -1280,8 +1289,8 @@ class Klenod::Build::Context::Test < Minitest::Test
 
       update_write_result = context.write_asset_updates(result.asset_updates, assets_dir: assets_dir)
 
-      assert_equal([new_disk_path], update_write_result.written_paths)
-      assert_equal([old_disk_path], update_write_result.removed_paths)
+      assert_equal(new_disk_paths.sort, update_write_result.written_paths.sort)
+      assert_equal(old_disk_paths.sort, update_write_result.removed_paths.sort)
       assert_equal(new_asset.bytes, File.binread(new_disk_path))
       refute(File.exist?(old_disk_path))
       refute(File.exist?("#{old_disk_path}.br"))

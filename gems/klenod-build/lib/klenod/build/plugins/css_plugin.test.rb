@@ -22,9 +22,10 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       css_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/home.css", nil))
 
       assert_match(/title/, mod.const_get(:Exports)::TITLE)
-      assert_equal(1, css_record.assets.length)
-      assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
-      assert_includes(css_record.assets.first.bytes, "color: red")
+      css_asset = css_record.assets.find { |asset| asset.metadata[:type] == :css }
+
+      assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, css_asset.output_path)
+      assert_includes(css_asset.bytes, "color: red")
     end
   end
 
@@ -150,7 +151,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       refute_includes(home_asset.bytes, base_asset.output_path)
       assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, home_asset.output_path)
       assert_match(%r{\A/assets/styles_base_css\.[a-f0-9]{16}\.css\z}, base_asset.output_path)
-      assert_equal(2, bundle.assets.length)
+      assert_equal(4, bundle.assets.length)
     end
   end
 
@@ -235,7 +236,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       mod = loaded.load("entry")
 
       assert_match(/title/, mod.const_get(:Exports)::TITLE)
-      assert_equal(1, bundle.assets.length)
+      assert_equal(2, bundle.assets.length)
       assert_equal(bundle.assets.keys, loaded.assets.keys)
     end
   end
@@ -291,7 +292,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       refute(exports::Styles.loaded?)
 
       assert_match(/title/, exports.title_class)
-      assert_equal(1, context.assets_for("styles/home.css").length)
+      assert_equal(2, context.assets_for("styles/home.css").length)
       assert(exports::Styles.loaded?)
     end
   end
@@ -326,6 +327,83 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
       refute(updated_exports::Styles.loaded?)
       assert_equal([:heading], updated_exports.classes)
+    end
+  end
+
+  def test_css_source_maps_can_be_disabled
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
+
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::CssPlugin.new(source_maps: false)
+          ]
+        )
+      record = context.evaluate("styles/home.css")
+
+      assert_equal([:css], record.assets.map { |asset| asset.metadata[:type] })
+      refute_includes(record.assets.fetch(0).bytes, "sourceMappingURL")
+    end
+  end
+
+  def test_css_source_maps_are_emitted_in_development
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.evaluate("styles/home.css")
+      css_asset = record.assets.find { |asset| asset.metadata[:type] == :css }
+      map_asset = record.assets.find { |asset| asset.metadata[:type] == :css_source_map }
+      source_map = JSON.parse(map_asset.bytes)
+
+      assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\.map\z}, map_asset.output_path)
+      assert_includes(css_asset.bytes, "sourceMappingURL=#{File.basename(map_asset.output_path)}")
+      assert_equal(3, source_map.fetch("version"))
+      assert_equal(["styles/home.css"], source_map.fetch("sources"))
+      assert_equal([".title { color: red; }\n"], source_map.fetch("sourcesContent"))
+    end
+  end
+
+  def test_css_source_maps_are_not_emitted_in_build_mode_by_default
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir, mode: :build)
+      record = context.collect("styles/home.css").record
+
+      assert_equal([:css], record.assets.map { |asset| asset.metadata[:type] })
+    end
+  end
+
+  def test_css_source_maps_preserve_mappings_after_dependency_rewrites
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      FileUtils.mkdir_p("#{dir}/images")
+      File.write("#{dir}/styles/base.css", ".base { color: blue; }\n")
+      File.binwrite("#{dir}/images/logo.png", "not really a png")
+      File.write(
+        "#{dir}/styles/home.css",
+        <<~CSS
+          @import "./base.css";
+          .logo { background: url("../images/logo.png"); }
+          .title { color: red; }
+        CSS
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.evaluate("styles/home.css")
+      map_asset = record.assets.find { |asset| asset.metadata[:type] == :css_source_map }
+      source_map = Klenod::Build::SourceMap::Map.parse(map_asset.bytes)
+
+      assert_equal(["styles/home.css"], source_map.sources)
+      assert_equal([1, 2], source_map.segments.map(&:original_line))
+      assert_equal([0, 4], source_map.segments.map(&:generated_line))
     end
   end
 end

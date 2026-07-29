@@ -127,8 +127,17 @@ Handles `.css` modules through `mayu-css`.
 - Ruby/Haml imports receive a class-name map.
 - CSS imports from CSS become stylesheet dependencies.
 - CSS `url(...)` references become asset dependencies.
+- Can emit standard v3 `.css.map` assets with mapped dependency rewrites.
 
-Configuration: none.
+Configuration:
+
+```ruby
+Klenod::Build::Plugins::CssPlugin.new(
+  source_maps: :development
+)
+```
+
+- `source_maps`: `false`, `true`, or `:development`. Defaults to `:development`, which emits source maps only when the build context mode is `:development`.
 
 ## GoogleFontsPlugin
 

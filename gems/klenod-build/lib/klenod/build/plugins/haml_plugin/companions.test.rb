@@ -164,9 +164,34 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
         haml_record.resolved_dependencies.map(&:module_id)
       )
       assert_match(/title/, styles.fetch(:title))
-      assert_equal(1, css_record.assets.length)
-      assert_match(%r{\A/assets/pages_page_haml_inline_0_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
-      assert_includes(css_record.assets.first.bytes, "color: red")
+      css_asset = css_record.assets.find { |asset| asset.metadata[:type] == :css }
+
+      assert_match(%r{\A/assets/pages_page_haml_inline_0_css\.[a-f0-9]{16}\.css\z}, css_asset.output_path)
+      assert_includes(css_asset.bytes, "color: red")
+    end
+  end
+
+  def test_haml_css_filter_source_map_points_to_haml_source
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      source = <<~HAML
+        %h1 Hello
+        :css
+          .title { color: red; }
+      HAML
+      File.write("#{dir}/pages/page.haml", source)
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("pages/page.haml")
+      css_record = context.graph.records.fetch(ModuleId.new("pages/page.haml.inline.0.css", nil))
+      map_asset = css_record.assets.find { |asset| asset.metadata[:type] == :css_source_map }
+      source_map = Klenod::Build::SourceMap::Map.parse(map_asset.bytes)
+      segment = source_map.segments.fetch(0)
+
+      assert_equal(["pages/page.haml"], source_map.sources)
+      assert_equal([source], source_map.sources_content)
+      assert_equal(2, segment.original_line)
+      assert_equal(2, segment.original_column)
     end
   end
 
@@ -296,9 +321,10 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       assert_equal(2, title_classes.length)
       assert(title_classes.all? { |class_name| class_name.include?("title") })
       assert_equal(title_classes.uniq, title_classes)
-      assert_equal(1, companion_css_record.assets.length)
-      assert_equal(1, inline_css_record.assets.length)
-      refute_equal(companion_css_record.assets.first.output_path, inline_css_record.assets.first.output_path)
+      companion_css_asset = companion_css_record.assets.find { |asset| asset.metadata[:type] == :css }
+      inline_css_asset = inline_css_record.assets.find { |asset| asset.metadata[:type] == :css }
+
+      refute_equal(companion_css_asset.output_path, inline_css_asset.output_path)
     end
   end
 

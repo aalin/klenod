@@ -107,7 +107,19 @@ module Klenod
           end
           inline_css_sources(code, module_id: module_id).each_with_index do |source, index|
             virtual_module_id = ModuleId.new("#{module_id.path}.inline.#{index}.css", nil)
-            context.register_virtual_module(virtual_module_id, source, owner_id: module_id)
+            context.register_virtual_module(
+              virtual_module_id,
+              source.text,
+              owner_id: module_id,
+              metadata: {
+                inline_css_origin: {
+                  module_id: module_id,
+                  source: code,
+                  line_offset: source.line_offset,
+                  column_offset: source.column_offset
+                }
+              }
+            )
             dependency =
               Dependency
                 .create(
@@ -223,6 +235,8 @@ module Klenod
 
         private
 
+        InlineCssSource = Data.define(:text, :line_offset, :column_offset)
+
         def validate_global_variables(global_variables)
           return nil if global_variables.nil?
 
@@ -253,7 +267,25 @@ module Klenod
         end
 
         def inline_css_sources(source, module_id: nil)
-          filter_nodes(source, "css", module_id: module_id).map { |node| node.value.fetch(:text) }
+          lines = source.lines
+          filter_nodes(source, "css", module_id: module_id).map do |node|
+            text = node.value.fetch(:text)
+            line_offset = node.line
+            column_offset = inline_filter_column_offset(lines, line_offset, text)
+
+            InlineCssSource.new(text, line_offset, column_offset)
+          end
+        end
+
+        def inline_filter_column_offset(lines, line_offset, text)
+          text.lines.each_with_index do |text_line, index|
+            next if text_line.strip.empty?
+
+            source_line = lines.fetch(line_offset + index, "")
+            return source_line.length - source_line.lstrip.length
+          end
+
+          0
         end
 
         def markdown_filter_nodes(source, module_id: nil)

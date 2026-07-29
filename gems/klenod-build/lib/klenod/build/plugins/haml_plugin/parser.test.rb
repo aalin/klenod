@@ -55,4 +55,19 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
     assert_includes(error.message, "pages/page.haml:2: Haml parse error")
     assert_includes(error.message, "> 2 | %time(datetime=post.fetch(\"date\"))= post.fetch(\"date\")")
   end
+
+  def test_inline_css_sources_include_haml_origin_offsets
+    plugin = Klenod::Build::Plugins::HamlPlugin.new
+    source = <<~HAML
+      %h1 Hello
+      :css
+        .title { color: red; }
+    HAML
+
+    inline_source = plugin.send(:inline_css_sources, source, module_id: ModuleId.new("pages/page.haml", nil)).fetch(0)
+
+    assert_equal(".title { color: red; }\n", inline_source.text)
+    assert_equal(2, inline_source.line_offset)
+    assert_equal(2, inline_source.column_offset)
+  end
 end

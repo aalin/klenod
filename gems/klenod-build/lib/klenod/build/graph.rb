@@ -79,6 +79,7 @@ module Klenod
         @records = {}
         @mods = {}
         @virtual_sources = {}
+        @virtual_metadata = {}
         @virtual_owners = {}
         @loading_tasks = {}
       end
@@ -200,15 +201,21 @@ module Klenod
         @resolver.source_dir
       end
 
-      def register_virtual_module(module_id, source, owner_id: nil)
+      def register_virtual_module(module_id, source, owner_id: nil, metadata: {})
         @virtual_sources[module_id] = source
+        @virtual_metadata[module_id] = metadata.freeze
         @virtual_owners[module_id] = owner_id if owner_id
+      end
+
+      def virtual_module_metadata(module_id)
+        @virtual_metadata.fetch(module_id, {})
       end
 
       def unregister_virtual_modules(owner_id)
         module_ids = @virtual_owners.filter_map { |module_id, owner| module_id if owner == owner_id }
         module_ids.each do |module_id|
           @virtual_sources.delete(module_id)
+          @virtual_metadata.delete(module_id)
           @virtual_owners.delete(module_id)
           @records.delete(module_id)
           @mods.delete(module_id)
