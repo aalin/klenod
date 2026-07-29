@@ -360,6 +360,36 @@ class Klenod::ExampleTest < Minitest::Test
     refute_includes(html_by_path.fetch("/docs/templates"), "docs-content p")
   end
 
+  def test_example_app_caches_markdown_syntax_highlighting
+    require "rouge"
+
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    context.evaluate("components/markdown/InlineCode.haml")
+    inline_code = context.exports("components/markdown/InlineCode.haml")::Default
+    inline_code.const_get(:HIGHLIGHT_CACHE).clear
+
+    ruby_lexer = Rouge::Lexer.find("ruby")
+    original_lex = ruby_lexer.singleton_class.instance_method(:lex)
+    lex_count = 0
+    ruby_lexer.define_singleton_method(:lex) do |*args, **kwargs, &block|
+      lex_count += 1
+      original_lex.bind_call(self, *args, **kwargs, &block)
+    end
+
+    2.times do
+      status, _headers, body = entry.call(request("/docs/getting-started"), context)
+
+      assert_equal(200, status)
+      assert_includes(body.join, "language-ruby")
+    end
+
+    assert_equal(4, lex_count)
+  ensure
+    ruby_lexer&.define_singleton_method(:lex, original_lex) if ruby_lexer && original_lex
+  end
+
   def test_example_app_renders_swedish_localized_routes
     config = example_config
     context = config.context

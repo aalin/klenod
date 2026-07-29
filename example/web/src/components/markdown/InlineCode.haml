@@ -6,17 +6,23 @@
     "haml" => Rouge::Lexer.find("haml"),
     "css" => Rouge::Lexer.find("css")
   }.freeze
+  HIGHLIGHT_CACHE = {}
 
   def highlighted_children(children, language)
     lexer = SUPPORTED_LEXERS[language]
     return children unless lexer
 
-    lexer.lex(children.text_content).map do |token, value|
+    source = children.text_content
+    cache_key = [language, source]
+    cached = HIGHLIGHT_CACHE[cache_key]
+    return cached if cached
+
+    HIGHLIGHT_CACHE[cache_key] = lexer.lex(source).map do |token, value|
       token_class = token.shortname&.to_sym
       next value unless token_class && ClassNames.key?(token_class)
 
       Example::H[:span, value, class: ClassNames[token_class]]
-    end
+    end.freeze
   end
 
   def language_from(class_name)
