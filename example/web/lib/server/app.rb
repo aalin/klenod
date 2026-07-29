@@ -6,6 +6,7 @@ require_relative "chrome_devtools_probe"
 require_relative "development_error_page"
 require_relative "errors"
 require_relative "formatting"
+require_relative "production_server"
 require_relative "recent_error_log"
 require_relative "runner"
 
@@ -13,8 +14,9 @@ module Example
   class DevServer
     ERROR_LOG_REPEAT_INTERVAL = RecentErrorLog::DEFAULT_REPEAT_INTERVAL
 
-    def initialize(config_path:, port: Integer(ENV.fetch("PORT", "9292")), assets_dir: ENV["ASSETS_DIR"])
+    def initialize(config_path:, host: ENV.fetch("HOST", "localhost"), port: Integer(ENV.fetch("PORT", "9292")), assets_dir: ENV["ASSETS_DIR"])
       @config = Klenod::Build::ConfigLoader.load(config_path)
+      @host = host
       @port = port
       @assets_dir = assets_dir && File.expand_path(assets_dir)
     end
@@ -23,7 +25,7 @@ module Example
       ServerFormatting.suppress_io_buffer_experimental_warning
       entry
       asset_app
-      ServerFormatting.log_startup(port:, source_dir:, assets_dir:)
+      ServerFormatting.log_startup(host:, port:, source_dir:, assets_dir:)
 
       begin
         watcher.start
@@ -36,7 +38,7 @@ module Example
 
     private
 
-    attr_reader :config, :port, :assets_dir
+    attr_reader :config, :host, :port, :assets_dir
 
     def source_dir
       @source_dir ||= config.source_path
@@ -66,6 +68,7 @@ module Example
       @server_runner ||=
         ServerRunner.new(
           port: port,
+          host: host,
           asset_app: asset_app,
           app: ->(request) { dev_response_for(request) || entry.call(request, context) },
           error_handler: ->(request, error) { handle_request_error(request, error) }
@@ -120,56 +123,6 @@ module Example
       formatted = ServerErrors.format_exception(error, context)
       recent_error_log.warn_unless_recent(error, formatted)
       error_page.response_for(request, error, formatted)
-    end
-  end
-
-  class ProductionServer
-    def initialize(config_path:, port: Integer(ENV.fetch("PORT", "9292")))
-      @config = Klenod::Build::ConfigLoader.load(config_path)
-      @port = port
-    end
-
-    def run
-      ServerFormatting.suppress_io_buffer_experimental_warning
-      bundle.preload_entrypoints
-      asset_app
-      ServerFormatting.log_startup(port:, source_dir: config.source_path, assets_dir: config.assets_path, source_label: "source")
-      server_runner.run
-    end
-
-    private
-
-    attr_reader :config, :port
-
-    def bundle
-      @bundle ||= Klenod::Runtime.load_bundle(config.output_path, source_root: config.source_path)
-    end
-
-    def entry
-      @entry ||= bundle.exports(config.entrypoints.fetch(0))
-    end
-
-    def asset_app
-      @asset_app ||= Klenod::Rack::AssetApp.new(bundle, assets_dir: config.assets_path)
-    end
-
-    def server_runner
-      @server_runner ||=
-        ServerRunner.new(
-          port: port,
-          asset_app: asset_app,
-          app: ->(request) { entry.call(request, bundle) },
-          error_handler: ->(_request, error) { error_response_for(error) }
-        )
-    end
-
-    def error_response_for(error)
-      warn error.full_message
-      [
-        500,
-        {"content-type" => "text/plain; charset=utf-8"},
-        ["Internal server error\n"]
-      ]
     end
   end
 end

@@ -8,7 +8,8 @@ require_relative "formatting"
 
 module Example
   class ServerRunner
-    def initialize(port:, asset_app:, app:, error_handler:)
+    def initialize(port:, asset_app:, app:, error_handler:, host: "localhost")
+      @host = host
       @port = port
       @asset_app = asset_app
       @app = app
@@ -38,10 +39,10 @@ module Example
 
     private
 
-    attr_reader :port
+    attr_reader :host, :port
 
     def endpoint
-      @endpoint ||= Async::HTTP::Endpoint.parse("http://localhost:#{port}")
+      @endpoint ||= Async::HTTP::Endpoint.parse("http://#{host}:#{port}")
     end
 
     def response_tuple_for(request)

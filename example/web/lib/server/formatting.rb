@@ -69,7 +69,7 @@ module Example
       Warning[:experimental] = previous unless previous.nil?
     end
 
-    def log_startup(port:, source_dir:, assets_dir:, source_label: "watching")
+    def log_startup(port:, source_dir:, assets_dir:, source_label: "watching", host: "localhost")
       yjit_value =
         if defined?(RubyVM::YJIT) && RubyVM::YJIT.enabled?
           color(:value, "true")
@@ -78,7 +78,7 @@ module Example
         end
 
       rows = [
-        ["url", color(:value, "http://localhost:#{port}")],
+        ["url", color(:value, "http://#{host}:#{port}")],
         [source_label, source_dir],
         ["assets", assets_dir || color(:dim, "in memory")],
         ["yjit", yjit_value]

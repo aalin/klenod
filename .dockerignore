@@ -1,0 +1,10 @@
+.git
+.bundle
+vendor/bundle
+**/.bundle
+**/vendor/bundle
+**/tmp
+**/dist
+pkg
+profile-*.vernier.json.gz
+**/profile-*.vernier.json.gz

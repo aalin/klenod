@@ -1,8 +1,10 @@
 #!/usr/bin/env -S ruby --jit
 # frozen_string_literal: true
 
-require "bundler/setup"
-require "klenod"
-require_relative "../lib/server/app"
+require "bundler/setup" if File.exist?(File.expand_path("../Gemfile", __dir__))
+require_relative "../lib/server/production_server"
 
-Example::ProductionServer.new(config_path: File.expand_path("../klenod.config.rb", __dir__)).run
+$stdout.sync = true
+$stderr.sync = true
+
+Example::ProductionServer.new.run

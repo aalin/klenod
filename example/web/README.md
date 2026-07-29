@@ -46,6 +46,15 @@ Vernier writes a profile file in the current directory. Use `bundle exec vernier
 
 `bin/server` starts the production server on `http://localhost:9292` from the bundle and assets written by `bin/build`. It logs exceptions server-side, but returns a generic 500 response instead of rendering development error details.
 
+Build and run the production server in Docker from the repository root:
+
+```sh
+docker build -f example/web/Dockerfile -t klenod-example-web .
+docker run --rm -p 9292:9292 klenod-example-web
+```
+
+The Docker image uses a multi-stage build. The build stage installs the full Klenod build stack and writes `dist/`; the final runtime image installs `klenod-runtime`, `klenod-rack`, and the example app runtime gems, but not `klenod-build` or the compatibility `klenod` gem.
+
 `bin/dev` can also mirror emitted assets to disk:
 
 ```sh
