@@ -1,5 +1,5 @@
 :ruby
-  Article = import("./article.md")
+  MarkdownArticle = import("./article.md")
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
 
@@ -11,7 +11,7 @@
   }
 
   %Panel{ title: "Imported .md file" }
-    %Article
+    %MarkdownArticle
 
   %Panel{ title: "Inline :markdown filter" }
     :markdown
