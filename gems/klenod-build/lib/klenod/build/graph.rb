@@ -718,7 +718,7 @@ module Klenod
         return block.call(task) if task
 
         with_experimental_warnings_suppressed do
-          Async(&block).wait
+          Async { |async_task| AsyncResult.capture { block.call(async_task) } }.wait.then { AsyncResult.unwrap(it) }
         end
       end
 
