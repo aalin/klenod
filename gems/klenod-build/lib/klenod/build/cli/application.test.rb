@@ -23,6 +23,8 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
     refute_includes(spec.files, "exe/klenod")
     refute_includes(spec.files, "lib/klenod.rb")
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })
+    refute(spec.files.any? { |path| path.include?("/__test__/") })
+    refute(spec.files.any? { |path| path.end_with?("/test_support.rb") })
     assert(spec.dependencies.any? { |dependency| dependency.name == "klenod-runtime" })
     assert(spec.dependencies.any? { |dependency| dependency.name == "rmagick" })
     assert(spec.dependencies.any? { |dependency| dependency.name == "syntax_tree-haml" })

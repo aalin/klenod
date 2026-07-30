@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../haml_test_support"
+require_relative "test_support"
 
 class Klenod::Build::Plugins::HamlPlugin::ErrorsTest < Klenod::Build::Plugins::HamlPlugin::TestSupport
   def test_haml_transform_result_can_be_built_from_ast

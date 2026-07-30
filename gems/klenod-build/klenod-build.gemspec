@@ -27,7 +27,12 @@ Gem::Specification.new do |spec|
         "lib/klenod/build/cli.rb",
         "lib/klenod/build/watcher.rb",
         *Dir["lib/klenod/build/**/*.rb"]
-      ].select { |path| File.file?(path) && !path.end_with?(".test.rb") }
+      ].select do |path|
+        File.file?(path) &&
+          !path.end_with?(".test.rb") &&
+          !path.include?("/__test__/") &&
+          !path.end_with?("/test_support.rb")
+      end
     end
   spec.require_paths = ["lib"]
 

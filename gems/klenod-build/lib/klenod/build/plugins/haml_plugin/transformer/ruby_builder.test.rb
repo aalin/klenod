@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../../haml_test_support"
+require_relative "../test_support"
 
 class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugins::HamlPlugin::TestSupport
   def test_ruby_builder_builds_unmarked_factory_calls_from_syntax_tree_nodes

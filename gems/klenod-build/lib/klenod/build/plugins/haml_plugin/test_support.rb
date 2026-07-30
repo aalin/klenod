@@ -5,11 +5,11 @@ require "minitest/autorun"
 require "tmpdir"
 
 require "klenod/runtime"
-require_relative "../context"
+require_relative "../../context"
 
 class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
   ModuleId = Klenod::Build::ModuleId
-  TEST_FIXTURE_DIR = File.expand_path("__test__", __dir__)
+  TEST_FIXTURE_DIR = File.expand_path("../__test__", __dir__)
   HAML_FIXTURE_DIR = File.join(TEST_FIXTURE_DIR, "haml")
 
   module FakeFramework

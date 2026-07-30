@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../haml_test_support"
+require_relative "test_support"
 
 class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugins::HamlPlugin::TestSupport
   def test_haml_generates_configured_component_class

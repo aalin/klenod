@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../haml_test_support"
+require_relative "test_support"
 
 class Klenod::Build::Plugins::HamlPlugin::FixturesTest < Klenod::Build::Plugins::HamlPlugin::TestSupport
   Dir.glob("#{HAML_FIXTURE_DIR}/*.haml").sort.each do |path|
