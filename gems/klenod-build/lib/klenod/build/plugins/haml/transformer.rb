@@ -503,7 +503,7 @@ module Klenod
 
           def compile_filter_node(node, builder:, markdown_compiler:)
             return builder.render_ruby_filter(compile_ruby_filter(node, builder: builder)) if ruby_filter?(node)
-            return builder.expression(markdown_compiler.compile(node.value.fetch(:text))) if markdown_filter?(node)
+            return builder.expression(markdown_compiler.compile(node.value.fetch(:text), interpolate: true)) if markdown_filter?(node)
 
             raise ArgumentError, "Only :ruby and :markdown Haml filters are supported"
           end

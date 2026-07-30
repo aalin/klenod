@@ -394,6 +394,33 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_markdown_filters_support_ruby_interpolation
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~'HAML'
+          :ruby
+            def dynamic_value
+              "abc"
+            end
+
+          :markdown
+            - Value: #{dynamic_value.upcase}
+            - Escaped: \#{dynamic_value}
+        HAML
+      }
+    ) do |_dir, _context, record, exports|
+      assert_equal(
+        [
+          :ul,
+          [:li, "Value: ", "ABC"],
+          [:li, "Escaped: \#{dynamic_value}"]
+        ],
+        exports::Default.new.render
+      )
+      assert_includes(record.transformed_source, "dynamic_value.upcase")
+    end
+  end
+
   def test_haml_markdown_filters_use_markdown_components_file
     evaluate_haml(
       {
