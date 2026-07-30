@@ -31,14 +31,14 @@ article {
   gap: var(--space-2);
   margin-bottom: var(--space-3);
   padding: var(--space-4);
-  background: oklch(96% 0.024 24);
-  border: 1px solid oklch(86% 0.055 24);
-  border-left: 4px solid oklch(54% 0.16 28);
+  background: light-dark(oklch(96% 0.024 24), oklch(28% 0.045 28));
+  border: 1px solid light-dark(oklch(86% 0.055 24), oklch(46% 0.075 28));
+  border-left: 4px solid light-dark(oklch(54% 0.16 28), oklch(72% 0.13 28));
   border-radius: var(--radius-sm);
 }
 
 .message-card span {
-  color: oklch(42% 0.14 28);
+  color: light-dark(oklch(42% 0.14 28), oklch(82% 0.1 28));
   font-size: var(--font-size-small);
   font-weight: 850;
   text-transform: uppercase;
@@ -77,17 +77,17 @@ dd {
 
 .trace-block {
   max-height: min(34rem, 46vh);
-  color: oklch(93% 0.012 248);
-  background: oklch(22% 0.026 252);
-  border: 1px solid oklch(30% 0.03 252);
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 8%);
+  color: light-dark(oklch(93% 0.012 248), oklch(90% 0.016 248));
+  background: light-dark(oklch(22% 0.026 252), oklch(14% 0.02 252));
+  border: 1px solid light-dark(oklch(30% 0.03 252), oklch(34% 0.03 252));
+  box-shadow: inset 0 1px 0 light-dark(oklch(100% 0 0 / 8%), oklch(100% 0 0 / 7%));
 }
 
 .source-block {
   max-height: min(22rem, 34vh);
-  color: oklch(24% 0.026 252);
-  background: oklch(98% 0.008 104);
-  border: 1px solid oklch(83% 0.06 104);
+  color: light-dark(oklch(24% 0.026 252), oklch(91% 0.015 248));
+  background: light-dark(oklch(98% 0.008 104), oklch(19% 0.024 252));
+  border: 1px solid light-dark(oklch(83% 0.06 104), oklch(36% 0.026 252));
 }
 
 .trace-block code,
