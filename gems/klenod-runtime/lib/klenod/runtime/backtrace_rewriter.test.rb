@@ -13,7 +13,7 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
   BacktraceRewriter = Klenod::Runtime::BacktraceRewriter
   SourceMap = Klenod::Runtime::SourceMap
 
-  FakeMod = Data.define(:source_map)
+  FakeMod = Data.define(:source_map, :path, :constant_name)
 
   def test_rewrite_exception
     source_map = SourceMap::SourceMap.parse(<<~INPUT, <<~OUTPUT)
@@ -49,7 +49,7 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
 
     backtrace_rewriter =
       BacktraceRewriter.new(
-        {"/app/components/MyComponent.haml" => FakeMod.new(source_map)}
+        {"/app/components/MyComponent.haml" => fake_mod(source_map)}
       )
 
     actual =
@@ -100,7 +100,7 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
 
     backtrace_rewriter =
       BacktraceRewriter.new(
-        {"/app/components/MyComponent.haml" => FakeMod.new(source_map)}
+        {"/app/components/MyComponent.haml" => fake_mod(source_map)}
       )
 
     formatted = backtrace_rewriter.format_exception(e)
@@ -117,6 +117,49 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
 
     assert_includes(formatted, "Plain Ruby error")
     refute_includes(formatted, "Sources:")
+  end
+
+  def test_format_exception_rewrites_generated_constant_paths
+    source_map = SourceMap::SourceMap.parse(<<~INPUT, <<~OUTPUT)
+      %p= x
+    INPUT
+      class Page
+        def render
+          # #{SourceMap::Mark[1]}
+          H[:p, x]
+        end
+      end
+    OUTPUT
+    constant_name = "Mod_101b82598ea9cbb7174d556e"
+    message =
+      "undefined local variable or method 'x' for an instance of " \
+      "Klenod::Runtime::Generated::#{constant_name}::Exports::Page"
+    error = NameError.new(message)
+    error.set_backtrace(
+      [
+        "/app/routes/demo/error/+page.haml:4:in `Klenod::Runtime::Generated::#{constant_name}::Exports::Page#render'"
+      ]
+    )
+
+    formatted =
+      BacktraceRewriter
+        .new(
+          {
+            "routes/demo/error/+page.haml" =>
+              fake_mod(
+                source_map,
+                path: "routes/demo/error/+page.haml",
+                constant_name: constant_name
+              )
+          }
+        )
+        .format_exception(error)
+
+    assert_includes(error.message, "Mod[\"routes/demo/error/+page.haml\"]::Exports::Page")
+    assert_includes(error.to_s, "Mod[\"routes/demo/error/+page.haml\"]::Exports::Page")
+    assert_includes(formatted, "Mod[\"routes/demo/error/+page.haml\"]::Exports::Page")
+    assert_includes(formatted, "Mod[\"routes/demo/error/+page.haml\"]::Exports::Page#render")
+    refute_includes(formatted, "Klenod::Runtime::Generated::#{constant_name}")
   end
 
   def test_format_exception_keeps_unrecognized_backtrace_lines
@@ -139,11 +182,17 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
     error = StandardError.new("Boom")
     error.set_backtrace(["/app/page.haml:2:in `render'"])
 
-    formatted = BacktraceRewriter.new({"/app/page.haml" => FakeMod.new(source_map)}).format_exception(error)
+    formatted = BacktraceRewriter.new({"/app/page.haml" => fake_mod(source_map)}).format_exception(error)
 
     assert_includes(formatted, "Boom")
     assert_includes(formatted, "/app/page.haml")
     assert_includes(formatted, "  1: raise \"boom\"")
     refute_includes(formatted, "  0:")
+  end
+
+  private
+
+  def fake_mod(source_map, path: "/app/components/MyComponent.haml", constant_name: "Mod_000000000000000000000000")
+    FakeMod.new(source_map, path, constant_name)
   end
 end

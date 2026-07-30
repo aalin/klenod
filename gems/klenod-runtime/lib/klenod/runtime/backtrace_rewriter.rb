@@ -41,6 +41,7 @@ module Klenod
       def initialize(mods)
         @source_maps = source_maps_for(mods)
         @source_map_cache = Hash.new { |h, path| h[path] = @source_maps[path] }
+        @constant_display_names = constant_display_names_for(mods)
       end
 
       def format_exception(e, source_path: nil)
@@ -69,6 +70,7 @@ module Klenod
       end
 
       def rewrite_exception(e)
+        rewrite_exception_message(e)
         e.set_backtrace(rewrite_backtrace(e.backtrace))
       end
 
@@ -112,10 +114,33 @@ module Klenod
 
       def rewrite_backtrace_entry(entry)
         if (original_line_no = find_original_line_no(entry.file, entry.line))
-          entry.with(line: original_line_no)
+          entry.with(line: original_line_no, description: rewrite_const_paths(entry.description))
         else
-          entry
+          entry.with(description: rewrite_const_paths(entry.description))
         end
+      end
+
+      def constant_display_names_for(mods)
+        mods.each_with_object({}) do |(key, mod), index|
+          next unless mod.respond_to?(:constant_name)
+
+          display_path = mod.respond_to?(:path) ? mod.path : key
+          index["Klenod::Runtime::Generated::#{mod.constant_name}"] = "Mod[#{display_path.inspect}]"
+        end
+      end
+
+      def rewrite_const_paths(value)
+        @constant_display_names.reduce(value.to_s) do |message, (generated_name, display_name)|
+          message.gsub(generated_name, display_name)
+        end
+      end
+
+      def rewrite_exception_message(error)
+        message = rewrite_const_paths(error.message)
+        return if message == error.message
+
+        error.define_singleton_method(:message) { message }
+        error.define_singleton_method(:to_s) { message }
       end
 
       def find_original_line_no(file, line_no)
