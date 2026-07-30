@@ -9,7 +9,7 @@ require_relative "parser"
 module Klenod
   module Build
     module Plugins
-      module Haml
+      module HamlPlugin
         class Transformer
           VALID_CONST_PATH = /\A[A-Z]\w*(?:::[A-Z]\w*)*\z/
 
@@ -146,7 +146,7 @@ module Klenod
           end
 
           def compile_template(source, factory:, builder:, module_id: nil, styleable: false, import_rewriter: nil, markdown_components_source: "{}")
-            parsed = measure_compile(:haml_parse_haml) { Haml.parse_haml(source, module_id: module_id) }
+            parsed = measure_compile(:haml_parse_haml) { HamlPlugin.parse_haml(source, module_id: module_id) }
             render_nodes, ruby_nodes =
               measure_compile(:haml_partition_top_level_nodes) do
                 partition_top_level_nodes(parsed.children)

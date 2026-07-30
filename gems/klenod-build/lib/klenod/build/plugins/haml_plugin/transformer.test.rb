@@ -70,7 +70,7 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_includes(error.message, "pages/demo/blog/page.haml:2: Haml parse error")
     assert_includes(error.message, "Invalid attribute list")
     assert_includes(error.message, "> 2 | %time(datetime=post.fetch(\"date\"))= post.fetch(\"date\")")
-    assert_kind_of(Haml::SyntaxError, error.cause)
+    assert_kind_of(::Haml::SyntaxError, error.cause)
   end
 
   def test_haml_transformer_reports_ruby_script_parse_errors_on_source_line

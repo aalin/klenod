@@ -1,8 +1,8 @@
 # Haml Plugin Internals
 
 The public plugin entry point is `../haml.rb`, exported as
-`Klenod::Build::Plugins::Haml::Plugin`. The old
-`Klenod::Build::Plugins::HamlPlugin` constant remains as a compatibility alias.
+`Klenod::Build::Plugins::HamlPlugin::Plugin`. Related classes live under the
+`Klenod::Build::Plugins::HamlPlugin` namespace.
 Keep the entry point focused on plugin hooks and graph integration.
 
 Internal responsibilities are split by phase:

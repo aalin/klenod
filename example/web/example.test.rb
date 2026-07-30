@@ -104,12 +104,12 @@ class Klenod::ExampleTest < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::HamlPlugin.new(
+            Klenod::Build::Plugins::HamlPlugin::Plugin.new(
               component_base_class: "Example::Component",
               factory: "Example::H",
               global_variables: "@__props"
             ),
-            Klenod::Build::Plugins::CssPlugin.new
+            Klenod::Build::Plugins::CssPlugin::Plugin.new
           ]
         )
       record = context.evaluate("component.haml")
@@ -557,11 +557,11 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(500, status)
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
     assert_includes(html, "Something went wrong")
-    assert_includes(html, "Rendering /demo/error raised RuntimeError.")
-    assert_includes(html, "Demo render failure")
-    assert_includes(html, "RuntimeError")
+    assert_includes(html, "Rendering /demo/error raised NameError.")
+    assert_includes(html, "undefined local variable or method")
+    assert_includes(html, "NameError")
     assert_includes(html, "Backtrace")
-    assert_includes(stderr, "RuntimeError: Demo render failure")
+    assert_includes(stderr, "NameError: undefined local variable or method")
     assert_includes(stderr, "routes/demo/error/+page.haml")
     assert(paths.any? { |path| path.include?("routes_layout_css") })
     refute(paths.any? { |path| path.include?("routes_demo_layout_css") })

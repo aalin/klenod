@@ -15,7 +15,7 @@
       A Haml module exports a component class as `Default`. The generated class inherits from the configured component base class and renders through the configured factory.
 
       ```ruby
-      Klenod::Build::Plugins::HamlPlugin.new(
+      Klenod::Build::Plugins::HamlPlugin::Plugin.new(
         component_base_class: "Example::Component",
         factory: "Example::H",
         global_variables: "@__props"

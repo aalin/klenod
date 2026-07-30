@@ -6,7 +6,7 @@ require "syntax_tree/haml"
 module Klenod
   module Build
     module Plugins
-      module Haml
+      module HamlPlugin
         def self.parse_haml(source, module_id: nil)
           parser = ParserWithMetadata.new({})
           parser.call(source)

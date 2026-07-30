@@ -9,7 +9,7 @@ require "syntax_suggest/explain_syntax"
 module Klenod
   module Build
     module Plugins
-      module Haml
+      module HamlPlugin
         class Transformer
           class RubyBuilder
             include SyntaxTree::DSL

@@ -5,7 +5,7 @@ require "klenod/runtime/source_map"
 module Klenod
   module Build
     module Plugins
-      module Haml
+      module HamlPlugin
         class ParseError < StandardError
           attr_reader :module_id, :source, :line, :column, :cause
 

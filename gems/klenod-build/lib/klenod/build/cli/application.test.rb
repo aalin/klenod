@@ -41,7 +41,7 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
           entrypoint "entry"
           output "dist/klenod.bundle"
           plugins [
-            Klenod::Build::Plugins::RubyPlugin.new
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new
           ]
         RUBY
       )
@@ -75,7 +75,7 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
           entrypoint "entry"
           output "dist/config.bundle"
           plugins [
-            Klenod::Build::Plugins::RubyPlugin.new
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new
           ]
         RUBY
       )
@@ -106,7 +106,7 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
           entrypoint "entry"
           output "dist/app"
           plugins [
-            Klenod::Build::Plugins::RubyPlugin.new
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new
           ]
         RUBY
       )

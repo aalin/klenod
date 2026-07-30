@@ -15,7 +15,7 @@
       The router is optional and framework-agnostic. It supports `+page.rb`, `+page.haml`, `+route.rb`, `+layout.*`, `+error.*`, and `+not-found.*`.
 
       ```ruby
-      Klenod::Build::Plugins::RouterPlugin.new(
+      Klenod::Build::Plugins::RouterPlugin::Plugin.new(
         specifier: "virtual:router",
         pages_dir: "routes",
         extensions: [".rb", ".haml"]

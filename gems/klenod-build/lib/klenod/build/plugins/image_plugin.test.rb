@@ -119,11 +119,11 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
           SIZES = Hero.sizes
         RUBY
       )
-      image_plugin = Klenod::Build::Plugins::ImagePlugin.new(widths: [2], formats: ["png"])
+      image_plugin = Klenod::Build::Plugins::ImagePlugin::Plugin.new(widths: [2], formats: ["png"])
       context =
         Klenod::Build::Context.new(
           source_dir: dir,
-          plugins: [Klenod::Build::Plugins::RubyPlugin.new, image_plugin]
+          plugins: [Klenod::Build::Plugins::RubyPlugin::Plugin.new, image_plugin]
         )
 
       record = context.evaluate("entry")
@@ -165,8 +165,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin.new,
-            Klenod::Build::Plugins::ImagePlugin.new
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+            Klenod::Build::Plugins::ImagePlugin::Plugin.new
           ]
         )
 
@@ -200,8 +200,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin.new,
-            Klenod::Build::Plugins::ImagePlugin.new
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+            Klenod::Build::Plugins::ImagePlugin::Plugin.new
           ]
         )
 
@@ -241,8 +241,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin.new,
-            Klenod::Build::Plugins::ImagePlugin.new
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+            Klenod::Build::Plugins::ImagePlugin::Plugin.new
           ]
         )
 
@@ -269,11 +269,11 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       File.binwrite("#{dir}/images/hero.png", real_png_bytes(width: 4, height: 2))
       File.write("#{dir}/entry_a.rb", "Hero = import(\"images/hero.png?width=2&quality=70\")\nIMAGE = Hero\n")
       File.write("#{dir}/entry_b.rb", "Hero = import(\"images/hero.png?width=2&quality=80\")\nIMAGE = Hero\n")
-      image_plugin = Klenod::Build::Plugins::ImagePlugin.new
+      image_plugin = Klenod::Build::Plugins::ImagePlugin::Plugin.new
       context =
         Klenod::Build::Context.new(
           source_dir: dir,
-          plugins: [Klenod::Build::Plugins::RubyPlugin.new, image_plugin]
+          plugins: [Klenod::Build::Plugins::RubyPlugin::Plugin.new, image_plugin]
         )
 
       record_a = context.evaluate("entry_a")
@@ -308,11 +308,11 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
           VARIANTS_B = HeroB.variants
         RUBY
       )
-      image_plugin = Klenod::Build::Plugins::ImagePlugin.new
+      image_plugin = Klenod::Build::Plugins::ImagePlugin::Plugin.new
       context =
         Klenod::Build::Context.new(
           source_dir: dir,
-          plugins: [Klenod::Build::Plugins::RubyPlugin.new, image_plugin]
+          plugins: [Klenod::Build::Plugins::RubyPlugin::Plugin.new, image_plugin]
         )
 
       record_a = context.evaluate("entry_a")
@@ -342,8 +342,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin.new,
-            Klenod::Build::Plugins::ImagePlugin.new
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+            Klenod::Build::Plugins::ImagePlugin::Plugin.new
           ]
         )
 
@@ -369,11 +369,11 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       File.binwrite("#{dir}/images/hero.png", real_png_bytes(width: 6, height: 3))
       File.write("#{dir}/entry.rb", "Hero = import(\"images/hero.png\")\nVARIANTS = Hero.variants\n")
       output = "#{dir}/bundle.mpk"
-      image_plugin = Klenod::Build::Plugins::ImagePlugin.new(widths: [3], formats: ["png"])
+      image_plugin = Klenod::Build::Plugins::ImagePlugin::Plugin.new(widths: [3], formats: ["png"])
       context =
         Klenod::Build::Context.new(
           source_dir: dir,
-          plugins: [Klenod::Build::Plugins::RubyPlugin.new, image_plugin]
+          plugins: [Klenod::Build::Plugins::RubyPlugin::Plugin.new, image_plugin]
         )
 
       bundle = context.build(entrypoints: ["entry"], output: output)
@@ -464,8 +464,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin.new,
-            Klenod::Build::Plugins::ImagePlugin.new(widths: [2], formats: ["png"])
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+            Klenod::Build::Plugins::ImagePlugin::Plugin.new(widths: [2], formats: ["png"])
           ]
         )
 

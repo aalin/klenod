@@ -164,7 +164,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       context =
         Klenod::Build::Context.new(
           source_dir: dir,
-          plugins: [VirtualFilePlugin.new, Klenod::Build::Plugins::RubyPlugin.new]
+          plugins: [VirtualFilePlugin.new, Klenod::Build::Plugins::RubyPlugin::Plugin.new]
         )
       record = context.evaluate("virtual:file")
 
@@ -243,7 +243,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
             ExtensionOnlyPlugin.new
           ]
         )
@@ -463,7 +463,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
             DelayedLoadPlugin.new(events)
           ]
         )
@@ -496,7 +496,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
             CountingLoadPlugin.new(events)
           ]
         )
@@ -529,7 +529,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
             DelayedTransformPlugin.new(events)
           ]
         )
@@ -784,7 +784,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       output = "#{dir}/dist/klenod.bundle"
       assets_dir = "#{dir}/dist/public"
       plugins = default_plugins_with(
-        Klenod::Build::Plugins::HamlPlugin.new(
+        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
           component_base_class: "#{self.class.name}::TestFramework::Component",
           factory: "#{self.class.name}::TestFramework::H"
         )
@@ -911,7 +911,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       )
       output = "#{dir}/bundle.mpk"
       plugins = default_plugins_with(
-        Klenod::Build::Plugins::HamlPlugin.new(
+        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
           component_base_class: "Object",
           factory: "RuntimeTestH"
         )
@@ -967,7 +967,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       output = "#{dir}/klenod.bundle"
       assets_dir = "#{dir}/public"
       plugins = default_plugins_with(
-        Klenod::Build::Plugins::HamlPlugin.new(
+        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
           component_base_class: "#{self.class.name}::TestFramework::Component",
           factory: "#{self.class.name}::TestFramework::H"
         )
@@ -1054,7 +1054,7 @@ class Klenod::Build::Context::Test < Minitest::Test
           source_dir: dir,
           plugins: [
             RuntimeOnlyImportValuePlugin.new,
-            Klenod::Build::Plugins::RubyPlugin.new
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new
           ]
         )
 
@@ -1136,8 +1136,8 @@ class Klenod::Build::Context::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin.new,
-            Klenod::Build::Plugins::ImagePlugin.new(widths: [2], formats: ["png"])
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+            Klenod::Build::Plugins::ImagePlugin::Plugin.new(widths: [2], formats: ["png"])
           ]
         )
 
@@ -1620,7 +1620,7 @@ class Klenod::Build::Context::Test < Minitest::Test
 
   def default_plugins_with(plugin)
     Klenod::Build::Context::DEFAULT_PLUGINS.map do |default_plugin|
-      default_plugin.is_a?(Klenod::Build::Plugins::HamlPlugin) ? plugin : default_plugin
+      default_plugin.is_a?(Klenod::Build::Plugins::HamlPlugin::Plugin) ? plugin : default_plugin
     end
   end
 

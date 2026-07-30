@@ -3,7 +3,7 @@
 module Klenod
   module Build
     module Plugins
-      module Haml
+      module HamlPlugin
         module HelperSource
           private
 

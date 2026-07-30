@@ -32,12 +32,12 @@
 
       ```ruby
       plugins [
-        Klenod::Build::Plugins::RouterPlugin.new(
+        Klenod::Build::Plugins::RouterPlugin::Plugin.new(
           route_base_class: "Example::Route"
         ),
-        Klenod::Build::Plugins::RubyPlugin.new,
-        Klenod::Build::Plugins::IntlPlugin.new,
-        Klenod::Build::Plugins::HamlPlugin.new(
+        Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+        Klenod::Build::Plugins::IntlPlugin::Plugin.new,
+        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
           component_base_class: "Example::Component",
           factory: "Example::H"
         )
@@ -51,12 +51,12 @@
       Haml and Markdown plugins need a component superclass and a factory for generated element calls.
 
       ```ruby
-      Klenod::Build::Plugins::HamlPlugin.new(
+      Klenod::Build::Plugins::HamlPlugin::Plugin.new(
         component_base_class: "Example::Component",
         factory: "Example::H"
       )
 
-      Klenod::Build::Plugins::MarkdownPlugin.new(
+      Klenod::Build::Plugins::MarkdownPlugin::Plugin.new(
         component_base_class: "Example::Component",
         factory: "Example::H"
       )
@@ -73,7 +73,7 @@
       Image defaults can be configured once and overridden by import query strings.
 
       ```ruby
-      Klenod::Build::Plugins::ImagePlugin.new(
+      Klenod::Build::Plugins::ImagePlugin::Plugin.new(
         widths: [320, 640, 960]
       )
       ```
@@ -81,7 +81,7 @@
       Google Fonts can use a cache directory for raw Google CSS responses. That avoids fetching CSS again when the exact Google Fonts URL has already been cached.
 
       ```ruby
-      Klenod::Build::Plugins::GoogleFontsPlugin.new(
+      Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
         cache_path: "tmp/cache/google_fonts",
         refresh_cache: false
       )

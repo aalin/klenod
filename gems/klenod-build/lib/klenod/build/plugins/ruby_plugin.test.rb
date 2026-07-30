@@ -11,7 +11,7 @@ require_relative "data_plugin"
 require_relative "ruby_plugin"
 
 class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
-  RubyPlugin = Klenod::Build::Plugins::RubyPlugin
+  RubyPlugin = Klenod::Build::Plugins::RubyPlugin::Plugin
   ModuleId = Klenod::Build::ModuleId
   Profiler = Klenod::Build::Profiler
   Context = Data.define(:profiler)
@@ -235,7 +235,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/pages/gallery")
       File.write("#{dir}/pages/page.rb", "Images = import_glob(\"./gallery/*.txt\")\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [RubyPlugin.new, Klenod::Build::Plugins::TextPlugin.new])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [RubyPlugin.new, Klenod::Build::Plugins::TextPlugin::Plugin.new])
       context.collect("pages/page.rb")
 
       new_path = "#{dir}/pages/gallery/new.txt"

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
 HamlHelper =
-  Klenod::Build::Plugins::Haml::Plugin::FixturesTest::FakeFramework::HamlHelper
+  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class InlineCssFilter < TestFramework::ComponentBase
   def self.module_path
     __FILE__

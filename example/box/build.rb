@@ -13,7 +13,7 @@ def build_bundle(name)
   context =
     Klenod::Build::Context.new(
       source_dir: source_dir,
-      plugins: [Klenod::Build::Plugins::RubyPlugin.new],
+      plugins: [Klenod::Build::Plugins::RubyPlugin::Plugin.new],
       mode: :production
     )
 

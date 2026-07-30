@@ -145,7 +145,7 @@ assets_dir "public"
 mode :development
 
 plugins [
-  Klenod::Build::Plugins::RubyPlugin.new
+  Klenod::Build::Plugins::RubyPlugin::Plugin.new
 ]
 ```
 
@@ -199,12 +199,12 @@ In development, frameworks using Klenod are expected to serve `context.asset(pat
 Routing is provided by the optional `RouterPlugin`, not by the core build context. Add it to a context and import its virtual module:
 
 ```ruby
-router_plugin = Klenod::Build::Plugins::RouterPlugin.new
+router_plugin = Klenod::Build::Plugins::RouterPlugin::Plugin.new
 
 context = Klenod::Build::Context.new(
   source_dir: "src",
   plugins: [
-    Klenod::Build::Plugins::RubyPlugin.new,
+    Klenod::Build::Plugins::RubyPlugin::Plugin.new,
     router_plugin
   ]
 )

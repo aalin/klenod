@@ -82,7 +82,7 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
       end
     end
 
-    module HamlHelper
+    module HamlPluginHelper
       def self.merge_props(component_class, *sources)
         result = {}
         classes = []
@@ -270,12 +270,12 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
 
   def default_plugins_with(plugin)
     Klenod::Build::Context::DEFAULT_PLUGINS.map do |default_plugin|
-      default_plugin.is_a?(Klenod::Build::Plugins::HamlPlugin) ? plugin : default_plugin
+      default_plugin.is_a?(Klenod::Build::Plugins::HamlPlugin::Plugin) ? plugin : default_plugin
     end
   end
 
   def haml_plugin(**options)
-    Klenod::Build::Plugins::HamlPlugin.new(
+    Klenod::Build::Plugins::HamlPlugin::Plugin.new(
       component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
       factory: "#{self.class.name}::FakeFramework::H",
       **options

@@ -40,7 +40,7 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
   end
 
   def test_haml_plugin_wraps_inline_css_parse_errors_with_source_context
-    plugin = Klenod::Build::Plugins::HamlPlugin.new
+    plugin = Klenod::Build::Plugins::HamlPlugin::Plugin.new
     module_id = ModuleId.new("pages/page.haml", nil)
     source = <<~HAML
       %h1 Hello
@@ -57,7 +57,7 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
   end
 
   def test_inline_css_sources_include_haml_origin_offsets
-    plugin = Klenod::Build::Plugins::HamlPlugin.new
+    plugin = Klenod::Build::Plugins::HamlPlugin::Plugin.new
     source = <<~HAML
       %h1 Hello
       :css

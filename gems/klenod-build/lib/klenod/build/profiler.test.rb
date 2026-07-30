@@ -83,7 +83,7 @@ class Klenod::Build::ProfilerTest < Minitest::Test
 
       assert_includes(profiler.totals.keys, :entrypoints)
       assert_includes(profiler.totals.keys, :runtime_dependencies)
-      assert(profiler.totals_by_plugin.keys.any? { |name, plugin| name == :plugin_transform && plugin.end_with?("TextPlugin") })
+      assert(profiler.totals_by_plugin.keys.any? { |name, plugin| name == :plugin_transform && plugin.end_with?("TextPlugin::Plugin") })
     end
   end
 

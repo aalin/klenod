@@ -339,8 +339,8 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin.new,
-            Klenod::Build::Plugins::CssPlugin.new(source_maps: false)
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+            Klenod::Build::Plugins::CssPlugin::Plugin.new(source_maps: false)
           ]
         )
       record = context.evaluate("styles/home.css")

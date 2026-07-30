@@ -19,7 +19,7 @@ class Klenod::Build::Config::Test < Minitest::Test
           assets_dir "public"
           mode :build
           plugins [
-            Klenod::Build::Plugins::RubyPlugin.new
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new
           ]
         RUBY
       )
@@ -31,7 +31,7 @@ class Klenod::Build::Config::Test < Minitest::Test
       assert_equal("dist/app.bundle", config.output)
       assert_equal("public", config.assets_dir)
       assert_equal(:build, config.mode)
-      assert_equal([Klenod::Build::Plugins::RubyPlugin], config.plugins.map(&:class))
+      assert_equal([Klenod::Build::Plugins::RubyPlugin::Plugin], config.plugins.map(&:class))
       assert_equal(dir, config.base_dir)
       assert_equal("#{dir}/app", config.source_path)
       assert_equal("#{dir}/dist/app.bundle", config.output_path)

@@ -15,7 +15,7 @@
       The plugin is opt-in. It handles Google Fonts URLs as plugin-owned external CSS imports and emits a local stylesheet asset.
 
       ```ruby
-      Klenod::Build::Plugins::GoogleFontsPlugin.new(
+      Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
         cache_path: "tmp/cache/google_fonts",
         refresh_cache: false
       )

@@ -90,17 +90,17 @@ module Klenod
 
       def self.default_plugins
         [
-          Plugins::RubyPlugin.new,
-          Plugins::IntlPlugin.new,
-          Plugins::HamlPlugin.new,
-          Plugins::MarkdownPlugin.new,
-          Plugins::CssPlugin.new,
-          Plugins::SvgPlugin.new,
-          Plugins::ImagePlugin.new,
-          Plugins::JsonPlugin.new,
-          Plugins::YamlPlugin.new,
-          Plugins::TomlPlugin.new,
-          Plugins::TextPlugin.new
+          Plugins::RubyPlugin::Plugin.new,
+          Plugins::IntlPlugin::Plugin.new,
+          Plugins::HamlPlugin::Plugin.new,
+          Plugins::MarkdownPlugin::Plugin.new,
+          Plugins::CssPlugin::Plugin.new,
+          Plugins::SvgPlugin::Plugin.new,
+          Plugins::ImagePlugin::Plugin.new,
+          Plugins::JsonPlugin::Plugin.new,
+          Plugins::YamlPlugin::Plugin.new,
+          Plugins::TomlPlugin::Plugin.new,
+          Plugins::TextPlugin::Plugin.new
         ]
       end
 
