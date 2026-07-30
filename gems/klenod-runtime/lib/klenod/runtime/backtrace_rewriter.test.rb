@@ -42,9 +42,9 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
     OUTPUT
 
     expected = <<~BACKTRACE.lines.map(&:strip)
-      /app/components/MyComponent.haml:3:in `render'
-      /app/components/MyComponent.haml:6:in `render'
-      /vendor/klenod/hello.rb:123:in `update'
+      /app/components/MyComponent.haml:3:in 'render'
+      /app/components/MyComponent.haml:6:in 'render'
+      /vendor/klenod/hello.rb:123:in 'update'
     BACKTRACE
 
     backtrace_rewriter =
@@ -54,9 +54,9 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
 
     actual =
       backtrace_rewriter.rewrite_backtrace(<<~BACKTRACE.lines.map(&:strip))
-        /app/components/MyComponent.haml:5:in `render'
-        /app/components/MyComponent.haml:11:in `render'
-        /vendor/klenod/hello.rb:123:in `update'
+        /app/components/MyComponent.haml:5:in 'render'
+        /app/components/MyComponent.haml:11:in 'render'
+        /vendor/klenod/hello.rb:123:in 'update'
       BACKTRACE
 
     assert_equal(expected, actual)
@@ -92,9 +92,9 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
 
     e.set_backtrace(
       [
-        "/app/components/MyComponent.haml:3:in `render'",
-        "/app/components/MyComponent.haml:6:in `render'",
-        "/vendor/klenod/hello.rb:123:in `update'"
+        "/app/components/MyComponent.haml:3:in 'render'",
+        "/app/components/MyComponent.haml:6:in 'render'",
+        "/vendor/klenod/hello.rb:123:in 'update'"
       ]
     )
 
@@ -111,7 +111,7 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
 
   def test_format_exception_omits_sources_section_without_source_maps
     e = StandardError.new("Plain Ruby error")
-    e.set_backtrace(["/app/server.rb:12:in `call'"])
+    e.set_backtrace(["/app/server.rb:12:in call"])
 
     formatted = BacktraceRewriter.new({}).format_exception(e)
 
@@ -137,7 +137,7 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
     error = NameError.new(message)
     error.set_backtrace(
       [
-        "/app/routes/demo/error/+page.haml:4:in `Klenod::Runtime::Generated::#{constant_name}::Exports::Page#render'"
+        "/app/routes/demo/error/+page.haml:4:in 'Klenod::Runtime::Generated::#{constant_name}::Exports::Page#render'"
       ]
     )
 
@@ -180,7 +180,7 @@ class Klenod::Runtime::BacktraceRewriter::Test < Minitest::Test
       raise "boom"
     OUTPUT
     error = StandardError.new("Boom")
-    error.set_backtrace(["/app/page.haml:2:in `render'"])
+    error.set_backtrace(["/app/page.haml:2:in 'render'"])
 
     formatted = BacktraceRewriter.new({"/app/page.haml" => fake_mod(source_map)}).format_exception(error)
 

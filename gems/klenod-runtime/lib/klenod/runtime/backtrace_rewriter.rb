@@ -22,7 +22,7 @@ module Klenod
             case line
             in BacktraceString
               line.parsed_backtrace_entry
-            in /\A(?<file>.*):(?<line>\d+):in [`'](?<description>.*)'\z/
+            in /\A(?<file>.*):(?<line>\d+):in '(?<description>.*)'\z/
               new($~[:file], $~[:line].to_i, $~[:description])
             else
               nil
@@ -30,7 +30,7 @@ module Klenod
           end
 
           def to_s
-            "#{file}:#{line}:in `#{description.sub(/^Mayu::Modules::Registry::.+::/, "")}'"
+            "#{file}:#{line}:in '#{description.sub(/^Mayu::Modules::Registry::.+::/, "")}'"
           end
 
           def to_backtrace_string
@@ -57,7 +57,7 @@ module Klenod
             .map do |line|
               if line in BacktraceString
                 format(
-                  "#{reset}\e[2mfrom #{reset}\e[1m%<file>s:%<line>d#{reset}\e[2m:in `#{reset}\e[1m%<description>s#{reset}\e[2m`#{reset}",
+                  "#{reset}\e[2mfrom #{reset}\e[1m%<file>s:%<line>d#{reset}\e[2m:in '#{reset}\e[1m%<description>s#{reset}\e[2m'#{reset}",
                   line.parsed_backtrace_entry.to_h
                 )
               else
