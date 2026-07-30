@@ -30,7 +30,7 @@ module Klenod
           end
 
           def to_s
-            "#{file}:#{line}:in '#{description.sub(/^Mayu::Modules::Registry::.+::/, "")}'"
+            "#{file}:#{line}:in '#{description}'"
           end
 
           def to_backtrace_string
