@@ -6,11 +6,11 @@ PATH
       async-http (~> 0.95.1)
       brotli (~> 0.8)
       image_size (~> 3.6)
+      klenod-runtime (= 0.0.1)
       kramdown (~> 2.5)
       kramdown-parser-gfm (~> 1.1)
       listen (~> 3.10)
       mayu-css (~> 0.1.5)
-      klenod-runtime (= 0.0.1)
       rmagick (~> 7.0)
       samovar (~> 2.5)
       syntax_tree (~> 6.3)
@@ -169,11 +169,11 @@ PLATFORMS
 
 DEPENDENCIES
   http-accept (~> 2.2)
-  minitest (~> 6.0)
   klenod!
   klenod-build!
   klenod-rack!
   klenod-runtime!
+  minitest (~> 6.0)
   rbnacl (~> 7.1)
   rouge (~> 5.0)
   vernier
@@ -206,6 +206,10 @@ CHECKSUMS
   io-event (1.19.2) sha256=c9ac4f0c3153b453727ab15c03cc762b29a207979c703b2bb15c8be6209d4b4c
   io-stream (0.13.2) sha256=8c7ac4efbb0d91d951726bbc88dbf28a56f792ff388e82bb18aa5abc48f2fe36
   json (2.21.1) sha256=13a43df75d95641443f5702dff350f237164a9d811ff0f2c2800d4d980220583
+  klenod (0.0.1)
+  klenod-build (0.0.1)
+  klenod-rack (0.0.1)
+  klenod-runtime (0.0.1)
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
   kramdown-parser-gfm (1.1.0) sha256=fb39745516427d2988543bf01fc4cf0ab1149476382393e0e9c48592f6581729
   listen (3.10.0) sha256=c6e182db62143aeccc2e1960033bebe7445309c7272061979bb098d03760c9d2
@@ -217,10 +221,6 @@ CHECKSUMS
   mayu-css (0.1.5-x86_64-linux) sha256=ed3bb215e50b039de766b2b72a02493b56083a85e1aa76fa8424d7798d7e5b8e
   metrics (0.15.0) sha256=61ded5bac95118e995b1bc9ed4a5f19bc9814928a312a85b200abbdac9039072
   minitest (6.0.6) sha256=153ea36d1d987a62942382b61075745042a2b3123b1cd48f4c3675af9cc7d6f1
-  klenod (0.0.1)
-  klenod-build (0.0.1)
-  klenod-rack (0.0.1)
-  klenod-runtime (0.0.1)
   observer (0.1.2) sha256=d8a3107131ba661138d748e7be3dbafc0d82e732fffba9fccb3d7829880950ac
   openssl (4.0.2) sha256=1037ad2868ae58df9ad917891c0c0f9815a1172f6846d4bcdd508e4c2ee747c2
   pkg-config (1.6.5) sha256=33f9f81c5322983d22b439b8b672f27777b406fea23bfec74ff14bbeb42ec733

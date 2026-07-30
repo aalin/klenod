@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "klenod"
+require_relative "../framework"
+require_relative "../web_config"
 require_relative "../dev/update_logger"
 require_relative "chrome_devtools_probe"
 require_relative "development_error_page"
@@ -14,8 +16,8 @@ module Example
   class DevServer
     ERROR_LOG_REPEAT_INTERVAL = RecentErrorLog::DEFAULT_REPEAT_INTERVAL
 
-    def initialize(config_path:, host: ENV.fetch("HOST", "localhost"), port: Integer(ENV.fetch("PORT", "9292")), assets_dir: ENV["ASSETS_DIR"])
-      @config = Klenod::Build::ConfigLoader.load(config_path)
+    def initialize(config: WebConfig.build_config, host: ENV.fetch("HOST", "localhost"), port: Integer(ENV.fetch("PORT", "9292")), assets_dir: ENV["ASSETS_DIR"])
+      @config = config
       @host = host
       @port = port
       @assets_dir = assets_dir && File.expand_path(assets_dir)

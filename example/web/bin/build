@@ -6,8 +6,9 @@ require "fileutils"
 
 require "klenod"
 require_relative "../lib/tools/build_logger"
+require_relative "../lib/web_config"
 
-config = Klenod::Build::ConfigLoader.load(File.expand_path("../klenod.config.rb", __dir__))
+config = Example::WebConfig.build_config
 output = config.output_path
 assets_dir = config.assets_path
 logger = Example::BuildLogger.new

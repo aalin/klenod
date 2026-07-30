@@ -4,4 +4,4 @@
 require "bundler/setup"
 require_relative "../lib/server/app"
 
-Example::DevServer.new(config_path: File.expand_path("../klenod.config.rb", __dir__)).run
+Example::DevServer.new.run

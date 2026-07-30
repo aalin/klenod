@@ -4,6 +4,7 @@
 require "bundler/setup"
 require "klenod"
 require_relative "../lib/tools/route_report"
+require_relative "../lib/web_config"
 
-config = Klenod::Build::ConfigLoader.load(File.expand_path("../klenod.config.rb", __dir__))
+config = Example::WebConfig.build_config
 Example::RouteReport.new(config).print

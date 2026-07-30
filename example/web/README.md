@@ -11,17 +11,10 @@ example/web/bin/routes
 example/web/bin/server
 ```
 
-`bin/build` writes `example/web/dist/klenod.bundle` and `example/web/dist/public`, printing the collected module count, emitted assets, generated assets, and written files. `bin/server` starts a production-style `async-http` server from that built bundle without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
+`bin/build` writes `example/web/dist/klenod.bundle` and `example/web/dist/public`, printing the collected module count, emitted assets, generated assets, and written files. The web example wires its Klenod build options directly from the example framework instead of using a CLI config file. `bin/server` starts a production-style `async-http` server from that built bundle without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
 
 ```ruby
 bundle = Klenod::Runtime.load_bundle("example/web/dist/klenod.bundle", source_root: "/app/src")
-```
-
-The same build can be run through the CLI using the example Ruby config:
-
-```sh
-cd example/web
-bundle exec klenod build
 ```
 
 Export the built bundle graph as Graphviz DOT and render it as SVG:

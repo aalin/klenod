@@ -11,6 +11,7 @@ require "klenod"
 require_relative "lib/framework"
 require_relative "lib/server/app"
 require_relative "lib/server/errors"
+require_relative "lib/web_config"
 
 class Klenod::ExampleTest < Minitest::Test
   Request = Data.define(:method, :path)
@@ -1282,7 +1283,7 @@ class Klenod::ExampleTest < Minitest::Test
 
   def example_config
     with_env("KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1") do
-      Klenod::Build::ConfigLoader.load(File.expand_path("klenod.config.rb", __dir__))
+      Example::WebConfig.build_config
     end
   end
 
