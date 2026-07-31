@@ -1,6 +1,33 @@
 # Built-in Build Plugins
 
-This directory contains Klenod's built-in build plugins. Plugins participate in graph collection through `resolve`, `load`, `transform`, `finalize`, `import_value`, and `runtime_import_value` hooks.
+This directory contains the built-in plugins for `klenod-build`.
+
+Plugins can:
+
+- resolve dependencies
+- load source content
+- transform source
+- emit assets
+- add watched companion file patterns
+- provide import values
+- provide runtime import values
+
+Collection hooks run before application code evaluation. Runtime import values must serialize cleanly and must not require build-only dependencies.
+
+Read [Graph And Plugin Phases](../../../../../../docs/graph-and-plugin-phases.md) for the full collection and evaluation model.
+
+## Hook Summary
+
+Plugins participate in graph collection through these hooks:
+
+- `resolve`: maps a dependency to a module id.
+- `load`: provides source for virtual modules or custom files.
+- `transform`: rewrites source and records dependencies, assets, metadata, source maps, and watched patterns.
+- `finalize`: adjusts a transform after eager dependency records are collected.
+- `import_value`: provides the value that development code receives from an evaluated import.
+- `runtime_import_value`: provides the value or instruction that a runtime bundle stores.
+
+Plugins can also implement `invalidate_module_ids` for custom invalidation and `emit_assets` for assets derived from collected records.
 
 ## Default Plugin Set
 
@@ -18,7 +45,7 @@ This directory contains Klenod's built-in build plugins. Plugins participate in 
 - `TomlPlugin::Plugin`
 - `TextPlugin::Plugin`
 
-`GoogleFontsPlugin::Plugin` and `RouterPlugin::Plugin` are built in but opt-in; the example web app configures both explicitly.
+`GoogleFontsPlugin::Plugin` and `RouterPlugin::Plugin` are built in but opt-in. The example web app configures both explicitly.
 
 Each built-in plugin namespace exposes its entry point as `Plugin`, leaving room for helpers, errors, and value objects beside the plugin class.
 
@@ -40,7 +67,9 @@ Glob imports are eager by default:
 Images = import_glob("./gallery/*.{jpg,png}?width=320&format=webp")
 ```
 
-The returned hash is keyed by matched path specifiers without query strings. The query string is applied to each generated dependency. Use `eager: false` for lazy values:
+The returned hash uses matched path specifiers without query strings as keys.
+
+The query string applies to each generated dependency. Use `eager: false` for lazy values:
 
 ```ruby
 Pages = import_glob("./pages/*.rb", eager: false)
@@ -108,7 +137,9 @@ Default = {
 }.freeze
 ```
 
-Unmapped tags fall back to symbol tags such as `:p`, `:a`, and `:code`. Markdown modules and Haml modules with `:markdown` filters watch `markdown-components.rb`, so adding, editing, or removing the map reloads affected modules.
+Unmapped tags fall back to symbol tags such as `:p`, `:a`, and `:code`.
+
+Markdown modules and Haml modules with `:markdown` filters watch `markdown-components.rb`. Adding, editing, or removing the map reloads affected modules.
 
 ## IntlPlugin
 
@@ -118,7 +149,9 @@ Provides translation helpers for Haml companion files.
 - Parses them with `toml-rb`.
 - Returns translations keyed by locale.
 
-Configuration: none. This plugin is used by `HamlPlugin::Plugin`; it does not transform standalone modules.
+Configuration: none.
+
+`HamlPlugin::Plugin` uses this plugin. It does not transform standalone modules.
 
 ## CssPlugin
 
@@ -173,7 +206,7 @@ Handles `.svg` modules.
 - Emits the SVG file as a browser asset.
 - Exports metadata with `src`, `width`, and `height`.
 - Reads dimensions from `<svg width height>` or derives them from `viewBox`.
-- Rejects query options for SVG imports.
+- Rejects query parameters for SVG imports.
 
 Configuration: none.
 
@@ -193,7 +226,7 @@ Behavior:
 - Uses path-backed loading so original image bytes are not stored in graph records.
 - Computes source hashes with a streaming file digest.
 - Reads dimensions from the source path with `image_size`.
-- Emits the original image as a source-path asset unless import query options require a generated default asset.
+- Emits the original image as a source-path asset unless import query parameters require a generated default asset.
 - Emits resized variants as generated CPU assets using RMagick.
 - Exports an image metadata object with `src`, `width`, `height`, `content_type`, `variants`, `srcset`, and `sizes`.
 
@@ -209,13 +242,15 @@ Klenod::Build::Plugins::ImagePlugin::Plugin.new(
 - `widths`: default variant widths when an import does not provide `?width=...`.
 - `formats`: default variant formats when an import does not provide `?format=...`. Defaults to the source file format.
 
-Import query options:
+Import query parameters:
 
 ```ruby
 import("hero.jpg?width=320,640&format=webp,jpeg&quality=82")
 ```
 
-`format` applies to variants and, when explicitly provided, to the default `src` asset. `quality` applies to generated default and variant assets for image formats that support it.
+`format` applies to variants. When explicitly provided, it also applies to the default `src` asset.
+
+`quality` applies to generated default and variant assets for image formats that support it.
 
 Overlapping variants from separate imports are deduplicated by source path, source hash, width, format, and quality.
 

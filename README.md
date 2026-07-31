@@ -1,15 +1,21 @@
 # Klenod
 
-Klenod is an experimental Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. It loads files from a configured source directory, transforms them through plugins, evaluates them as stable `Klenod::Runtime::Mod` instances, and can serialize a runtime-only bundle with `Marshal.dump`.
+Klenod is an experimental module bundler for Ruby, inspired by JavaScript bundlers.
 
-The project is still early, but the core shape is in place:
+Klenod reads files from a source directory, applies plugins, records a dependency graph, and writes a runtime bundle. The runtime bundle can run without build plugins.
 
-- `klenod-runtime` owns production bundle loading, source maps, and backtrace rewriting.
-- `klenod-build` owns graph construction, build plugins, the CLI, and development watching.
-- `klenod-rack` owns Rack-compatible asset serving helpers.
-- `klenod` is a compatibility gem that depends on build and rack.
-- `Klenod::Build` owns resolving, transforms, plugins, graph construction, bundling, emitted assets, and development watching.
-- `Klenod::Runtime` owns production bundle loading without depending on build plugins.
+The project is still early. The core graph, bundle, asset, router, Haml, CSS, and example-app paths are usable.
+
+## Packages
+
+The repository contains four gems:
+
+- `klenod-runtime`: loads bundles, evaluates modules, reads source maps, and rewrites backtraces.
+- `klenod-build`: builds graphs, runs plugins, watches files, writes bundles, and provides the CLI.
+- `klenod-rack`: provides Rack helpers for serving bundled assets.
+- `klenod`: provides a compatibility gem that depends on build and rack.
+
+Production applications that only load a prebuilt bundle usually need `klenod-runtime` only.
 
 ## Basic Usage
 
@@ -21,7 +27,7 @@ entry = context.entry("pages/server")
 page = entry.exports
 ```
 
-Ruby modules can import other modules with literal `import("...")` calls. Relative imports resolve from the importing file, while absolute imports are scoped to the configured source directory.
+Ruby modules import other modules with literal `import("...")` calls:
 
 ```ruby
 Shared = import("../shared")
@@ -29,48 +35,108 @@ Styles = import("styles/home.css")
 Hero = import("./hero.png?width=320,640&format=png")
 ```
 
-Use `import_glob("...")` to import a deterministic hash of files matched by a literal glob. It is eager by default, which is useful for image galleries and icon sets:
+Relative imports resolve from the importing file. Leading-slash imports resolve from the configured source directory.
+
+```ruby
+Card = import("./Card")
+Layout = import("/layouts/App")
+Router = import("virtual:router")
+```
+
+Use `lazy_import("...")` to record a dependency and defer loading its value:
+
+```ruby
+Details = lazy_import("./details")
+
+def self.render_details
+  Details.call::Default.new.render
+end
+```
+
+Use `import_glob("...")` for a deterministic hash of matched files:
 
 ```ruby
 Gallery = import_glob("./gallery/*.{jpg,png}?width=320,640&format=webp")
-Icons = import_glob("/components/icons/*.svg")
-```
-
-Hash keys are the matched path specifiers without query strings, such as `"./gallery/boat.jpg"`. Query strings are still applied to each imported dependency. Pass `eager: false` when you want registry-style lazy values:
-
-```ruby
 Pages = import_glob("./pages/*.rb", eager: false)
-Pages.fetch("./pages/about.rb").call
 ```
 
-Markdown files can be imported as components when `MarkdownPlugin` is configured with the same factory as Haml:
+The hash keys are the matched import specifiers without query strings.
+
+## Collection And Evaluation
+
+Klenod separates graph collection from module evaluation.
+
+Collection reads source, transforms it, records dependencies, emits assets, and stores a module record. Evaluation instantiates a `Klenod::Runtime::Mod` and runs the module Ruby code.
+
+These APIs collect without evaluating application code:
+
+- `context.entry(...)`
+- `context.collect(...)`
+
+These APIs evaluate on demand:
+
+- `entry.exports`
+- `entry.call(...)`
+- `context.exports(...)`
+- `context.evaluate(...)`
+
+Build mode collects and serializes modules. It does not evaluate application top-level code.
+
+Read [Graph And Plugin Phases](docs/graph-and-plugin-phases.md) for the detailed lifecycle.
+
+## Build A Bundle
+
+Use the Ruby API to build a bundle:
 
 ```ruby
-Article = import("./article.md")
+bundle = context.build(
+  entrypoints: ["pages/server"],
+  output: "dist/klenod.bundle",
+  assets_dir: "public"
+)
 ```
 
-Haml components can also use inline Markdown:
+You can also use the CLI from a directory with `klenod.config.rb`:
 
-```haml
-:markdown
-  # Hello
-
-  A paragraph with [a link](/demo).
+```sh
+bundle exec klenod build
 ```
 
-If `src/markdown-components.rb` exists, Markdown rendering uses its `Default` hash to map tags to components:
+The CLI finds the nearest `klenod.config.rb`. Then it changes into that directory before it builds.
+
+A configuration file is Ruby:
 
 ```ruby
-Heading = import("/components/MarkdownHeading.haml")
+source_dir "src"
+entrypoint "pages/server"
+output "dist/klenod.bundle"
+assets_dir "public"
+mode :development
 
-Default = {
-  h1: Heading
-}.freeze
+plugins [
+  Klenod::Build::Plugins::RubyPlugin::Plugin.new
+]
+```
+
+Load a runtime bundle without build plugins:
+
+```ruby
+require "klenod/runtime"
+
+bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
+page = bundle.exports("pages/server")
+```
+
+You can inspect a built bundle as Graphviz DOT:
+
+```sh
+bundle exec klenod graph dist/klenod.bundle > graph.dot
+dot -Tsvg graph.dot > graph.svg
 ```
 
 ## Entry Handles
 
-Frameworks should usually keep a loaded entry handle instead of storing raw graph records:
+Frameworks usually keep an entry handle:
 
 ```ruby
 entry = context.entry("pages/server")
@@ -79,11 +145,11 @@ page = entry.exports
 stylesheets = entry.assets(type: :css)
 ```
 
-`context.entry(...)` collects the module record, dependencies, watched files, and emitted assets without evaluating the entry module. `entry.call(...)` and `entry.exports` evaluate the module on demand and then resolve through the current graph state, so the same handle can be reused after development updates. `entry.assets` returns assets reachable from that entry and is recursive by default; pass `recursive: false` to include only assets emitted directly by the entry module.
+The handle stays valid after development updates. Klenod resolves it through the current graph state when code asks for exports, calls, or assets.
 
-Use `context.collect(...)` when you want the same collected handle semantics for a non-entry module. Use `context.evaluate(...)` when you explicitly want to collect and evaluate immediately.
+`entry.assets` returns reachable assets by default. Pass `recursive: false` to get only assets that the entry emits directly.
 
-Watch-mode consumers can apply a graph update and keep using the same entry handle:
+Watch-mode consumers can apply updates and keep the same handle:
 
 ```ruby
 context.on_update do |event|
@@ -98,74 +164,23 @@ context.on_update do |event|
 end
 ```
 
-`apply_update` refreshes the entry, mirrors changed assets when `assets_dir:` is provided, and returns an applied update object with `entry`, `exports`, `asset_write_result`, and `errors`. Use `update.success?`, `update.failed?`, `update.error_messages`, and `update.asset_files_changed?` for common watch-mode branches.
+`apply_update` refreshes the entry and mirrors changed assets when `assets_dir:` is set.
 
-Use `lazy_import("...")` to record a dependency without loading it while the importing module is evaluated. It returns a `Klenod::Runtime::LazyImport`; call `#call` or `#value` to load and cache the imported value.
+## Assets
 
-```ruby
-Details = lazy_import("./details")
+Plugins emit assets through `Klenod::Build::Asset`.
 
-def self.render_details
-  Details.call::Default.new.render
-end
-```
+Assets have two stable names:
 
-Build output can be serialized for runtime loading:
+- `logical_name`: the source-root-relative path without import query parameters.
+- `output_path`: the public content-hashed path for browsers.
 
-```ruby
-bundle = context.build(
-  entrypoints: ["pages/server"],
-  output: "dist/klenod.bundle",
-  assets_dir: "public"
-)
-```
-
-The same build path is available through the CLI. It finds the nearest `klenod.config.rb` by checking the current directory and then walking up parent directories. The CLI changes into the config directory before building:
-
-```sh
-bundle exec klenod build
-```
-
-You can inspect a built bundle without evaluating application modules by exporting the serialized graph as Graphviz DOT:
-
-```sh
-bundle exec klenod graph dist/klenod.bundle > graph.dot
-dot -Tsvg graph.dot > graph.svg
-```
-
-Graph output colors modules by kind, marks lazy imports with dashed edges, and includes generated asset nodes by default. Use `--no-assets` to hide asset nodes and edges.
-
-The config file is Ruby, so applications can configure plugins directly:
+Example:
 
 ```ruby
-source_dir "src"
-entrypoint "pages/server"
-output "dist/klenod.bundle"
-assets_dir "public"
-mode :development
-
-plugins [
-  Klenod::Build::Plugins::RubyPlugin::Plugin.new
-]
+logical_name # "images/hero.png"
+output_path  # "/assets/hero.320w.abc123.png"
 ```
-
-The runtime side can load the bundle without build plugins:
-
-```ruby
-require "klenod/runtime"
-
-bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
-page = bundle.exports("pages/server")
-```
-
-Production deployments that only load prebuilt bundles should depend on `klenod-runtime`; they do not need build dependencies such as Haml, CSS, or image transformers.
-
-## Asset Conventions
-
-Plugins emit assets through `Klenod::Build::Asset`. Assets have two stable identifiers:
-
-- `logical_name`: the source-root-relative file path without import query parameters, such as `images/hero.png`.
-- `output_path`: the public, content-hashed path served to browsers, such as `/assets/hero.320w.abc123.png`.
 
 The graph and runtime bundle expose the same lookup shape:
 
@@ -179,24 +194,71 @@ bundle.assets_for("styles/home.css")
 bundle.assets_for_module("pages/server.rb", type: :css)
 ```
 
-`assets_for_module` is recursive by default. Pass `recursive: false` to return only assets directly emitted by that module.
-
-Build assets keep bytes so they can be served in development or written to disk. Runtime asset specs keep only metadata, content hashes, content types, logical names, and output paths.
-
-When `Context#build` receives `assets_dir:`, emitted assets are written under that directory using their public path without the leading slash. For example, `/assets/home.abc123.css` becomes `public/assets/home.abc123.css`.
-
-Import query parameters configure a specific import without changing the asset's logical name. For example, both of these imports belong to `images/hero.png`, and overlapping generated variants are reused:
+Import query parameters configure one import. They do not change the logical name.
 
 ```ruby
 LargeHero = import("images/hero.png?width=640&format=png")
 ResponsiveHero = import("images/hero.png?width=320,640&format=png")
 ```
 
-In development, frameworks using Klenod are expected to serve `context.asset(path).bytes` for requested asset paths and listen to update events from `Klenod::Build::Watcher`.
+Klenod reuses overlapping generated variants across imports. In this example, it generates the `640` variant once.
+
+When `Context#build` receives `assets_dir:`, Klenod writes emitted assets under that directory.
+
+In development, frameworks can serve `context.asset(path).bytes` or `context.asset_bytes(path, assets_dir:)`.
+
+## Plugins
+
+The default build context includes plugins for Ruby, Haml, Markdown, CSS, SVG, images, and data files.
+
+Read [Built-in Build Plugins](gems/klenod-build/lib/klenod/build/plugins/README.md) for the plugin list and plugin configuration.
+
+## Haml And Markdown
+
+The Haml plugin is an adapter. It does not own rendering policy.
+
+Applications configure a component base class and an HTML factory:
+
+```ruby
+Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+  component_base_class: "Example::Component",
+  factory: "Example::H"
+)
+```
+
+Haml files export a component class as `Default`.
+
+```ruby
+Page = import("./+page.haml")
+```
+
+Companion files use fixed names:
+
+- `+page.css` imports as `Styles`.
+- `+page.intl.*.toml` imports as translations.
+
+Markdown files can import as components when `MarkdownPlugin` uses the same factory:
+
+```ruby
+Article = import("./article.md")
+```
+
+Haml can also include inline Markdown:
+
+```haml
+:markdown
+  # Hello
+
+  A paragraph with [a link](/demo).
+```
+
+If `src/markdown-components.rb` exists, Markdown rendering uses its `Default` hash for tag-to-component mappings.
 
 ## Router Plugin
 
-Routing is provided by the optional `RouterPlugin`, not by the core build context. Add it to a context and import its virtual module:
+Routing belongs to the optional `RouterPlugin`.
+
+Add the plugin, then import `virtual:router`:
 
 ```ruby
 router_plugin = Klenod::Build::Plugins::RouterPlugin::Plugin.new
@@ -211,86 +273,98 @@ context = Klenod::Build::Context.new(
 
 router = context.entry("virtual:router").exports::Default
 match = router.match("/blog/hello")
-match.params
-# => {slug: "hello"}
-match.page
-# => exports for pages/blog/[slug]/+page.rb or +page.haml
 ```
 
-Only `+page.rb` and `+page.haml` files are route entrypoints for now. For example, `pages/+page.haml` maps to `/`, and `pages/blog/+page.rb` maps to `/blog`. Layouts and path params are represented structurally; layout composition and rendering stay in the framework layer.
+The router supports:
 
-The router plugin preserves NextJS-style structure:
+- `+page.rb` and `+page.haml`
+- `+route.rb`
+- `+layout.rb` and `+layout.haml`
+- `+error.rb` and `+error.haml`
+- `+not-found.rb` and `+not-found.haml`
+- dynamic and catch-all segments
+- route groups
+- parallel route slots
+- intercepted route segments
 
-- `[id]` becomes a dynamic segment with path part `:id`.
-- `[...slug]` becomes a catch-all segment with path part `*slug`.
-- `[[...slug]]` is preserved as an optional catch-all segment.
-- `(marketing)` is preserved as a route group and does not add a URL path part.
-- `@modal` is preserved as a parallel route slot and does not add a URL path part.
-- `(.)photo`, `(..)profile`, and `(...)login` are preserved as intercepted route segments with visible path parts.
+A match exposes:
 
-The generated router also exposes a structural route tree:
+- `match.page`
+- `match.handler`
+- `match.layouts`
+- `match.slots`
+- `match.params`
+- `match.route`
 
-```ruby
-tree = router.tree
-tree.children
-tree.route
-tree.slots.fetch(:modal)
+The router does not decide request policy. A framework decides whether a request renders a page or calls a route handler.
+
+## Examples
+
+The web example is the main integration test and reference application.
+
+Run these commands from the repository root:
+
+```sh
+example/web/bin/build
+example/web/bin/dev
+example/web/bin/routes
+example/web/bin/server
 ```
 
-Tree nodes expose `segment`, `path`, `route`, `children`, `slots`, `root?`, and `leaf?`. Parallel route slots are available through `node.slots`, while still remaining in `node.children` for structural traversal.
+`example/web/bin/dev` starts a development server on `http://localhost:9292`.
 
-The generated router uses `lazy_import` for pages and layouts so matching a route can load only the selected page. Build mode still serializes discovered page and layout modules by walking runtime dependencies while collecting the bundle graph.
+The example includes routes for:
 
-## Plugins
+- Haml pages and layouts
+- CSS modules
+- image variants
+- TOML data imports
+- forms and sessions
+- route handlers
+- hybrid page and handler routes
+- not-found and error rendering
+- route metadata
 
-The default build context includes plugins for Ruby, intl TOML files, Haml adapter output, CSS, and images. Plugins can:
+Read [example/web/README.md](example/web/README.md) for the complete example guide.
 
-- resolve dependencies,
-- load source content,
-- transform source,
-- emit assets,
-- add watched companion file patterns,
-- provide import values for the importing module.
+The standalone example shows non-web bundle use:
 
-CSS imports currently return class-name maps for Ruby or Haml importers. Image imports return an image object with `src`, dimensions, and generated `variants`.
-
-Plugin hooks run in separate phases:
-
-- `resolve`, `load`, `transform`, and `finalize` are graph collection hooks. Build mode may call these without evaluating app modules.
-- `import_value` is a development/evaluation hook. It runs when an evaluated module resolves an import value.
-- `runtime_import_value` is a serialization hook. It provides values stored in runtime bundles and must not rely on evaluated build-time exports.
-
-See [Graph And Plugin Phases](docs/graph-and-plugin-phases.md) for the collection/evaluation model and the difference between `import_value` and `runtime_import_value`.
-
-Sibling dependency modules may be loaded or collected concurrently. Plugin hooks should avoid unguarded shared mutable state, because `load` and `transform` calls for independent modules can overlap. `finalize` still runs after eager dependency records for that module have been collected.
-
-Assets can be static or generated. Generated assets expose metadata immediately and generate bytes on demand; call `asset.wait` before serving or writing an asset when the bytes may not be ready yet. Failed generation marks the asset as failed and exposes `asset.error`. Build mode drains generated assets before writing the bundle.
-
-Generated asset work runs through a build-owned queue. Configure it with `asset_generation_concurrency:` when creating a build context.
-
-```ruby
-asset = context.asset(request.path)
-bytes = context.asset_bytes(request.path, assets_dir: "public")
-
-[
-  200,
-  {"content-type" => asset.content_type},
-  [bytes]
-]
+```sh
+bundle exec ruby example/standalone/example.test.rb
 ```
 
 ## Development
 
-Run the test suite with:
+Run the full test suite:
 
 ```sh
 bundle exec rake
 ```
 
-The example app can be run from the repository root:
+Run focused test suites:
 
 ```sh
-example/web/bin/dev
+bundle exec rake test:runtime
+bundle exec rake test:build
+bundle exec rake test:rack
+bundle exec rake test:gems
 ```
 
-It starts a small `async-http` server, serves emitted assets from the build context, and watches the source tree for graph updates.
+Run a single test file:
+
+```sh
+bundle exec ruby gems/klenod-build/lib/klenod/build/plugins/router_plugin.test.rb
+```
+
+Run Standard on changed Ruby files:
+
+```sh
+RUBOCOP_CACHE_ROOT=/private/tmp/rubocop_cache bundle exec standardrb path/to/file.rb
+```
+
+## More Documentation
+
+- [Architecture](ARCHITECTURE.md)
+- [Graph And Plugin Phases](docs/graph-and-plugin-phases.md)
+- [Web Example](example/web/README.md)
+- [Plan](PLAN.md)
