@@ -35,6 +35,7 @@ module Klenod
             factory:,
             styles_source:,
             translations_source:,
+            i18n_source: nil,
             styleable: false,
             profiler: nil,
             import_rewriter: nil,
@@ -90,6 +91,7 @@ module Klenod
                     render_source: template.render,
                     styles_source: styles_source,
                     haml_helper_source: haml_helper_source,
+                    i18n_source: i18n_source,
                     static_constants: template.static_constants
                   )
                 end
@@ -102,6 +104,7 @@ module Klenod
                   render_source: template.render,
                   styles_source: styles_source,
                   haml_helper_source: haml_helper_source,
+                  i18n_source: i18n_source,
                   static_constants: template.static_constants
                 )
               end

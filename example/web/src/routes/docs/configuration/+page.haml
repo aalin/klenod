@@ -39,7 +39,8 @@
         Klenod::Build::Plugins::IntlPlugin::Plugin.new,
         Klenod::Build::Plugins::HamlPlugin::Plugin.new(
           component_base_class: "Example::Component",
-          factory: "Example::H"
+          factory: "Example::H",
+          i18n_class: "Example::I18n"
         )
       ]
       ```
@@ -53,7 +54,8 @@
       ```ruby
       Klenod::Build::Plugins::HamlPlugin::Plugin.new(
         component_base_class: "Example::Component",
-        factory: "Example::H"
+        factory: "Example::H",
+        i18n_class: "Example::I18n"
       )
 
       Klenod::Build::Plugins::MarkdownPlugin::Plugin.new(

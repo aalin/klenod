@@ -45,12 +45,14 @@ module Klenod
               render_source:,
               styles_source:,
               haml_helper_source: nil,
-              static_constants: []
+              static_constants: [],
+              i18n_source: nil
             )
               component_program(
                 component_class_name: component_class_name,
                 component_base_class: component_base_class,
                 translations_source: translations_source,
+                i18n_source: i18n_source,
                 ruby_source: ruby_source,
                 render_source: render_source,
                 styles_source: styles_source,
@@ -67,7 +69,8 @@ module Klenod
               render_source:,
               styles_source:,
               haml_helper_source: nil,
-              static_constants: []
+              static_constants: [],
+              i18n_source: nil
             )
               component_class_name = expression_fragment(component_class_name)
               component_base_class = expression_fragment(component_base_class)
@@ -90,6 +93,7 @@ module Klenod
                   component_class_name: component_class_name,
                   component_base_class: component_base_class,
                   translations_source: translations_source,
+                  i18n_source: i18n_source,
                   ruby_source: ruby_source,
                   render_source: render_source,
                   static_constants: static_constants
@@ -110,7 +114,8 @@ module Klenod
               translations_source:,
               ruby_source:,
               render_source:,
-              static_constants: []
+              static_constants: [],
+              i18n_source: nil
             )
               skeleton = class_skeleton_fragment(component_class_name, component_base_class)
               body_fragments =
@@ -118,6 +123,7 @@ module Klenod
                   method_definition("module_path", target: "self", body: file_expression),
                   constant_assignment("Self", "self"),
                   constant_assignment("Translations", translations_source),
+                  i18n_source,
                   method_definition(
                     "__klenod_import__",
                     target: "self",

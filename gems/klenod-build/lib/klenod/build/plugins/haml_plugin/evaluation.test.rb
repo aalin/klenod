@@ -24,6 +24,56 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_generates_configured_i18n_constant
+    plugin = haml_plugin(i18n_class: "#{self.class.name}::FakeFramework::I18n")
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %h1= I18n.owner.name
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      assert_instance_of(FakeFramework::I18n, exports::Default::I18n)
+      assert_equal(exports::Default, exports::Default::I18n.owner)
+      assert_equal([:h1, exports::Default.name], exports::Default.new.render)
+      assert_includes(record.transformed_source, "I18n = #{self.class.name}::FakeFramework::I18n.new(self)")
+    end
+  end
+
+  def test_haml_uses_configured_i18n_constant_name
+    plugin = haml_plugin(i18n_class: "#{self.class.name}::FakeFramework::I18n", i18n_constant: "TranslationsHelper")
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %h1= TranslationsHelper.owner.name
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, _record, exports|
+      assert_instance_of(FakeFramework::I18n, exports::Default::TranslationsHelper)
+      assert_equal([:h1, exports::Default.name], exports::Default.new.render)
+    end
+  end
+
+  def test_haml_requires_i18n_class_when_i18n_constant_is_configured
+    error = assert_raises(ArgumentError) do
+      haml_plugin(i18n_constant: "I18n")
+    end
+
+    assert_equal("i18n_class must be configured when i18n_constant is configured", error.message)
+  end
+
+  def test_haml_requires_i18n_constant_to_be_simple_constant_name
+    error = assert_raises(ArgumentError) do
+      haml_plugin(i18n_class: "#{self.class.name}::FakeFramework::I18n", i18n_constant: "Helpers::I18n")
+    end
+
+    assert_equal("i18n_constant must be a Ruby constant name", error.message)
+  end
+
   def test_haml_transformer_renders_with_configured_factory
     evaluate_haml(
       {

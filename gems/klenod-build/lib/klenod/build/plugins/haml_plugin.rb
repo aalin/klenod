@@ -55,11 +55,14 @@ module Klenod
             component_base_class: DEFAULT_COMPONENT_BASE_CLASS,
             factory: DEFAULT_FACTORY,
             global_variables: nil,
+            i18n_class: nil,
+            i18n_constant: nil,
             cache_static_subtrees: false
           )
             @component_base_class = component_base_class
             @factory = factory
             @global_variables = validate_global_variables(global_variables)
+            @i18n_class, @i18n_constant = validate_i18n_options(i18n_class, i18n_constant)
             @cache_static_subtrees = cache_static_subtrees
             @transformer = Transformer.new
           end
@@ -185,6 +188,7 @@ module Klenod
                 factory: @factory,
                 styles_source: styles_source,
                 translations_source: translations_source,
+                i18n_source: i18n_source_for(builder),
                 haml_helper_source: haml_helper_dependency && builder.constant_assignment("HamlHelper", "#{builder.import_call(haml_helper_dependency.id).source}::Default"),
                 styleable: !style_dependencies.empty?,
                 profiler: profiler,
@@ -267,6 +271,25 @@ module Klenod
             source
           rescue SyntaxTree::Parser::ParseError
             raise ArgumentError, "global_variables must be a Ruby expression"
+          end
+
+          def validate_i18n_options(i18n_class, i18n_constant)
+            return [nil, nil] if i18n_class.nil? && i18n_constant.nil?
+            raise ArgumentError, "i18n_class must be configured when i18n_constant is configured" if i18n_class.nil?
+
+            i18n_constant = (i18n_constant || "I18n").to_s
+            raise ArgumentError, "i18n_constant must be a Ruby constant name" unless i18n_constant.match?(/\A[A-Z]\w*\z/)
+
+            [
+              Transformer::ConstPath.parse(i18n_class, name: "i18n_class").to_s,
+              i18n_constant
+            ]
+          end
+
+          def i18n_source_for(builder)
+            return nil unless @i18n_class
+
+            builder.constant_assignment(@i18n_constant, "#{@i18n_class}.new(self)")
           end
 
           def translations_for(context, module_id)

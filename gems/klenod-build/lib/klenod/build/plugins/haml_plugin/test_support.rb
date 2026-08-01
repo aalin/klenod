@@ -82,6 +82,14 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
       end
     end
 
+    class I18n
+      attr_reader :owner
+
+      def initialize(owner)
+        @owner = owner
+      end
+    end
+
     module HamlPluginHelper
       def self.merge_props(component_class, *sources)
         result = {}

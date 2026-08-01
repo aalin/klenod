@@ -31,6 +31,7 @@ module Example
           component_base_class: "Example::Component",
           factory: "Example::H",
           global_variables: "@__props",
+          i18n_class: "Example::I18n",
           cache_static_subtrees: false
         ),
         Klenod::Build::Plugins::MarkdownPlugin::Plugin.new(

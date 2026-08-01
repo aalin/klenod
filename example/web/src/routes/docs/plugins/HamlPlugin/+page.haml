@@ -18,7 +18,8 @@
       Klenod::Build::Plugins::HamlPlugin::Plugin.new(
         component_base_class: "Example::Component",
         factory: "Example::H",
-        global_variables: "@__props"
+        global_variables: "@__props",
+        i18n_class: "Example::I18n"
       )
       ```
 
@@ -63,6 +64,14 @@
       components/Card.intl.en.toml
       components/Card.intl.sv.toml
       ```
+
+      `i18n_class` is optional. When configured, every generated component gets an `I18n` constant initialized with the component class:
+
+      ```ruby
+      I18n = Example::I18n.new(self)
+      ```
+
+      `i18n_constant` can override the constant name. If omitted, it defaults to `I18n`.
 
   %DocsSection{ title: "Errors" }
     :markdown
