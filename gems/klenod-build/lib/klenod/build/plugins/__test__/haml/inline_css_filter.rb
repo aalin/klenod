@@ -14,6 +14,10 @@ class InlineCssFilter < TestFramework::ComponentBase
   def __klenod_import__(dependency_id)
     self.class.__klenod_import__(dependency_id)
   end
+  ClassNames =
+    __klenod_import__("virtual:klenod/class_names").new(
+      { title: "title_hash" }.freeze
+    )
   public def render
     # SourceMapMark:6
     TestFramework::H[
@@ -28,9 +32,5 @@ class InlineCssFilter < TestFramework::ComponentBase
   end
 end
 Default = InlineCssFilter
-ClassNames =
-  __klenod_import__("virtual:klenod/class_names").new(
-    { title: "title_hash" }.freeze
-  )
-Default.const_set(:ClassNames, ClassNames)
+ClassNames = Default::ClassNames
 Translations = Default::Translations

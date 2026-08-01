@@ -12,6 +12,7 @@ class OutputConditionalWithoutElse < TestFramework::ComponentBase
   def __klenod_import__(dependency_id)
     self.class.__klenod_import__(dependency_id)
   end
+  ClassNames = __klenod_import__("virtual:klenod/class_names").new({}.freeze)
   begin
     # SourceMapMark:2
     def initialize(show:)
@@ -33,6 +34,5 @@ class OutputConditionalWithoutElse < TestFramework::ComponentBase
   end
 end
 Default = OutputConditionalWithoutElse
-ClassNames = __klenod_import__("virtual:klenod/class_names").new({}.freeze)
-Default.const_set(:ClassNames, ClassNames)
+ClassNames = Default::ClassNames
 Translations = Default::Translations

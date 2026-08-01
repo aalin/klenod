@@ -14,6 +14,15 @@ class StyleClasses < TestFramework::ComponentBase
   def __klenod_import__(dependency_id)
     self.class.__klenod_import__(dependency_id)
   end
+  ClassNames =
+    __klenod_import__("virtual:klenod/class_names").new(
+      {
+        __figure: "figure_hash",
+        __img: "img_hash",
+        card: "card_hash",
+        image: "image_hash"
+      }.freeze
+    )
   public def render
     # SourceMapMark:1
     TestFramework::H[
@@ -55,14 +64,5 @@ class StyleClasses < TestFramework::ComponentBase
   end
 end
 Default = StyleClasses
-ClassNames =
-  __klenod_import__("virtual:klenod/class_names").new(
-    {
-      __figure: "figure_hash",
-      __img: "img_hash",
-      card: "card_hash",
-      image: "image_hash"
-    }.freeze
-  )
-Default.const_set(:ClassNames, ClassNames)
+ClassNames = Default::ClassNames
 Translations = Default::Translations

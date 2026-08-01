@@ -12,6 +12,7 @@ class WhitespaceMarkers < TestFramework::ComponentBase
   def __klenod_import__(dependency_id)
     self.class.__klenod_import__(dependency_id)
   end
+  ClassNames = __klenod_import__("virtual:klenod/class_names").new({}.freeze)
   public def render
     # SourceMapMark:1
     TestFramework::H[
@@ -42,6 +43,5 @@ class WhitespaceMarkers < TestFramework::ComponentBase
   end
 end
 Default = WhitespaceMarkers
-ClassNames = __klenod_import__("virtual:klenod/class_names").new({}.freeze)
-Default.const_set(:ClassNames, ClassNames)
+ClassNames = Default::ClassNames
 Translations = Default::Translations

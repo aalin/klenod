@@ -93,6 +93,7 @@ module Klenod
                   component_class_name: component_class_name,
                   component_base_class: component_base_class,
                   translations_source: translations_source,
+                  styles_source: styles_source,
                   i18n_source: i18n_source,
                   ruby_source: ruby_source,
                   render_source: render_source,
@@ -100,8 +101,7 @@ module Klenod
                 )
               footer = [
                 constant_assignment("Default", component_class_name),
-                constant_assignment("ClassNames", styles_source),
-                call(receiver: "Default", name: "const_set", arguments: [symbol("ClassNames"), "ClassNames"]),
+                constant_assignment("ClassNames", "Default::ClassNames"),
                 constant_assignment("Translations", "Default::Translations")
               ]
 
@@ -112,6 +112,7 @@ module Klenod
               component_class_name:,
               component_base_class:,
               translations_source:,
+              styles_source:,
               ruby_source:,
               render_source:,
               static_constants: [],
@@ -135,6 +136,7 @@ module Klenod
                     parameters: ["dependency_id"],
                     body: call(receiver: "self.class", name: "__klenod_import__", arguments: ["dependency_id"])
                   ),
+                  constant_assignment("ClassNames", styles_source),
                   ruby_source,
                   *static_constants,
                   public_method_definition("render", body: render_source)

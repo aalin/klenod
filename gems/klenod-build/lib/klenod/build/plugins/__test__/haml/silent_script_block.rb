@@ -12,6 +12,7 @@ class SilentScriptBlock < TestFramework::ComponentBase
   def __klenod_import__(dependency_id)
     self.class.__klenod_import__(dependency_id)
   end
+  ClassNames = __klenod_import__("virtual:klenod/class_names").new({}.freeze)
   begin
     # SourceMapMark:2
     Item = Data.define(:name)
@@ -56,6 +57,5 @@ class SilentScriptBlock < TestFramework::ComponentBase
   end
 end
 Default = SilentScriptBlock
-ClassNames = __klenod_import__("virtual:klenod/class_names").new({}.freeze)
-Default.const_set(:ClassNames, ClassNames)
+ClassNames = Default::ClassNames
 Translations = Default::Translations

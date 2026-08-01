@@ -298,6 +298,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         component_class_name: builder.expression_fragment("Page"),
         component_base_class: builder.expression_fragment("Object"),
         translations_source: builder.expression_fragment("{}.freeze"),
+        styles_source: builder.expression_fragment("{ foo: \"foo_hash\" }.freeze"),
         i18n_source: builder.constant_assignment("I18n", "Framework::I18n.new(self)"),
         ruby_source: builder.statements_fragment("def title\n  \"Hello\"\nend\n"),
         render_source: builder.expression_fragment("title")
@@ -309,6 +310,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_includes(formatted, "class Page < Object")
     assert_includes(formatted, "Translations = {}.freeze")
     assert_includes(formatted, "I18n = Framework::I18n.new(self)")
+    assert_includes(formatted, "ClassNames = { foo: \"foo_hash\" }.freeze")
     assert_includes(formatted, "def title")
     assert_includes(formatted, "public def render")
   end
