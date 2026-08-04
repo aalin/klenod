@@ -94,6 +94,7 @@ module Klenod
           Plugins::IntlPlugin::Plugin.new,
           Plugins::HamlPlugin::Plugin.new,
           Plugins::MarkdownPlugin::Plugin.new,
+          Plugins::GemImportPlugin::Plugin.new,
           Plugins::CssPlugin::Plugin.new,
           Plugins::SvgPlugin::Plugin.new,
           Plugins::ImagePlugin::Plugin.new,

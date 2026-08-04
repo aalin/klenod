@@ -75,7 +75,7 @@ import("virtual:router")
 import("gem://klenod-ui/components/Card")
 ```
 
-Files under the configured source directory use the hostless `app:` scheme internally, e.g. `app:/components/Card.haml`. Virtual modules use the hostless `virtual:` scheme, e.g. `virtual:/router.rb`. Plugin-owned module trees can use hostful schemes such as `gem://gem-name/path`.
+Files under the configured source directory use the hostless `app:` scheme internally, e.g. `app:/components/Card.haml`. Virtual modules use the hostless `virtual:` scheme, e.g. `virtual:/router.rb`. Plugin-owned module trees can use hostful schemes such as `gem://gem-name/path`. The built-in `GemImportPlugin` maps `gem://...` ids to files under a controlled import root inside installed gems.
 
 Relative imports resolve from the importer using URL-style rules. That means `import("./Card")` and `import("Card")` both resolve next to the importing module. Leading-slash imports stay in the current scheme root, so `import("/components/Card")` from an app module resolves to `app:/components/Card`, while `import("/tokens.css")` from `gem://klenod-ui/components/Button.haml` resolves to `gem://klenod-ui/tokens.css`.
 
@@ -318,7 +318,7 @@ The example framework also owns request error policy: it maps explicit `NotFound
 
 The main areas still evolving:
 
-- External import plugins, such as a future `GemImportPlugin` for `gem://...` module trees.
+- Further external import plugin polish for package-owned Klenod module trees.
 - More precise route visualization and route ordering tools.
 - Broader async rendering semantics beyond the example framework's fiber-local request context.
 - A future `klenod dev` command or TUI, if it can remain framework-neutral.

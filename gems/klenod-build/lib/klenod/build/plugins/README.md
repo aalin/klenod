@@ -37,6 +37,7 @@ Plugins can also implement `invalidate_module_ids` for custom invalidation and `
 - `IntlPlugin::Plugin`
 - `HamlPlugin::Plugin`
 - `MarkdownPlugin::Plugin`
+- `GemImportPlugin::Plugin`
 - `CssPlugin::Plugin`
 - `SvgPlugin::Plugin`
 - `ImagePlugin::Plugin`
@@ -104,6 +105,30 @@ Klenod::Build::Plugins::HamlPlugin::Plugin.new(
 - `cache_static_subtrees`: optional experimental optimization. When enabled, fully static Haml tag subtrees are compiled once into frozen constants and reused across renders. Defaults to `false`.
 
 `:markdown` filters use `MarkdownPlugin::Plugin`'s source-root component map convention when `markdown-components.rb` exists.
+
+## GemImportPlugin
+
+Handles `gem://...` module ids.
+
+- Resolves `gem://gem-name/path` through `Gem::Specification.find_by_name("gem-name")`.
+- Loads files from a controlled import root inside the gem, `klenod/` by default.
+- Supports extensionless imports using `.rb` and `.haml` by default.
+- Keeps relative imports inside the same gem scheme, so `import("./Icon")` from `gem://ui/components/Button.rb` resolves to `gem://ui/components/Icon.rb`.
+- Keeps leading-slash imports inside the gem import root, so `import("/tokens.css")` from `gem://ui/components/Button.rb` resolves to `gem://ui/tokens.css`.
+- Allows app imports explicitly with `app:/...`.
+- Rejects paths that escape the configured gem import root.
+
+Configuration:
+
+```ruby
+Klenod::Build::Plugins::GemImportPlugin::Plugin.new(
+  import_root: "klenod",
+  extensions: [".rb", ".haml"]
+)
+```
+
+- `import_root`: directory inside each gem exposed to Klenod imports.
+- `extensions`: extension resolution order for extensionless gem imports.
 
 ## MarkdownPlugin
 

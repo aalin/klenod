@@ -96,7 +96,7 @@ Plugin hook phases:
 
 Imports:
 
-- Module ids are canonical URI-like ids, e.g. `app:/components/Foo.haml`, `virtual:/router.rb`, or future plugin-owned ids such as `gem://klenod-ui/Button.haml`.
+- Module ids are canonical URI-like ids, e.g. `app:/components/Foo.haml`, `virtual:/router.rb`, or plugin-owned ids such as `gem://klenod-ui/Button.haml`.
 - `import("./foo")` and `import("foo")` resolve relative to the importer.
 - `import("/foo")` resolves from the current scheme root. From an app module that means the configured source root; from `gem://name/path.rb` it means `gem://name/foo`.
 - Use `app:/foo` when code outside the app scheme needs to import from the configured source root.
@@ -311,7 +311,7 @@ For route handler line numbers, `example/web/bin/routes` scans `def GET`, `def P
 From `PLAN.md` and recent work:
 
 - Revisit route utility ordering and visualization so displayed routes follow actual router match priority.
-- Continue plugin-owned import support, especially a future `GemImportPlugin` for `gem://...` module trees.
+- Continue plugin-owned import support and polish for `gem://...` module trees.
 - Keep replacing ad hoc app/virtual checks with scheme-aware helpers where useful.
 - Add `klenod dev` only after API shape is clearer; frameworks may own dev commands.
 - Eventually revisit broader async rendering semantics. The current example context uses `Fiber[...]` for request-local state, but rendering itself is still synchronous.
