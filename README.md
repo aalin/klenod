@@ -302,16 +302,17 @@ The router does not decide request policy. A framework decides whether a request
 
 The web example is the main integration test and reference application.
 
-Run these commands from the repository root:
+Run these commands from `example/web`:
 
 ```sh
-example/web/bin/build
-example/web/bin/dev
-example/web/bin/routes
-example/web/bin/server
+cd example/web
+bin/build
+bin/dev
+bin/routes
+bin/server
 ```
 
-`example/web/bin/dev` starts a development server on `http://localhost:9292`.
+`bin/dev` starts a development server on `http://localhost:9292`.
 
 The example includes routes for:
 
