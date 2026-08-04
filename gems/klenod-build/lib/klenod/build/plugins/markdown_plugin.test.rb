@@ -200,7 +200,7 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
       )
       result = context.invalidate_paths(["#{dir}/markdown-components.rb"])
 
-      assert_equal(["page.md"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/page.md"], result.reloaded_module_ids.map(&:to_s))
       assert_equal([:heading, "Hello", {id: "hello"}], context.exports(record)::Default.new.render)
     end
   end

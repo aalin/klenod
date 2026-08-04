@@ -96,10 +96,12 @@ Plugin hook phases:
 
 Imports:
 
-- `import("./foo")` resolves relative to the importer.
-- `import("/foo")` resolves from the configured source root.
+- Module ids are canonical URI-like ids, e.g. `app:/components/Foo.haml`, `virtual:/router.rb`, or future plugin-owned ids such as `gem://klenod-ui/Button.haml`.
+- `import("./foo")` and `import("foo")` resolve relative to the importer.
+- `import("/foo")` resolves from the current scheme root. From an app module that means the configured source root; from `gem://name/path.rb` it means `gem://name/foo`.
+- Use `app:/foo` when code outside the app scheme needs to import from the configured source root.
 - `lazy_import("...")` records a dependency but defers loading/evaluation until called.
-- Future external imports should probably use explicit schemes such as `plugin:` or `gem:`; do not overload `/foo`.
+- Non-app schemes must be resolved by plugins before filesystem resolution, otherwise the app resolver raises `ResolveError`.
 
 Cycles:
 
@@ -309,7 +311,7 @@ For route handler line numbers, `example/web/bin/routes` scans `def GET`, `def P
 From `PLAN.md` and recent work:
 
 - Revisit route utility ordering and visualization so displayed routes follow actual router match priority.
-- Continue scheme-aware imports for future `plugin:` and `gem:` modules.
+- Continue plugin-owned import support, especially a future `GemImportPlugin` for `gem://...` module trees.
 - Keep replacing ad hoc app/virtual checks with scheme-aware helpers where useful.
 - Add `klenod dev` only after API shape is clearer; frameworks may own dev commands.
 - Eventually revisit broader async rendering semantics. The current example context uses `Fiber[...]` for request-local state, but rendering itself is still synchronous.

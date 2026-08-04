@@ -121,23 +121,21 @@ Klenod is a Ruby module bundler inspired by Vite, Rollup, Parcel, and Webpack. I
 
 ## Module Identity And Import Schemes
 
-- [x] Keep app source modules as source-root-relative module ids by default.
-- [x] Reserve module id schemes without migrating graph keys yet:
+- [x] Store module ids as canonical URI-like ids:
   - [x] `app` for source-root files, inferred when no explicit scheme is present.
   - [x] `virtual` for generated modules such as `virtual:router`.
-  - [ ] Future `gem` or `plugin` schemes for imports resolved outside the app source root.
+  - [x] `gem` or `plugin` schemes can be resolved outside the app source root by plugins.
 - [x] Add `ModuleId#scheme` and `ModuleId#bare_path` helpers.
-- [ ] Replace ad hoc virtual/app checks with scheme-aware helpers where useful.
-- [ ] Design external plugin/package imports after the current app-root `/foo` imports settle:
-  - [ ] Reserve `plugin:` and `gem:` import specifiers for modules outside `source_dir`.
-  - [ ] Let resolver plugins handle non-app schemes before the filesystem resolver runs.
-  - [ ] Raise a clear `ResolveError` for unknown schemes that no plugin resolves.
-  - [ ] Add tests with a small fake resolver plugin for `plugin:demo`.
-  - [ ] Keep `import("/foo")` as the only app-root import syntax for now.
-  - [ ] Treat `gem:` imports as opt-in exposed Klenod module trees, not arbitrary RubyGems file access.
-  - [ ] Sketch a future `GemImportPlugin` that maps `gem:my_gem/path` through `Gem::Specification.find_by_name("my_gem")`.
+- [x] Let resolver plugins handle non-app schemes before the filesystem resolver runs.
+- [x] Raise a clear `ResolveError` for unknown schemes that no plugin resolves.
+- [x] Add tests with a small fake resolver plugin for `gem://demo`.
+- [x] Keep `app:/foo` as the explicit app-root syntax from non-app schemes.
+- [ ] Continue replacing ad hoc virtual/app checks with scheme-aware helpers where useful.
+- [ ] Design external plugin/package imports after the URI module id foundation settles:
+  - [ ] Treat `gem://...` imports as opt-in exposed Klenod module trees, not arbitrary RubyGems file access.
+  - [ ] Sketch a future `GemImportPlugin` that maps `gem://my_gem/path` through `Gem::Specification.find_by_name("my_gem")`.
   - [ ] Require gem import plugins to configure or discover an import root inside the gem, such as `klenod/`.
-  - [ ] Keep `require "my_gem"` distinct from `import("gem:my_gem/...")`: `require` loads process code, while `import` adds modules to the Klenod graph.
+  - [ ] Keep `require "my_gem"` distinct from `import("gem://my_gem/...")`: `require` loads process code, while `import` adds modules to the Klenod graph.
 
 ## Routing And App Structure
 

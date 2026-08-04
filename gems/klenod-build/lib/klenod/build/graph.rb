@@ -372,12 +372,20 @@ module Klenod
         else
           ref = record_or_module_id.to_s
           @records.each_key.find { |module_id| module_id.to_s == ref } ||
+            module_id_for_canonical_ref(ref) ||
             module_id_for_absolute_ref(ref) ||
             raise(KeyError, "No module loaded for #{record_or_module_id.inspect}")
         end
       end
 
       private
+
+      def module_id_for_canonical_ref(ref)
+        canonical = ModuleId.parse(ref)
+        @records.key?(canonical) ? canonical : nil
+      rescue
+        nil
+      end
 
       def module_id_for_absolute_ref(ref)
         absolute_path = Pathname.new(ref).expand_path
@@ -460,7 +468,7 @@ module Klenod
       def read_module_source(module_id)
         loaded =
           @profiler.measure(:module_source_read, module_id: module_id.to_s) do
-            load_source(module_id, @resolver.absolute_path(module_id))
+            load_source(module_id)
           end
         return loaded if loaded.is_a?(LoadResult)
 
@@ -782,7 +790,7 @@ module Klenod
         Runtime::ImportSpec.new(record.id.to_s, value, resolved_dependency.dependency.eager)
       end
 
-      def load_source(module_id, absolute_path)
+      def load_source(module_id)
         @plugins.each do |plugin|
           @profiler.count(:plugin_load_check)
           loaded =
@@ -798,7 +806,7 @@ module Klenod
         end
 
         @profiler.count(:module_file_read)
-        @profiler.measure(:module_file_read, module_id: module_id.to_s) { absolute_path.binread }
+        @profiler.measure(:module_file_read, module_id: module_id.to_s) { @resolver.absolute_path(module_id).binread }
       end
 
       def transform(module_id, source)

@@ -101,6 +101,31 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  class GemFilePlugin < Klenod::Build::Plugin
+    def initialize(sources)
+      @sources = sources
+    end
+
+    def resolve(dependency, _context)
+      module_id =
+        if dependency.specifier.start_with?("gem://")
+          Klenod::Build::ModuleId.parse(dependency.specifier)
+        elsif dependency.importer_id&.scheme == :gem
+          dependency.importer_id.merge(dependency.specifier)
+        end
+
+      return nil unless module_id&.scheme == :gem
+
+      Klenod::Build::ResolvedDependency.new(dependency, module_id, {scheme: :gem})
+    end
+
+    def load(module_id, _context)
+      return nil unless module_id.scheme == :gem
+
+      @sources.fetch(module_id.to_s)
+    end
+  end
+
   class GeneratedAssetPlugin < Klenod::Build::Plugin
     EXTENSIONS = [".asset"].freeze
 
@@ -169,7 +194,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       record = context.evaluate("virtual:file")
 
       assert_equal(:virtual, record.id.scheme)
-      assert_equal("virtual:file.rb", context.exports(record)::FILE_PATH)
+      assert_equal("virtual:/file.rb", context.exports(record)::FILE_PATH)
     end
   end
 
@@ -287,7 +312,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       entry = context.entry("entry")
 
       assert_equal(Klenod::Build::ModuleId.new("entry.rb", nil), entry.id)
-      assert_equal("entry.rb", entry.to_s)
+      assert_equal("app:/entry.rb", entry.to_s)
       assert_equal(42, entry.exports::VALUE)
       assert_equal([200, {"content-type" => "text/plain"}, ["42"]], entry.call(nil, context))
       assert_same(entry.exports, context.exports(entry))
@@ -369,7 +394,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write(dep_path, "VALUE = 2\n")
       result = context.invalidate_paths([dep_path])
 
-      assert_equal(["dep.rb"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/dep.rb"], result.reloaded_module_ids.map(&:to_s))
       assert_equal([], result.reevaluated_module_ids)
       assert_equal({}, context.graph.mods)
       refute(File.exist?(side_effect_path), "Expected invalidation to avoid evaluating collected entry dependents")
@@ -442,6 +467,37 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal([2, 3, 5, 7], asset_references.map(&:index))
       assert_equal(["styles/layout.css", "styles/page.css"], context.assets_for_module(["styles/layout.css", "styles/page.css"], type: :css, recursive: false).map(&:logical_name))
       assert_equal([0, 1], context.asset_references_for_module(["styles/layout.css", "styles/page.css"], type: :css, recursive: false).map(&:index))
+    end
+  end
+
+  def test_plugin_owned_scheme_resolves_relative_imports_inside_scheme
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/local.rb", "VALUE = :app\n")
+      sources = {
+        "gem://demo/entry.rb" => <<~RUBY,
+          Dep = import("./dep.rb")
+          Local = import("app:/local.rb")
+          VALUES = [Dep::VALUE, Local::VALUE]
+        RUBY
+        "gem://demo/dep.rb" => "VALUE = :gem\n"
+      }
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [
+            GemFilePlugin.new(sources),
+            Klenod::Build::Plugins::RubyPlugin::Plugin.new
+          ]
+        )
+
+      record = context.evaluate("gem://demo/entry.rb")
+      values = context.graph.mods.fetch(record.id).const_get(:Exports)::VALUES
+
+      assert_equal([:gem, :app], values)
+      assert_equal(
+        ["app:/local.rb", "gem://demo/dep.rb", "gem://demo/entry.rb"],
+        context.graph.records.keys.map(&:to_s).sort
+      )
     end
   end
 
@@ -554,7 +610,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         [Klenod::Build::ModuleId.new("entry.rb", nil), Klenod::Build::ModuleId.new("entry.rb", nil)],
         error.cycle
       )
-      assert_equal("Import cycle detected: entry.rb -> entry.rb", error.message)
+      assert_equal("Import cycle detected: app:/entry.rb -> app:/entry.rb", error.message)
     end
   end
 
@@ -567,8 +623,8 @@ class Klenod::Build::Context::Test < Minitest::Test
       context = Klenod::Build::Context.new(source_dir: dir)
       error = assert_raises(Klenod::Build::ImportCycleError) { context.evaluate("a") }
 
-      assert_equal(["a.rb", "b.rb", "c.rb", "a.rb"], error.cycle.map(&:to_s))
-      assert_equal("Import cycle detected: a.rb -> b.rb -> c.rb -> a.rb", error.message)
+      assert_equal(["app:/a.rb", "app:/b.rb", "app:/c.rb", "app:/a.rb"], error.cycle.map(&:to_s))
+      assert_equal("Import cycle detected: app:/a.rb -> app:/b.rb -> app:/c.rb -> app:/a.rb", error.message)
     end
   end
 
@@ -669,8 +725,8 @@ class Klenod::Build::Context::Test < Minitest::Test
       result = context.invalidate_paths([dep_path])
       updated_exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
 
-      assert_equal(["dep.rb"], result.reloaded_module_ids.map(&:to_s))
-      assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      assert_equal(["app:/dep.rb"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/entry.rb"], result.reevaluated_module_ids.map(&:to_s))
       refute(updated_exports::Dep.loaded?)
       assert_equal(100, updated_exports.value)
     end
@@ -918,9 +974,9 @@ class Klenod::Build::Context::Test < Minitest::Test
       )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: plugins)
       bundle = context.build(entrypoints: ["page.haml"], output: output)
-      page_imports = bundle.modules.fetch("page.haml").imports
+      page_imports = bundle.modules.fetch("app:/page.haml").imports
 
-      assert_equal(Klenod::Runtime::DefaultImport.new(:Default), page_imports.fetch("page.haml:dependency:0").value)
+      assert_equal(Klenod::Runtime::DefaultImport.new(:Default), page_imports.fetch("app:/page.haml:dependency:0").value)
 
       script = <<~RUBY
         require "klenod/runtime"
@@ -1038,7 +1094,7 @@ class Klenod::Build::Context::Test < Minitest::Test
 
       refute(File.exist?(side_effect_path), "Expected build to avoid evaluating top-level entrypoint code")
       assert_equal(["entry"], bundle.entrypoints.keys)
-      assert_equal(["entry.rb"], bundle.modules.keys)
+      assert_equal(["app:/entry.rb"], bundle.modules.keys)
       assert_equal([], context.graph.mods.keys)
     end
   end
@@ -1390,7 +1446,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_nil(applied.asset_write_result)
       assert_equal(result.errors, applied.errors)
       assert_equal(result.errors.to_a, applied.each_error.to_a)
-      assert_equal(["entry.rb: Klenod::Build::ResolveError: Could not resolve dep (while resolving \"dep\", for entry.rb, from entry.rb, kind: ruby_import)"], applied.error_messages)
+      assert_equal(["app:/entry.rb: Klenod::Build::ResolveError: Could not resolve dep (while resolving \"dep\", for app:/entry.rb, from app:/entry.rb, kind: ruby_import)"], applied.error_messages)
       refute(applied.asset_files_changed?)
       assert_equal([], applied.written_asset_paths)
       assert_equal([], applied.removed_asset_paths)
@@ -1469,9 +1525,9 @@ class Klenod::Build::Context::Test < Minitest::Test
       updated_record = context.graph.records.fetch(record.id)
       updated_mod = context.graph.mods.fetch(record.id)
 
-      assert_equal(["dep.rb"], result.changed_module_ids.map(&:to_s))
-      assert_equal(["dep.rb"], result.reloaded_module_ids.map(&:to_s))
-      assert_equal(["pages/page.rb"], result.reevaluated_module_ids.map(&:to_s))
+      assert_equal(["app:/dep.rb"], result.changed_module_ids.map(&:to_s))
+      assert_equal(["app:/dep.rb"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.rb"], result.reevaluated_module_ids.map(&:to_s))
       assert_equal(100, updated_mod.const_get(:Exports)::VALUE)
       assert_equal(1, updated_record.version)
     end
@@ -1490,8 +1546,8 @@ class Klenod::Build::Context::Test < Minitest::Test
 
       result = context.invalidate_paths([], removed_paths: [dep_path])
 
-      assert_equal(["dep.rb"], result.removed_module_ids.map(&:to_s))
-      assert_equal(["entry.rb"], result.errors.map { |module_id, _error| module_id.to_s })
+      assert_equal(["app:/dep.rb"], result.removed_module_ids.map(&:to_s))
+      assert_equal(["app:/entry.rb"], result.errors.map { |module_id, _error| module_id.to_s })
     end
   end
 
@@ -1570,7 +1626,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/components/Table.haml", "%table\n  = rows.map do |row| }\n    %tr= row\n")
       result = context.invalidate_paths(["#{dir}/components/Table.haml"])
 
-      assert_equal(["components/Table.haml"], result.errors.map { |module_id, _error| module_id.to_s })
+      assert_equal(["app:/components/Table.haml"], result.errors.map { |module_id, _error| module_id.to_s })
       assert_equal([], result.reevaluated_module_ids)
       assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.evaluate("first.rb") }
 
@@ -1578,7 +1634,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       result = context.invalidate_paths(["#{dir}/components/Table.haml"])
 
       assert_empty(result.errors)
-      assert_equal(["components/Table.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/components/Table.haml"], result.reloaded_module_ids.map(&:to_s))
       first = context.evaluate("first.rb")
       assert_kind_of(Module, context.exports(first)::Table)
     end
@@ -1596,14 +1652,14 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write(entry_path, "Dep = import(\"./dep.rb\")\nVALUE = Dep::VALUE\n")
       failed_result = context.invalidate_paths([entry_path])
 
-      assert_equal(["entry.rb"], failed_result.errors.map { |module_id, _error| module_id.to_s })
+      assert_equal(["app:/entry.rb"], failed_result.errors.map { |module_id, _error| module_id.to_s })
       assert_raises(Klenod::Build::ResolveError) { context.evaluate("entry.rb") }
 
       File.write(dep_path, "VALUE = 2\n")
       recovered_result = context.invalidate_paths([dep_path])
 
       assert_empty(recovered_result.errors)
-      assert_equal(["entry.rb"], recovered_result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/entry.rb"], recovered_result.reloaded_module_ids.map(&:to_s))
       assert_equal(2, context.exports("entry.rb")::VALUE)
     end
   end

@@ -126,13 +126,13 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       manifest = RouterPlugin.new.discover(source_dir: dir)
       special_views = manifest.special_views.to_h { |view| [[view.kind, view.path], view] }
 
-      assert_equal(["pages/demo/+page.rb"], manifest.routes.map(&:module_id).map(&:to_s))
+      assert_equal(["pages/demo/+page.rb"], manifest.routes.map(&:module_id).map(&:path))
       assert_equal(
         ["pages/demo/+page.rb", "pages/+error.rb", "pages/+not-found.rb", "pages/demo/+not-found.rb"],
         manifest.entrypoints
       )
-      assert_equal(["pages/+layout.rb"], special_views.fetch([:error, "/"]).layout_module_ids.map(&:to_s))
-      assert_equal(["pages/+layout.rb", "pages/demo/+layout.rb"], special_views.fetch([:not_found, "/demo"]).layout_module_ids.map(&:to_s))
+      assert_equal(["pages/+layout.rb"], special_views.fetch([:error, "/"]).layout_module_ids.map(&:path))
+      assert_equal(["pages/+layout.rb", "pages/demo/+layout.rb"], special_views.fetch([:not_found, "/demo"]).layout_module_ids.map(&:path))
     end
   end
 
@@ -601,11 +601,11 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       router = context.exports(router_record)::Default
 
       assert_includes(router_record.transformed_source, "__klenod_lazy_import__")
-      assert_equal(["virtual:router.rb"], context.graph.records.keys.map(&:to_s))
+      assert_equal(["virtual:/router.rb"], context.graph.records.keys.map(&:to_s))
 
       assert_equal(:about, router.match("/about").page::NAME)
-      assert_includes(context.graph.records.keys.map(&:to_s), "pages/about/+page.rb")
-      refute_includes(context.graph.records.keys.map(&:to_s), "pages/+page.rb")
+      assert_includes(context.graph.records.keys.map(&:to_s), "app:/pages/about/+page.rb")
+      refute_includes(context.graph.records.keys.map(&:to_s), "app:/pages/+page.rb")
     end
   end
 
@@ -629,14 +629,14 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       router = context.exports(router_record)::Default
 
       assert_includes(router_record.transformed_source, "__klenod_lazy_import__")
-      assert_equal(["virtual:router.rb"], context.graph.records.keys.map(&:to_s))
+      assert_equal(["virtual:/router.rb"], context.graph.records.keys.map(&:to_s))
 
       assert(router.match("/"))
-      assert_equal(["virtual:router.rb"], context.graph.records.keys.map(&:to_s))
+      assert_equal(["virtual:/router.rb"], context.graph.records.keys.map(&:to_s))
 
       router.match("/").page
-      assert_includes(context.graph.records.keys.map(&:to_s), "pages/+page.haml")
-      refute_includes(context.graph.records.keys.map(&:to_s), "pages/broken/+page.haml")
+      assert_includes(context.graph.records.keys.map(&:to_s), "app:/pages/+page.haml")
+      refute_includes(context.graph.records.keys.map(&:to_s), "app:/pages/broken/+page.haml")
 
       assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
         router.match("/broken").page
@@ -663,14 +663,14 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
         )
       router_record = context.evaluate("virtual:router")
 
-      assert_equal(["virtual:router.rb"], context.graph.records.keys.map(&:to_s))
+      assert_equal(["virtual:/router.rb"], context.graph.records.keys.map(&:to_s))
 
       File.write(css_path, "h1 { color: red; }\n")
       result = context.invalidate_paths([css_path])
       css_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("pages/blog/[slug]/+page.css", nil))
 
-      assert_equal(["pages/blog/[slug]/+page.haml"], result.reloaded_module_ids.map(&:to_s))
-      assert_equal(["virtual:router.rb"], result.reevaluated_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/blog/[slug]/+page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["virtual:/router.rb"], result.reevaluated_module_ids.map(&:to_s))
       assert_match(%r{\A/assets/pages_blog_slug_page_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
       assert_includes(context.graph.records.fetch(router_record.id).resolved_dependencies.map(&:module_id), Klenod::Build::ModuleId.new("pages/blog/[slug]/+page.haml", nil))
     end
@@ -687,7 +687,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
 
       assert_includes(router_record.transformed_source, "__klenod_lazy_import__")
       refute_includes(router_record.transformed_source, "__klenod_import__(\"")
-      assert_equal(["virtual:router.rb"], context.graph.records.keys.map(&:to_s))
+      assert_equal(["virtual:/router.rb"], context.graph.records.keys.map(&:to_s))
     end
   end
 
@@ -701,10 +701,10 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       router = context.exports(router_record)::Default
 
       assert_includes(router_record.transformed_source, "__klenod_lazy_import__")
-      assert_equal(["virtual:router.rb"], context.graph.records.keys.map(&:to_s))
+      assert_equal(["virtual:/router.rb"], context.graph.records.keys.map(&:to_s))
 
       assert_equal(:not_found, router.not_found("/missing").page::NAME)
-      assert_includes(context.graph.records.keys.map(&:to_s), "pages/+not-found.rb")
+      assert_includes(context.graph.records.keys.map(&:to_s), "app:/pages/+not-found.rb")
     end
   end
 
@@ -751,7 +751,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       result = context.invalidate_paths([about_path])
       router = context.exports("virtual:router.rb")::Default
 
-      assert_includes(result.reloaded_module_ids.map(&:to_s), "virtual:router.rb")
+      assert_includes(result.reloaded_module_ids.map(&:to_s), "virtual:/router.rb")
       assert_equal(:about, router.match("/about").page::NAME)
     end
   end
@@ -772,7 +772,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       result = context.invalidate_paths([], removed_paths: [about_path])
       router = context.exports("virtual:router.rb")::Default
 
-      assert_includes(result.reloaded_module_ids.map(&:to_s), "virtual:router.rb")
+      assert_includes(result.reloaded_module_ids.map(&:to_s), "virtual:/router.rb")
       assert_nil(router.match("/about"))
     end
   end
@@ -793,7 +793,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       result = context.invalidate_paths([], removed_paths: [route_path])
       router = context.exports("virtual:router.rb")::Default
 
-      assert_includes(result.reloaded_module_ids.map(&:to_s), "virtual:router.rb")
+      assert_includes(result.reloaded_module_ids.map(&:to_s), "virtual:/router.rb")
       assert_nil(router.match("/language"))
     end
   end
@@ -828,8 +828,8 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       loaded = Klenod::Runtime.load_bundle(output)
       router = loaded.exports("virtual:router")::Default
 
-      assert_includes(bundle.modules.keys, "pages/+not-found.rb")
-      assert_includes(bundle.modules.keys, "pages/+error.rb")
+      assert_includes(bundle.modules.keys, "app:/pages/+not-found.rb")
+      assert_includes(bundle.modules.keys, "app:/pages/+error.rb")
       assert_equal(:not_found, router.not_found("/missing").page::NAME)
       assert_equal(:error, router.error("/missing").page::NAME)
     end
@@ -847,8 +847,8 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       loaded = Klenod::Runtime.load_bundle(output)
       match = loaded.exports("virtual:router")::Default.match("/api")
 
-      assert_includes(bundle.modules.keys, "pages/api/+page.rb")
-      assert_includes(bundle.modules.keys, "pages/api/+route.rb")
+      assert_includes(bundle.modules.keys, "app:/pages/api/+page.rb")
+      assert_includes(bundle.modules.keys, "app:/pages/api/+route.rb")
       assert_equal(:page, match.page::NAME)
       assert_equal(:handler, match.handler.new.GET(nil))
     end
@@ -874,7 +874,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       router = loaded.exports("virtual:router")::Default
       routes_page = router.match("/routes").page
 
-      assert_includes(bundle.modules.keys, "pages/routes/+page.rb")
+      assert_includes(bundle.modules.keys, "app:/pages/routes/+page.rb")
       assert_equal(:routes, routes_page::NAME)
       assert_equal(2, routes_page::ROUTE_COUNT)
     end

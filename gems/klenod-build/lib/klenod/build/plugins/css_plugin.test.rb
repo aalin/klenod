@@ -132,7 +132,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       css = record.assets.first.bytes
 
       assert_includes(css, font_url)
-      assert_equal(["styles/home.css"], context.graph.records.keys.map(&:to_s).grep_v(/\Avirtual:/))
+      assert_equal(["app:/styles/home.css"], context.graph.records.keys.map(&:to_s).grep_v(/\Avirtual:/))
     end
   end
 
@@ -210,8 +210,8 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       new_base_asset = context.assets_for("styles/base.css").fetch(0)
       title = context.graph.mods.fetch(entry_record.id).const_get(:Exports)::TITLE
 
-      assert_equal(["styles/base.css"], result.reloaded_module_ids.map(&:to_s))
-      assert_equal(["styles/home.css", "entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      assert_equal(["app:/styles/base.css"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/styles/home.css", "app:/entry.rb"], result.reevaluated_module_ids.map(&:to_s))
       refute_equal(old_base_asset.output_path, new_base_asset.output_path)
       assert_equal(old_home_asset.output_path, new_home_asset.output_path)
       refute_includes(new_home_asset.bytes, new_base_asset.output_path)
@@ -263,8 +263,8 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       result = context.invalidate_paths([css_path])
       classes = context.graph.mods.fetch(entry_record.id).const_get(:Exports)::CLASSES
 
-      assert_equal(["styles/home.css"], result.reloaded_module_ids.map(&:to_s))
-      assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      assert_equal(["app:/styles/home.css"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/entry.rb"], result.reevaluated_module_ids.map(&:to_s))
       assert_equal([:heading], classes)
     end
   end
@@ -323,8 +323,8 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       result = context.invalidate_paths([css_path])
       updated_exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
 
-      assert_equal(["styles/home.css"], result.reloaded_module_ids.map(&:to_s))
-      assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      assert_equal(["app:/styles/home.css"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/entry.rb"], result.reevaluated_module_ids.map(&:to_s))
       refute(updated_exports::Styles.loaded?)
       assert_equal([:heading], updated_exports.classes)
     end

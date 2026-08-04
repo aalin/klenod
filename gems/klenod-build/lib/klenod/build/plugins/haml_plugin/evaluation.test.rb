@@ -415,7 +415,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
 
       assert_equal(["./icons/a.txt", "./icons/b.txt"], record.dependencies.select { it.kind == :haml_import }.map(&:specifier))
       assert_equal(["pages/icons/*.txt"], record.watched_patterns.select { it.kind == :import_glob }.map(&:glob))
-      assert_includes(record.transformed_source, "\"./icons/a.txt\" => __klenod_import__(\"pages/page.haml:dependency:0\")")
+      assert_includes(record.transformed_source, "\"./icons/a.txt\" => __klenod_import__(\"app:/pages/page.haml:dependency:0\")")
     end
   end
 
@@ -928,8 +928,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       details_class = context.graph.mods.fetch(ModuleId.new("components/details.haml", nil)).const_get(:Exports)::Default
 
       refute_includes(record.transformed_source, "import(\"components/details.haml\")")
-      assert_includes(record.transformed_source, "__klenod_import__(\"page.haml:dependency:0\")")
-      assert_equal(["page.haml:dependency:0"], record.dependencies.select { |dependency| dependency.kind == :haml_import }.map(&:id))
+      assert_includes(record.transformed_source, "__klenod_import__(\"app:/page.haml:dependency:0\")")
+      assert_equal(["app:/page.haml:dependency:0"], record.dependencies.select { |dependency| dependency.kind == :haml_import }.map(&:id))
       assert_same(details_class, exports::Default.const_get(:Details))
       assert_equal(
         [

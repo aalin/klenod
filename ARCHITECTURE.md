@@ -1,6 +1,6 @@
 # Klenod Architecture
 
-Klenod is a Ruby module bundler. It resolves source-root-relative modules, transforms them through plugins, records a dependency graph, evaluates modules on demand, and can serialize a runtime-only bundle.
+Klenod is a Ruby module bundler. It resolves URI-like module ids, transforms them through plugins, records a dependency graph, evaluates modules on demand, and can serialize a runtime-only bundle.
 
 The design goal is close to Vite/Rollup/Parcel for graph and plugin behavior, with Ruby-native runtime values and optional NextJS/SvelteKit-inspired routing in a plugin.
 
@@ -66,17 +66,20 @@ Build mode should collect and serialize modules without evaluating application t
 
 ## Module Identity And Imports
 
-Module ids are source-root-relative by default:
+Module ids are canonical URI-like identifiers:
 
 ```ruby
 import("./Card")
 import("/components/Card")
 import("virtual:router")
+import("gem://klenod-ui/components/Card")
 ```
 
-Relative imports resolve from the importer. Leading-slash imports resolve from the configured source directory. Virtual modules use explicit schemes, currently `virtual:`.
+Files under the configured source directory use the hostless `app:` scheme internally, e.g. `app:/components/Card.haml`. Virtual modules use the hostless `virtual:` scheme, e.g. `virtual:/router.rb`. Plugin-owned module trees can use hostful schemes such as `gem://gem-name/path`.
 
-Future external imports should use schemes such as `plugin:` or `gem:` and be resolved by plugins before filesystem resolution.
+Relative imports resolve from the importer using URL-style rules. That means `import("./Card")` and `import("Card")` both resolve next to the importing module. Leading-slash imports stay in the current scheme root, so `import("/components/Card")` from an app module resolves to `app:/components/Card`, while `import("/tokens.css")` from `gem://klenod-ui/components/Button.haml` resolves to `gem://klenod-ui/tokens.css`.
+
+Use `app:/...` explicitly when code inside another scheme needs to import from the application source root. Unknown schemes must be handled by plugins before filesystem resolution, otherwise Klenod raises a `ResolveError`.
 
 `import("...")` creates an eager dependency. `lazy_import("...")` records the dependency but returns a lazy runtime value that loads when called.
 
@@ -315,7 +318,7 @@ The example framework also owns request error policy: it maps explicit `NotFound
 
 The main areas still evolving:
 
-- External import schemes such as `plugin:` and `gem:`.
+- External import plugins, such as a future `GemImportPlugin` for `gem://...` module trees.
 - More precise route visualization and route ordering tools.
 - Broader async rendering semantics beyond the example framework's fiber-local request context.
 - A future `klenod dev` command or TUI, if it can remain framework-neutral.

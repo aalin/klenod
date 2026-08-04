@@ -27,7 +27,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
 
     assert_equal(1, result.dependencies.length)
     assert_equal("../dep", result.dependencies.first.specifier)
-    assert_includes(result.code, "__klenod_import__(\"pages/page.rb:dependency:0\")")
+    assert_includes(result.code, "__klenod_import__(\"app:/pages/page.rb:dependency:0\")")
   end
 
   def test_rewrites_literal_imports_without_syntax_tree_scan
@@ -40,7 +40,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       )
 
     assert_equal(1, result.dependencies.length)
-    assert_includes(result.code, "__klenod_import__(\"pages/page.rb:dependency:0\")")
+    assert_includes(result.code, "__klenod_import__(\"app:/pages/page.rb:dependency:0\")")
     refute_includes(profiler.totals.keys, :ruby_import_parse)
     refute_includes(profiler.totals.keys, :ruby_import_scan)
   end
@@ -54,7 +54,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       )
 
     assert_equal("../dep", result.dependencies.first.specifier)
-    assert_equal("Dep = __klenod_import__(\"pages/page.rb:dependency:0\")\n", result.code)
+    assert_equal("Dep = __klenod_import__(\"app:/pages/page.rb:dependency:0\")\n", result.code)
   end
 
   def test_does_not_rewrite_import_text_inside_strings
@@ -156,7 +156,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
     assert_equal(1, result.dependencies.length)
     assert_equal("../dep", result.dependencies.first.specifier)
     refute(result.dependencies.first.eager)
-    assert_includes(result.code, "__klenod_lazy_import__(\"pages/page.rb:dependency:0\")")
+    assert_includes(result.code, "__klenod_lazy_import__(\"app:/pages/page.rb:dependency:0\")")
   end
 
   def test_rejects_dynamic_imports
@@ -185,8 +185,8 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       assert_equal(["./gallery/a.jpg", "./gallery/b.jpg"], result.dependencies.map { it.metadata.fetch(:glob_key) })
       assert(result.dependencies.all?(&:eager))
       assert_equal(["pages/gallery/*.jpg"], result.watched_patterns.map(&:glob))
-      assert_includes(result.code, "\"./gallery/a.jpg\" => __klenod_import__(\"pages/page.rb:dependency:0\")")
-      assert_includes(result.code, "\"./gallery/b.jpg\" => __klenod_import__(\"pages/page.rb:dependency:1\")")
+      assert_includes(result.code, "\"./gallery/a.jpg\" => __klenod_import__(\"app:/pages/page.rb:dependency:0\")")
+      assert_includes(result.code, "\"./gallery/b.jpg\" => __klenod_import__(\"app:/pages/page.rb:dependency:1\")")
     end
   end
 
@@ -201,7 +201,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
 
       assert_equal(["./icons/add.svg"], result.dependencies.map(&:specifier))
       refute(result.dependencies.first.eager)
-      assert_includes(result.code, "\"./icons/add.svg\" => __klenod_lazy_import__(\"pages/page.rb:dependency:0\")")
+      assert_includes(result.code, "\"./icons/add.svg\" => __klenod_lazy_import__(\"app:/pages/page.rb:dependency:0\")")
     end
   end
 
@@ -242,7 +242,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       File.write(new_path, "new")
       result = context.invalidate_paths([new_path])
 
-      assert_equal(["pages/page.rb"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.rb"], result.reloaded_module_ids.map(&:to_s))
       record = context.graph.records.fetch(ModuleId.new("pages/page.rb", nil))
       assert_equal(["./gallery/new.txt"], record.dependencies.map(&:specifier))
     end

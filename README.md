@@ -31,17 +31,19 @@ Ruby modules import other modules with literal `import("...")` calls:
 
 ```ruby
 Shared = import("../shared")
-Styles = import("styles/home.css")
+Styles = import("./styles/home.css")
 Hero = import("./hero.png?width=320,640&format=png")
 ```
 
-Relative imports resolve from the importing file. Leading-slash imports resolve from the configured source directory.
+Relative imports resolve from the importing file. Bare imports like `import("Card")` are also relative. Leading-slash imports resolve from the current scheme root; for normal app files that is the configured source directory.
 
 ```ruby
 Card = import("./Card")
 Layout = import("/layouts/App")
 Router = import("virtual:router")
 ```
+
+Internally, source files use canonical module ids such as `app:/layouts/App.rb`, while virtual modules use ids such as `virtual:/router.rb`. Plugins can own other schemes, for example `gem://some-gem/components/Button.rb`.
 
 Use `lazy_import("...")` to record a dependency and defer loading its value:
 

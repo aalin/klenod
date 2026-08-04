@@ -21,42 +21,37 @@ module Klenod
       attr_reader :source_dir
 
       def resolve(dependency)
-        specifier, query = dependency.specifier.split("?", 2)
-        base_path =
-          if specifier.start_with?("/")
-            File.expand_path(specifier.delete_prefix("/"), @source_dir_path)
-          elsif specifier.start_with?(".")
-            importer_dir = dependency.importer_id&.dirname || "."
-            File.expand_path(File.join(importer_dir, specifier), @source_dir_path)
-          else
-            File.expand_path(specifier, @source_dir_path)
-          end
+        module_id = resolve_app_module_id(dependency)
+        raise ResolveError, "Unknown import scheme #{module_id.scheme.inspect} for #{dependency.specifier.inspect}" unless module_id.scheme == :app
 
+        base_path = File.expand_path(module_id.relative_path, @source_dir_path)
         assert_inside_source_dir!(base_path)
-        key = [base_path, query]
-        module_id = @resolved_module_ids[key]
-        if module_id
+        key = [base_path, module_id.query]
+        resolved_module_id = @resolved_module_ids[key]
+        if resolved_module_id
           @profiler&.count(:resolver_cache_hit)
         else
           @profiler&.count(:resolver_cache_miss)
           resolved_path = resolve_existing_path(base_path)
           relative = relative_source_path(resolved_path)
-          module_id = @resolved_module_ids[key] = ModuleId.new(relative, query)
+          resolved_module_id = @resolved_module_ids[key] = ModuleId.new("app:/#{relative}", module_id.query)
         end
 
-        ResolvedDependency.new(dependency, module_id, {})
+        ResolvedDependency.new(dependency, resolved_module_id, {})
       end
 
       def absolute_path(module_id)
-        path = @absolute_paths[module_id.path]
+        path = @absolute_paths[module_id.to_s]
         if path
           @profiler&.count(:resolver_absolute_path_cache_hit)
           return path
         end
 
         @profiler&.count(:resolver_absolute_path_cache_miss)
-        @absolute_paths.fetch(module_id.path) do |path_key|
-          path = Pathname.new(File.expand_path(path_key, @source_dir_path))
+        @absolute_paths.fetch(module_id.to_s) do |path_key|
+          raise ResolveError, "Cannot map non-app module to source_dir: #{module_id}" unless module_id.scheme == :app
+
+          path = Pathname.new(File.expand_path(module_id.relative_path, @source_dir_path))
           assert_inside_source_dir!(path)
           @absolute_paths[path_key] = path
         end
@@ -68,6 +63,18 @@ module Klenod
       end
 
       private
+
+      def resolve_app_module_id(dependency)
+        specifier = dependency.specifier.to_s
+        return ModuleId.parse(specifier) if specifier.match?(ModuleId::SCHEME_PATTERN)
+
+        importer_id = dependency.importer_id
+        if importer_id
+          importer_id.merge(specifier)
+        else
+          ModuleId.new("app:/#{specifier.delete_prefix("/")}")
+        end
+      end
 
       def resolve_existing_path(path)
         return path if File.file?(path)

@@ -42,7 +42,7 @@
       Icons = import_glob("./icons/*.svg")
       ```
 
-      Relative imports resolve from the importing module. Leading slash imports resolve from the configured source root. Virtual modules use explicit schemes such as `virtual:router`.
+      Relative imports resolve from the importing module. Leading slash imports resolve from the current scheme root, which is the configured source root for normal app files. Virtual modules use explicit schemes such as `virtual:router`.
 
   %DocsSection{ title: "Plugins Define File Meaning" }
     :markdown

@@ -84,7 +84,7 @@ module Klenod
               source_map_output_path = "/assets/#{asset_name(module_id)}.#{source_map_hash}.css.map"
               source_map_asset =
                 Asset.new(
-                  module_id.to_s,
+                  module_id.path,
                   source_map_hash,
                   source_map_output_path,
                   nil,
@@ -99,7 +99,7 @@ module Klenod
             output_path = "/assets/#{asset_name(module_id)}.#{hash}.css"
             asset =
               Asset.new(
-                module_id.to_s,
+                module_id.path,
                 hash,
                 output_path,
                 nil,

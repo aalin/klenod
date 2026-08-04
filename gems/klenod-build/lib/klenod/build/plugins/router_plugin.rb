@@ -72,7 +72,7 @@ module Klenod
               [
                 *routes.flat_map { |route| [route.page_module_id, route.handler_module_id] },
                 *special_views.map(&:view_module_id)
-              ].compact.map(&:to_s)
+              ].compact.map(&:path)
             end
 
             def [](path)
@@ -733,12 +733,12 @@ module Klenod
               [
                 "    Route.new(",
                 "      #{route.path.inspect},",
-                "      #{route.page_module_id&.to_s.inspect},",
-                "      #{route.handler_module_id&.to_s.inspect},",
+                "      #{route.page_module_id&.path.inspect},",
+                "      #{route.handler_module_id&.path.inspect},",
                 "      #{segments_source(route.segments)},",
                 "      #{match_parts_source(route.segments)},",
-                "      #{route.layout_module_ids.map(&:to_s).inspect},",
-                "      #{route.slot_layout_module_id&.to_s.inspect},",
+                "      #{route.layout_module_ids.map(&:path).inspect},",
+                "      #{route.slot_layout_module_id&.path.inspect},",
                 "      #{route.page_module_id ? imports.fetch(route.page_module_id.to_s) : "nil"},",
                 "      #{route.handler_module_id ? imports.fetch(route.handler_module_id.to_s) : "nil"},",
                 "      #{layouts_source(layouts)}",
@@ -755,10 +755,10 @@ module Klenod
                 "      #{view.kind.inspect},",
                 "      #{view.path.inspect},",
                 "      #{view.status.inspect},",
-                "      #{view.view_module_id.to_s.inspect},",
+                "      #{view.view_module_id.path.inspect},",
                 "      #{segments_source(view.segments)},",
                 "      #{match_parts_source(view.segments)},",
-                "      #{view.layout_module_ids.map(&:to_s).inspect},",
+                "      #{view.layout_module_ids.map(&:path).inspect},",
                 "      #{imports.fetch(view.view_module_id.to_s)},",
                 "      #{layouts_source(layouts)}",
                 "    )"

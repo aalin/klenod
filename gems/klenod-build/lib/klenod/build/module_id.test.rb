@@ -12,13 +12,15 @@ class Klenod::Build::ModuleId::Test < Minitest::Test
 
     assert_equal(:app, module_id.scheme)
     assert_equal("pages/page.rb", module_id.bare_path)
+    assert_equal("app:/pages/page.rb", module_id.to_s)
   end
 
-  def test_scheme_is_inferred_from_prefixed_path
+  def test_legacy_scheme_paths_are_normalized_to_hostless_uris
     module_id = ModuleId.new("virtual:router.rb", nil)
 
     assert_equal(:virtual, module_id.scheme)
     assert_equal("router.rb", module_id.bare_path)
+    assert_equal("virtual:/router.rb", module_id.to_s)
   end
 
   def test_parse_preserves_query_and_scheme
@@ -27,6 +29,26 @@ class Klenod::Build::ModuleId::Test < Minitest::Test
     assert_equal(:virtual, module_id.scheme)
     assert_equal("klenod/image.rb", module_id.bare_path)
     assert_equal("width=320", module_id.query)
-    assert_equal("virtual:klenod/image.rb?width=320", module_id.to_s)
+    assert_equal("virtual:/klenod/image.rb?width=320", module_id.to_s)
+  end
+
+  def test_parse_preserves_hostful_gem_uri
+    module_id = ModuleId.parse("gem://klenod-ui/components/Button.haml")
+
+    assert_equal(:gem, module_id.scheme)
+    assert_equal("klenod-ui", module_id.host)
+    assert_equal("/components/Button.haml", module_id.uri_path)
+    assert_equal("gem://klenod-ui/components/Button.haml", module_id.to_s)
+  end
+
+  def test_merge_uses_uri_resolution_rules
+    app_page = ModuleId.parse("app:/pages/foo/+page.haml")
+    gem_component = ModuleId.parse("gem://klenod-ui/components/Button.haml")
+
+    assert_equal("app:/pages/foo/Icon.haml", app_page.merge("./Icon.haml").to_s)
+    assert_equal("app:/components/Hello.haml", app_page.merge("/components/Hello.haml").to_s)
+    assert_equal("gem://klenod-ui/components/Icon.haml", gem_component.merge("./Icon.haml").to_s)
+    assert_equal("gem://klenod-ui/tokens.css", gem_component.merge("/tokens.css").to_s)
+    assert_equal("app:/components/Hello.haml", gem_component.merge("app:/components/Hello.haml").to_s)
   end
 end

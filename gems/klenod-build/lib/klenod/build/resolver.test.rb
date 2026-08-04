@@ -18,6 +18,7 @@ class Klenod::Build::Resolver::Test < Minitest::Test
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
       File.write("#{dir}/pages/page.rb", "")
+      File.write("#{dir}/pages/shared.rb", "")
       File.write("#{dir}/shared.rb", "")
 
       resolver = Resolver.new(source_dir: dir)
@@ -27,6 +28,10 @@ class Klenod::Build::Resolver::Test < Minitest::Test
         resolver.resolve(
           Dependency.create(specifier: "../shared", importer_id: importer, kind: :ruby_import)
         )
+      current_dir =
+        resolver.resolve(
+          Dependency.create(specifier: "./shared", importer_id: importer, kind: :ruby_import)
+        )
       absolute =
         resolver.resolve(
           Dependency.create(specifier: "shared", importer_id: importer, kind: :ruby_import)
@@ -35,10 +40,16 @@ class Klenod::Build::Resolver::Test < Minitest::Test
         resolver.resolve(
           Dependency.create(specifier: "/shared", importer_id: importer, kind: :ruby_import)
         )
+      explicit_app =
+        resolver.resolve(
+          Dependency.create(specifier: "app:/shared", importer_id: importer, kind: :ruby_import)
+        )
 
       assert_equal("shared.rb", relative.module_id.path)
-      assert_equal("shared.rb", absolute.module_id.path)
+      assert_equal("pages/shared.rb", current_dir.module_id.path)
+      assert_equal("pages/shared.rb", absolute.module_id.path)
       assert_equal("shared.rb", explicit_root.module_id.path)
+      assert_equal("shared.rb", explicit_app.module_id.path)
     end
   end
 
@@ -52,7 +63,7 @@ class Klenod::Build::Resolver::Test < Minitest::Test
           Dependency.create(specifier: "image?width=100", importer_id: nil, kind: :asset_url)
         )
 
-      assert_equal("image.png?width=100", resolved.module_id.to_s)
+      assert_equal("app:/image.png?width=100", resolved.module_id.to_s)
     end
   end
 

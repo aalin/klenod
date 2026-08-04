@@ -87,7 +87,7 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
 
       refute_equal("Klenod::Build::Plugins::SvgPlugin::Svg", svg.class.name)
       refute_match(/::Exports\z/, svg.inspect)
-      assert(loaded.modules.key?("virtual:klenod/svg.rb"))
+      assert(loaded.modules.key?("virtual:/klenod/svg.rb"))
       assert_equal(48, svg.width)
       assert_equal(64, svg.height)
       assert_equal("image/svg+xml", svg.content_type)

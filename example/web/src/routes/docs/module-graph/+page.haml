@@ -20,15 +20,18 @@
 
   %DocsSection{ title: "Module Identifiers" }
     :markdown
-      Module ids are source-root-relative by default.
+      Module ids are canonical URI-like identifiers internally.
 
       ```ruby
       import("./Card")
       import("/components/Card")
       import("virtual:router")
+      import("gem://klenod-ui/components/Card")
       ```
 
-      Relative imports resolve from the importer. Leading slash imports resolve from the configured source directory. Virtual modules use explicit schemes such as `virtual:`.
+      App source files use the hostless `app:` scheme internally, such as `app:/components/Card.haml`. Virtual modules use `virtual:/...`, and plugin-owned module trees can use hostful schemes such as `gem://gem-name/path`.
+
+      Relative imports resolve from the importer. Leading slash imports resolve from the current scheme root, so app modules resolve them from the configured source directory. Use `app:/...` when code in another scheme needs to import from the app.
 
       Extensionless imports use the resolver's default extension order. Ruby files are preferred before Haml files, and CSS imports should be explicit.
 

@@ -17,7 +17,7 @@ Build mode only needs collected records. It serializes those records into runtim
 
 Plugin hooks belong to different phases:
 
-- `resolve(dependency, context)` maps an import specifier to a module id.
+- `resolve(dependency, context)` maps an import specifier to a canonical module id.
 - `load(module_id, context)` provides source for virtual modules or custom files.
 - `transform(module_id, code, context)` rewrites source and records dependencies, assets, metadata, source maps, and watched patterns.
 - `finalize(module_id, result, resolved_dependencies, dependency_records, context)` adjusts a transform after eager dependency records are collected.
@@ -25,6 +25,8 @@ Plugin hooks belong to different phases:
 - `runtime_import_value(resolved_dependency, record, context)` provides the value serialized into runtime bundles.
 
 `transform` and `finalize` are graph collection hooks. They must not require evaluated app exports.
+
+Module ids use URI-like schemes. App source files are stored as `app:/path/to/file.rb`, virtual modules as `virtual:/name.rb`, and plugin-owned module trees can use schemes such as `gem://gem-name/path.rb`. Relative import specifiers resolve from the importer with URL-style rules before app filesystem lookup; plugins can resolve non-app schemes first.
 
 ## `import_value`
 

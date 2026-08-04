@@ -96,7 +96,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
 
       refute_equal("Klenod::Build::Plugins::ImagePlugin::Image", image.class.name)
       refute_match(/::Exports\z/, image.inspect)
-      assert(loaded.modules.key?("virtual:klenod/image.rb"))
+      assert(loaded.modules.key?("virtual:/klenod/image.rb"))
       assert_equal(4, image.width)
       assert_equal(5, image.height)
       assert_equal("image/png", image.content_type)
@@ -446,8 +446,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       result = context.invalidate_paths([image_path])
       updated_exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
-      assert_equal(["images/logo.png"], result.reloaded_module_ids.map(&:to_s))
-      assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      assert_equal(["app:/images/logo.png"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/entry.rb"], result.reevaluated_module_ids.map(&:to_s))
       refute(updated_exports::Logo.loaded?)
       assert_equal([5, 7], updated_exports.image_size)
     end
@@ -491,7 +491,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       new_original_disk_path = File.join(assets_dir, new_original.output_path.delete_prefix("/"))
       new_variant_disk_path = File.join(assets_dir, new_variant.output_path.delete_prefix("/"))
 
-      assert_equal(["images/hero.png"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/images/hero.png"], result.reloaded_module_ids.map(&:to_s))
       assert_includes(result.removed_assets, old_original.output_path)
       assert_includes(result.removed_assets, old_variant.output_path)
       assert_includes(result.added_assets, new_original.output_path)

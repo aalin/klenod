@@ -16,7 +16,7 @@ class Klenod::StandaloneExampleTest < Minitest::Test
         context = example_config.context
         entry = context.entry(example_config.entrypoints.fetch(0))
 
-        assert_equal("main.rb", entry.id.to_s)
+        assert_equal("app:/main.rb", entry.id.to_s)
         refute(File.exist?(output), "Expected entry handle creation to avoid running the report")
         entry.exports
       end

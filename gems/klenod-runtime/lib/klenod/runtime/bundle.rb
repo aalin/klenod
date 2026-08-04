@@ -133,6 +133,8 @@ module Klenod
         id = module_ref.respond_to?(:path) ? module_ref.path : module_ref.to_s
         id = entrypoints.fetch(id, id) if entrypoints.respond_to?(:fetch)
         return id if @modules.key?(id)
+        canonical_module_id = module_id_for_canonical_ref(id)
+        return canonical_module_id if canonical_module_id
 
         if (relative_id = module_id_for_absolute_ref(id))
           return relative_id
@@ -142,6 +144,26 @@ module Klenod
       end
 
       private
+
+      SCHEME_PATTERN = /\A[A-Za-z][A-Za-z0-9+.-]*:/
+
+      def module_id_for_canonical_ref(id)
+        canonical =
+          if id.match?(SCHEME_PATTERN)
+            canonical_scheme_ref(id)
+          elsif !id.start_with?("/")
+            "app:/#{id.delete_prefix("/")}"
+          end
+
+        canonical if canonical && @modules.key?(canonical)
+      end
+
+      def canonical_scheme_ref(id)
+        scheme, rest = id.split(":", 2)
+        return id if rest.start_with?("/", "//")
+
+        "#{scheme}:/#{rest}"
+      end
 
       def module_id_for_absolute_ref(id)
         return nil unless source_root

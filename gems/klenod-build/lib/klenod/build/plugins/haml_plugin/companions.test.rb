@@ -89,7 +89,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       result = context.invalidate_paths([css_path])
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
 
-      assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
       assert_match(/title/, styles.fetch(:title))
       assert(context.graph.records.key?(ModuleId.new("pages/page.css", nil)))
     end
@@ -122,8 +122,8 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       haml_record = context.graph.records.fetch(ModuleId.new("pages/page.haml", nil))
       css_record = context.graph.records.fetch(ModuleId.new("pages/page.css", nil))
 
-      assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
-      assert_equal(["entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/entry.rb"], result.reevaluated_module_ids.map(&:to_s))
       assert_equal(
         [
           ModuleId.new("pages/page.css", nil),
@@ -352,7 +352,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       result = context.invalidate_paths([haml_path])
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
 
-      assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
       refute(context.graph.records.key?(virtual_css_id))
       assert_empty(styles.keys)
     end
@@ -370,7 +370,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       File.write(intl_path, "title = \"Hello\"\n")
       result = context.invalidate_paths([intl_path])
 
-      assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
       assert_equal(1, context.graph.records.fetch(haml_record.id).version)
     end
   end
@@ -392,7 +392,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
       css_record = context.graph.records.fetch(ModuleId.new("pages/page.css", nil))
 
-      assert_equal(["pages/page.css", "pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.css", "app:/pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
       assert_match(/title/, old_styles.fetch(:title))
       refute_includes(styles.keys, :title)
       assert_match(/heading/, styles.fetch(:heading))
@@ -417,9 +417,9 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       File.delete(intl_path)
       remove_result = context.invalidate_paths([], removed_paths: [intl_path])
 
-      assert_equal(["pages/page.haml"], add_result.reloaded_module_ids.map(&:to_s))
-      assert_equal(["pages/page.haml"], edit_result.reloaded_module_ids.map(&:to_s))
-      assert_equal(["pages/page.haml"], remove_result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], add_result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], edit_result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], remove_result.reloaded_module_ids.map(&:to_s))
       assert_equal(3, context.graph.records.fetch(haml_record.id).version)
     end
   end
@@ -454,7 +454,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       File.write(intl_path, "title = \"Hello\"\ninvalid =\n")
       result = context.invalidate_paths([intl_path])
 
-      assert_equal(["pages/page.haml"], result.errors.map { |module_id, _error| module_id.to_s })
+      assert_equal(["app:/pages/page.haml"], result.errors.map { |module_id, _error| module_id.to_s })
       assert_kind_of(TomlRB::ParseError, result.errors.first.last)
     end
   end
@@ -475,8 +475,8 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       result = context.invalidate_paths([], removed_paths: [css_path])
       styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
 
-      assert_equal(["pages/page.css"], result.removed_module_ids.map(&:to_s))
-      assert_equal(["pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.css"], result.removed_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
       assert_empty(styles.keys)
     end
   end

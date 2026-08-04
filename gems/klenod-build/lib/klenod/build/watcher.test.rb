@@ -112,7 +112,7 @@ class Klenod::Build::Watcher::Test < Minitest::Test
       added_update = event.asset_updates.fetch(0)
 
       assert_same(event, events.fetch(0))
-      assert_equal(["pages/page.haml"], event.result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], event.result.reloaded_module_ids.map(&:to_s))
       assert_equal([], event.result.removed_module_ids)
       assert_equal(event.asset_changes.added, event.asset_updates.map(&:output_path))
       assert(added_update.added?)
@@ -138,8 +138,8 @@ class Klenod::Build::Watcher::Test < Minitest::Test
       styles = context.graph.mods.fetch(Klenod::Build::ModuleId.new("pages/page.haml", nil)).const_get(:Exports)::ClassNames
       removed_update = event.asset_updates.find { |update| update.output_path == old_asset.output_path }
 
-      assert_equal(["pages/page.css"], event.result.removed_module_ids.map(&:to_s))
-      assert_equal(["pages/page.haml"], event.result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.css"], event.result.removed_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], event.result.reloaded_module_ids.map(&:to_s))
       assert_equal(old_assets.map(&:output_path).sort, event.asset_changes.removed.sort)
       assert(removed_update.removed?)
       assert_equal(old_asset, removed_update.previous_asset)
@@ -169,11 +169,11 @@ class Klenod::Build::Watcher::Test < Minitest::Test
       File.delete(intl_path)
       remove_event = emit_update(context, [], [intl_path], 2)
 
-      assert_equal(["pages/page.haml"], add_event.result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], add_event.result.reloaded_module_ids.map(&:to_s))
       assert(add_event.asset_changes.empty?)
       assert_equal([], add_event.asset_updates)
       assert_equal("Hello", translations.fetch("en-US").fetch("title"))
-      assert_equal(["pages/page.haml"], remove_event.result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/pages/page.haml"], remove_event.result.reloaded_module_ids.map(&:to_s))
       assert(remove_event.asset_changes.empty?)
       assert_equal([], remove_event.asset_updates)
     end
