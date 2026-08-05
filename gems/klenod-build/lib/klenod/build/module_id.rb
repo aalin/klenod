@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "protocol/url"
+
 module Klenod
   module Build
     class ModuleId
@@ -10,40 +12,26 @@ module Klenod
       end
 
       def initialize(value, query = nil)
-        value, parsed_query = value.to_s.split("?", 2)
-        query ||= parsed_query
+        @url = absolute_url_for(value.to_s)
+        @url = @url.with(query: query) if query
 
-        @scheme, @host, @uri_path = parse_uri_parts(value)
-        @query = query
+        @scheme = @url.scheme.to_sym
+        @host = @url.authority
+        @uri_path = absolute_uri_path(@url.path)
+        @query = @url.query
       end
 
       attr_reader :scheme, :host, :uri_path, :query
 
       def merge(specifier)
         specifier = specifier.to_s
-        return self.class.parse(specifier) if specifier.match?(SCHEME_PATTERN)
+        return self.class.parse(specifier) if explicit_scheme?(specifier)
 
-        path, query = specifier.split("?", 2)
-        merged_path =
-          if path.empty?
-            uri_path
-          elsif path.start_with?("/")
-            path
-          else
-            File.expand_path(path, File.dirname(uri_path))
-          end
-
-        self.class.new(uri_string(scheme, host, merged_path), query)
+        self.class.parse((@url + Protocol::URL[specifier]).to_s)
       end
 
       def to_s
-        result =
-          if host
-            "#{scheme}://#{host}#{uri_path}"
-          else
-            "#{scheme}:#{uri_path}"
-          end
-        query ? "#{result}?#{query}" : result
+        @url.to_s
       end
 
       def path
@@ -81,24 +69,21 @@ module Klenod
 
       private
 
-      def parse_uri_parts(value)
-        if value.match?(SCHEME_PATTERN)
-          parse_explicit_uri(value)
-        else
-          [:app, nil, absolute_uri_path(value)]
-        end
+      def absolute_url_for(value)
+        parsed = Protocol::URL[value]
+        return absolute_url(parsed) if parsed.respond_to?(:scheme) && parsed.scheme
+
+        Protocol::URL::Absolute.new("app", nil, absolute_uri_path(parsed.path), parsed.query, parsed.fragment)
       end
 
-      def parse_explicit_uri(value)
-        scheme_string, rest = value.split(":", 2)
-        scheme = scheme_string.to_sym
-
-        if rest.start_with?("//")
-          host, path = rest.delete_prefix("//").split("/", 2)
-          [scheme, host, absolute_uri_path(path)]
-        else
-          [scheme, nil, absolute_uri_path(rest)]
-        end
+      def absolute_url(parsed)
+        Protocol::URL::Absolute.new(
+          parsed.scheme,
+          parsed.authority,
+          absolute_uri_path(parsed.path),
+          parsed.query,
+          parsed.fragment
+        )
       end
 
       def absolute_uri_path(path)
@@ -107,12 +92,8 @@ module Klenod
         path
       end
 
-      def uri_string(scheme, host, path)
-        if host
-          "#{scheme}://#{host}#{absolute_uri_path(path)}"
-        else
-          "#{scheme}:#{absolute_uri_path(path)}"
-        end
+      def explicit_scheme?(value)
+        value.match?(SCHEME_PATTERN)
       end
     end
   end

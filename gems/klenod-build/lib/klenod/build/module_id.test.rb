@@ -46,9 +46,28 @@ class Klenod::Build::ModuleId::Test < Minitest::Test
     gem_component = ModuleId.parse("gem://klenod-ui/components/Button.haml")
 
     assert_equal("app:/pages/foo/Icon.haml", app_page.merge("./Icon.haml").to_s)
+    assert_equal("app:/pages/foo/Card.haml", app_page.merge("Card.haml").to_s)
     assert_equal("app:/components/Hello.haml", app_page.merge("/components/Hello.haml").to_s)
     assert_equal("gem://klenod-ui/components/Icon.haml", gem_component.merge("./Icon.haml").to_s)
+    assert_equal("gem://klenod-ui/components/Icon.haml", gem_component.merge("Icon.haml").to_s)
     assert_equal("gem://klenod-ui/tokens.css", gem_component.merge("/tokens.css").to_s)
     assert_equal("app:/components/Hello.haml", gem_component.merge("app:/components/Hello.haml").to_s)
+  end
+
+  def test_preserves_queries_when_constructing_and_merging
+    app_page = ModuleId.parse("app:/pages/foo/+page.haml")
+
+    assert_equal("app:/images/hero.jpg?width=320", ModuleId.new("images/hero.jpg?width=320", nil).to_s)
+    assert_equal("app:/images/hero.jpg?width=640", ModuleId.new("images/hero.jpg?width=320", "width=640").to_s)
+    assert_equal("app:/pages/foo/image.jpg?width=320", app_page.merge("./image.jpg?width=320").to_s)
+    assert_equal("app:/pages/foo/+page.haml?inline=0", app_page.merge("?inline=0").to_s)
+  end
+
+  def test_preserves_route_syntax_paths
+    page = ModuleId.parse("app:/routes/(marketing)/blog/[slug]/+page.haml")
+    modal = ModuleId.parse("app:/routes/demo/@modal/(.)photo/+page.haml")
+
+    assert_equal("app:/routes/(marketing)/blog/[slug]/article.md", page.merge("./article.md").to_s)
+    assert_equal("app:/routes/demo/@modal/(.)photo/data.json", modal.merge("data.json").to_s)
   end
 end

@@ -11,6 +11,7 @@ PATH
       kramdown-parser-gfm (~> 1.1)
       listen (~> 3.10)
       mayu-css (~> 0.1.5)
+      protocol-url (~> 0.4)
       rmagick (~> 7.0)
       samovar (~> 2.5)
       syntax_tree (~> 6.3)
