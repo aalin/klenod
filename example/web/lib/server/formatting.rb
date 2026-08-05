@@ -69,7 +69,7 @@ module Example
       Warning[:experimental] = previous unless previous.nil?
     end
 
-    def log_startup(port:, source_dir:, assets_dir:, source_label: "watching", host: "localhost")
+    def log_startup(port:, source_dir:, assets_dir:, source_label: "watching", host: "localhost", scheme: "http", protocol: nil)
       yjit_value =
         if defined?(RubyVM::YJIT) && RubyVM::YJIT.enabled?
           color(:value, "true")
@@ -78,11 +78,12 @@ module Example
         end
 
       rows = [
-        ["url", color(:value, "http://#{host}:#{port}")],
+        ["url", color(:value, "#{scheme}://#{host}:#{port}")],
         [source_label, source_dir],
         ["assets", assets_dir || color(:dim, "in memory")],
+        protocol && ["protocol", protocol],
         ["yjit", yjit_value]
-      ]
+      ].compact
       label_width = rows.map { |label, _value| label.length }.max
 
       puts color(:title, "Klenod example server")

@@ -35,8 +35,9 @@ module Example
       ServerFormatting.suppress_io_buffer_experimental_warning
       bundle.preload_entrypoints
       asset_app
-      ServerFormatting.log_startup(host:, port:, source_dir: source_root, assets_dir: assets_dir, source_label: "source")
-      server_runner.run
+      runner = server_runner
+      ServerFormatting.log_startup(host:, port:, source_dir: source_root, assets_dir: assets_dir, source_label: "source", scheme: runner.scheme, protocol: runner.protocol_name)
+      runner.run
     end
 
     private

@@ -2,6 +2,8 @@
 
 require "async"
 require "async/http"
+require "async/http/protocol/https"
+require "localhost"
 require "protocol/http/response"
 
 require_relative "formatting"
@@ -14,6 +16,16 @@ module Example
       @asset_app = asset_app
       @app = app
       @error_handler = error_handler
+    end
+
+    attr_reader :host, :port
+
+    def scheme
+      "https"
+    end
+
+    def protocol_name
+      "HTTPS + HTTP/2 + HTTP/1.x"
     end
 
     def run
@@ -39,10 +51,23 @@ module Example
 
     private
 
-    attr_reader :host, :port
-
     def endpoint
-      @endpoint ||= Async::HTTP::Endpoint.parse("http://#{host}:#{port}")
+      @endpoint ||= Async::HTTP::Endpoint.parse("#{scheme}://#{host}:#{port}", protocol: protocol, ssl_context: ssl_context)
+    end
+
+    def protocol
+      Async::HTTP::Protocol::HTTPS
+    end
+
+    def ssl_context
+      @ssl_context ||= Localhost::Authority.fetch(host).server_context.tap do |context|
+        protocols = Async::HTTP::Protocol::HTTPS.names
+        context.alpn_protocols = protocols
+
+        context.alpn_select_cb = lambda do |offered_protocols|
+          protocols.find { |protocol| offered_protocols.include?(protocol) }
+        end
+      end
     end
 
     def response_tuple_for(request)

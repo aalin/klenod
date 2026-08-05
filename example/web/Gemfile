@@ -15,3 +15,5 @@ group :development, :build do
 end
 
 gem "http-accept", "~> 2.2"
+
+gem "localhost", "~> 1.8"

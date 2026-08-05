@@ -35,9 +35,16 @@ Vernier writes a profile file in the current directory. Use `bundle exec vernier
 
 `bin/routes` prints a Rails-style route table with the HTTP method, server path, route type, and source file for each discovered `+page.haml` and `+route.rb`.
 
-`bin/dev` starts the development `async-http` server on `http://localhost:9292`. It watches the source tree, matches each request through the router plugin, serves emitted CSS/image assets from the build context, and renders detailed development exception pages.
+`bin/dev` starts the development `async-http` server on `https://localhost:9292`. It watches the source tree, matches each request through the router plugin, serves emitted CSS/image assets from the build context, and renders detailed development exception pages.
 
-`bin/server` starts the production server on `http://localhost:9292` from the bundle and assets written by `bin/build`. It logs exceptions server-side, but returns a generic 500 response instead of rendering development error details.
+`bin/server` starts the production server on `https://localhost:9292` from the bundle and assets written by `bin/build`. It logs exceptions server-side, but returns a generic 500 response instead of rendering development error details.
+
+The example server uses the `localhost` gem for its local TLS certificate. HTTPS clients negotiate HTTP/2 when supported and fall back to HTTP/1.x otherwise:
+
+```sh
+example/web/bin/dev
+curl -k -I --http2 https://localhost:9292/demo
+```
 
 Build and run the production server in Docker from the repository root:
 

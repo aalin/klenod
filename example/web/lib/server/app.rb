@@ -27,12 +27,13 @@ module Example
       ServerFormatting.suppress_io_buffer_experimental_warning
       entry
       asset_app
-      ServerFormatting.log_startup(host:, port:, source_dir:, assets_dir:)
+      runner = server_runner
+      ServerFormatting.log_startup(host:, port:, source_dir:, assets_dir:, scheme: runner.scheme, protocol: runner.protocol_name)
 
       begin
         watcher.start
 
-        server_runner.run
+        runner.run
       ensure
         watcher&.stop
       end

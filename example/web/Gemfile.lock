@@ -60,6 +60,10 @@ GEM
       traces (~> 0.10)
     async-pool (0.11.2)
       async (>= 2.0)
+    bake (0.25.0)
+      bigdecimal
+      samovar (~> 2.1)
+    bigdecimal (4.1.2)
     brotli (0.8.0)
     citrus (3.0.2)
     console (1.37.0)
@@ -100,6 +104,8 @@ GEM
       logger
       rb-fsevent (~> 0.10, >= 0.10.3)
       rb-inotify (~> 0.9, >= 0.9.10)
+    localhost (1.8.0)
+      bake
     logger (1.7.0)
     mayu-css (0.1.5)
     mayu-css (0.1.5-aarch64-linux)
@@ -174,6 +180,7 @@ DEPENDENCIES
   klenod-build!
   klenod-rack!
   klenod-runtime!
+  localhost (~> 1.8)
   minitest (~> 6.0)
   rbnacl (~> 7.1)
   rouge (~> 5.0)
@@ -183,6 +190,8 @@ CHECKSUMS
   async (2.42.0) sha256=536078293b8c95d5b5679fa01bf7d2458bcc65cd46dec2c4cb3580feaeb965c6
   async-http (0.95.1) sha256=0c3dd458c204c06d5c4b20b01bbec4794a1203db627fb2ce536e1799ec14786c
   async-pool (0.11.2) sha256=0a43a17b02b04d9c451b7d12fafa9a50e55dc6dd00d4369aca00433f16a7e3ed
+  bake (0.25.0) sha256=a47bdc6a26addc048827debc36fe27bb4d5d71ac2958ad910b5386e9baf49869
+  bigdecimal (4.1.2) sha256=53d217666027eab4280346fba98e7d5b66baaae1b9c3c1c0ffe89d48188a3fbd
   brotli (0.8.0) sha256=0c5a42046b3b603fb109656881147fd76064c034b7d19c1b4fcc32a093a4d55d
   citrus (3.0.2) sha256=4ec2412fc389ad186735f4baee1460f7900a8e130ffe3f216b30d4f9c684f650
   console (1.37.0) sha256=8093b286c2595a063849c098594fee5155ecc7967d36f3aa8cbe7569c8f3efd7
@@ -214,6 +223,7 @@ CHECKSUMS
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
   kramdown-parser-gfm (1.1.0) sha256=fb39745516427d2988543bf01fc4cf0ab1149476382393e0e9c48592f6581729
   listen (3.10.0) sha256=c6e182db62143aeccc2e1960033bebe7445309c7272061979bb098d03760c9d2
+  localhost (1.8.0) sha256=df7ea825b4f64949c588c17efac86bc47ddc4460d723778abe933b71759b2701
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
   mayu-css (0.1.5) sha256=a9579066d20e6ef16b183cd4d5bb4747bae6ccb85a8caeef13855278ed19b959
   mayu-css (0.1.5-aarch64-linux) sha256=2ff0f90bf50a594ebe6b3093efd7a738b96d87751a2190afe75c4f9a7299356e
