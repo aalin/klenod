@@ -382,7 +382,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
         ) { |_dir, _context, _record, _exports| }
       end
 
-    assert_equal(1, error.line)
+    assert_equal(3, error.line)
     assert_includes(error.message, "Could not parse Haml dynamic attributes")
     assert_match(/Errors:|Missing:/, error.message)
   end

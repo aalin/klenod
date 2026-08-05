@@ -1004,6 +1004,7 @@ module Klenod
             end
 
             def raise_ruby_parse_error(source, line_no:, context:)
+              parse_error = syntax_tree_parse_error(source)
               explain =
                 SyntaxSuggest::ExplainSyntax.new(
                   code_lines: SyntaxSuggest::CodeLine.from_source(source)
@@ -1011,11 +1012,24 @@ module Klenod
               errors = explain.errors
               missing = explain.missing.map { |item| explain.why(item) } - errors
 
-              message = ["#{context}: #{source.inspect}"]
+              message = [context]
               message << "Errors:\n  #{errors.join("\n  ")}" unless errors.empty?
               message << "Missing:\n  #{missing.join("\n  ")}" unless missing.empty?
 
-              raise RubyParseError.new(message.join("\n\n"), line: line_no)
+              raise RubyParseError.new(message.join("\n\n"), line: source_line_for_parse_error(line_no, parse_error))
+            end
+
+            def syntax_tree_parse_error(source)
+              SyntaxTree.parse(source)
+              nil
+            rescue SyntaxTree::Parser::ParseError => error
+              error
+            end
+
+            def source_line_for_parse_error(line_no, parse_error)
+              return line_no unless line_no && parse_error&.lineno
+
+              line_no + parse_error.lineno - 1
             end
           end
         end
