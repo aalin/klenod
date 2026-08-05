@@ -55,8 +55,10 @@ module Example
       page = match.page
       layouts = match.layouts
       prepare_slot_pages(match, layouts)
-      css_asset_references = context.asset_references_for_module(css_module_ids_for(match), type: :css)
-      early_hints_sent = send_early_hints(raw_request, css_asset_references)
+      route_asset_module_ids = route_asset_module_ids_for(match)
+      css_asset_references = context.asset_references_for_module(route_asset_module_ids, type: :css)
+      javascript_asset_references = context.asset_references_for_module(route_asset_module_ids, type: :javascript)
+      early_hints_sent = send_early_hints(raw_request, css_asset_references, javascript_asset_references)
 
       body =
         Context.with(request: request, routes: routes) do
@@ -72,12 +74,13 @@ module Example
               <head>
                 <title>Klenod example</title>
                 #{stylesheet_links(css_asset_references)}
+                #{module_script_tags(javascript_asset_references)}
               </head>
               #{body}
             </html>
           HTML
           status: status,
-          headers: html_response_headers(css_asset_references, include_link: !early_hints_sent)
+          headers: html_response_headers(css_asset_references, javascript_asset_references, include_link: !early_hints_sent)
         ),
         request
       )
@@ -146,17 +149,23 @@ module Example
         .join("\n")
     end
 
-    def html_response_headers(css_asset_references, include_link: true)
+    def module_script_tags(asset_references)
+      asset_references
+        .map { |reference| %(<script type="module" src="#{reference.asset.output_path}" data-index="#{reference.index}"></script>) }
+        .join("\n")
+    end
+
+    def html_response_headers(css_asset_references, javascript_asset_references, include_link: true)
       headers = {"vary" => "Cookie"}
-      link = stylesheet_preload_link_header(css_asset_references)
+      link = asset_preload_link_header(css_asset_references, javascript_asset_references)
       headers["link"] = link if include_link && !link.empty?
       headers
     end
 
-    def send_early_hints(raw_request, css_asset_references)
+    def send_early_hints(raw_request, css_asset_references, javascript_asset_references)
       return unless raw_request&.respond_to?(:send_interim_response)
 
-      link = stylesheet_preload_link_header(css_asset_references)
+      link = asset_preload_link_header(css_asset_references, javascript_asset_references)
       return false if link.empty?
 
       raw_request.send_interim_response(103, [["link", link]])
@@ -165,10 +174,21 @@ module Example
       false
     end
 
-    def stylesheet_preload_link_header(asset_references)
+    def asset_preload_link_header(css_asset_references, javascript_asset_references)
+      [
+        *stylesheet_preload_links(css_asset_references),
+        *modulepreload_links(javascript_asset_references)
+      ].join(", ")
+    end
+
+    def stylesheet_preload_links(asset_references)
       asset_references
         .map { |reference| %(<#{reference.asset.output_path}>; rel=preload; as=style) }
-        .join(", ")
+    end
+
+    def modulepreload_links(asset_references)
+      asset_references
+        .map { |reference| %(<#{reference.asset.output_path}>; rel=modulepreload) }
     end
 
     def request_path(raw_request)
@@ -306,15 +326,15 @@ module Example
       end
     end
 
-    def css_module_ids_for(match)
+    def route_asset_module_ids_for(match)
       [
         *match.route.layout_module_ids,
         match.route.module_id,
-        *slot_css_module_ids_for(match)
+        *slot_asset_module_ids_for(match)
       ].compact.uniq
     end
 
-    def slot_css_module_ids_for(match)
+    def slot_asset_module_ids_for(match)
       rendered_layout_ids = match.route.layout_module_ids
 
       match

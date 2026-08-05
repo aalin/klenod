@@ -211,18 +211,23 @@ class Klenod::ExampleTest < Minitest::Test
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
-    request = EarlyHintsRequest.new("GET", "/demo/dashboard")
+    request = EarlyHintsRequest.new("GET", "/demo")
 
     status, headers, body = entry.call(request, context)
-    paths = stylesheet_paths(body.join)
+    html = body.join
+    stylesheet_paths = stylesheet_paths(html)
+    script_paths = module_script_paths(html)
     _early_status, early_headers = request.interim_responses.fetch(0)
     link = early_headers.fetch(0).fetch(1)
 
     assert_equal(200, status)
     refute_includes(headers.keys, "link")
     assert_equal([[103, [["link", link]]]], request.interim_responses)
-    paths.each do |path|
+    stylesheet_paths.each do |path|
       assert_includes(link, "<#{path}>; rel=preload; as=style")
+    end
+    script_paths.each do |path|
+      assert_includes(link, "<#{path}>; rel=modulepreload")
     end
   end
 
@@ -231,14 +236,33 @@ class Klenod::ExampleTest < Minitest::Test
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
 
-    status, headers, body = entry.call(request("/demo/dashboard"), context)
-    paths = stylesheet_paths(body.join)
+    status, headers, body = entry.call(request("/demo"), context)
+    html = body.join
+    stylesheet_paths = stylesheet_paths(html)
+    script_paths = module_script_paths(html)
     link = headers.fetch("link")
 
     assert_equal(200, status)
-    paths.each do |path|
+    stylesheet_paths.each do |path|
       assert_includes(link, "<#{path}>; rel=preload; as=style")
     end
+    script_paths.each do |path|
+      assert_includes(link, "<#{path}>; rel=modulepreload")
+    end
+  end
+
+  def test_example_app_includes_route_javascript_as_module_script
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    status, _headers, body = entry.call(request("/demo"), context)
+    html = body.join
+    scripts = module_script_paths(html)
+
+    assert_equal(200, status)
+    assert(scripts.any? { |path| path.include?("routes_demo_demo_js") })
+    assert_module_script_indexes_present(html)
   end
 
   def test_example_app_renders_nested_route_through_layout
@@ -1338,9 +1362,25 @@ class Klenod::ExampleTest < Minitest::Test
     html.scan(%r{<link rel="stylesheet" href="[^"]+" data-index="(\d+)"}).flatten.map(&:to_i)
   end
 
+  def module_script_paths(html)
+    html.scan(%r{<script type="module" src="([^"]+)"}).flatten
+  end
+
+  def module_script_indexes(html)
+    html.scan(%r{<script type="module" src="[^"]+" data-index="(\d+)"}).flatten.map(&:to_i)
+  end
+
   def assert_stylesheet_indexes_present(html)
     paths = stylesheet_paths(html)
     indexes = stylesheet_indexes(html)
+
+    assert_equal(paths.length, indexes.length)
+    assert_equal(indexes.sort, indexes)
+  end
+
+  def assert_module_script_indexes_present(html)
+    paths = module_script_paths(html)
+    indexes = module_script_indexes(html)
 
     assert_equal(paths.length, indexes.length)
     assert_equal(indexes.sort, indexes)

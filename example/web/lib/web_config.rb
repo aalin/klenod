@@ -43,6 +43,7 @@ module Example
           cache_path: google_fonts_cache_path
         ),
         Klenod::Build::Plugins::CssPlugin::Plugin.new,
+        Klenod::Build::Plugins::JavaScriptPlugin::Plugin.new,
         Klenod::Build::Plugins::SvgPlugin::Plugin.new,
         Klenod::Build::Plugins::ImagePlugin::Plugin.new(
           widths: [320, 640, 960]

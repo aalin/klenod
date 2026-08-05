@@ -69,7 +69,7 @@ The server entry imports the virtual router:
 Router = import("virtual:router")
 ```
 
-Pages import their own assets. For example, `src/routes/+page.haml` imports an image with query-driven variants.
+Pages import their own assets. For example, `src/routes/+page.haml` imports an image with query-driven variants, and `src/routes/demo/+page.haml` imports `demo.js`. Route-reachable JavaScript assets are emitted as content-hashed files, included with `<script type="module">`, and advertised with `rel=modulepreload`.
 
 `Router::Default.match(path).page` returns the matched component class. `Router::Default.match(path).handler` returns a matched `+route.rb` handler class. The server entry wraps rendered pages through `match.layouts`, passing the current HTML as `children: [inner]`, renders named parallel routes from `match.slots`, and dispatches route handlers through the example `Example::Route` base class. The nested route `src/routes/demo/blog/[slug]/+page.haml` demonstrates dynamic params at `/demo/blog/graph`.
 

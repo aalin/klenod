@@ -39,6 +39,7 @@ Plugins can also implement `invalidate_module_ids` for custom invalidation and `
 - `MarkdownPlugin::Plugin`
 - `GemImportPlugin::Plugin`
 - `CssPlugin::Plugin`
+- `JavaScriptPlugin::Plugin`
 - `SvgPlugin::Plugin`
 - `ImagePlugin::Plugin`
 - `JsonPlugin::Plugin`
@@ -223,6 +224,19 @@ Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
 - `fetcher`: optional object/lambda used for downloading. It must respond to `call(url)`. If it also responds to `write(url, io)`, font downloads stream through that method.
 - `cache_path`: optional directory for raw Google CSS responses, keyed by full URL. `nil` disables the cache.
 - `refresh_cache`: when true, fetches and replaces cached CSS even if a cached response exists.
+
+## JavaScriptPlugin
+
+Handles `.js` modules as browser assets.
+
+- Emits the JavaScript file as a content-hashed asset.
+- Ruby/Haml imports receive the public asset path as a string.
+- Runtime bundle imports serialize that public path directly.
+- Does not parse JavaScript imports, transpile, minify, bundle, or emit JavaScript source maps yet.
+
+Configuration: none.
+
+Example framework behavior can decide how to include emitted JavaScript assets. The web example includes route-reachable assets with module script tags and advertises them with `rel=modulepreload`.
 
 ## SvgPlugin
 
