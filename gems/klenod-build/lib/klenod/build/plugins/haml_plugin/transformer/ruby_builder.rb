@@ -490,6 +490,10 @@ module Klenod
               rewrite_ruby_source(source, line_no)
             end
 
+            def ruby_parse_error(source, line_no:, context:)
+              raise_ruby_parse_error(source, line_no: line_no, context: context)
+            end
+
             def block_script?(source)
               fixed_source = fix_syntax_by_adding_missing_pairs(source)
               node = parse_expression(fixed_source, context: :block_script_predicate)

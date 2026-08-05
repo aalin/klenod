@@ -367,6 +367,26 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_rejects_invalid_dynamic_attribute_hashes
+    error =
+      assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
+        evaluate_haml(
+          {
+            "pages/page.haml" => <<~HAML
+              %time{
+                datetime: time.iso8601
+                "date-style": "short"
+              } Hello
+            HAML
+          }
+        ) { |_dir, _context, _record, _exports| }
+      end
+
+    assert_equal(1, error.line)
+    assert_includes(error.message, "Could not parse Haml dynamic attributes")
+    assert_match(/Errors:|Missing:/, error.message)
+  end
+
   def test_haml_transformer_maps_object_reference_to_key_prop
     evaluate_haml(
       {

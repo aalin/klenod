@@ -549,8 +549,10 @@ module Klenod
                 return simple
               end
 
-              hash = builder.hash_expression(source)
-              return {} unless hash
+              hash = builder.hash_expression(source, line_no: node.line)
+              unless hash
+                builder.ruby_parse_error(source, line_no: node.line, context: "Could not parse Haml dynamic attributes")
+              end
 
               dynamic = {}
               hash.node.assocs.each do |assoc|
@@ -577,7 +579,10 @@ module Klenod
               value = match[2].strip
               return nil if value.empty?
 
-              [match[1].to_sym, builder.node_fragment(value, nil)]
+              fragment = builder.expression(value)
+              return nil unless fragment.node
+
+              [match[1].to_sym, fragment]
             end
           end
 
