@@ -339,6 +339,34 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_supports_quoted_dynamic_attribute_labels
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %time(is="intl-time"){
+            "date-style": "full",
+            "time-style": "short",
+            datetime: "2026-08-05T12:10:39-05:00"
+          } 2026-08-05
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal(
+        [
+          :time,
+          "2026-08-05",
+          {
+            is: "intl-time",
+            "date-style": "full",
+            "time-style": "short",
+            datetime: "2026-08-05T12:10:39-05:00"
+          }
+        ],
+        exports::Default.new.render
+      )
+    end
+  end
+
   def test_haml_transformer_maps_object_reference_to_key_prop
     evaluate_haml(
       {

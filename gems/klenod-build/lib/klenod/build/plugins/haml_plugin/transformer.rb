@@ -683,11 +683,24 @@ module Klenod
             case node
             when SyntaxTree::Label
               node.value.delete_suffix(":").to_sym
+            when SyntaxTree::DynaSymbol
+              static_dyna_symbol_value(node)&.to_sym || builder.fragment(node).source.to_sym
             when SyntaxTree::StringLiteral
               node.parts.map(&:value).join.to_sym
             else
               builder.fragment(node).source.to_sym
             end
+          end
+
+          def static_dyna_symbol_value(node)
+            values =
+              node.parts.map do |part|
+                return nil unless part.is_a?(SyntaxTree::TStringContent)
+
+                part.value
+              end
+
+            values.join
           end
 
           def source_mark(node, builder:)
