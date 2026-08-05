@@ -387,6 +387,35 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     assert_match(/Errors:|Missing:/, error.message)
   end
 
+  def test_haml_transformer_supports_omitted_dynamic_attribute_values
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          - lang = "sv"
+          %time{
+            lang:,
+            datetime: "2026-08-05T12:10:39-05:00"
+          } 2026-08-05
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal(
+        [
+          nil,
+          [
+            :time,
+            "2026-08-05",
+            {
+              lang: "sv",
+              datetime: "2026-08-05T12:10:39-05:00"
+            }
+          ]
+        ],
+        exports::Default.new.render
+      )
+    end
+  end
+
   def test_haml_transformer_maps_object_reference_to_key_prop
     evaluate_haml(
       {

@@ -557,7 +557,7 @@ module Klenod
               dynamic = {}
               hash.node.assocs.each do |assoc|
                 key = attribute_key(assoc.key, builder: builder)
-                value = builder.node_fragment(node_source(source, assoc.value), assoc.value)
+                value = attribute_value(assoc, source, builder: builder)
                 dynamic[key] = value
                 props[key] = value
               end
@@ -682,6 +682,24 @@ module Klenod
             return source unless location
 
             source[location.start_char...location.end_char]
+          end
+
+          def attribute_value(assoc, source, builder:)
+            value = assoc.value
+            return builder.node_fragment(node_source(source, value), value) if value
+
+            key = omitted_attribute_value_name(assoc.key)
+            return builder.expression(key) if key
+
+            builder.ruby_parse_error(source, line_no: assoc.key.location&.start_line, context: "Could not parse Haml dynamic attributes")
+          end
+
+          def omitted_attribute_value_name(node)
+            case node
+            when SyntaxTree::Label
+              name = node.value.delete_suffix(":")
+              name if name.match?(/\A[a-zA-Z_]\w*\z/)
+            end
           end
 
           def attribute_key(node, builder:)
