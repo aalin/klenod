@@ -171,10 +171,32 @@ module Example
         next if value == true
 
         output << '="'
-        output << escape_html(value)
+        output << escape_html(attribute_value(name, value))
         output << '"'
       end
       output
+    end
+
+    def self.attribute_value(name, value)
+      return style_attribute(value) if style_attribute?(name, value)
+
+      value
+    end
+
+    def self.style_attribute?(name, value)
+      value.is_a?(Hash) && name.to_sym == :style
+    end
+
+    def self.style_attribute(value)
+      value.filter_map do |property, property_value|
+        next if property_value.nil? || property_value == false
+
+        "#{style_property_name(property)}: #{property_value}"
+      end.join("; ")
+    end
+
+    def self.style_property_name(property)
+      property.to_s.tr("_", "-")
     end
 
     def self.localize_anchor_props(props)

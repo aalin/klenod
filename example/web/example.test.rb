@@ -69,6 +69,26 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(%(<p title="&quot;quoted&quot;">Fish &amp; chips</p>), Example::H.render(node))
   end
 
+  def test_example_h_serializes_style_hashes
+    node =
+      Example::H[
+        :div,
+        "Foo",
+        style: {
+          __background_image: "linear-gradient(#f0f, #fc0)",
+          font_size: "2em",
+          color: %("red"),
+          display: nil,
+          hidden: false
+        }
+      ]
+
+    assert_equal(
+      %(<div style="--background-image: linear-gradient(#f0f, #fc0); font-size: 2em; color: &quot;red&quot;">Foo</div>),
+      Example::H.render(node)
+    )
+  end
+
   def test_example_h_partitions_component_slots
     component =
       Class.new(Example::Component) do
