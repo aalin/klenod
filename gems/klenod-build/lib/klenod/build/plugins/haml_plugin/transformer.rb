@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "syntax_tree"
+require "ripper"
 
 require "klenod/runtime/source_map"
 require_relative "../markdown_compiler"
@@ -493,15 +494,41 @@ module Klenod
           def compile_ruby_filter(node, builder:, import_rewriter: nil)
             text = node.value.fetch(:text)
             text = import_rewriter.call(text) if import_rewriter && text.include?("import")
+            heredoc_body_lines = ruby_heredoc_body_lines(text)
             source = +""
             text.each_line.with_index(node.line + 1) do |line, line_no|
               source << "\n" unless source.empty?
-              source << builder.source_mark(line_no, nil)
-              source << "\n"
-              source << builder.line_rewritten_source(line.chomp, line_no).chomp
+              relative_line_no = line_no - node.line
+
+              if heredoc_body_lines.key?(relative_line_no)
+                source << line.chomp
+              else
+                source << builder.source_mark(line_no, nil)
+                source << "\n"
+                source << builder.line_rewritten_source(line.chomp, line_no).chomp
+              end
             end
 
             builder.node_fragment(source, nil)
+          end
+
+          def ruby_heredoc_body_lines(source)
+            starts = []
+            lines = {}
+
+            ::Ripper.lex(source).each do |(line_no, _column), token, _text, _state|
+              case token
+              when :on_heredoc_beg
+                starts << line_no
+              when :on_heredoc_end
+                start_line = starts.shift
+                next unless start_line
+
+                ((start_line + 1)..line_no).each { |body_line| lines[body_line] = true }
+              end
+            end
+
+            lines
           end
 
           def compile_filter_node(node, builder:, markdown_compiler:)

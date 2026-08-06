@@ -114,4 +114,28 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_includes(fragment.source, "SourceMapMark:2")
     assert_includes(fragment.source, "def title")
   end
+
+  def test_haml_transformer_does_not_insert_source_marks_inside_ruby_filter_heredocs
+    transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    parsed = SyntaxTree::Haml.parse(<<~HAML)
+      :ruby
+        ExampleSource = <<~TEXT
+          :ruby
+            import("./IntlTime.js")
+
+          %time(is="intl-time")
+        TEXT
+    HAML
+    fragment = transformer.send(:compile_ruby_filter, parsed.children.fetch(0), builder: builder)
+
+    assert_includes(fragment.source, "SourceMapMark:2")
+    assert_includes(fragment.source, "ExampleSource = <<~TEXT")
+    assert_includes(fragment.source, "  :ruby")
+    refute_includes(fragment.source, "SourceMapMark:3")
+    refute_includes(fragment.source, "SourceMapMark:4")
+    refute_includes(fragment.source, "SourceMapMark:5")
+    refute_includes(fragment.source, "SourceMapMark:6")
+    refute_includes(fragment.source, "SourceMapMark:7")
+  end
 end
