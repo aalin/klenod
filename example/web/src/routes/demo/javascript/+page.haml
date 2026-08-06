@@ -1,0 +1,28 @@
+:ruby
+  IntlTime = import("./IntlTime.haml")
+  PageHeader = import("/components/PageHeader.haml")
+  Panel = import("/components/Panel.haml")
+
+  StyleValues = ["full", "long", "medium", "short", nil].freeze
+
+%article
+  %PageHeader{
+    kicker: I18n.t(:header, :kicker),
+    title: I18n.t(:header, :title),
+    summary: I18n.t(:header, :summary)
+  }
+
+  %Panel{ title: I18n.t(:matrix, :title) }
+    %table
+      %thead
+        %tr
+          %th= I18n.t(:matrix, :date_style)
+          %th= I18n.t(:matrix, :time_style)
+          %th= I18n.t(:matrix, :output)
+      %tbody
+        = StyleValues.repeated_permutation(2).map do |date_style, time_style|
+          %tr
+            %td= date_style.inspect
+            %td= time_style.inspect
+            %td
+              %IntlTime{ time: Time.now, date_style:, time_style: }

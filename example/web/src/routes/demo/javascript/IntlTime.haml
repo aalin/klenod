@@ -1,0 +1,16 @@
+:ruby
+  import("./IntlTime.js")
+
+  DEFAULT_DATE_STYLE = "long"
+  DEFAULT_TIME_STYLE = "short"
+
+- time = $time || Time.now
+- lang = $lang || Example::Context.current&.request&.locale || "en"
+- date_style = prop(:date_style, DEFAULT_DATE_STYLE)
+- time_style = prop(:time_style, DEFAULT_TIME_STYLE)
+%time(is="intl-time"){
+  lang:,
+  datetime: time.iso8601,
+  "date-style": date_style,
+  "time-style": time_style,
+}= time

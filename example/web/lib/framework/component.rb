@@ -59,6 +59,15 @@ module Example
       context.routes.localized_path(...)
     end
 
+    def prop?(name)
+      !!prop_key(name)
+    end
+
+    def prop(name, default = nil)
+      key = prop_key(name)
+      key ? @__props.fetch(key) : default
+    end
+
     def children
       @__props[:children]
     end
@@ -66,6 +75,15 @@ module Example
     def initialize(**props)
       @__props = (@__props || {}).merge(props).freeze
       @__slots = (@__slots || {}).freeze
+    end
+
+    private
+
+    def prop_key(name)
+      return name if @__props.key?(name)
+
+      symbol_name = name.to_sym if name.respond_to?(:to_sym)
+      symbol_name if symbol_name && @__props.key?(symbol_name)
     end
   end
 end

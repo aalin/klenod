@@ -123,6 +123,24 @@ class Klenod::ExampleTest < Minitest::Test
     end
   end
 
+  def test_example_component_reads_props_without_exposing_storage
+    component =
+      Class.new(Example::Component) do
+        def values
+          [
+            prop?(:enabled),
+            prop(:enabled, true),
+            prop?(:missing),
+            prop(:missing, "fallback")
+          ]
+        end
+      end
+
+    instance = component.instantiate(enabled: false)
+
+    assert_equal([true, false, false, "fallback"], instance.values)
+  end
+
   def test_example_app_loads_renders_and_emits_assets
     config = example_config
     context = config.context

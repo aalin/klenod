@@ -1,0 +1,10 @@
+[header]
+kicker = "JavaScript"
+title = "Import JavaScript and use custom elements"
+summary = "This page imports a JavaScript file from a Haml component. The script defines a customized built-in element that formats times in the browser."
+
+[matrix]
+title = "IntlTime custom element"
+date_style = "date_style"
+time_style = "time_style"
+output = "Output"
