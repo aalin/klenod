@@ -15,7 +15,6 @@ module Klenod
           assert_operator MarkdownPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
           assert_operator GemImportPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
           assert_operator CssPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
-          assert_operator JavaScriptPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
           assert_operator GoogleFontsPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
           assert_operator SvgPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
           assert_operator ImagePlugin::Plugin.new, :is_a?, Klenod::Build::Plugin

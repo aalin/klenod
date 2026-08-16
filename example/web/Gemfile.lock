@@ -20,6 +20,12 @@ PATH
       tsort (~> 0.2.0)
 
 PATH
+  remote: ../../gems/klenod-plugin-javascript
+  specs:
+    klenod-plugin-javascript (0.0.1)
+      klenod-build (= 0.0.1)
+
+PATH
   remote: ../../gems/klenod-rack
   specs:
     klenod-rack (0.0.1)
@@ -178,6 +184,7 @@ DEPENDENCIES
   http-accept (~> 2.2)
   klenod!
   klenod-build!
+  klenod-plugin-javascript!
   klenod-rack!
   klenod-runtime!
   localhost (~> 1.8)
@@ -218,6 +225,7 @@ CHECKSUMS
   json (2.21.1) sha256=13a43df75d95641443f5702dff350f237164a9d811ff0f2c2800d4d980220583
   klenod (0.0.1)
   klenod-build (0.0.1)
+  klenod-plugin-javascript (0.0.1)
   klenod-rack (0.0.1)
   klenod-runtime (0.0.1)
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa

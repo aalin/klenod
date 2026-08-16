@@ -10,19 +10,22 @@ VERSION_FILES = {
   "gems/klenod/lib/klenod/version.rb" => ["Klenod", "VERSION"],
   "gems/klenod-build/lib/klenod/build/version.rb" => ["Klenod", "Build", "VERSION"],
   "gems/klenod-runtime/lib/klenod/runtime/version.rb" => ["Klenod", "Runtime", "VERSION"],
-  "gems/klenod-rack/lib/klenod/rack/version.rb" => ["Klenod", "Rack", "VERSION"]
+  "gems/klenod-rack/lib/klenod/rack/version.rb" => ["Klenod", "Rack", "VERSION"],
+  "gems/klenod-plugin-javascript/lib/klenod/plugin/javascript/version.rb" => ["Klenod", "Plugin", "JavaScript", "VERSION"]
 }.freeze
 
 TEST_LIBS = [
   "gems/klenod/lib",
   "gems/klenod-runtime/lib",
   "gems/klenod-build/lib",
-  "gems/klenod-rack/lib"
+  "gems/klenod-rack/lib",
+  "gems/klenod-plugin-javascript/lib"
 ].freeze
 GEMS = {
   "klenod-runtime" => "gems/klenod-runtime",
   "klenod-build" => "gems/klenod-build",
   "klenod-rack" => "gems/klenod-rack",
+  "klenod-plugin-javascript" => "gems/klenod-plugin-javascript",
   "klenod" => "gems/klenod"
 }.freeze
 
@@ -80,6 +83,7 @@ namespace :test do
   minitest_task(:runtime, "Run klenod-runtime tests", ["gems/klenod-runtime/lib/**/*.test.rb"])
   minitest_task(:build, "Run klenod-build tests", ["gems/klenod-build/lib/**/*.test.rb"])
   minitest_task(:rack, "Run klenod-rack tests", ["gems/klenod-rack/lib/**/*.test.rb"])
+  minitest_task(:javascript, "Run klenod-plugin-javascript tests", ["gems/klenod-plugin-javascript/lib/**/*.test.rb"])
   minitest_task(:meta, "Run klenod meta gem tests", ["gems/klenod/lib/**/*.test.rb"])
   minitest_task(:standalone, "Run standalone example tests", ["example/standalone/**/*.test.rb"])
   minitest_task(:box, "Run Ruby::Box example tests", ["example/box/**/*.test.rb"])
@@ -96,7 +100,7 @@ namespace :test do
   end
 
   desc "Run all packaged gem tests"
-  task gems: %i[runtime build rack meta]
+  task gems: %i[runtime build rack javascript meta]
 
   desc "Run all example app tests"
   task examples: %i[standalone box performance web]

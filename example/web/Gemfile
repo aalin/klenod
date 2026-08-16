@@ -11,6 +11,7 @@ group :development, :build do
   gem "minitest", "~> 6.0"
   gem "klenod", path: "../../gems/klenod"
   gem "klenod-build", path: "../../gems/klenod-build"
+  gem "klenod-plugin-javascript", path: "../../gems/klenod-plugin-javascript"
   gem "vernier"
 end
 

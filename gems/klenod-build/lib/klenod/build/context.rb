@@ -96,7 +96,6 @@ module Klenod
           Plugins::MarkdownPlugin::Plugin.new,
           Plugins::GemImportPlugin::Plugin.new,
           Plugins::CssPlugin::Plugin.new,
-          Plugins::JavaScriptPlugin::Plugin.new,
           Plugins::SvgPlugin::Plugin.new,
           Plugins::ImagePlugin::Plugin.new,
           Plugins::JsonPlugin::Plugin.new,
