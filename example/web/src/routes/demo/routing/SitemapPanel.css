@@ -23,7 +23,7 @@ ol {
     minmax(13rem, 1.2fr)
     minmax(7rem, 0.7fr)
     minmax(10rem, 1fr);
-  align-items: center;
+  align-items: start;
   gap: var(--space-2);
   min-width: 0;
   padding: var(--space-1) var(--space-2);
@@ -116,6 +116,10 @@ code {
     display: grid;
     grid-template-columns: 5.5rem minmax(0, 1fr);
     align-items: baseline;
+  }
+
+  .route-layout-cell code {
+    grid-column: 2;
   }
 
   .route-path-cell::before {
