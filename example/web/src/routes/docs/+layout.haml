@@ -1,52 +1,53 @@
 :ruby
+  Link = Data.define(:href, :label)
+  Section = Data.define(:label, :links) do
+    def open?(current_path) = links.any? { it.href == current_path }
+  end
+
   DocsSections = [
-    {
+    Section[
       label: "Start",
       links: [
-        {href: "/docs", label: "Overview"},
-        {href: "/docs/getting-started", label: "Getting Started"},
-        {href: "/docs/core-concepts", label: "Core Concepts"},
-        {href: "/docs/configuration", label: "Configuration"}
+        Link["/docs", "Overview"],
+        Link["/docs/getting-started", "Getting Started"],
+        Link["/docs/core-concepts", "Core Concepts"],
+        Link["/docs/configuration", "Configuration"],
       ]
-    },
-    {
+    ],
+    Section[
       label: "Guides",
       links: [
-        {href: "/docs/module-graph", label: "Module Graph"},
-        {href: "/docs/haml-components", label: "Haml Components"},
-        {href: "/docs/templates", label: "Markdown"},
-        {href: "/docs/assets", label: "Assets"},
-        {href: "/docs/data", label: "Data Imports"},
-        {href: "/docs/routing", label: "Routing"}
+        Link["/docs/module-graph", "Module Graph"],
+        Link["/docs/haml-components", "Haml Components"],
+        Link["/docs/templates", "Markdown"],
+        Link["/docs/assets", "Assets"],
+        Link["/docs/data", "Data Imports"],
+        Link["/docs/routing", "Routing"],
       ]
-    },
-    {
+    ],
+     Section[
       label: "Plugins",
       links: [
-        {href: "/docs/plugins", label: "Overview"},
-        {href: "/docs/plugins/RubyPlugin", label: "RubyPlugin"},
-        {href: "/docs/plugins/HamlPlugin", label: "HamlPlugin"},
-        {href: "/docs/plugins/MarkdownPlugin", label: "MarkdownPlugin"},
-        {href: "/docs/plugins/CssPlugin", label: "CssPlugin"},
-        {href: "/docs/plugins/RouterPlugin", label: "RouterPlugin"},
-        {href: "/docs/plugins/Assets", label: "Assets"},
-        {href: "/docs/plugins/DataPlugins", label: "Data Plugins"},
-        {href: "/docs/plugins/IntlPlugin", label: "IntlPlugin"},
-        {href: "/docs/plugins/GoogleFontsPlugin", label: "GoogleFontsPlugin"}
+        Link["/docs/plugins", "Overview"],
+        Link["/docs/plugins/RubyPlugin", "RubyPlugin"],
+        Link["/docs/plugins/HamlPlugin", "HamlPlugin"],
+        Link["/docs/plugins/MarkdownPlugin", "MarkdownPlugin"],
+        Link["/docs/plugins/CssPlugin", "CssPlugin"],
+        Link["/docs/plugins/RouterPlugin", "RouterPlugin"],
+        Link["/docs/plugins/Assets", "Assets"],
+        Link["/docs/plugins/DataPlugins", "Data Plugins"],
+        Link["/docs/plugins/IntlPlugin", "IntlPlugin"],
+        Link["/docs/plugins/GoogleFontsPlugin", "GoogleFontsPlugin"],
       ]
-    },
-    {
+    ],
+    Section[
       label: "Reference",
       links: [
-        {href: "/docs/development", label: "Development Updates"},
-        {href: "/docs/build-runtime", label: "Build And Runtime"}
+        Link["/docs/development", "Development Updates"],
+        Link["/docs/build-runtime", "Build And Runtime"],
       ]
-    }
+    ]
   ].freeze
-
-  def section_open?(section, current_path)
-    section.fetch(:links).any? { |link| link.fetch(:href) == current_path }
-  end
 
 - current_path = request.canonical_path || request.path
 
@@ -54,12 +55,12 @@
   %aside
     %nav{ aria: { label: "Documentation" } }
       = DocsSections.map do |section|
-        %details{ name: "docs-section", open: section_open?(section, current_path) }
-          %summary= section.fetch(:label)
-          = section.fetch(:links).map do |link|
+        %details{ name: "docs-section", open: section.open?(current_path) }
+          %summary= section.label
+          = section.links.map do |link|
             %a{
-              href: localized_path(link.fetch(:href)),
-              "aria-current" => (current_path == link.fetch(:href)) ? "page" : nil
-            }= link.fetch(:label)
+              href: localized_path(link.href),
+              "aria-current" => (current_path == link.href) ? "page" : nil
+            }= link.label
   .content
     = $children

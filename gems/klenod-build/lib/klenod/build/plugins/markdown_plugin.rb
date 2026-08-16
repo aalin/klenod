@@ -108,9 +108,9 @@ module Klenod
           def normalize_frontmatter(value)
             case value
             when Hash
-              value.transform_values { |item| normalize_frontmatter(item) }
+              value.transform_values { normalize_frontmatter(it) }
             when Array
-              value.map { |item| normalize_frontmatter(item) }
+              value.map { normalize_frontmatter(it) }
             when Date, Time
               value.iso8601
             else
@@ -147,7 +147,7 @@ module Klenod
                 .split(/[^A-Za-z0-9]+/)
                 .reject(&:empty?)
 
-            name = parts.map { |part| part[0].upcase + part[1..] }.join
+            name = parts.map { it[0].upcase + it[1..] }.join
             name.empty? ? "Markdown" : name
           end
         end
