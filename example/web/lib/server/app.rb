@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "warning_filter"
+
 require "klenod"
 require_relative "../framework"
 require_relative "../web_config"
@@ -24,7 +26,6 @@ module Example
     end
 
     def run
-      ServerFormatting.suppress_io_buffer_experimental_warning
       entry
       asset_app
       runner = server_runner

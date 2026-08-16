@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "warning_filter"
+
 require "klenod/rack"
 require "klenod/runtime"
 
@@ -32,7 +34,6 @@ module Example
     end
 
     def run
-      ServerFormatting.suppress_io_buffer_experimental_warning
       bundle.preload_entrypoints
       asset_app
       runner = server_runner

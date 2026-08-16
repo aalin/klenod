@@ -59,16 +59,6 @@ module Example
       puts color(:dim, "Stopping server")
     end
 
-    def suppress_io_buffer_experimental_warning
-      return unless defined?(IO::Buffer)
-
-      previous = Warning[:experimental]
-      Warning[:experimental] = false
-      IO::Buffer.new(0)
-    ensure
-      Warning[:experimental] = previous unless previous.nil?
-    end
-
     def log_startup(port:, source_dir:, assets_dir:, source_label: "watching", host: "localhost", scheme: "http", protocol: nil)
       yjit_value =
         if defined?(RubyVM::YJIT) && RubyVM::YJIT.enabled?
