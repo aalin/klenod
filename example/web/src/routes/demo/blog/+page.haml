@@ -1,6 +1,6 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
-  Posts = import_glob("./_posts/*.md").values.sort_by { |post| post::Frontmatter.fetch("date") }.reverse
+  Posts = import_glob("./_posts/*.md").values.sort_by { it::Frontmatter.fetch(:date) }.reverse
 
 %article
   %PageHeader{
@@ -13,7 +13,7 @@
       - frontmatter = post::Frontmatter
       %article
         %header
-          %h2= frontmatter.fetch("title")
-          %time{ datetime: frontmatter.fetch("date") }= frontmatter.fetch("date")
-        %p= frontmatter.fetch("summary")
-        %a{ href: "/demo/blog/#{frontmatter.fetch("slug")}" } Read post
+          %h2= frontmatter.fetch(:title)
+          %time{ datetime: frontmatter.fetch(:date) }= frontmatter.fetch(:date)
+        %p= frontmatter.fetch(:summary)
+        %a{ href: "/demo/blog/#{frontmatter.fetch(:slug)}" } Read post

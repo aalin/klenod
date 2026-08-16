@@ -57,6 +57,8 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
           tags:
             - ruby
             - markdown
+          author:
+            name: Ada
           ---
 
           # Hello
@@ -68,10 +70,13 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
 
       assert_equal(
         {
-          "title" => "Hello",
-          "slug" => "hello",
-          "date" => "2026-07-25",
-          "tags" => ["ruby", "markdown"]
+          title: "Hello",
+          slug: "hello",
+          date: "2026-07-25",
+          tags: ["ruby", "markdown"],
+          author: {
+            name: "Ada"
+          }
         },
         component::Frontmatter
       )

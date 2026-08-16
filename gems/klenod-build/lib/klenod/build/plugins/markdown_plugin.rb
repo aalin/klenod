@@ -96,7 +96,8 @@ module Klenod
             match = source.match(/\A---[ \t]*\r?\n(?<frontmatter>.*?\r?\n)---[ \t]*(?:\r?\n|\z)/m)
             return [{}, source] unless match
 
-            frontmatter = YAML.safe_load(match[:frontmatter], permitted_classes: [Date, Time, Symbol], aliases: false) || {}
+            frontmatter = YAML.safe_load(match[:frontmatter], permitted_classes: [Date, Time, Symbol], aliases: false, symbolize_names: true) || {}
+
             unless frontmatter.is_a?(Hash)
               raise ArgumentError, "Markdown frontmatter must be a mapping"
             end

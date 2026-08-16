@@ -4,19 +4,19 @@
 
 :ruby
   slug = request.params.fetch(:slug)
-  post = Posts.find { it::Frontmatter.fetch("slug") == slug }
+  post = Posts.find { it::Frontmatter.fetch(:slug) == slug }
   frontmatter = post && post::Frontmatter
 
 %article
   = if post
     %PageHeader{
       kicker: "Dynamic Markdown route",
-      title: frontmatter.fetch("title"),
-      summary: frontmatter.fetch("summary")
+      title: frontmatter.fetch(:title),
+      summary: frontmatter.fetch(:summary)
     }
     %section.post
       %header
-        %time{ datetime: frontmatter.fetch("date") }= frontmatter.fetch("date")
+        %time{ datetime: frontmatter.fetch(:date) }= frontmatter.fetch(:date)
         %span Markdown post
       .body
         = Example::H[post]
