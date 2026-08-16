@@ -7,6 +7,17 @@ summary = "Assets importeras genom routade Haml-sidor och genereras med variante
 title = "CSS url()"
 body = "CSS kan referera bildfiler med `url(\"./coffee.jpg\")`; CSS-pluginet skriver om URL:en till den genererade asset-sökvägen."
 
+[patterns]
+title = "Asset-mönster"
+
+[picture]
+title = "Picture-element"
+body = "`picture` kan kombinera en genererad WebP-källa med JPEG-fallback och återanvända varje imports `srcset`- och `sizes`-metadata."
+
+[image_set]
+title = "CSS image-set()"
+body = "Ruby kan bygga ett `image-set()`-värde från importerade bildvarianter och skicka det till CSS med en custom property."
+
 [items.default]
 caption = "Standardimport"
 
@@ -15,6 +26,9 @@ caption = "Importerad med konfigurerade bredder"
 
 [items.webp]
 caption = "Importerad som webp."
+
+[items.multi_format]
+caption = "Importerad som AVIF- och WebP-varianter."
 
 [items.sailing_boat]
 caption = "En seglingsbild med genererade JPEG-bredder."
@@ -32,4 +46,6 @@ alt = "Segelbåt på öppet vatten"
 alt = "Grönsaker arrangerade för matlagning"
 
 [metadata]
+title = "Importerad bildmetadata"
+body = "Bildimporter exponerar dimensioner, responsiva varianter och genererade outputsökvägar för Haml- och Ruby-kod."
 variants = "Varianter"

@@ -3,12 +3,6 @@ article {
   gap: var(--space-6);
 }
 
-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  gap: var(--space-4);
-}
-
 h2,
 h3,
 dl,
@@ -20,6 +14,7 @@ ol {
   display: grid;
   gap: var(--space-2);
   margin-top: var(--space-3);
+  min-width: 0;
 }
 
 .metadata h2 {
@@ -36,7 +31,7 @@ ol {
 
 dl {
   display: grid;
-  grid-template-columns: max-content auto;
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: start;
   gap: var(--space-2);
 }
@@ -56,6 +51,7 @@ dd, dt {
 code {
   display: block;
   max-width: 100%;
+  min-width: 0;
   overflow-wrap: anywhere;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -67,6 +63,58 @@ code {
   white-space: pre-wrap;
 }
 
+.metadata-details {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.metadata-demo {
+  display: grid;
+  grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+  min-width: 0;
+}
+
+.tab-content {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.picture-demo {
+  display: block;
+}
+
+.picture-demo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.image-set-card {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.image-set-preview {
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-image: var(--image-set);
+  background-position: center;
+  background-size: cover;
+}
+
+figcaption {
+  display: grid;
+  gap: var(--space-2);
+}
+
 ol {
   display: grid;
   gap: var(--space-2);
@@ -76,9 +124,10 @@ ol {
 
 li {
   display: grid;
-  grid-template-columns: minmax(6.5rem, auto) minmax(0, 1fr);
+  grid-template-columns: minmax(5rem, auto) minmax(0, 1fr);
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 strong {
@@ -89,6 +138,11 @@ strong {
   display: grid;
   gap: 0.125rem;
   font-size: 0.75rem;
+}
+
+a {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .variant-label span {
@@ -137,4 +191,10 @@ strong {
   background-repeat: no-repeat, repeat, repeat;
   background-size: cover, contain, contain;
   background-blend-mode: soft-light;
+}
+
+@container main (width < 45rem) {
+  .metadata-demo {
+    grid-template-columns: 1fr;
+  }
 }

@@ -1,0 +1,13 @@
+- tabs = $tabs || []
+- name = $name || "tabs"
+.tabs{ style: { __tab_count: tabs.length } }
+  = tabs.each_with_index.map do |tab, index|
+    - slot = tab[:slot] || tab[:id]
+    %details{
+      name: name,
+      open: index.zero?,
+      style: { __n: index + 1 }
+    }
+      %summary= tab[:title]
+      .panel
+        = $children[slot]

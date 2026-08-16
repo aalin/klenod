@@ -2,6 +2,7 @@
   Figure = import("/components/Figure.haml")
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
+  Tabs = import("/components/Tabs.haml")
 
   Items = [
     {
@@ -35,6 +36,21 @@
       caption: [:items, :vegetables, :caption]
     }
   ]
+  PictureFallback = Items.fetch(1).fetch(:image)
+  PictureWebp = Items.fetch(2).fetch(:image)
+  ImageSetItem = {
+    name: "coffee.jpg",
+    image: import("./coffee.jpg?width=360,720&format=avif,webp"),
+    alt: [:images, :coffee, :alt],
+    caption: [:items, :multi_format, :caption]
+  }
+  MetadataItem = ImageSetItem
+  PatternTabs = [
+    { id: :css, title: I18n.t(:css, :title) },
+    { id: :picture, title: I18n.t(:picture, :title) },
+    { id: :image_set, title: I18n.t(:image_set, :title) },
+    { id: :metadata, title: I18n.t(:metadata, :title) }
+  ]
 
   def image_rows(image)
     [
@@ -46,6 +62,24 @@
     ]
   end
 
+  def image_sources(image)
+    [
+      ["original", "#{image.width} x #{image.height} #{image.content_type.delete_prefix("image/")}", image.src],
+      *image.variants.map { |variant| [variant.descriptor, "#{variant.width} x #{variant.height} #{variant.format}", variant.src] }
+    ]
+  end
+
+  def image_set(image)
+    min_width = image.variants.map(&:width).min
+    sources =
+      image.variants.map do |variant|
+        density = (variant.width.to_f / min_width).then { |value| (value % 1).zero? ? value.to_i : value.round(2) }
+        "url(#{variant.src}) type(\"#{variant.content_type}\") #{density}x"
+      end
+
+    "image-set(#{sources.join(", ")})"
+  end
+
 %article
   %PageHeader{
     kicker: I18n.t(:header, :kicker),
@@ -53,27 +87,55 @@
     summary: I18n.t(:header, :summary)
   }
 
-  %Panel{ title: I18n.t(:css, :title) }
-    %div.css-frame
-      %div.css-image
-    %p= I18n.t(:css, :body)
+  %Panel{ title: I18n.t(:patterns, :title) }
+    %Tabs{ name: "asset-patterns", tabs: PatternTabs }
+      .tab-content(slot="css")
+        %div.css-frame
+          %div.css-image
+        %p= I18n.t(:css, :body)
 
-  %section
-    = Items.map do |item|
-      %Panel
-        %Figure{ image: item[:image], alt: I18n.t(*item[:alt]), caption: I18n.t(*item[:caption]) }
-        %div.metadata
-          %h2= item[:name]
-          %dl
-            = image_rows(item[:image]).map do |label, value|
-              %dt= label
-              %dd
-                %code= value
-          %h3= I18n.t(:metadata, :variants)
-          %ol
-            = item[:image].variants.map do |variant|
-              %li
-                %span.variant-label
-                  %strong= variant.descriptor
-                  %span= "#{variant.width} x #{variant.height} #{variant.format}"
-                %a(href="#{variant.src}" target="_blank")= variant.src
+      .tab-content(slot="picture")
+        %p= I18n.t(:picture, :body)
+        %picture.picture-demo
+          %source{ type: "image/webp", srcset: PictureWebp.srcset, sizes: PictureWebp.sizes }
+          %img{
+            src: PictureFallback.src,
+            srcset: PictureFallback.srcset,
+            sizes: PictureFallback.sizes,
+            width: PictureFallback.width,
+            height: PictureFallback.height,
+            alt: I18n.t(:images, :coffee, :alt)
+          }
+
+      .tab-content(slot="image_set")
+        %p= I18n.t(:image_set, :body)
+        %figure.image-set-card
+          %div.image-set-preview{ style: { __image_set: image_set(ImageSetItem[:image]) } }
+          %figcaption
+            %strong= ImageSetItem[:name]
+            %code= image_set(ImageSetItem[:image])
+
+      .tab-content(slot="metadata")
+        %p= I18n.t(:metadata, :body)
+        .metadata-demo
+          %Figure{
+            image: MetadataItem[:image],
+            alt: I18n.t(*MetadataItem[:alt]),
+            caption: I18n.t(*MetadataItem[:caption])
+          }
+          %div.metadata
+            %h2= MetadataItem[:name]
+            %dl
+              = image_rows(MetadataItem[:image]).map do |label, value|
+                %dt= label
+                %dd
+                  %code= value
+            .metadata-details
+              %h3= I18n.t(:metadata, :variants)
+              %ol
+                = image_sources(MetadataItem[:image]).map do |descriptor, details, src|
+                  %li
+                    %span.variant-label
+                      %strong= descriptor
+                      %span= details
+                    %a(href="#{src}" target="_blank")= src

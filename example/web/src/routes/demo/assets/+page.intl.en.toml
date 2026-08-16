@@ -7,6 +7,17 @@ summary = "Assets are imported through routed Haml pages and emitted with genera
 title = "CSS url()"
 body = "CSS can reference image files with `url(\"./coffee.jpg\")`; the CSS plugin rewrites the URL to the generated asset path."
 
+[patterns]
+title = "Asset patterns"
+
+[picture]
+title = "Picture element"
+body = "`picture` can combine a generated WebP source with a JPEG fallback while reusing each import's `srcset` and `sizes` metadata."
+
+[image_set]
+title = "CSS image-set()"
+body = "Ruby can build an `image-set()` value from imported image variants and pass it to CSS with a custom property."
+
 [items.default]
 caption = "Default import"
 
@@ -15,6 +26,9 @@ caption = "Imported with configured widths"
 
 [items.webp]
 caption = "Imported as webp."
+
+[items.multi_format]
+caption = "Imported as AVIF and WebP variants."
 
 [items.sailing_boat]
 caption = "A sailing image with generated JPEG widths."
@@ -32,4 +46,6 @@ alt = "Sailing boat on open water"
 alt = "Vegetables arranged for cooking"
 
 [metadata]
+title = "Imported image metadata"
+body = "Image imports expose dimensions, responsive variants, and generated output paths to Haml and Ruby code."
 variants = "Variants"
