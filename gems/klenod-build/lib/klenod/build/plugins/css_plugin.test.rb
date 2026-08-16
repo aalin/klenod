@@ -29,6 +29,22 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_css_source_is_read_as_utf_8
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", ".title::before { content: \"🌗\"; }\n", encoding: "UTF-8")
+      File.write("#{dir}/pages/home.rb", "Styles = import(\"../styles/home.css\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("pages/home")
+      css_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/home.css", nil))
+      css_asset = css_record.assets.find { it.metadata[:type] == :css }
+
+      assert_includes(css_asset.bytes, "🌗")
+    end
+  end
+
   def test_ruby_import_of_css_returns_element_selector_map
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

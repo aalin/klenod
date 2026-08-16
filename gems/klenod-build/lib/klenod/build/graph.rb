@@ -806,7 +806,7 @@ module Klenod
         end
 
         @profiler.count(:module_file_read)
-        @profiler.measure(:module_file_read, module_id: module_id.to_s) { @resolver.absolute_path(module_id).binread }
+        @profiler.measure(:module_file_read, module_id: module_id.to_s) { @resolver.absolute_path(module_id).read(encoding: "UTF-8") }
       end
 
       def transform(module_id, source)
