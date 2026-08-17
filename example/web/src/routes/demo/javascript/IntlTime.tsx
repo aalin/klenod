@@ -1,5 +1,3 @@
-"custom element";
-
 export default class IntlTimeElement extends HTMLElement {
   static get observedAttributes(): string[] {
     return ['time', 'lang', 'date-style', 'time-style'];

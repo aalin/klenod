@@ -4,6 +4,8 @@ require "klenod/build/asset"
 require "klenod/build/dependency"
 require "klenod/build/errors"
 require "klenod/build/hashing"
+require "klenod/build/load_result"
+require "klenod/build/module_id"
 require "klenod/build/plugin"
 require "klenod/build/source_map"
 require "klenod/build/transform_result"
@@ -17,11 +19,13 @@ module Klenod
       module JavaScriptPlugin
         class Plugin < Klenod::Build::Plugin
           CONTENT_TYPE = "application/javascript"
-          EXTENSIONS = [".js", ".ts"].freeze
+          EXTENSIONS = [".js", ".jsx", ".ts", ".tsx"].freeze
+          CUSTOM_ELEMENT_EXTENSIONS = [".jsx", ".tsx"].freeze
+          JSX_RUNTIME_SPECIFIER = "virtual:klenod/jsx-runtime"
+          JSX_RUNTIME_MODULE_ID = ModuleId.new("virtual:klenod/jsx-runtime.js", nil)
           LOCAL_SPECIFIER_PATTERN = %r{\A(?:\.{1,2}/|/|app:/)}
           EXTERNAL_SPECIFIER_PATTERN = %r{\A(?:[A-Za-z][A-Za-z0-9+.-]*:)?//}
           VALID_SOURCE_MAP_MODES = [false, true, :development].freeze
-          CUSTOM_ELEMENT_DIRECTIVE_PATTERN = /\A\s*(["'])custom element\1;?[ \t]*(?:\r?\n)?/
           IDENTIFIER_PATTERN = '[$_\p{Alpha}][$\u200c\u200d\p{Alnum}_]*'
           DEFAULT_EXPORT_CLASS_PATTERN = /\bexport\s+default\s+class\s+(#{IDENTIFIER_PATTERN})\b/
           DEFAULT_EXPORT_IDENTIFIER_PATTERN = /\bexport\s+default\s+(#{IDENTIFIER_PATTERN})\s*;/
@@ -35,6 +39,7 @@ module Klenod
           end
 
           def resolve(dependency, context)
+            return ResolvedDependency.new(dependency, JSX_RUNTIME_MODULE_ID, {virtual: true}) if dependency.specifier == JSX_RUNTIME_SPECIFIER
             return nil unless dependency.kind.to_s.start_with?("javascript_")
             return nil unless extensionless_javascript_specifier?(dependency.specifier)
 
@@ -47,11 +52,17 @@ module Klenod
             nil
           end
 
+          def load(module_id, _context)
+            return nil unless module_id.scheme == :virtual && module_id == JSX_RUNTIME_MODULE_ID
+
+            LoadResult.new(jsx_runtime_source, nil, nil)
+          end
+
           def transform(module_id, code, _context)
             return super unless EXTENSIONS.include?(module_id.extname)
 
-            custom_element = custom_element_directive?(code)
-            source = custom_element ? strip_custom_element_directive(code) : code
+            custom_element = custom_element_module?(module_id)
+            source = custom_element ? jsx_module_source(code) : code
             transform = Klenod::Plugin::JavaScript::Parser.transform(source, filename: module_id.to_s, source_kind: source_kind(module_id))
             dependencies = build_dependencies(module_id, transform.imports)
 
@@ -144,18 +155,18 @@ module Klenod
 
           private
 
-          def custom_element_directive?(source)
-            source.match?(CUSTOM_ELEMENT_DIRECTIVE_PATTERN)
+          def custom_element_module?(module_id)
+            CUSTOM_ELEMENT_EXTENSIONS.include?(module_id.extname)
           end
 
-          def strip_custom_element_directive(source)
-            source.sub(CUSTOM_ELEMENT_DIRECTIVE_PATTERN, "")
+          def jsx_module_source(code)
+            %(import { h, Fragment } from "#{JSX_RUNTIME_SPECIFIER}";\n#{code})
           end
 
           def build_dependencies(module_id, imports)
             imports.filter_map.with_index do |import, index|
               next if external_specifier?(import.specifier)
-              raise DynamicImportError, unsupported_specifier_message(import) unless local_specifier?(import.specifier)
+              raise DynamicImportError, unsupported_specifier_message(import) unless local_specifier?(import.specifier) || import.specifier == JSX_RUNTIME_SPECIFIER
 
               Dependency
                 .create(
@@ -260,15 +271,68 @@ module Klenod
           end
 
           def extensionless_resolve_extensions(dependency)
-            return [".ts", ".js"] if dependency.importer_id&.extname == ".ts"
-
-            [".js"]
+            case dependency.importer_id&.extname
+            when ".tsx"
+              [".tsx", ".ts", ".jsx", ".js"]
+            when ".ts"
+              [".ts", ".js"]
+            when ".jsx"
+              [".jsx", ".js"]
+            else
+              [".js"]
+            end
           end
 
           def source_kind(module_id)
-            return :typescript if module_id.extname == ".ts"
+            case module_id.extname
+            when ".ts"
+              :typescript
+            when ".jsx"
+              :javascript_jsx
+            when ".tsx"
+              :typescript_jsx
+            else
+              :javascript
+            end
+          end
 
-            :javascript
+          def jsx_runtime_source
+            <<~JS
+              export function h(type, attrs, ...children) {
+                if (typeof type === "function") return type(attrs, ...children);
+
+                const el = document.createElement(type);
+
+                for (const [key, value] of Object.entries(attrs || {})) {
+                  if (value) {
+                    if (value === true) {
+                      el.setAttribute(key, key);
+                    } else {
+                      el.setAttribute(key, value);
+                    }
+                  }
+                }
+
+                appendChildren(el, children);
+                return el;
+              }
+
+              export function Fragment(_attrs, ...children) {
+                const fragment = document.createDocumentFragment();
+                appendChildren(fragment, children);
+                return fragment;
+              }
+
+              function appendChildren(parent, children) {
+                children.flat().forEach((child) => {
+                  if (child instanceof Node) {
+                    parent.appendChild(child);
+                  } else if (child) {
+                    parent.appendChild(document.createTextNode(String(child)));
+                  }
+                });
+              }
+            JS
           end
 
           def module_source(output_path, custom_element_descriptor: nil)

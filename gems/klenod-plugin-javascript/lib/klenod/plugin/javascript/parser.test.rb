@@ -97,4 +97,47 @@ class Klenod::Plugin::JavaScript::ParserTest < Minitest::Test
     refute_includes(result.code, ": Message")
     assert_includes(result.code, "const message = \"hello\"")
   end
+
+  def test_native_transform_lowers_jsx
+    skip "native parser is not compiled" unless Parser.native?
+
+    result =
+      Parser.transform(
+        <<~JS,
+          export default class Panel extends HTMLElement {
+            connectedCallback() {
+              this.append(<section hidden>Ready</section>);
+            }
+          }
+        JS
+        filename: "app:/panel.jsx",
+        source_kind: :javascript_jsx
+      )
+
+    assert_includes(result.code, "h(\"section\", {")
+    assert_includes(result.code, "hidden: true")
+    refute_includes(result.code, "<section")
+  end
+
+  def test_native_transform_strips_typescript_and_lowers_tsx_fragments
+    skip "native parser is not compiled" unless Parser.native?
+
+    result =
+      Parser.transform(
+        <<~TS,
+          export default class Panel extends HTMLElement {
+            connectedCallback(): void {
+              this.append(<><span>Ready</span></>);
+            }
+          }
+        TS
+        filename: "app:/panel.tsx",
+        source_kind: :typescript_jsx
+      )
+
+    assert_includes(result.code, "h(Fragment, null")
+    assert_includes(result.code, "h(\"span\", null")
+    refute_includes(result.code, ": void")
+    refute_includes(result.code, "<span")
+  end
 end

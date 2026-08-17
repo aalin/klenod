@@ -147,44 +147,51 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
     end
   end
 
-  def test_ruby_import_of_custom_element_javascript_returns_descriptor
+  def test_ruby_import_of_jsx_returns_custom_element_descriptor
+    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
       File.write(
-        "#{dir}/scripts/clock.js",
+        "#{dir}/scripts/clock.jsx",
         <<~JS
-          "custom element";
-
           export default class ClockElement extends HTMLElement {
+            connectedCallback() {
+              this.append(<span hidden>Clock</span>);
+            }
           }
         JS
       )
-      File.write("#{dir}/entry.rb", "Clock = import(\"scripts/clock.js\")\nDefault = Clock\n")
+      File.write("#{dir}/entry.rb", "Clock = import(\"scripts/clock.jsx\")\nDefault = Clock\n")
 
       context = context_for(dir)
       record = context.evaluate("entry")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-      asset = javascript_asset(context, "scripts/clock.js")
+      asset = javascript_asset(context, "scripts/clock.jsx")
+      runtime_asset = javascript_asset(context, "virtual:klenod/jsx-runtime.js")
 
       assert_equal(true, exports::Default.fetch(:__klenod_custom_element))
-      assert_match(/\Aklenod-scripts-clock-js-[a-f0-9]{8}\z/, exports::Default.fetch(:tag))
+      assert_match(/\Aklenod-scripts-clock-jsx-[a-f0-9]{8}\z/, exports::Default.fetch(:tag))
       assert_equal(asset.output_path, exports::Default.fetch(:asset_path))
-      refute_includes(asset.bytes, "custom element")
+      assert_includes(asset.bytes, %(from "#{runtime_asset.output_path}"))
+      assert_includes(asset.bytes, "h(\"span\", {")
+      assert_includes(asset.bytes, "hidden: true")
       assert_includes(asset.bytes, "customElements.define(#{exports::Default.fetch(:tag).inspect}, ClockElement);")
     end
   end
 
   def test_runtime_bundle_preserves_custom_element_descriptor
+    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
       File.write(
-        "#{dir}/scripts/clock.js",
+        "#{dir}/scripts/clock.jsx",
         <<~JS
-          "custom element";
           export default class ClockElement extends HTMLElement {}
         JS
       )
-      File.write("#{dir}/entry.rb", "Default = import(\"scripts/clock.js\")\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/clock.jsx\")\n")
       output = "#{dir}/bundle.mpk"
 
       context = context_for(dir, mode: :build)
@@ -193,45 +200,47 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       descriptor = loaded.exports("entry")::Default
 
       assert_equal(true, descriptor.fetch(:__klenod_custom_element))
-      assert_match(/\Aklenod-scripts-clock-js-[a-f0-9]{8}\z/, descriptor.fetch(:tag))
-      assert_match(%r{\A/assets/scripts_clock_js\.[a-f0-9]{16}\.js\z}, descriptor.fetch(:asset_path))
+      assert_match(/\Aklenod-scripts-clock-jsx-[a-f0-9]{8}\z/, descriptor.fetch(:tag))
+      assert_match(%r{\A/assets/scripts_clock_jsx\.[a-f0-9]{16}\.js\z}, descriptor.fetch(:asset_path))
     end
   end
 
-  def test_custom_element_javascript_can_default_export_identifier
+  def test_jsx_custom_element_can_default_export_identifier
+    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
       File.write(
-        "#{dir}/scripts/clock.js",
+        "#{dir}/scripts/clock.jsx",
         <<~JS
-          "custom element";
           class ClockElement extends HTMLElement {}
           export default ClockElement;
         JS
       )
 
       context = context_for(dir)
-      context.evaluate("scripts/clock.js")
-      asset = javascript_asset(context, "scripts/clock.js")
+      context.evaluate("scripts/clock.jsx")
+      asset = javascript_asset(context, "scripts/clock.jsx")
 
-      assert_includes(asset.bytes, "customElements.define(\"klenod-scripts-clock-js-")
+      assert_includes(asset.bytes, "customElements.define(\"klenod-scripts-clock-jsx-")
       assert_includes(asset.bytes, ", ClockElement);")
     end
   end
 
-  def test_custom_element_javascript_requires_supported_default_export
+  def test_jsx_custom_element_requires_supported_default_export
+    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
       File.write(
-        "#{dir}/scripts/clock.js",
+        "#{dir}/scripts/clock.jsx",
         <<~JS
-          "custom element";
           export const ClockElement = class extends HTMLElement {};
         JS
       )
 
       error = assert_raises(Klenod::Build::Error) do
-        context_for(dir).evaluate("scripts/clock.js")
+        context_for(dir).evaluate("scripts/clock.jsx")
       end
 
       assert_includes(error.message, "\"custom element\" modules must default-export")
@@ -327,31 +336,33 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
     end
   end
 
-  def test_typescript_custom_element_import_returns_descriptor
+  def test_tsx_custom_element_import_returns_descriptor
     skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
 
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
       File.write(
-        "#{dir}/scripts/clock.ts",
+        "#{dir}/scripts/clock.tsx",
         <<~TS
-          "custom element";
           export default class ClockElement extends HTMLElement {
-            connectedCallback(): void {}
+            connectedCallback(): void {
+              this.append(<><span>Clock</span></>);
+            }
           }
         TS
       )
-      File.write("#{dir}/entry.rb", "Default = import(\"scripts/clock.ts\")\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/clock.tsx\")\n")
 
       context = context_for(dir)
       record = context.evaluate("entry")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
-      asset = javascript_asset(context, "scripts/clock.ts")
+      asset = javascript_asset(context, "scripts/clock.tsx")
 
       assert_equal(true, exports::Default.fetch(:__klenod_custom_element))
-      assert_match(/\Aklenod-scripts-clock-ts-[a-f0-9]{8}\z/, exports::Default.fetch(:tag))
+      assert_match(/\Aklenod-scripts-clock-tsx-[a-f0-9]{8}\z/, exports::Default.fetch(:tag))
       assert_equal(asset.output_path, exports::Default.fetch(:asset_path))
       assert_includes(asset.bytes, "customElements.define(#{exports::Default.fetch(:tag).inspect}, ClockElement);")
+      assert_includes(asset.bytes, "h(Fragment, null")
       refute_includes(asset.bytes, ": void")
     end
   end

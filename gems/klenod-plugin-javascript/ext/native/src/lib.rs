@@ -1,6 +1,8 @@
 use magnus::{function, prelude::*, Error, RArray, RHash, Ruby};
 use swc_core::{
-    common::{sync::Lrc, FileName, Globals, Mark, SourceMap, Span, GLOBALS},
+    common::{
+        comments::NoopComments, sync::Lrc, FileName, Globals, Mark, SourceMap, Span, GLOBALS,
+    },
     ecma::{
         ast::{
             Callee, ExportAll, ExportNamedSpecifier, ExportSpecifier, Expr, Lit, ModuleDecl,
@@ -8,7 +10,7 @@ use swc_core::{
         },
         codegen::{text_writer::JsWriter, Emitter},
         parser::{lexer::Lexer, EsSyntax, Parser, StringInput, Syntax, TsSyntax},
-        transforms::typescript::strip,
+        transforms::{react, typescript::strip},
         visit::{Visit, VisitWith},
     },
 };
@@ -128,10 +130,7 @@ fn transform_native(
     source_kind: String,
 ) -> Result<RHash, Error> {
     let source_kind = SourceKind::from_string(ruby, &source_kind)?;
-    let transformed_source = match source_kind {
-        SourceKind::JavaScript => source,
-        SourceKind::TypeScript => transform_typescript(ruby, source, filename.clone())?,
-    };
+    let transformed_source = transform_source(ruby, source, filename.clone(), source_kind)?;
     let parsed = parse_module(
         ruby,
         transformed_source.clone(),
@@ -159,6 +158,8 @@ fn transform_native(
 enum SourceKind {
     JavaScript,
     TypeScript,
+    JavaScriptJsx,
+    TypeScriptJsx,
 }
 
 impl SourceKind {
@@ -166,6 +167,8 @@ impl SourceKind {
         match source_kind {
             "javascript" => Ok(Self::JavaScript),
             "typescript" => Ok(Self::TypeScript),
+            "javascript_jsx" => Ok(Self::JavaScriptJsx),
+            "typescript_jsx" => Ok(Self::TypeScriptJsx),
             _ => Err(Error::new(
                 ruby.exception_arg_error(),
                 format!("unknown JavaScript source kind: {}", source_kind),
@@ -214,8 +217,18 @@ fn syntax_for(source_kind: SourceKind) -> Syntax {
             import_attributes: true,
             ..Default::default()
         }),
+        SourceKind::JavaScriptJsx => Syntax::Es(EsSyntax {
+            import_attributes: true,
+            jsx: true,
+            ..Default::default()
+        }),
         SourceKind::TypeScript => Syntax::Typescript(TsSyntax {
             tsx: false,
+            decorators: true,
+            ..Default::default()
+        }),
+        SourceKind::TypeScriptJsx => Syntax::Typescript(TsSyntax {
+            tsx: true,
             decorators: true,
             ..Default::default()
         }),
@@ -253,15 +266,40 @@ fn records_to_array(ruby: &Ruby, records: Vec<ImportRecord>) -> Result<RArray, E
     Ok(array)
 }
 
-fn transform_typescript(ruby: &Ruby, source: String, filename: String) -> Result<String, Error> {
-    let parsed = parse_module(ruby, source, filename, SourceKind::TypeScript)?;
+fn transform_source(
+    ruby: &Ruby,
+    source: String,
+    filename: String,
+    source_kind: SourceKind,
+) -> Result<String, Error> {
+    if !source_kind.needs_transform() {
+        return Ok(source);
+    }
+
+    let parsed = parse_module(ruby, source, filename, source_kind)?;
     let source_map = parsed.source_map;
     let mut program = parsed.program;
 
     GLOBALS.set(&Globals::default(), || {
         let unresolved_mark = Mark::new();
         let top_level_mark = Mark::new();
-        strip(unresolved_mark, top_level_mark).process(&mut program);
+        if source_kind.is_typescript() {
+            strip(unresolved_mark, top_level_mark).process(&mut program);
+        }
+        if source_kind.is_jsx() {
+            react::jsx(
+                source_map.clone(),
+                None::<NoopComments>,
+                react::Options {
+                    pragma: Some("h".into()),
+                    pragma_frag: Some("Fragment".into()),
+                    ..Default::default()
+                },
+                top_level_mark,
+                unresolved_mark,
+            )
+            .process(&mut program);
+        }
     });
 
     let mut bytes = Vec::new();
@@ -287,6 +325,20 @@ fn transform_typescript(ruby: &Ruby, source: String, filename: String) -> Result
             format!("SWC generated invalid UTF-8: {}", error),
         )
     })
+}
+
+impl SourceKind {
+    fn needs_transform(self) -> bool {
+        self.is_typescript() || self.is_jsx()
+    }
+
+    fn is_typescript(self) -> bool {
+        matches!(self, SourceKind::TypeScript | SourceKind::TypeScriptJsx)
+    }
+
+    fn is_jsx(self) -> bool {
+        matches!(self, SourceKind::JavaScriptJsx | SourceKind::TypeScriptJsx)
+    }
 }
 
 #[magnus::init]

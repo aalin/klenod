@@ -18,9 +18,9 @@ module Klenod
         end
 
         def transform(source, filename:, source_kind:)
-          if source_kind == :typescript
+          if NATIVE_SOURCE_KINDS.include?(source_kind)
             native = native_parser || raise(SyntaxError, "TypeScript support requires the klenod-plugin-javascript native extension. Run `bundle exec rake compile` in gems/klenod-plugin-javascript.")
-            return native_transform_result(native.transform_native(source, filename, "typescript"))
+            return native_transform_result(native.transform_native(source, filename, source_kind.to_s))
           end
 
           if (native = native_parser)
@@ -30,6 +30,8 @@ module Klenod
           scanner = FallbackScanner.new(source, filename)
           TransformResult.new(source, scanner.imports)
         end
+
+        NATIVE_SOURCE_KINDS = [:typescript, :javascript_jsx, :typescript_jsx].freeze
 
         def native_parser
           @native_parser =
