@@ -10,6 +10,11 @@ require "klenod/plugin/javascript"
 require "klenod/runtime"
 
 class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
+  PNG_BYTES = [
+    "89504e470d0a1a0a0000000d494844520000000200000003080600000083f2be9c0000001249" \
+    "44415478da63fccfc00044b26060606000000d010101d750b30a0000000049454e44ae426082"
+  ].pack("H*")
+
   def test_ruby_import_of_javascript_returns_asset_path_and_emits_asset
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -44,6 +49,65 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       message_asset = javascript_asset(context, "scripts/message.js")
 
       assert_includes(app_asset.bytes, "from '#{message_asset.output_path}'")
+    end
+  end
+
+  def test_default_image_import_is_rewritten_to_javascript_metadata_asset
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/images"])
+      File.binwrite("#{dir}/images/logo.png", PNG_BYTES)
+      File.write("#{dir}/scripts/app.js", "import logo from '../images/logo.png';\nconsole.log(logo.src, logo.width);\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.js\")\n")
+
+      context = context_for(dir)
+      context.evaluate("entry")
+      app_asset = javascript_asset(context, "scripts/app.js")
+      image_asset = context.assets_for("images/logo.png").find { it.metadata[:type] == :image }
+      image_module_asset = context.assets_for("images/logo.png").find { it.metadata[:type] == :javascript && it.metadata[:image_metadata] }
+
+      assert_equal("#{image_asset.output_path}.js", image_module_asset.output_path)
+      assert_includes(app_asset.bytes, "from '#{image_module_asset.output_path}'")
+      assert_includes(image_module_asset.bytes, %("src":"#{image_asset.output_path}"))
+      assert_includes(image_module_asset.bytes, %("width":2))
+      assert_includes(image_module_asset.bytes, %("height":3))
+      assert_includes(context.assets_for_module("scripts/app.js", type: :javascript, recursive: false).map(&:output_path), image_module_asset.output_path)
+    end
+  end
+
+  def test_named_image_import_raises_clear_error
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/images"])
+      File.binwrite("#{dir}/images/logo.png", PNG_BYTES)
+      File.write("#{dir}/scripts/app.js", "import { src } from '../images/logo.png';\nconsole.log(src);\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.js\")\n")
+
+      error = assert_raises(Klenod::Build::DynamicImportError) do
+        context_for(dir).evaluate("entry")
+      end
+
+      assert_includes(error.message, "Unsupported image import \"../images/logo.png\"")
+      assert_includes(error.message, "Use a default import")
+    end
+  end
+
+  def test_runtime_bundle_preserves_javascript_image_import_assets
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/images"])
+      File.binwrite("#{dir}/images/logo.png", PNG_BYTES)
+      File.write("#{dir}/scripts/app.js", "import logo from '../images/logo.png';\nconsole.log(logo.src);\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.js\")\n")
+      output = "#{dir}/bundle.mpk"
+
+      context = context_for(dir, mode: :build)
+      bundle = context.build(entrypoints: ["entry"], output: output)
+      loaded = Klenod::Runtime.load_bundle(output)
+      image_asset = bundle.assets.values.find { it.metadata[:type] == :image }
+      image_module_asset = bundle.assets.values.find { it.metadata[:type] == :javascript && it.metadata[:image_metadata] }
+
+      assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.png\z}, image_asset.output_path)
+      assert_equal("#{image_asset.output_path}.js", image_module_asset.output_path)
+      assert(loaded.assets.key?(image_asset.output_path))
+      assert(loaded.assets.key?(image_module_asset.output_path))
     end
   end
 

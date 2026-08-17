@@ -29,6 +29,7 @@ module Klenod
           IDENTIFIER_PATTERN = '[$_\p{Alpha}][$\u200c\u200d\p{Alnum}_]*'
           DEFAULT_EXPORT_CLASS_PATTERN = /\bexport\s+default\s+class\s+(#{IDENTIFIER_PATTERN})\b/
           DEFAULT_EXPORT_IDENTIFIER_PATTERN = /\bexport\s+default\s+(#{IDENTIFIER_PATTERN})\s*;/
+          DEFAULT_IMPORT_PREFIX_PATTERN = /\Aimport\s+#{IDENTIFIER_PATTERN}\s+from\z/
 
           def initialize(source_maps: :development)
             unless VALID_SOURCE_MAP_MODES.include?(source_maps)
@@ -123,6 +124,7 @@ module Klenod
 
             hash = Hashing.short(code)
             output_path = "/assets/#{asset_name(module_id)}.#{hash}.js"
+            image_javascript_assets = image_javascript_assets(resolved_dependencies, dependency_records)
             asset =
               Asset.new(
                 module_id.path,
@@ -136,7 +138,7 @@ module Klenod
 
             result.with(
               code: module_source(output_path, custom_element_descriptor: custom_element_descriptor&.merge(asset_path: output_path)),
-              assets: [asset, source_map_asset].compact,
+              assets: [asset, source_map_asset, *image_javascript_assets].compact,
               metadata: result.metadata.merge(
                 javascript_asset_path: output_path,
                 javascript_custom_element_descriptor: custom_element_descriptor&.merge(asset_path: output_path)
@@ -219,7 +221,7 @@ module Klenod
                 metadata = resolved_dependency.dependency.metadata
                 range = [metadata.fetch(:start_offset), metadata.fetch(:end_offset)]
                 record = dependency_records.fetch(resolved_dependency.dependency.id)
-                [range, record.metadata.fetch(:javascript_asset_path)]
+                [range, import_replacement(module_id, source, resolved_dependency.dependency, record)]
               end
 
             edits =
@@ -231,6 +233,46 @@ module Klenod
               end
 
             SourceMap::Editor.new(source, identity_source_map(module_id, source, original_source)).apply(edits)
+          end
+
+          def import_replacement(module_id, source, dependency, record)
+            if (image_asset_path = record.metadata[:image_javascript_asset_path])
+              validate_image_import!(module_id, source, dependency)
+              return image_asset_path
+            end
+
+            record.metadata.fetch(:javascript_asset_path)
+          end
+
+          def image_javascript_assets(resolved_dependencies, dependency_records)
+            resolved_dependencies.filter_map do |resolved_dependency|
+              record = dependency_records.fetch(resolved_dependency.dependency.id)
+              asset = record.assets.find { it.metadata[:type] == :image_javascript_metadata }
+              next unless asset
+
+              Asset.new(
+                asset.logical_name,
+                asset.content_hash,
+                asset.output_path,
+                asset.source_path,
+                asset.bytes,
+                asset.content_type,
+                asset.metadata.merge(type: :javascript)
+              )
+            end
+          end
+
+          def validate_image_import!(module_id, source, dependency)
+            return if dependency.kind == :javascript_import && default_import?(source, dependency)
+
+            raise DynamicImportError, "Unsupported image import #{dependency.specifier.inspect} in #{module_id}. Use a default import, e.g. `import image from \"#{dependency.specifier}\"`."
+          end
+
+          def default_import?(source, dependency)
+            start_offset = dependency.metadata.fetch(:start_offset)
+            statement_start = source.rindex(/\bimport\b/, start_offset) || 0
+            prefix = source[statement_start...start_offset].sub(/["']\z/, "").strip
+            prefix.match?(DEFAULT_IMPORT_PREFIX_PATTERN)
           end
 
           def register_custom_element(module_id, code, tag)

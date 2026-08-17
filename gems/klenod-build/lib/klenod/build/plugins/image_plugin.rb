@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "image_size"
+require "json"
 require "rmagick"
 require "uri"
 
@@ -46,7 +47,8 @@ module Klenod
             image_options = image_options_for(module_id)
             asset = default_image_asset(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
             variant_assets = generate_variant_assets(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
-            assets = [asset, *variant_assets]
+            javascript_asset = javascript_image_asset(module_id, asset, variant_assets)
+            assets = [asset, *variant_assets, javascript_asset]
             image_runtime_dependency =
               Dependency
                 .create(
@@ -63,7 +65,7 @@ module Klenod
                 nil,
                 assets,
                 [],
-                {}
+                {image_javascript_asset_path: javascript_asset.output_path}
               )
             LoadResult.new(
               image_source(module_id),
@@ -204,8 +206,8 @@ module Klenod
           end
 
           def image_module_source(module_id, assets, image_runtime_dependency)
-            asset = assets.fetch(0)
-            variants = assets.drop(1).map { |variant_asset| image_variant_source(variant_asset) }
+            asset = image_asset(assets)
+            variants = image_variant_assets(assets).map { |variant_asset| image_variant_source(variant_asset) }
 
             <<~RUBY
               ImageRuntime = __klenod_import__(#{image_runtime_dependency.id.inspect})
@@ -235,6 +237,58 @@ module Klenod
                 metadata: #{asset.metadata.inspect}
               )
             RUBY
+          end
+
+          def javascript_image_asset(module_id, asset, variant_assets)
+            code = javascript_image_module_source(asset, variant_assets)
+            hash = Hashing.short(code)
+            Asset.new(
+              module_id.path,
+              hash,
+              "#{asset.output_path}.js",
+              nil,
+              code,
+              "application/javascript",
+              {type: :image_javascript_metadata, image_metadata: true, image_asset_path: asset.output_path}
+            )
+          end
+
+          def javascript_image_module_source(asset, variant_assets)
+            variants = variant_assets.map { |variant_asset| javascript_image_variant(variant_asset) }
+            srcset = variant_assets.empty? ? nil : variant_assets.map { "#{it.output_path} #{it.metadata[:descriptor]}" }.join(", ")
+            display_width = variant_assets.filter_map { it.metadata[:width] }.max || asset.metadata[:width]
+            sizes = display_width ? "(max-width: #{display_width}px) 100vw, #{display_width}px" : nil
+            metadata = {
+              src: asset.output_path,
+              width: asset.metadata[:width],
+              height: asset.metadata[:height],
+              contentType: asset.content_type,
+              variants: variants,
+              srcset: srcset,
+              sizes: sizes
+            }
+
+            "export default #{JSON.generate(metadata)};\n"
+          end
+
+          def javascript_image_variant(asset)
+            {
+              src: asset.output_path,
+              width: asset.metadata[:width],
+              height: asset.metadata[:height],
+              contentType: asset.content_type,
+              format: asset.metadata[:format],
+              descriptor: asset.metadata[:descriptor],
+              metadata: asset.metadata
+            }
+          end
+
+          def image_asset(assets)
+            assets.find { it.metadata[:type] == :image } || assets.fetch(0)
+          end
+
+          def image_variant_assets(assets)
+            assets.select { it.metadata[:type] == :image_variant }
           end
 
           def image_options_for(module_id)
