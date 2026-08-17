@@ -125,7 +125,9 @@ module Klenod
             hash = Hashing.short(code)
             output_path = "/assets/#{asset_name(module_id)}.#{hash}.js"
             asset_javascript_assets = asset_javascript_assets(resolved_dependencies, dependency_records)
-            preload_assets = preload_assets(resolved_dependencies, dependency_records)
+            metadata = {type: :javascript}
+            css_preload_assets = css_preload_assets(resolved_dependencies, dependency_records)
+            metadata[:preload_assets] = css_preload_assets unless css_preload_assets.empty?
             asset =
               Asset.new(
                 module_id.path,
@@ -134,7 +136,7 @@ module Klenod
                 nil,
                 code,
                 CONTENT_TYPE,
-                {type: :javascript, preload_assets: preload_assets}.compact
+                metadata
               )
 
             result.with(
@@ -297,7 +299,7 @@ module Klenod
             record.assets.find { it.metadata[:type] == :css_javascript_stylesheet } || record.assets.find { it.metadata[:type] == :css }
           end
 
-          def preload_assets(resolved_dependencies, dependency_records)
+          def css_preload_assets(resolved_dependencies, dependency_records)
             resolved_dependencies.filter_map do |resolved_dependency|
               record = dependency_records.fetch(resolved_dependency.dependency.id)
               asset = css_javascript_stylesheet_asset(record)

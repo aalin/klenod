@@ -103,12 +103,12 @@ module Klenod
               literal = yield(match)
               start_offset = @source.index(literal, match.begin(0)) + 1
               end_offset = start_offset + literal.length - 2
-              attributes = import_attributes(match, literal)
+              attributes = import_attributes(match)
               records << ImportRecord.new(literal[1...-1], kind, start_offset, end_offset, attributes, loc(start_offset))
             end
           end
 
-          def import_attributes(match, literal)
+          def import_attributes(match)
             attributes = match.names.include?("attributes") ? match[:attributes] : nil
             type = attributes&.match(/\btype\s*:\s*["'](?<type>[^"']+)["']/) { it[:type] }
             type ? {type: type} : {}
