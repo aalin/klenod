@@ -6,5 +6,5 @@ require "klenod"
 require_relative "../lib/tools/route_report"
 require_relative "../lib/web_config"
 
-config = Example::WebConfig.build_config
+config = Example::WebConfig.build_config(mode: :development)
 Example::RouteReport.new(config).print

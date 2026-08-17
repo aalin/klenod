@@ -18,7 +18,7 @@ module Example
   class DevServer
     ERROR_LOG_REPEAT_INTERVAL = RecentErrorLog::DEFAULT_REPEAT_INTERVAL
 
-    def initialize(config: WebConfig.build_config, host: ENV.fetch("HOST", "localhost"), port: Integer(ENV.fetch("PORT", "9292")), assets_dir: ENV["ASSETS_DIR"])
+    def initialize(config: WebConfig.build_config(mode: :development), host: ENV.fetch("HOST", "localhost"), port: Integer(ENV.fetch("PORT", "9292")), assets_dir: ENV["ASSETS_DIR"])
       @config = config
       @host = host
       @port = port

@@ -10,13 +10,14 @@ module Example
 
     module_function
 
-    def build_config
+    def build_config(mode: :build)
       Klenod::Build::Config.new(
         source_dir: "src",
         entrypoints: ["/entrypoint.rb"],
         output: "dist/klenod.bundle",
         assets_dir: "dist/public",
         plugins: plugins,
+        mode: mode,
         base_dir: APP_ROOT
       )
     end

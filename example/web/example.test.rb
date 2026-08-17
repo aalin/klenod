@@ -1358,7 +1358,7 @@ class Klenod::ExampleTest < Minitest::Test
 
   def example_config
     with_env("KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1") do
-      Example::WebConfig.build_config
+      Example::WebConfig.build_config(mode: :development)
     end
   end
 
