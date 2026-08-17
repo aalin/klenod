@@ -176,7 +176,9 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       assert_includes(asset.bytes, %(from "#{runtime_asset.output_path}"))
       assert_includes(asset.bytes, "h(\"span\", {")
       assert_includes(asset.bytes, "hidden: true")
+      assert_includes(asset.bytes, "Object.defineProperty(ClockElement, \"__klenodCustomElementTag\"")
       assert_includes(asset.bytes, "customElements.define(#{exports::Default.fetch(:tag).inspect}, ClockElement);")
+      assert_includes(runtime_asset.bytes, "type.__klenodCustomElementTag")
     end
   end
 

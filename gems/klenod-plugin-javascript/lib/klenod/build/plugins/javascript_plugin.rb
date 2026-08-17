@@ -62,9 +62,14 @@ module Klenod
             return super unless EXTENSIONS.include?(module_id.extname)
 
             custom_element = custom_element_module?(module_id)
-            source = custom_element ? jsx_module_source(code) : code
-            transform = Klenod::Plugin::JavaScript::Parser.transform(source, filename: module_id.to_s, source_kind: source_kind(module_id))
-            dependencies = build_dependencies(module_id, transform.imports)
+            transform = Klenod::Plugin::JavaScript::Parser.transform(code, filename: module_id.to_s, source_kind: source_kind(module_id))
+            javascript_source, imports =
+              if custom_element
+                inject_jsx_runtime(transform.code, transform.imports, module_id)
+              else
+                [transform.code, transform.imports]
+              end
+            dependencies = build_dependencies(module_id, imports)
 
             TransformResult.new(
               module_source(nil),
@@ -73,9 +78,9 @@ module Klenod
               [],
               [],
               {
-                javascript_source: transform.code,
+                javascript_source: javascript_source,
                 javascript_original_source: code,
-                javascript_imports: transform.imports,
+                javascript_imports: imports,
                 javascript_custom_element: custom_element,
                 javascript_custom_element_tag: custom_element ? custom_element_tag(module_id) : nil
               }
@@ -159,8 +164,36 @@ module Klenod
             CUSTOM_ELEMENT_EXTENSIONS.include?(module_id.extname)
           end
 
-          def jsx_module_source(code)
-            %(import { h, Fragment } from "#{JSX_RUNTIME_SPECIFIER}";\n#{code})
+          def inject_jsx_runtime(code, imports, module_id)
+            prefix = %(import { h, Fragment } from "#{JSX_RUNTIME_SPECIFIER}";\n)
+            [
+              "#{prefix}#{code}",
+              [
+                jsx_runtime_import_record(prefix, module_id),
+                *imports.map { shifted_import_record(it, prefix.length) }
+              ]
+            ]
+          end
+
+          def jsx_runtime_import_record(prefix, module_id)
+            start_offset = prefix.index(JSX_RUNTIME_SPECIFIER) || raise(KeyError, "Missing JSX runtime specifier in injected import")
+            Klenod::Plugin::JavaScript::ImportRecord.new(
+              JSX_RUNTIME_SPECIFIER,
+              :javascript_import,
+              start_offset,
+              start_offset + JSX_RUNTIME_SPECIFIER.length,
+              "#{module_id}:1:#{start_offset + 1}"
+            )
+          end
+
+          def shifted_import_record(import, offset)
+            Klenod::Plugin::JavaScript::ImportRecord.new(
+              import.specifier,
+              import.kind,
+              import.start_offset + offset,
+              import.end_offset + offset,
+              import.loc
+            )
           end
 
           def build_dependencies(module_id, imports)
@@ -202,7 +235,11 @@ module Klenod
 
           def register_custom_element(module_id, code, tag)
             constructor = custom_element_constructor(module_id, code)
-            "#{code.chomp}\ncustomElements.define(#{tag.inspect}, #{constructor});\n"
+            <<~JS
+              #{code.chomp}
+              Object.defineProperty(#{constructor}, "__klenodCustomElementTag", { value: #{tag.inspect} });
+              customElements.define(#{tag.inspect}, #{constructor});
+            JS
           end
 
           def custom_element_constructor(module_id, code)
@@ -299,6 +336,9 @@ module Klenod
           def jsx_runtime_source
             <<~JS
               export function h(type, attrs, ...children) {
+                if (type && typeof type.__klenodCustomElementTag === "string") {
+                  return h(type.__klenodCustomElementTag, attrs, ...children);
+                }
                 if (typeof type === "function") return type(attrs, ...children);
 
                 const el = document.createElement(type);

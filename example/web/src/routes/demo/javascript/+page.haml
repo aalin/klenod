@@ -1,5 +1,6 @@
 :ruby
   IntlTime = import("./IntlTime.tsx")
+  TimeDemo = import("./TimeDemo.tsx")
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
 
@@ -33,3 +34,6 @@
                 "date-style": date_style || DEFAULT_DATE_STYLE,
                 "time-style": time_style || DEFAULT_TIME_STYLE
               }= Time.now
+
+  %Panel{ title: "TSX composition" }
+    %TimeDemo{ time: Time.now }= Time.now
