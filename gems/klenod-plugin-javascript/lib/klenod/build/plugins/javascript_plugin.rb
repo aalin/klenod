@@ -21,6 +21,10 @@ module Klenod
           LOCAL_SPECIFIER_PATTERN = %r{\A(?:\.{1,2}/|/|app:/)}
           EXTERNAL_SPECIFIER_PATTERN = %r{\A(?:[A-Za-z][A-Za-z0-9+.-]*:)?//}
           VALID_SOURCE_MAP_MODES = [false, true, :development].freeze
+          CUSTOM_ELEMENT_DIRECTIVE_PATTERN = /\A\s*(["'])custom element\1;?[ \t]*(?:\r?\n)?/
+          IDENTIFIER_PATTERN = '[$_\p{Alpha}][$\u200c\u200d\p{Alnum}_]*'
+          DEFAULT_EXPORT_CLASS_PATTERN = /\bexport\s+default\s+class\s+(#{IDENTIFIER_PATTERN})\b/
+          DEFAULT_EXPORT_IDENTIFIER_PATTERN = /\bexport\s+default\s+(#{IDENTIFIER_PATTERN})\s*;/
 
           def initialize(source_maps: :development)
             unless VALID_SOURCE_MAP_MODES.include?(source_maps)
@@ -46,7 +50,9 @@ module Klenod
           def transform(module_id, code, _context)
             return super unless EXTENSIONS.include?(module_id.extname)
 
-            transform = Klenod::Plugin::JavaScript::Parser.transform(code, filename: module_id.to_s, source_kind: source_kind(module_id))
+            custom_element = custom_element_directive?(code)
+            source = custom_element ? strip_custom_element_directive(code) : code
+            transform = Klenod::Plugin::JavaScript::Parser.transform(source, filename: module_id.to_s, source_kind: source_kind(module_id))
             dependencies = build_dependencies(module_id, transform.imports)
 
             TransformResult.new(
@@ -58,7 +64,9 @@ module Klenod
               {
                 javascript_source: transform.code,
                 javascript_original_source: code,
-                javascript_imports: transform.imports
+                javascript_imports: transform.imports,
+                javascript_custom_element: custom_element,
+                javascript_custom_element_tag: custom_element ? custom_element_tag(module_id) : nil
               }
             )
           end
@@ -72,6 +80,13 @@ module Klenod
             edit = rewrite_imports(module_id, source, original_source, imports, resolved_dependencies, dependency_records)
             source_map_asset = nil
             code = edit.code
+            custom_element_descriptor = nil
+
+            if result.metadata[:javascript_custom_element]
+              tag = result.metadata.fetch(:javascript_custom_element_tag)
+              code = register_custom_element(module_id, code, tag)
+              custom_element_descriptor = custom_element_descriptor(tag, nil)
+            end
 
             if source_maps_enabled?(context)
               source_map_json = edit.source_map.to_json
@@ -104,9 +119,12 @@ module Klenod
               )
 
             result.with(
-              code: module_source(output_path),
+              code: module_source(output_path, custom_element_descriptor: custom_element_descriptor&.merge(asset_path: output_path)),
               assets: [asset, source_map_asset].compact,
-              metadata: result.metadata.merge(javascript_asset_path: output_path)
+              metadata: result.metadata.merge(
+                javascript_asset_path: output_path,
+                javascript_custom_element_descriptor: custom_element_descriptor&.merge(asset_path: output_path)
+              )
             )
           end
 
@@ -119,10 +137,20 @@ module Klenod
           def runtime_import_value(_resolved_dependency, record, _context)
             return nil unless EXTENSIONS.include?(record.id.extname)
 
+            return record.metadata.fetch(:javascript_custom_element_descriptor) if record.metadata[:javascript_custom_element]
+
             record.metadata.fetch(:javascript_asset_path)
           end
 
           private
+
+          def custom_element_directive?(source)
+            source.match?(CUSTOM_ELEMENT_DIRECTIVE_PATTERN)
+          end
+
+          def strip_custom_element_directive(source)
+            source.sub(CUSTOM_ELEMENT_DIRECTIVE_PATTERN, "")
+          end
 
           def build_dependencies(module_id, imports)
             imports.filter_map.with_index do |import, index|
@@ -159,6 +187,31 @@ module Klenod
               end
 
             SourceMap::Editor.new(source, identity_source_map(module_id, source, original_source)).apply(edits)
+          end
+
+          def register_custom_element(module_id, code, tag)
+            constructor = custom_element_constructor(module_id, code)
+            "#{code.chomp}\ncustomElements.define(#{tag.inspect}, #{constructor});\n"
+          end
+
+          def custom_element_constructor(module_id, code)
+            if (match = code.match(DEFAULT_EXPORT_CLASS_PATTERN))
+              return match[1]
+            end
+
+            if (match = code.match(DEFAULT_EXPORT_IDENTIFIER_PATTERN))
+              return match[1]
+            end
+
+            raise Error, "\"custom element\" modules must default-export a named class or identifier: #{module_id}"
+          end
+
+          def custom_element_descriptor(tag, asset_path)
+            {
+              __klenod_custom_element: true,
+              tag: tag,
+              asset_path: asset_path
+            }
           end
 
           def identity_source_map(module_id, source, original_source)
@@ -218,14 +271,22 @@ module Klenod
             :javascript
           end
 
-          def module_source(output_path)
+          def module_source(output_path, custom_element_descriptor: nil)
+            default = custom_element_descriptor || output_path
+
             <<~RUBY
-              Default = #{output_path.inspect}
+              Default = #{default.inspect}
             RUBY
           end
 
           def asset_name(module_id)
             module_id.path.gsub(/[^A-Za-z0-9]+/, "_").sub(/\A_+/, "").sub(/_+\z/, "")
+          end
+
+          def custom_element_tag(module_id)
+            name = asset_name(module_id).downcase.gsub(/_+/, "-")
+            hash = Hashing.short(module_id.to_s, length: 8)
+            "klenod-#{name}-#{hash}"
           end
         end
       end

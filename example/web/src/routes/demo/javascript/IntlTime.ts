@@ -1,6 +1,8 @@
-class IntlTimeElement extends HTMLTimeElement {
+"custom element";
+
+export default class IntlTimeElement extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['datetime', 'lang', 'date-style', 'time-style'];
+    return ['time', 'lang', 'date-style', 'time-style'];
   }
 
   connectedCallback(): void {
@@ -12,10 +14,10 @@ class IntlTimeElement extends HTMLTimeElement {
   }
 
   render(): void {
-    const datetime = this.getAttribute('datetime');
-    if (!datetime) return;
+    const time = this.getAttribute('time');
+    if (!time) return;
 
-    const date = new Date(datetime);
+    const date = new Date(time);
     if (Number.isNaN(date.getTime())) return;
 
     const options = this.formatOptions();
@@ -43,5 +45,3 @@ class IntlTimeElement extends HTMLTimeElement {
 function isDateTimeStyle(value: string | null): value is Intl.DateTimeFormatOptions['dateStyle'] {
   return value === 'full' || value === 'long' || value === 'medium' || value === 'short';
 }
-
-customElements.define('intl-time', IntlTimeElement, { extends: 'time' });

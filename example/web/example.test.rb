@@ -69,6 +69,19 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(%(<p title="&quot;quoted&quot;">Fish &amp; chips</p>), Example::H.render(node))
   end
 
+  def test_example_h_renders_custom_element_descriptors_as_elements
+    descriptor = {
+      __klenod_custom_element: true,
+      tag: "klenod-clock-a1b2c3d4",
+      asset_path: "/assets/clock.js"
+    }
+    node = Example::H[descriptor, "12:00", time: "2026-08-16 12:00:00 -0500"]
+
+    assert_instance_of(Example::H::Element, node)
+    assert_equal("klenod-clock-a1b2c3d4", node.tag)
+    assert_equal(%(<klenod-clock-a1b2c3d4 time="2026-08-16 12:00:00 -0500">12:00</klenod-clock-a1b2c3d4>), Example::H.render(node))
+  end
+
   def test_example_h_serializes_style_hashes
     node =
       Example::H[

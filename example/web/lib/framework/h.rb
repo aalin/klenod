@@ -57,12 +57,17 @@ module Example
     HTML_ESCAPE_PATTERN = /[&"<>]/
 
     def self.[](tag, *children, **props)
+      tag = tag.fetch(:tag) if custom_element_descriptor?(tag)
       return render_component(tag, **props, children: children) if tag.is_a?(Class)
 
       key = props.delete(:key)
       slot = props.delete(:slot)&.to_sym
 
       Element[tag, key, slot, props, normalize_children(children)]
+    end
+
+    def self.custom_element_descriptor?(tag)
+      tag.is_a?(Hash) && tag[:__klenod_custom_element] == true && tag.key?(:tag)
     end
 
     def self.fragment(*children, key: nil, slot: nil)

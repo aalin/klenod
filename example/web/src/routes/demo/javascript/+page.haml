@@ -1,8 +1,10 @@
 :ruby
-  IntlTime = import("./IntlTime.haml")
+  IntlTime = import("./IntlTime.ts")
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
 
+  DEFAULT_DATE_STYLE = "long"
+  DEFAULT_TIME_STYLE = "short"
   StyleValues = ["full", "long", "medium", "short", nil].freeze
 
 %article
@@ -25,4 +27,9 @@
             %td= date_style.inspect
             %td= time_style.inspect
             %td
-              %IntlTime{ time: Time.now, date_style:, time_style: }
+              %IntlTime{
+                lang: Example::Context.current&.request&.locale || "en",
+                time: Time.now,
+                "date-style": date_style || DEFAULT_DATE_STYLE,
+                "time-style": time_style || DEFAULT_TIME_STYLE
+              }= Time.now
