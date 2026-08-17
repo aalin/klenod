@@ -40,6 +40,6 @@ export default class IntlTimeElement extends HTMLElement {
   }
 }
 
-function isDateTimeStyle(value: string | null): value is Intl.DateTimeFormatOptions['dateStyle'] {
+function isDateTimeStyle(value: string | null): value is NonNullable<Intl.DateTimeFormatOptions['dateStyle']> {
   return value === 'full' || value === 'long' || value === 'medium' || value === 'short';
 }
