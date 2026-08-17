@@ -8,6 +8,7 @@ require_relative "asset"
 require_relative "context"
 require_relative "invalidation_result"
 require_relative "watcher"
+require "klenod/plugin/css"
 
 class Klenod::Build::Watcher::Test < Minitest::Test
   def test_update_event_carries_invalidation_result
@@ -101,7 +102,7 @@ class Klenod::Build::Watcher::Test < Minitest::Test
       css_path = "#{dir}/pages/page.css"
       File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       context.evaluate("pages/page.haml")
       events = []
       context.on_update { |event| events << event }
@@ -128,7 +129,7 @@ class Klenod::Build::Watcher::Test < Minitest::Test
       File.write("#{dir}/pages/page.haml", "%h1 Hello\n")
       File.write(css_path, ".title { color: red; }\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       context.evaluate("pages/page.haml")
       old_assets = context.assets_for("pages/page.css")
       old_asset = old_assets.find { |asset| asset.metadata[:type] == :css }
@@ -187,5 +188,15 @@ class Klenod::Build::Watcher::Test < Minitest::Test
 
     context.emit_update(event)
     event
+  end
+
+  def context_with_css(dir)
+    Klenod::Build::Context.new(
+      source_dir: dir,
+      plugins: [
+        *Klenod::Build::Context.default_plugins,
+        Klenod::Build::Plugins::CssPlugin::Plugin.new
+      ]
+    )
   end
 end

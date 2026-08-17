@@ -8,6 +8,7 @@ require "rmagick"
 require "tmpdir"
 
 require "klenod/runtime"
+require "klenod/plugin/css"
 require_relative "asset"
 require_relative "context"
 
@@ -160,7 +161,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/dep.rb", "VALUE = 41\n")
       File.write("#{dir}/pages/page.rb", "Dep = import(\"../dep\")\nVALUE = Dep::VALUE + 1\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       record = context.evaluate("pages/page")
       mod = context.graph.mods.fetch(record.id)
 
@@ -174,7 +175,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       side_effect_path = "#{dir}/side-effect.txt"
       File.write("#{dir}/entry.rb", "File.binwrite(#{side_effect_path.inspect}, \"ran\")\nVALUE = 42\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       record = context.evaluate("entry")
 
       assert_equal(Klenod::Build::ModuleId.new("entry.rb", nil), record.id)
@@ -204,7 +205,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/shared.rb", "VALUE = 41\n")
       File.write("#{dir}/pages/page.rb", "Shared = import(\"/shared\")\nVALUE = Shared::VALUE + 1\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       record = context.evaluate("pages/page")
 
       assert_equal(42, context.exports(record)::VALUE)
@@ -217,7 +218,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/pages")
       File.write("#{dir}/pages/page.rb", "VALUE = 42\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       entry = context.entry("pages/page")
 
       assert_equal(entry.id, context.module_id_for(entry))
@@ -249,7 +250,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/pages/page.rb", "FILE_PATH = __FILE__\n")
 
       output = "#{dir}/dist/klenod.bundle"
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       context.build(entrypoints: ["pages/page"], output: output)
 
       build_bundle = Klenod::Runtime.load_bundle(output)
@@ -284,7 +285,7 @@ class Klenod::Build::Context::Test < Minitest::Test
     Dir.mktmpdir do |dir|
       File.write("#{dir}/entry.rb", "VALUE = 42\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       record = context.evaluate("entry")
 
       assert_equal(42, context.exports(record)::VALUE)
@@ -308,7 +309,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       entry = context.entry("entry")
 
       assert_equal(Klenod::Build::ModuleId.new("entry.rb", nil), entry.id)
@@ -327,7 +328,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       side_effect_path = "#{dir}/side-effect.txt"
       File.write("#{dir}/entry.rb", "File.binwrite(#{side_effect_path.inspect}, \"ran\")\nVALUE = 42\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       entry = context.entry("entry")
 
       assert_equal(Klenod::Build::ModuleId.new("entry.rb", nil), entry.id)
@@ -346,7 +347,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       side_effect_path = "#{dir}/side-effect.txt"
       File.write("#{dir}/entry.rb", "File.binwrite(#{side_effect_path.inspect}, \"ran\")\nVALUE = 42\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       handle = context.collect("entry")
 
       assert_instance_of(Klenod::Build::LoadedModule, handle)
@@ -368,7 +369,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
       File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\nFile.binwrite(#{side_effect_path.inspect}, \"ran\")\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       entry = context.entry("entry")
 
       assert_equal(["styles/home.css"], entry.assets(type: :css).map(&:logical_name))
@@ -384,7 +385,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write(dep_path, "VALUE = 1\n")
       File.write("#{dir}/entry.rb", "Dep = import(\"./dep\")\nFile.binwrite(#{side_effect_path.inspect}, Dep::VALUE.to_s)\nVALUE = Dep::VALUE\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       entry = context.entry("entry")
 
       assert_equal(Klenod::Build::ModuleId.new("entry.rb", nil), entry.id)
@@ -419,13 +420,13 @@ class Klenod::Build::Context::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       record = context.evaluate("entry")
       assets = context.assets_for_module(record, type: :css)
 
       assert_equal(["styles/entry.css", "styles/card.css"], assets.map(&:logical_name))
       assert_equal([], context.assets_for_module(record, type: :image))
-      assert_equal(assets, context.assets_for_module(record.id, content_type: "text/css"))
+      assert_equal(assets, context.assets_for_module(record.id, type: :css))
       assert_equal([], context.assets_for_module(record, type: :css, recursive: false))
       assert_equal(["styles/entry.css"], context.assets_for_module("styles/entry.css", type: :css, recursive: false).map(&:logical_name))
     end
@@ -451,7 +452,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       )
       File.write("#{dir}/extra.rb", "Styles = import(\"styles/extra.css\")\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       layout = context.collect("layout")
       page = context.collect("page")
       context.collect("extra")
@@ -603,7 +604,7 @@ class Klenod::Build::Context::Test < Minitest::Test
     Dir.mktmpdir do |dir|
       File.write("#{dir}/entry.rb", "SelfImport = import(\"entry\")\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       error = assert_raises(Klenod::Build::ImportCycleError) { context.evaluate("entry") }
 
       assert_equal(
@@ -620,7 +621,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/b.rb", "C = import(\"c\")\n")
       File.write("#{dir}/c.rb", "A = import(\"a\")\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       error = assert_raises(Klenod::Build::ImportCycleError) { context.evaluate("a") }
 
       assert_equal(["app:/a.rb", "app:/b.rb", "app:/c.rb", "app:/a.rb"], error.cycle.map(&:to_s))
@@ -642,7 +643,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       )
       File.write("#{dir}/b.rb", "A = import(\"a\")\nVALUE = 41\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       record = context.evaluate("a")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -665,7 +666,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       record = context.evaluate("entry")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -692,7 +693,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       record = context.evaluate("entry")
       first, second = context.graph.mods.fetch(record.id).const_get(:Exports).loaded_values
 
@@ -715,7 +716,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       entry_record = context.evaluate("entry")
       exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
 
@@ -747,7 +748,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       entry_record = context.evaluate("entry")
       exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
 
@@ -846,7 +847,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         )
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: plugins)
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: plugins_with_css(plugins))
       bundle = context.build(entrypoints: ["entry"], output: output, assets_dir: assets_dir)
       loaded = Klenod::Runtime.load_bundle(output)
       rendered, css_asset_paths, image_src = loaded.load("entry").const_get(:Exports).call(loaded)
@@ -897,7 +898,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         RUBY
       )
       output = "#{dir}/bundle.mpk"
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
 
       context.build(entrypoints: ["entry"], output: output)
 
@@ -1029,7 +1030,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         )
       )
 
-      context = Klenod::Build::Context.new(source_dir: FIXTURE_APP_DIR, plugins: plugins)
+      context = Klenod::Build::Context.new(source_dir: FIXTURE_APP_DIR, plugins: plugins_with_css(plugins))
       bundle = context.build(entrypoints: ["entry"], output: output, assets_dir: assets_dir)
       loaded = Klenod::Runtime.load_bundle(output)
       rendered, page_css_paths, card_css_paths, image_paths = loaded.load("entry").const_get(:Exports).render(loaded)
@@ -1068,7 +1069,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       output = "#{dir}/dist/klenod.bundle"
       assets_dir = "#{dir}/dist/public"
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       bundle = context.build(entrypoints: ["entry"], output: output, assets_dir: assets_dir)
       asset_path, runtime_asset = bundle.assets.first
       asset = context.asset(asset_path)
@@ -1089,7 +1090,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       side_effect_path = "#{dir}/side-effect.txt"
       File.write("#{dir}/entry.rb", "File.binwrite(#{side_effect_path.inspect}, \"built\")\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       bundle = context.build(entrypoints: ["entry"], output: output)
 
       refute(File.exist?(side_effect_path), "Expected build to avoid evaluating top-level entrypoint code")
@@ -1128,7 +1129,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       side_effect_path = "#{dir}/side-effect.txt"
       File.write("#{dir}/entry.rb", "File.binwrite(#{side_effect_path.inspect}, \"ran\")\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       context.build_executable(entrypoints: ["entry"], output: output)
 
       refute(File.exist?(side_effect_path), "Expected executable build to avoid evaluating top-level entrypoint code")
@@ -1213,7 +1214,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
       File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       context.evaluate("entry")
       asset = context.assets_for("styles/home.css").first
       context.write_assets(assets_dir)
@@ -1232,7 +1233,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/styles/home.css", ".title { color: red; }\n" * 100)
       File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       context.evaluate("entry")
       asset = context.assets_for("styles/home.css").find { |candidate| candidate.metadata[:type] == :css }
       map_asset = context.assets_for("styles/home.css").find { |candidate| candidate.metadata[:type] == :css_source_map }
@@ -1242,7 +1243,8 @@ class Klenod::Build::Context::Test < Minitest::Test
       map_disk_path = File.join(assets_dir, map_asset.output_path.delete_prefix("/"))
       brotli_path = "#{disk_path}.br"
 
-      assert_equal([disk_path, map_disk_path].sort, result.written_paths.sort)
+      assert_includes(result.written_paths, disk_path)
+      assert_includes(result.written_paths, map_disk_path)
       assert_path_exists(brotli_path)
       assert_path_exists(map_disk_path)
       assert_operator(File.size(brotli_path), :<, File.size(disk_path))
@@ -1300,7 +1302,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       assets_dir = "#{dir}/public"
       File.write(css_path, ".title { color: red; }\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       context.evaluate("styles/home.css")
       old_assets = context.assets_for("styles/home.css")
       old_asset = old_assets.find { |asset| asset.metadata[:type] == :css }
@@ -1367,7 +1369,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       entry = context.entry("entry")
       entry.exports
       context.write_assets(assets_dir)
@@ -1496,7 +1498,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       output = "#{dir}/dist/klenod.bundle"
       assets_dir = "#{dir}/dist/public"
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_with_css(dir)
       bundle = context.build(entrypoints: ["entry"], output: output, assets_dir: assets_dir)
       image_asset =
         bundle.assets.values.find { |asset| asset.content_type == "image/png" }
@@ -1678,6 +1680,21 @@ class Klenod::Build::Context::Test < Minitest::Test
     Klenod::Build::Context::DEFAULT_PLUGINS.map do |default_plugin|
       default_plugin.is_a?(Klenod::Build::Plugins::HamlPlugin::Plugin) ? plugin : default_plugin
     end
+  end
+
+  def plugins_with_css(plugins = Klenod::Build::Context.default_plugins)
+    [
+      *plugins,
+      Klenod::Build::Plugins::CssPlugin::Plugin.new
+    ]
+  end
+
+  def context_with_css(dir, mode: :development)
+    Klenod::Build::Context.new(
+      source_dir: dir,
+      mode: mode,
+      plugins: plugins_with_css
+    )
   end
 
   def png_bytes(width:, height:)

@@ -10,7 +10,6 @@ PATH
       kramdown (~> 2.5)
       kramdown-parser-gfm (~> 1.1)
       listen (~> 3.10)
-      mayu-css (~> 0.1.5)
       protocol-url (~> 0.4)
       rmagick (~> 7.0)
       samovar (~> 2.5)
@@ -18,6 +17,13 @@ PATH
       syntax_tree-haml (~> 4.0)
       toml-rb (~> 4.2)
       tsort (~> 0.2.0)
+
+PATH
+  remote: gems/klenod-plugin-css
+  specs:
+    klenod-plugin-css (0.0.1)
+      klenod-build (= 0.0.1)
+      rb_sys (~> 0.9.39)
 
 PATH
   remote: gems/klenod-plugin-javascript
@@ -104,8 +110,6 @@ GEM
       rb-fsevent (~> 0.10, >= 0.10.3)
       rb-inotify (~> 0.9, >= 0.9.10)
     logger (1.7.0)
-    mayu-css (0.1.5-arm64-darwin)
-    mayu-css (0.1.5-x86_64-linux)
     method_source (1.1.0)
     metrics (0.15.0)
     minitest (6.0.6)
@@ -209,6 +213,7 @@ PLATFORMS
 DEPENDENCIES
   klenod!
   klenod-build!
+  klenod-plugin-css!
   klenod-plugin-javascript!
   klenod-rack!
   klenod-runtime!
@@ -244,6 +249,7 @@ CHECKSUMS
   json (2.20.0) sha256=9362bc6e55a952b056abf9167cf053358181c904cb70cd6eee0808ea830fc32b
   klenod (0.0.1)
   klenod-build (0.0.1)
+  klenod-plugin-css (0.0.1)
   klenod-plugin-javascript (0.0.1)
   klenod-rack (0.0.1)
   klenod-runtime (0.0.1)
@@ -253,8 +259,6 @@ CHECKSUMS
   lint_roller (1.1.0) sha256=2c0c845b632a7d172cb849cc90c1bce937a28c5c8ccccb50dfd46a485003cc87
   listen (3.10.0) sha256=c6e182db62143aeccc2e1960033bebe7445309c7272061979bb098d03760c9d2
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
-  mayu-css (0.1.5-arm64-darwin) sha256=692b2c0263fa2c4c2af179a9413ac6b06e01f595b65f4dca4ff90b0cb374c77b
-  mayu-css (0.1.5-x86_64-linux) sha256=ed3bb215e50b039de766b2b72a02493b56083a85e1aa76fa8424d7798d7e5b8e
   method_source (1.1.0) sha256=181301c9c45b731b4769bc81e8860e72f9161ad7d66dd99103c9ab84f560f5c5
   metrics (0.15.0) sha256=61ded5bac95118e995b1bc9ed4a5f19bc9814928a312a85b200abbdac9039072
   minitest (6.0.6) sha256=153ea36d1d987a62942382b61075745042a2b3123b1cd48f4c3675af9cc7d6f1

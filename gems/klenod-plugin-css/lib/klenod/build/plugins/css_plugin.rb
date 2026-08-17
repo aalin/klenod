@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
-require "mayu/css"
+require "klenod/plugin/css/transformer"
 require "uri"
 
-require_relative "../asset"
-require_relative "../dependency"
-require_relative "../errors"
-require_relative "../hashing"
-require_relative "../plugin"
-require_relative "../source_map"
-require_relative "class_names_runtime"
-require_relative "../transform_result"
+require "klenod/build/asset"
+require "klenod/build/dependency"
+require "klenod/build/errors"
+require "klenod/build/hashing"
+require "klenod/build/plugin"
+require "klenod/build/source_map"
+require "klenod/build/transform_result"
+require "klenod/build/plugins/class_names_runtime"
 
 module Klenod
   module Build
@@ -20,18 +20,20 @@ module Klenod
           include ClassNamesRuntime
 
           CSS_DEPENDENCY_TYPES = {
-            Mayu::CSS::ImportDependency => :css_import,
-            Mayu::CSS::UrlDependency => :asset_url
+            Klenod::Plugin::CSS::ImportDependency => :css_import,
+            Klenod::Plugin::CSS::UrlDependency => :asset_url
           }.freeze
 
           VALID_SOURCE_MAP_MODES = [false, true, :development].freeze
 
-          def initialize(source_maps: :development)
+          def initialize(source_maps: :development, class_pattern: "[component].[local]?[hash]", tag_pattern: "[component]_[local]?[hash]")
             unless VALID_SOURCE_MAP_MODES.include?(source_maps)
               raise ArgumentError, "source_maps must be false, true, or :development"
             end
 
             @source_maps = source_maps
+            @class_pattern = class_pattern
+            @tag_pattern = tag_pattern
           end
 
           def resolve(dependency, _context)
@@ -45,19 +47,21 @@ module Klenod
           def transform(module_id, code, context)
             return super unless module_id.extname == ".css"
 
-            result = Mayu::CSS.transform(module_id.path, code, minify: false)
-            css_dependencies = build_dependencies(module_id, result.dependencies, context)
+            scoped_result = transform_css(module_id, code, transform_names: true)
+            javascript_result = transform_css(module_id, code, transform_names: false)
+            css_dependencies = build_dependencies(module_id, scoped_result.dependencies, context)
             styles_dependency = class_names_runtime_dependency(module_id)
 
             TransformResult.new(
-              ruby_module_source(css_selectors(result), nil, styles_dependency: styles_dependency),
+              ruby_module_source(css_selectors(scoped_result), nil, styles_dependency: styles_dependency),
               [styles_dependency, *css_dependencies.dependencies],
               nil,
               [],
               [],
               {
-                css_result: result,
-                css_classes: css_selectors(result),
+                css_result: scoped_result,
+                css_javascript_result: javascript_result,
+                css_classes: css_selectors(scoped_result),
                 external_dependencies: css_dependencies.external_dependencies
               }
             )
@@ -67,53 +71,23 @@ module Klenod
             css_result = result.metadata[:css_result]
             return result unless css_result
 
-            css_edit = replace_dependencies(
-              css_result,
+            css_edit = finalized_css_edit(css_result, resolved_dependencies, dependency_records, result.metadata.fetch(:external_dependencies))
+            javascript_css_edit = finalized_css_edit(
+              result.metadata.fetch(:css_javascript_result),
               resolved_dependencies,
               dependency_records,
-              result.metadata.fetch(:external_dependencies)
+              result.metadata.fetch(:external_dependencies),
+              import_asset_type: :css_javascript_stylesheet
             )
-            css_edit = remove_empty_imports(css_edit)
-            source_map_asset = nil
-            css = css_edit.code
-
-            if source_maps_enabled?(context)
-              source_map = source_map_for(css_edit.source_map, module_id, context)
-              source_map_json = source_map.to_json
-              source_map_hash = Hashing.short(source_map_json)
-              source_map_output_path = "/assets/#{asset_name(module_id)}.#{source_map_hash}.css.map"
-              source_map_asset =
-                Asset.new(
-                  module_id.path,
-                  source_map_hash,
-                  source_map_output_path,
-                  nil,
-                  source_map_json,
-                  "application/json",
-                  {type: :css_source_map}
-                )
-              css = "#{css.chomp}\n/*# sourceMappingURL=#{File.basename(source_map_output_path)} */\n"
-            end
-
-            hash = Hashing.short(css)
-            output_path = "/assets/#{asset_name(module_id)}.#{hash}.css"
-            asset =
-              Asset.new(
-                module_id.path,
-                hash,
-                output_path,
-                nil,
-                css,
-                "text/css",
-                {type: :css, classes: result.metadata[:css_classes]}
-              )
+            asset, source_map_asset = css_asset_pair(module_id, css_edit, :css, {classes: result.metadata[:css_classes]}, context)
+            javascript_asset, javascript_source_map_asset = css_asset_pair(module_id, javascript_css_edit, :css_javascript_stylesheet, {}, context)
 
             result.with(
-              code: ruby_module_source(result.metadata[:css_classes], output_path, styles_dependency: result.dependencies.fetch(0)),
-              assets: [asset, source_map_asset, *result.assets].compact,
+              code: ruby_module_source(result.metadata[:css_classes], asset.output_path, styles_dependency: result.dependencies.fetch(0)),
+              assets: [asset, source_map_asset, javascript_asset, javascript_source_map_asset, *result.assets].compact,
               metadata: result.metadata.merge(
-                css_asset_path: output_path,
-                css_javascript_stylesheet_path: output_path
+                css_asset_path: asset.output_path,
+                css_javascript_stylesheet_path: javascript_asset.output_path
               )
             )
           end
@@ -137,6 +111,18 @@ module Klenod
           private
 
           CssDependencies = ::Data.define(:dependencies, :external_dependencies)
+          CssEdit = ::Data.define(:code, :source_map)
+
+          def transform_css(module_id, code, transform_names:)
+            Klenod::Plugin::CSS::Transformer.transform(
+              module_id.path,
+              code,
+              minify: false,
+              transform_names: transform_names,
+              class_pattern: @class_pattern,
+              tag_pattern: @tag_pattern
+            )
+          end
 
           def build_dependencies(module_id, dependencies, context)
             external_dependencies = {}
@@ -165,7 +151,7 @@ module Klenod
           end
 
           def plugin_resolvable_external_import?(dependency, css_dependency, context)
-            return false unless css_dependency.is_a?(Mayu::CSS::ImportDependency)
+            return false unless css_dependency.is_a?(Klenod::Plugin::CSS::ImportDependency)
 
             context.resolve_dependency(dependency)
             true
@@ -173,9 +159,12 @@ module Klenod
             false
           end
 
-          CssEdit = ::Data.define(:code, :source_map)
+          def finalized_css_edit(css_result, resolved_dependencies, dependency_records, external_dependencies, import_asset_type: :css)
+            replace_dependencies(css_result, resolved_dependencies, dependency_records, external_dependencies, import_asset_type:)
+              .then { remove_empty_imports(it) }
+          end
 
-          def replace_dependencies(css_result, resolved_dependencies, dependency_records, external_dependencies)
+          def replace_dependencies(css_result, resolved_dependencies, dependency_records, external_dependencies, import_asset_type:)
             dependencies_by_placeholder =
               resolved_dependencies.filter_map do |resolved_dependency|
                 next unless resolved_dependency.dependency.metadata.key?(:placeholder)
@@ -191,7 +180,7 @@ module Klenod
                   else
                     resolved_dependency = dependencies_by_placeholder.fetch(css_dependency.placeholder)
                     record = dependency_records.fetch(resolved_dependency.dependency.id)
-                    replacement_for_dependency(resolved_dependency, record)
+                    replacement_for_dependency(resolved_dependency, record, import_asset_type:)
                   end
 
                 [css_dependency.placeholder, replacement]
@@ -222,6 +211,46 @@ module Klenod
 
             edited = SourceMap::Editor.new(css_edit.code, css_edit.source_map).apply(edits)
             CssEdit.new(edited.code, edited.source_map)
+          end
+
+          def css_asset_pair(module_id, css_edit, type, metadata, context)
+            source_map_asset = nil
+            css = css_edit.code
+
+            if source_maps_enabled?(context)
+              source_map = source_map_for(css_edit.source_map, module_id, context)
+              source_map_json = source_map.to_json
+              source_map_hash = Hashing.short(source_map_json)
+              suffix = (type == :css) ? "" : ".javascript"
+              source_map_output_path = "/assets/#{asset_name(module_id)}#{suffix}.#{source_map_hash}.css.map"
+              source_map_asset =
+                Asset.new(
+                  module_id.path,
+                  source_map_hash,
+                  source_map_output_path,
+                  nil,
+                  source_map_json,
+                  "application/json",
+                  {type: (type == :css) ? :css_source_map : :"#{type}_source_map"}
+                )
+              css = "#{css.chomp}\n/*# sourceMappingURL=#{File.basename(source_map_output_path)} */\n"
+            end
+
+            hash = Hashing.short(css)
+            suffix = (type == :css) ? "" : ".javascript"
+            output_path = "/assets/#{asset_name(module_id)}#{suffix}.#{hash}.css"
+            asset =
+              Asset.new(
+                module_id.path,
+                hash,
+                output_path,
+                nil,
+                css,
+                "text/css",
+                metadata.merge(type: type)
+              )
+
+            [asset, source_map_asset]
           end
 
           def source_map_for(source_map, module_id, context)
@@ -264,14 +293,15 @@ module Klenod
             end
           end
 
-          def replacement_for_dependency(resolved_dependency, record)
+          def replacement_for_dependency(resolved_dependency, record, import_asset_type:)
             case resolved_dependency.dependency.kind
             when :css_import
-              css_asset = record.assets.find { |asset| asset.metadata[:type] == :css }
+              css_asset = record.assets.find { |asset| asset.metadata[:type] == import_asset_type }
+              css_asset ||= record.assets.find { |asset| asset.metadata[:type] == :css } if import_asset_type == :css_javascript_stylesheet
               unless css_asset
                 raise UnsupportedFileError, "CSS @import #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to module #{record.id}, which does not emit a CSS asset"
               end
-              return ""
+              return (import_asset_type == :css) ? "" : css_asset.output_path
             when :asset_url
               unless record.assets.first
                 raise UnsupportedFileError, "CSS url() #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to module #{record.id}, which does not emit an asset"

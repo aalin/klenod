@@ -98,7 +98,7 @@ module Klenod
             builder = Transformer::RubyBuilder.new(profiler: profiler)
             context.unregister_virtual_modules(module_id)
 
-            if context.absolute_path(companion_css).file?
+            if context.absolute_path(companion_css).file? && css_plugin_available?(context)
               dependency =
                 Dependency
                   .create(
@@ -361,6 +361,14 @@ module Klenod
                 "#{class_names_runtime}.merge(#{imports.map(&:source).join(", ")})"
               )
               .source
+          end
+
+          def css_plugin_available?(context)
+            css_plugin_class =
+              Klenod::Build::Plugins.const_get(:CssPlugin, false).const_get(:Plugin, false)
+            context.respond_to?(:plugins) && context.plugins.any? { it.instance_of?(css_plugin_class) }
+          rescue NameError
+            false
           end
         end
       end

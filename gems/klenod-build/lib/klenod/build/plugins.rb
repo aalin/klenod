@@ -8,7 +8,6 @@ module Klenod
       autoload :HamlPlugin, File.expand_path("plugins/haml_plugin", __dir__)
       autoload :MarkdownPlugin, File.expand_path("plugins/markdown_plugin", __dir__)
       autoload :GemImportPlugin, File.expand_path("plugins/gem_import_plugin", __dir__)
-      autoload :CssPlugin, File.expand_path("plugins/css_plugin", __dir__)
       autoload :GoogleFontsPlugin, File.expand_path("plugins/google_fonts_plugin", __dir__)
       autoload :SvgPlugin, File.expand_path("plugins/svg_plugin", __dir__)
       autoload :ImagePlugin, File.expand_path("plugins/image_plugin", __dir__)

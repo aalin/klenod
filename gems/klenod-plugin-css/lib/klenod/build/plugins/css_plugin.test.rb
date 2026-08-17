@@ -4,9 +4,10 @@ require "fileutils"
 require "minitest/autorun"
 require "tmpdir"
 
-require_relative "../context"
+require "klenod/build/context"
+require "klenod/plugin/css"
 require "klenod/runtime"
-require_relative "image_plugin"
+require "klenod/build/plugins/image_plugin"
 
 class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
   def test_ruby_import_of_css_returns_class_map_and_emits_asset
@@ -16,7 +17,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
       File.write("#{dir}/pages/home.rb", "Styles = import(\"../styles/home.css\")\nTITLE = Styles.fetch(:title)\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       record = context.evaluate("pages/home")
       mod = context.graph.mods.fetch(record.id)
       css_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/home.css", nil))
@@ -36,7 +37,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       File.write("#{dir}/styles/home.css", ".title::before { content: \"🌗\"; }\n", encoding: "UTF-8")
       File.write("#{dir}/pages/home.rb", "Styles = import(\"../styles/home.css\")\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       context.evaluate("pages/home")
       css_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/home.css", nil))
       css_asset = css_record.assets.find { it.metadata[:type] == :css }
@@ -45,17 +46,19 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
-  def test_css_uses_mayu_stylesheet_for_javascript_imports
+  def test_css_tracks_unscoped_stylesheet_for_javascript_imports
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
       File.write("#{dir}/styles/home.css", ".title { color: red; }\nimg { display: block; }\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       record = context.evaluate("styles/home.css")
       css_asset = record.assets.find { it.metadata[:type] == :css }
+      javascript_css_asset = record.assets.find { it.metadata[:type] == :css_javascript_stylesheet }
 
-      assert_equal(css_asset.output_path, record.metadata.fetch(:css_javascript_stylesheet_path))
+      assert_equal(javascript_css_asset.output_path, record.metadata.fetch(:css_javascript_stylesheet_path))
       assert_includes(css_asset.bytes, "sourceMappingURL")
+      assert_includes(javascript_css_asset.bytes, ".title")
     end
   end
 
@@ -73,7 +76,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       record = context.evaluate("pages/home")
       mod = context.graph.mods.fetch(record.id)
       css_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/home.css", nil))
@@ -101,7 +104,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       record = context.evaluate("pages/home")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
 
@@ -131,7 +134,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         CSS
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       record = context.evaluate("styles/home.css")
       css = record.assets.first.bytes
       base_javascript_css_path = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/base.css", nil)).metadata.fetch(:css_javascript_stylesheet_path)
@@ -139,7 +142,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       refute_includes(css, "@import")
       refute_includes(css, "/assets/styles_base_css")
       assert_includes(css, "/assets/logo.")
-      assert_equal(context.assets_for("styles/base.css").find { it.metadata[:type] == :css }.output_path, base_javascript_css_path)
+      assert_equal(context.assets_for("styles/base.css").find { it.metadata[:type] == :css_javascript_stylesheet }.output_path, base_javascript_css_path)
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/home.css", nil)))
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/base.css", nil)))
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("images/logo.png", nil)))
@@ -159,7 +162,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         CSS
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       record = context.evaluate("styles/home.css")
       css = record.assets.first.bytes
 
@@ -174,7 +177,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       File.write("#{dir}/styles/base.css", ".base { color: blue; }\n")
       File.write("#{dir}/styles/home.css", "@import \"./base.css\";\n.title { color: red; }\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       bundle = context.build(entrypoints: ["styles/home.css"], output: "#{dir}/bundle.mpk")
       home_asset = context.assets_for("styles/home.css").fetch(0)
       base_asset = context.assets_for("styles/base.css").fetch(0)
@@ -183,7 +186,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       refute_includes(home_asset.bytes, base_asset.output_path)
       assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, home_asset.output_path)
       assert_match(%r{\A/assets/styles_base_css\.[a-f0-9]{16}\.css\z}, base_asset.output_path)
-      assert_equal(4, bundle.assets.length)
+      assert_equal(8, bundle.assets.length)
     end
   end
 
@@ -194,7 +197,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       File.write("#{dir}/styles/home.css", "@import \"./dep.rb\";\n.title { color: red; }\n")
 
       error = assert_raises(Klenod::Build::UnsupportedFileError) do
-        Klenod::Build::Context.new(source_dir: dir).evaluate("styles/home.css")
+        context_for(dir).evaluate("styles/home.css")
       end
 
       assert_match(/CSS @import/, error.message)
@@ -209,7 +212,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       File.write("#{dir}/styles/home.css", "@import \"./dep.haml\";\n.title { color: red; }\n")
 
       error = assert_raises(Klenod::Build::UnsupportedFileError) do
-        Klenod::Build::Context.new(source_dir: dir).evaluate("styles/home.css")
+        context_for(dir).evaluate("styles/home.css")
       end
 
       assert_match(/CSS @import/, error.message)
@@ -231,7 +234,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       entry_record = context.evaluate("entry")
       old_home_asset = context.assets_for("styles/home.css").fetch(0)
       old_base_asset = context.assets_for("styles/base.css").fetch(0)
@@ -262,13 +265,13 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\nTITLE = Styles.fetch(:title)\n")
       output = "#{dir}/bundle.mpk"
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       bundle = context.build(entrypoints: ["entry"], output: output)
       loaded = Klenod::Runtime.load_bundle(output)
       mod = loaded.load("entry")
 
       assert_match(/title/, mod.const_get(:Exports)::TITLE)
-      assert_equal(2, bundle.assets.length)
+      assert_equal(4, bundle.assets.length)
       assert_equal(bundle.assets.keys, loaded.assets.keys)
     end
   end
@@ -286,7 +289,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       entry_record = context.evaluate("entry")
 
       assert_equal([:title], context.graph.mods.fetch(entry_record.id).const_get(:Exports)::CLASSES)
@@ -316,7 +319,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       entry_record = context.evaluate("entry")
       exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
 
@@ -324,7 +327,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       refute(exports::Styles.loaded?)
 
       assert_match(/title/, exports.title_class)
-      assert_equal(2, context.assets_for("styles/home.css").length)
+      assert_equal(4, context.assets_for("styles/home.css").length)
       assert(exports::Styles.loaded?)
     end
   end
@@ -345,7 +348,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         RUBY
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       entry_record = context.evaluate("entry")
       exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
 
@@ -368,16 +371,13 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
 
       context =
-        Klenod::Build::Context.new(
-          source_dir: dir,
-          plugins: [
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
-            Klenod::Build::Plugins::CssPlugin::Plugin.new(source_maps: false)
-          ]
+        context_for(
+          dir,
+          css_plugin: Klenod::Build::Plugins::CssPlugin::Plugin.new(source_maps: false)
         )
       record = context.evaluate("styles/home.css")
 
-      assert_equal([:css], record.assets.map { |asset| asset.metadata[:type] })
+      assert_equal([:css, :css_javascript_stylesheet], record.assets.map { |asset| asset.metadata[:type] })
       refute_includes(record.assets.fetch(0).bytes, "sourceMappingURL")
     end
   end
@@ -387,7 +387,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/styles")
       File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       record = context.evaluate("styles/home.css")
       css_asset = record.assets.find { |asset| asset.metadata[:type] == :css }
       map_asset = record.assets.find { |asset| asset.metadata[:type] == :css_source_map }
@@ -406,10 +406,10 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/styles")
       File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir, mode: :build)
+      context = context_for(dir, mode: :build)
       record = context.collect("styles/home.css").record
 
-      assert_equal([:css], record.assets.map { |asset| asset.metadata[:type] })
+      assert_equal([:css, :css_javascript_stylesheet], record.assets.map { |asset| asset.metadata[:type] })
     end
   end
 
@@ -428,7 +428,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         CSS
       )
 
-      context = Klenod::Build::Context.new(source_dir: dir)
+      context = context_for(dir)
       record = context.evaluate("styles/home.css")
       map_asset = record.assets.find { |asset| asset.metadata[:type] == :css_source_map }
       source_map = Klenod::Build::SourceMap::Map.parse(map_asset.bytes)
@@ -437,5 +437,18 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       assert_equal([1, 2], source_map.segments.map(&:original_line))
       assert_equal([0, 4], source_map.segments.map(&:generated_line))
     end
+  end
+
+  private
+
+  def context_for(dir, mode: :development, css_plugin: Klenod::Build::Plugins::CssPlugin::Plugin.new)
+    Klenod::Build::Context.new(
+      source_dir: dir,
+      mode: mode,
+      plugins: [
+        *Klenod::Build::Context.default_plugins,
+        css_plugin
+      ]
+    )
   end
 end

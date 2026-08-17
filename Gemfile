@@ -7,6 +7,7 @@ gemspec path: "gems/klenod-runtime"
 gemspec path: "gems/klenod-build"
 gemspec path: "gems/klenod-rack"
 gemspec path: "gems/klenod-plugin-javascript"
+gemspec path: "gems/klenod-plugin-css"
 
 gem "minitest", "~> 6.0"
 gem "pry"

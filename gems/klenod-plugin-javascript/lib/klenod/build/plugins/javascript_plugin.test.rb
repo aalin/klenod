@@ -6,6 +6,7 @@ require "minitest/autorun"
 require "tmpdir"
 
 require "klenod/build/source_map"
+require "klenod/plugin/css"
 require "klenod/plugin/javascript"
 require "klenod/runtime"
 
@@ -122,7 +123,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       context = context_for(dir)
       context.evaluate("entry")
       app_asset = javascript_asset(context, "scripts/app.ts")
-      stylesheet_asset = context.assets_for("styles/panel.css").find { it.metadata[:type] == :css }
+      stylesheet_asset = context.assets_for("styles/panel.css").find { it.metadata[:type] == :css_javascript_stylesheet }
       css_module_asset = context.assets_for("styles/panel.css").find { it.metadata[:type] == :javascript && it.metadata[:css_metadata] }
       helper_asset = context.assets_for("virtual:klenod/css-helper.js").find { it.metadata[:javascript_css_helper] }
 
@@ -564,6 +565,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       mode: mode,
       plugins: [
         *Klenod::Build::Context.default_plugins,
+        Klenod::Build::Plugins::CssPlugin::Plugin.new,
         javascript_plugin
       ]
     )

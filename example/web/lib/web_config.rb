@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "klenod/build"
+require "klenod/plugin/css"
 require "klenod/plugin/javascript"
 
 module Example

@@ -305,7 +305,7 @@ module Klenod
           end
 
           def css_javascript_stylesheet_asset(record)
-            record.assets.find { it.metadata[:type] == :css }
+            record.assets.find { it.metadata[:type] == :css_javascript_stylesheet } || record.assets.find { it.metadata[:type] == :css }
           end
 
           def css_javascript_module_source(stylesheet_asset, helper_asset)

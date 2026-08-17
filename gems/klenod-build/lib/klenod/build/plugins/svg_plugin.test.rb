@@ -5,8 +5,8 @@ require "minitest/autorun"
 require "tmpdir"
 
 require_relative "../context"
+require "klenod/plugin/css"
 require "klenod/runtime"
-require_relative "css_plugin"
 require_relative "ruby_plugin"
 
 class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test

@@ -5,6 +5,7 @@ require "minitest/autorun"
 require "tmpdir"
 
 require_relative "../context"
+require "klenod/plugin/css"
 require_relative "google_fonts_plugin"
 
 class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test

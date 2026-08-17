@@ -11,7 +11,8 @@ VERSION_FILES = {
   "gems/klenod-build/lib/klenod/build/version.rb" => ["Klenod", "Build", "VERSION"],
   "gems/klenod-runtime/lib/klenod/runtime/version.rb" => ["Klenod", "Runtime", "VERSION"],
   "gems/klenod-rack/lib/klenod/rack/version.rb" => ["Klenod", "Rack", "VERSION"],
-  "gems/klenod-plugin-javascript/lib/klenod/plugin/javascript/version.rb" => ["Klenod", "Plugin", "JavaScript", "VERSION"]
+  "gems/klenod-plugin-javascript/lib/klenod/plugin/javascript/version.rb" => ["Klenod", "Plugin", "JavaScript", "VERSION"],
+  "gems/klenod-plugin-css/lib/klenod/plugin/css/version.rb" => ["Klenod", "Plugin", "CSS", "VERSION"]
 }.freeze
 
 TEST_LIBS = [
@@ -19,13 +20,15 @@ TEST_LIBS = [
   "gems/klenod-runtime/lib",
   "gems/klenod-build/lib",
   "gems/klenod-rack/lib",
-  "gems/klenod-plugin-javascript/lib"
+  "gems/klenod-plugin-javascript/lib",
+  "gems/klenod-plugin-css/lib"
 ].freeze
 GEMS = {
   "klenod-runtime" => "gems/klenod-runtime",
   "klenod-build" => "gems/klenod-build",
   "klenod-rack" => "gems/klenod-rack",
   "klenod-plugin-javascript" => "gems/klenod-plugin-javascript",
+  "klenod-plugin-css" => "gems/klenod-plugin-css",
   "klenod" => "gems/klenod"
 }.freeze
 
@@ -84,6 +87,7 @@ namespace :test do
   minitest_task(:build, "Run klenod-build tests", ["gems/klenod-build/lib/**/*.test.rb"])
   minitest_task(:rack, "Run klenod-rack tests", ["gems/klenod-rack/lib/**/*.test.rb"])
   minitest_task(:javascript, "Run klenod-plugin-javascript tests", ["gems/klenod-plugin-javascript/lib/**/*.test.rb"])
+  minitest_task(:css, "Run klenod-plugin-css tests", ["gems/klenod-plugin-css/lib/**/*.test.rb"])
   minitest_task(:meta, "Run klenod meta gem tests", ["gems/klenod/lib/**/*.test.rb"])
   minitest_task(:standalone, "Run standalone example tests", ["example/standalone/**/*.test.rb"])
   minitest_task(:box, "Run Ruby::Box example tests", ["example/box/**/*.test.rb"])
@@ -100,7 +104,7 @@ namespace :test do
   end
 
   desc "Run all packaged gem tests"
-  task gems: %i[runtime build rack javascript meta]
+  task gems: %i[runtime build rack javascript css meta]
 
   desc "Run all example app tests"
   task examples: %i[standalone box performance web]
