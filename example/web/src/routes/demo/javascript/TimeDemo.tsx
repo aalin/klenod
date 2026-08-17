@@ -27,8 +27,9 @@ export default class TimeDemoElement extends HTMLElement {
     const time = this.getAttribute("time");
     if (!time) return;
 
-    this.replaceChildren(
-      styles.style(),
+    const root = this.shadowRoot || this.attachShadow({ mode: "open" });
+    root.adoptedStyleSheets = [styles];
+    root.replaceChildren(
       <dl class="assets">
         <dt>Imported SVG</dt>
         <dd>

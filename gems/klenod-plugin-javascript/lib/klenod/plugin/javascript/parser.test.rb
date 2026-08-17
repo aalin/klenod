@@ -66,6 +66,20 @@ class Klenod::Plugin::JavaScript::ParserTest < Minitest::Test
       )
 
     assert_equal(["./data.json"], imports.map(&:specifier))
+    assert_equal({type: "json"}, imports.fetch(0).attributes)
+  end
+
+  def test_fallback_parser_extracts_import_attributes
+    imports =
+      without_native_parser do
+        Parser.parse(
+          'import styles from "./styles.css" with { type: "css" };',
+          filename: "app:/entry.js"
+        )
+      end
+
+    assert_equal(["./styles.css"], imports.map(&:specifier))
+    assert_equal({type: "css"}, imports.fetch(0).attributes)
   end
 
   def test_native_parser_reports_syntax_errors
@@ -139,5 +153,24 @@ class Klenod::Plugin::JavaScript::ParserTest < Minitest::Test
     assert_includes(result.code, "h(\"span\", null")
     refute_includes(result.code, ": void")
     refute_includes(result.code, "<span")
+  end
+
+  private
+
+  def without_native_parser
+    previous =
+      if Parser.instance_variable_defined?(:@native_parser)
+        Parser.instance_variable_get(:@native_parser)
+      else
+        :__undefined
+      end
+    Parser.instance_variable_set(:@native_parser, nil)
+    yield
+  ensure
+    if previous == :__undefined
+      Parser.remove_instance_variable(:@native_parser) if Parser.instance_variable_defined?(:@native_parser)
+    else
+      Parser.instance_variable_set(:@native_parser, previous)
+    end
   end
 end

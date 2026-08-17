@@ -5,8 +5,8 @@ use swc_core::{
     },
     ecma::{
         ast::{
-            Callee, ExportAll, ExportNamedSpecifier, ExportSpecifier, Expr, Lit, ModuleDecl,
-            ModuleItem, Pass, Program,
+            Callee, ExportAll, ExportNamedSpecifier, ExportSpecifier, Expr, ImportDecl, Lit,
+            ModuleDecl, ModuleItem, Pass, Program,
         },
         codegen::{text_writer::JsWriter, Emitter},
         parser::{lexer::Lexer, EsSyntax, Parser, StringInput, Syntax, TsSyntax},
@@ -21,6 +21,7 @@ struct ImportRecord {
     kind: &'static str,
     start_offset: usize,
     end_offset: usize,
+    attributes: Vec<(String, String)>,
     loc: String,
 }
 
@@ -32,7 +33,13 @@ struct ImportVisitor<'a> {
 }
 
 impl<'a> ImportVisitor<'a> {
-    fn push(&mut self, specifier: &str, kind: &'static str, span: Span) {
+    fn push(
+        &mut self,
+        specifier: &str,
+        kind: &'static str,
+        span: Span,
+        attributes: Vec<(String, String)>,
+    ) {
         let lo = span.lo.0.saturating_sub(self.source_start) as usize;
         let hi = span.hi.0.saturating_sub(self.source_start) as usize;
 
@@ -41,6 +48,7 @@ impl<'a> ImportVisitor<'a> {
             kind,
             start_offset: lo + 1,
             end_offset: hi.saturating_sub(1),
+            attributes,
             loc: self.loc(span),
         });
     }
@@ -59,6 +67,7 @@ impl Visit for ImportVisitor<'_> {
                     import.src.value.to_string_lossy().as_ref(),
                     "javascript_import",
                     import.src.span,
+                    import_attributes(import),
                 );
             }
             ModuleItem::ModuleDecl(ModuleDecl::ExportNamed(export)) => {
@@ -67,6 +76,7 @@ impl Visit for ImportVisitor<'_> {
                         src.value.to_string_lossy().as_ref(),
                         "javascript_export",
                         src.span,
+                        Vec::new(),
                     );
                 }
 
@@ -84,6 +94,7 @@ impl Visit for ImportVisitor<'_> {
                     src.value.to_string_lossy().as_ref(),
                     "javascript_export",
                     src.span,
+                    Vec::new(),
                 );
             }
             _ => {
@@ -100,6 +111,7 @@ impl Visit for ImportVisitor<'_> {
                         string.value.to_string_lossy().as_ref(),
                         "javascript_dynamic_import",
                         string.span,
+                        Vec::new(),
                     );
                     return;
                 }
@@ -252,6 +264,25 @@ fn import_records(
     visitor.records
 }
 
+fn import_attributes(import: &ImportDecl) -> Vec<(String, String)> {
+    import
+        .with
+        .as_ref()
+        .and_then(|with| with.as_import_with())
+        .map(|with| {
+            with.values
+                .iter()
+                .map(|item| {
+                    (
+                        item.key.sym.to_string(),
+                        item.value.value.to_string_lossy().to_string(),
+                    )
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 fn records_to_array(ruby: &Ruby, records: Vec<ImportRecord>) -> Result<RArray, Error> {
     let array = ruby.ary_new();
     for record in records {
@@ -260,6 +291,11 @@ fn records_to_array(ruby: &Ruby, records: Vec<ImportRecord>) -> Result<RArray, E
         hash.aset("kind", record.kind)?;
         hash.aset("start_offset", record.start_offset)?;
         hash.aset("end_offset", record.end_offset)?;
+        let attributes = ruby.hash_new();
+        for (key, value) in record.attributes {
+            attributes.aset(key, value)?;
+        }
+        hash.aset("attributes", attributes)?;
         hash.aset("loc", record.loc)?;
         array.push(hash)?;
     }

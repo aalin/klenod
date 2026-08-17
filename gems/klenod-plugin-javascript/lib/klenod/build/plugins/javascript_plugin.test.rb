@@ -113,32 +113,57 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
     end
   end
 
-  def test_default_css_import_is_rewritten_to_javascript_metadata_asset
+  def test_default_css_import_is_rewritten_to_native_css_module_import
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/styles"])
       File.write("#{dir}/styles/panel.css", ".panel { color: red; }\n")
-      File.write("#{dir}/scripts/app.ts", "import styles from '../styles/panel.css';\nconsole.log(styles.src, styles.link, styles.style);\n")
+      File.write("#{dir}/scripts/app.ts", "import styles from '../styles/panel.css';\nconsole.log(styles);\n")
       File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.ts\")\n")
 
       context = context_for(dir)
       context.evaluate("entry")
       app_asset = javascript_asset(context, "scripts/app.ts")
       stylesheet_asset = context.assets_for("styles/panel.css").find { it.metadata[:type] == :css_javascript_stylesheet }
-      css_module_asset = context.assets_for("styles/panel.css").find { it.metadata[:type] == :javascript && it.metadata[:css_metadata] }
-      helper_asset = context.assets_for("virtual:klenod/css-helper.js").find { it.metadata[:javascript_css_helper] }
 
-      assert_equal("#{stylesheet_asset.output_path}.js", css_module_asset.output_path)
-      assert_includes(app_asset.bytes, "from '#{css_module_asset.output_path}'")
-      assert_includes(css_module_asset.bytes, %(from "#{helper_asset.output_path}"))
-      assert_includes(css_module_asset.bytes, %(export const src = "#{stylesheet_asset.output_path}";))
-      assert_includes(css_module_asset.bytes, "export const link = createLinkFn(src);")
-      assert_includes(css_module_asset.bytes, "export const style = createStyleFn(src);")
-      assert_equal([{path: stylesheet_asset.output_path, as: "style"}], css_module_asset.metadata[:preload_assets])
-      assert_includes(helper_asset.bytes, "createLinkFn")
-      assert_includes(helper_asset.bytes, "@import url")
+      assert_includes(app_asset.bytes, "from '#{stylesheet_asset.output_path}' with { type: \"css\" }")
+      assert_equal([{path: stylesheet_asset.output_path, as: "style"}], app_asset.metadata[:preload_assets])
+      assert_nil(context.assets_for("styles/panel.css").find { it.metadata[:type] == :javascript && it.metadata[:css_metadata] })
+      assert_empty(context.assets_for("virtual:klenod/css-helper.js"))
       assert_empty(context.assets_for_module("scripts/app.ts", type: :css))
-      assert_includes(context.assets_for_module("scripts/app.ts", type: :javascript, recursive: false).map(&:output_path), css_module_asset.output_path)
-      assert_includes(context.assets_for_module("scripts/app.ts", type: :javascript, recursive: false).map(&:output_path), helper_asset.output_path)
+      assert_equal([app_asset.output_path], context.assets_for_module("scripts/app.ts", type: :javascript, recursive: false).map(&:output_path))
+    end
+  end
+
+  def test_css_import_with_css_type_attribute_preserves_attribute
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/styles"])
+      File.write("#{dir}/styles/panel.css", ".panel { color: red; }\n")
+      File.write("#{dir}/scripts/app.js", "import styles from '../styles/panel.css' with { type: \"css\" };\nconsole.log(styles);\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.js\")\n")
+
+      context = context_for(dir)
+      context.evaluate("entry")
+      app_asset = javascript_asset(context, "scripts/app.js")
+      stylesheet_asset = context.assets_for("styles/panel.css").find { it.metadata[:type] == :css_javascript_stylesheet }
+
+      assert_includes(app_asset.bytes, "from '#{stylesheet_asset.output_path}' with { type: \"css\" }")
+      assert_equal(1, app_asset.bytes.scan('with { type: "css" }').length)
+    end
+  end
+
+  def test_css_import_with_conflicting_type_attribute_raises_clear_error
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/styles"])
+      File.write("#{dir}/styles/panel.css", ".panel { color: red; }\n")
+      File.write("#{dir}/scripts/app.js", "import styles from '../styles/panel.css' with { type: \"text\" };\nconsole.log(styles);\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.js\")\n")
+
+      error = assert_raises(Klenod::Build::DynamicImportError) do
+        context_for(dir).evaluate("entry")
+      end
+
+      assert_includes(error.message, "Unsupported CSS import attribute type \"text\"")
+      assert_includes(error.message, "with { type: \"css\" }")
     end
   end
 

@@ -23,7 +23,6 @@ module Klenod
           CUSTOM_ELEMENT_EXTENSIONS = [".jsx", ".tsx"].freeze
           JSX_RUNTIME_SPECIFIER = "virtual:klenod/jsx-runtime"
           JSX_RUNTIME_MODULE_ID = ModuleId.new("virtual:klenod/jsx-runtime.js", nil)
-          CSS_HELPER_LOGICAL_NAME = "virtual:klenod/css-helper.js"
           LOCAL_SPECIFIER_PATTERN = %r{\A(?:\.{1,2}/|/|app:/)}
           EXTERNAL_SPECIFIER_PATTERN = %r{\A(?:[A-Za-z][A-Za-z0-9+.-]*:)?//}
           VALID_SOURCE_MAP_MODES = [false, true, :development].freeze
@@ -126,6 +125,7 @@ module Klenod
             hash = Hashing.short(code)
             output_path = "/assets/#{asset_name(module_id)}.#{hash}.js"
             asset_javascript_assets = asset_javascript_assets(resolved_dependencies, dependency_records)
+            preload_assets = preload_assets(resolved_dependencies, dependency_records)
             asset =
               Asset.new(
                 module_id.path,
@@ -134,7 +134,7 @@ module Klenod
                 nil,
                 code,
                 CONTENT_TYPE,
-                {type: :javascript}
+                {type: :javascript, preload_assets: preload_assets}.compact
               )
 
             result.with(
@@ -185,6 +185,7 @@ module Klenod
               :javascript_import,
               start_offset,
               start_offset + JSX_RUNTIME_SPECIFIER.length,
+              {},
               "#{module_id}:1:#{start_offset + 1}"
             )
           end
@@ -195,6 +196,7 @@ module Klenod
               import.kind,
               import.start_offset + offset,
               import.end_offset + offset,
+              import.attributes,
               import.loc
             )
           end
@@ -210,7 +212,12 @@ module Klenod
                   importer_id: module_id,
                   kind: import.kind,
                   loc: import.loc,
-                  metadata: {start_offset: import.start_offset, end_offset: import.end_offset}
+                  metadata: {
+                    start_offset: import.start_offset,
+                    end_offset: import.end_offset,
+                    attribute_insert_offset: import.end_offset + 1,
+                    attributes: import.attributes
+                  }
                 )
                 .with(id: "#{module_id}:dependency:#{index}")
             end
@@ -222,45 +229,49 @@ module Klenod
                 metadata = resolved_dependency.dependency.metadata
                 range = [metadata.fetch(:start_offset), metadata.fetch(:end_offset)]
                 record = dependency_records.fetch(resolved_dependency.dependency.id)
-                [range, import_replacement(module_id, source, resolved_dependency.dependency, record)]
+                [range, [resolved_dependency.dependency, record]]
               end
 
             edits =
-              imports.filter_map do |import|
-                replacement = resolved_by_range[[import.start_offset, import.end_offset]]
-                next unless replacement
+              imports.flat_map do |import|
+                dependency, record = resolved_by_range[[import.start_offset, import.end_offset]]
+                next [] unless dependency
 
-                SourceMap::Edit.replace(import.start_offset, import.end_offset, replacement)
+                import_edits(module_id, source, dependency, record)
               end
 
             SourceMap::Editor.new(source, identity_source_map(module_id, source, original_source)).apply(edits)
           end
 
-          def import_replacement(module_id, source, dependency, record)
-            if (asset_path = asset_javascript_asset_path(record))
-              validate_asset_import!(module_id, source, dependency)
-              return asset_path
+          def import_edits(module_id, source, dependency, record)
+            if (stylesheet_asset = css_javascript_stylesheet_asset(record))
+              validate_css_import!(module_id, source, dependency)
+              edits = [SourceMap::Edit.replace(dependency.metadata.fetch(:start_offset), dependency.metadata.fetch(:end_offset), stylesheet_asset.output_path)]
+              if dependency.metadata.fetch(:attributes)[:type].nil?
+                edits << SourceMap::Edit.replace(dependency.metadata.fetch(:attribute_insert_offset), dependency.metadata.fetch(:attribute_insert_offset), %( with { type: "css" }))
+              end
+              return edits
             end
 
-            record.metadata.fetch(:javascript_asset_path)
+            if (asset_path = asset_javascript_asset_path(record))
+              validate_asset_import!(module_id, source, dependency)
+              return [SourceMap::Edit.replace(dependency.metadata.fetch(:start_offset), dependency.metadata.fetch(:end_offset), asset_path)]
+            end
+
+            [SourceMap::Edit.replace(dependency.metadata.fetch(:start_offset), dependency.metadata.fetch(:end_offset), record.metadata.fetch(:javascript_asset_path))]
           end
 
           def asset_javascript_asset_path(record)
-            record.metadata[:image_javascript_asset_path] || record.metadata[:svg_javascript_asset_path] || css_javascript_asset(record)&.output_path
+            record.metadata[:image_javascript_asset_path] || record.metadata[:svg_javascript_asset_path]
           end
 
           def asset_javascript_assets(resolved_dependencies, dependency_records)
-            helper_asset = css_helper_asset
-            has_css_asset = false
             resolved_dependencies.filter_map do |resolved_dependency|
               record = dependency_records.fetch(resolved_dependency.dependency.id)
-              asset = record.assets.find { asset_javascript_metadata?(it) } || css_javascript_asset(record, helper_asset:)
+              asset = record.assets.find { asset_javascript_metadata?(it) }
               next unless asset
 
-              has_css_asset = true if asset.metadata[:css_metadata]
               javascript_asset(asset)
-            end.then do |assets|
-              has_css_asset ? [helper_asset, *assets] : assets
             end
           end
 
@@ -280,63 +291,32 @@ module Klenod
             )
           end
 
-          def css_javascript_asset(record, helper_asset: css_helper_asset)
+          def css_javascript_stylesheet_asset(record)
             return nil unless record.id.extname == ".css"
 
-            stylesheet_asset = css_javascript_stylesheet_asset(record)
-            return nil unless stylesheet_asset
-
-            code = css_javascript_module_source(stylesheet_asset, helper_asset)
-            hash = Hashing.short(code)
-            Asset.new(
-              record.id.path,
-              hash,
-              "#{stylesheet_asset.output_path}.js",
-              nil,
-              code,
-              CONTENT_TYPE,
-              {
-                type: :css_javascript_metadata,
-                css_metadata: true,
-                css_asset_path: stylesheet_asset.output_path,
-                preload_assets: [{path: stylesheet_asset.output_path, as: "style"}]
-              }
-            )
-          end
-
-          def css_javascript_stylesheet_asset(record)
             record.assets.find { it.metadata[:type] == :css_javascript_stylesheet } || record.assets.find { it.metadata[:type] == :css }
           end
 
-          def css_javascript_module_source(stylesheet_asset, helper_asset)
-            <<~JS
-              import { createLinkFn, createStyleFn } from #{helper_asset.output_path.inspect};
-
-              export const src = #{stylesheet_asset.output_path.inspect};
-              export const link = createLinkFn(src);
-              export const style = createStyleFn(src);
-              export default { src, link, style };
-            JS
-          end
-
-          def css_helper_asset
-            code = css_helper_source
-            hash = Hashing.short(code)
-            Asset.new(
-              CSS_HELPER_LOGICAL_NAME,
-              hash,
-              "/assets/virtual_klenod_css_helper.#{hash}.js",
-              nil,
-              code,
-              CONTENT_TYPE,
-              {type: :javascript, javascript_css_helper: true}
-            )
+          def preload_assets(resolved_dependencies, dependency_records)
+            resolved_dependencies.filter_map do |resolved_dependency|
+              record = dependency_records.fetch(resolved_dependency.dependency.id)
+              asset = css_javascript_stylesheet_asset(record)
+              {path: asset.output_path, as: "style"} if asset
+            end.uniq
           end
 
           def validate_asset_import!(module_id, source, dependency)
             return if dependency.kind == :javascript_import && default_import?(source, dependency)
 
             raise DynamicImportError, "Unsupported asset import #{dependency.specifier.inspect} in #{module_id}. Use a default import, e.g. `import asset from \"#{dependency.specifier}\"`."
+          end
+
+          def validate_css_import!(module_id, source, dependency)
+            validate_asset_import!(module_id, source, dependency)
+            type = dependency.metadata.fetch(:attributes)[:type]
+            return if type.nil? || type == "css"
+
+            raise DynamicImportError, "Unsupported CSS import attribute type #{type.inspect} for #{dependency.specifier.inspect} in #{module_id}. CSS imports must use `with { type: \"css\" }`."
           end
 
           def default_import?(source, dependency)
@@ -484,27 +464,6 @@ module Klenod
                     parent.appendChild(document.createTextNode(String(child)));
                   }
                 });
-              }
-            JS
-          end
-
-          def css_helper_source
-            <<~JS
-              export function createLinkFn(src) {
-                return function link() {
-                  const el = document.createElement("link");
-                  el.rel = "stylesheet";
-                  el.href = src;
-                  return el;
-                };
-              }
-
-              export function createStyleFn(src) {
-                return function style() {
-                  const el = document.createElement("style");
-                  el.textContent = `@import url("${src}");`;
-                  return el;
-                };
               }
             JS
           end

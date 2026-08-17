@@ -3,7 +3,7 @@
 module Klenod
   module Plugin
     module JavaScript
-      ImportRecord = Data.define(:specifier, :kind, :start_offset, :end_offset, :loc)
+      ImportRecord = Data.define(:specifier, :kind, :start_offset, :end_offset, :attributes, :loc)
       TransformResult = Data.define(:code, :imports)
 
       module Parser
@@ -53,6 +53,7 @@ module Klenod
             record.fetch("kind").to_sym,
             record.fetch("start_offset"),
             record.fetch("end_offset"),
+            record.fetch("attributes").transform_keys(&:to_sym),
             record.fetch("loc")
           )
         end
@@ -74,6 +75,7 @@ module Klenod
                 |
                 (?<clause>[\s\S]*?) \s+ from \s+ (?<from>["'][^"']+["'])
               )
+              (?:\s+with\s+\{(?<attributes>[^}]*)\})?
             /x
           EXPORT_FROM_PATTERN = /\bexport\b[\s\S]*?\bfrom\s+(?<from>["'][^"']+["'])/
           DYNAMIC_IMPORT_PATTERN = /\bimport\s*\(\s*(?<from>["'][^"']+["'])\s*\)/
@@ -101,8 +103,15 @@ module Klenod
               literal = yield(match)
               start_offset = @source.index(literal, match.begin(0)) + 1
               end_offset = start_offset + literal.length - 2
-              records << ImportRecord.new(literal[1...-1], kind, start_offset, end_offset, loc(start_offset))
+              attributes = import_attributes(match, literal)
+              records << ImportRecord.new(literal[1...-1], kind, start_offset, end_offset, attributes, loc(start_offset))
             end
+          end
+
+          def import_attributes(match, literal)
+            attributes = match.names.include?("attributes") ? match[:attributes] : nil
+            type = attributes&.match(/\btype\s*:\s*["'](?<type>[^"']+)["']/) { it[:type] }
+            type ? {type: type} : {}
           end
 
           def inside_comment_or_string?(offset)
