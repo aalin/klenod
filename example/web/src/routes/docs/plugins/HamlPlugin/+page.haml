@@ -23,7 +23,7 @@
       )
       ```
 
-      Imported component constants can be used directly as Haml tags. `%Button` compiles to a factory call using the imported component class as the tag.
+      Imported component constants can be used directly as Haml tags. `%Button` compiles to a factory call using the imported component class as the tag. Imported TSX custom element descriptors from `JavaScriptPlugin` can also be used as tags, letting Haml render browser custom elements without repeating their generated tag names.
 
   %DocsSection{ title: "Prop Globals" }
     :markdown
@@ -48,7 +48,7 @@
 
   %DocsSection{ title: "Companions" }
     :markdown
-      Haml automatically watches and imports matching CSS companions as `ClassNames`.
+      Haml automatically watches and imports matching CSS companions as `ClassNames`. The companion CSS uses the normal Ruby/Haml CSS path, so class and tag selectors are scoped through `CssPlugin`.
 
       ```text
       components/Card.haml
@@ -75,4 +75,4 @@
 
   %DocsSection{ title: "Errors" }
     :markdown
-      Generated Ruby includes source map marks. Runtime backtraces can be rewritten to original Haml files and parse errors show Haml source context without requiring users to inspect generated Ruby.
+      Generated Ruby includes source map marks. Runtime backtraces can be rewritten to original Haml files and parse errors show Haml source context without requiring users to inspect generated Ruby. CSS companions and inline CSS filters keep their own source maps, so stylesheet errors and browser source maps point back to the original source where possible.

@@ -7,12 +7,12 @@
   %PageHeader{
     kicker: "Plugin Reference",
     title: "CssPlugin",
-    summary: "CssPlugin scopes CSS, emits stylesheet assets, records CSS dependencies, and returns class maps to Ruby and Haml."
+    summary: "CssPlugin transforms CSS, emits stylesheet assets, records CSS dependencies, and returns scoped class maps to Ruby and Haml."
   }
 
   %DocsSection{ title: "Scoped Selectors" }
     :markdown
-      CSS is transformed through `mayu-css`. Class selectors become scoped class names, and tag selectors are exposed through `__`-prefixed keys.
+      CSS is transformed through the native CSS plugin. Class selectors become scoped class names for Ruby and Haml imports, and tag selectors are exposed through `__`-prefixed keys.
 
       ```css
       article {
@@ -38,6 +38,18 @@
 
       The same stylesheet should appear once in a rendered document. Routed frameworks can use route-scoped asset traversal so root and layout CSS appear before page and component CSS.
 
+      CSS imported from JavaScript uses a separate graph module and emits an unscoped stylesheet asset for native browser CSS module imports:
+
+      ```ts
+      import styles from "./Panel.css";
+      ```
+
+      That import is rewritten to the emitted asset with `with { type: "css" }`, so the browser returns a `CSSStyleSheet` that custom elements can assign to `shadowRoot.adoptedStyleSheets`.
+
   %DocsSection{ title: "Assets" }
     :markdown
       `url(...)` references are resolved through the graph and emitted as assets. External CSS imports can be owned by other plugins, such as `GoogleFontsPlugin`.
+
+  %DocsSection{ title: "Source Maps And Minification" }
+    :markdown
+      CSS assets emit source maps in development by default. Build mode disables source map assets by default and always minifies CSS output. Development output is readable unless the plugin is configured with `minify: true`.

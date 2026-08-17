@@ -1,0 +1,82 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Plugin Reference",
+    title: "JavaScriptPlugin",
+    summary: "JavaScriptPlugin emits content-hashed JavaScript assets, rewrites module imports, supports TypeScript and TSX, and can expose TSX custom elements to Ruby and Haml."
+  }
+
+  %DocsSection{ title: "Source Files" }
+    :markdown
+      `JavaScriptPlugin` handles `.js`, `.jsx`, `.ts`, and `.tsx` files. Ruby and Haml imports receive either the emitted JavaScript asset path or, for JSX and TSX custom element modules, a custom element descriptor.
+
+      ```ruby
+      Demo = import("./demo.js")
+      TimeDemo = import("./TimeDemo.tsx")
+      ```
+
+      TypeScript and JSX transforms are provided by the native extension, which uses SWC. Plain JavaScript can still be scanned without the native extension, but TypeScript and JSX require it.
+
+  %DocsSection{ title: "JavaScript Imports" }
+    :markdown
+      Static imports, re-exports, and literal dynamic imports are resolved through the Klenod graph and rewritten to content-hashed browser asset paths.
+
+      ```js
+      import message from "./message";
+      export { value } from "./value.js";
+      button.addEventListener("click", () => import("./Panel.js"));
+      ```
+
+      Relative imports, app-root imports, and external URL imports are supported. Bare package specifiers are intentionally unsupported for now. Extensionless JavaScript imports resolve according to the importer: TSX prefers `.tsx`, `.ts`, `.jsx`, then `.js`; TS prefers `.ts`, then `.js`.
+
+  %DocsSection{ title: "CSS And Asset Imports" }
+    :markdown
+      JavaScript can import CSS directly. CSS imports are rewritten to native browser CSS module imports using `with { type: "css" }`, and the referenced stylesheet is emitted as an unscoped CSS asset.
+
+      ```ts
+      import styles from "./TimeDemo.css";
+
+      this.shadowRoot.adoptedStyleSheets = [styles];
+      ```
+
+      Imported CSS assets are added to JavaScript preload metadata so framework servers can send early hints and `Link` headers.
+
+      Raster image and SVG imports are rewritten to small JavaScript metadata modules:
+
+      ```js
+      import photo from "./photo.jpg";
+      import logo from "./logo.svg";
+      ```
+
+      The default export includes the emitted `src`, dimensions when available, and content type. Raster image metadata also includes generated variants.
+
+  %DocsSection{ title: "Custom Elements" }
+    :markdown
+      `.jsx` and `.tsx` modules are treated as custom element modules. They should default-export a named class or identifier. The plugin generates a stable custom element tag name, registers the element, and returns a descriptor when imported from Ruby or Haml.
+
+      ```tsx
+      export default class TimeDemoElement extends HTMLElement {
+        connectedCallback(): void {
+          this.replaceChildren(<p>Hello</p>);
+        }
+      }
+      ```
+
+      Haml can render the imported descriptor as a component-style tag:
+
+      ```haml
+      :ruby
+        TimeDemo = import("./TimeDemo.tsx")
+
+      %TimeDemo{ time: Time.now }
+      ```
+
+      The JSX runtime helper is provided as a virtual module and injects `h` and `Fragment` for JSX and TSX output.
+
+  %DocsSection{ title: "Source Maps And Minification" }
+    :markdown
+      JavaScript assets can emit source maps in development. Build mode disables source map assets by default and always minifies JavaScript output. Development output is readable by default, but `JavaScriptPlugin::Plugin.new(minify: true)` can minify development output when an app wants to test production-like assets locally.

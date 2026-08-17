@@ -9,12 +9,12 @@
   %PageHeader{
     kicker: "Docs",
     title: "Plugin Reference",
-    summary: "Built-in plugins cover Ruby, Haml, Markdown, CSS, assets, data imports, routing, and Google Fonts."
+    summary: "Built-in plugins cover Ruby, Haml, Markdown, CSS, JavaScript, assets, data imports, routing, and Google Fonts."
   }
 
   %DocsSection{ title: "Default Plugin Set" }
     :markdown
-      `Klenod::Build::Context.default_plugins` includes `RubyPlugin`, `IntlPlugin`, `HamlPlugin`, `MarkdownPlugin`, `CssPlugin`, `SvgPlugin`, `ImagePlugin`, `JsonPlugin`, `YamlPlugin`, `TomlPlugin`, and `TextPlugin`.
+      `Klenod::Build::Context.default_plugins` includes `RubyPlugin`, `IntlPlugin`, `HamlPlugin`, `MarkdownPlugin`, `CssPlugin`, `JavaScriptPlugin`, `SvgPlugin`, `ImagePlugin`, `JsonPlugin`, `YamlPlugin`, `TomlPlugin`, and `TextPlugin`.
 
       `RouterPlugin` and `GoogleFontsPlugin` are built in but opt-in. Applications can configure either one explicitly when they need routing or Google Fonts imports.
 
@@ -52,6 +52,11 @@
         href: localized_path("/docs/plugins/CssPlugin"),
         title: "CssPlugin",
         summary: "Scoped CSS, stylesheet assets, CSS imports, class maps, and URL dependencies."
+      }
+      %DocsLinkCard{
+        href: localized_path("/docs/plugins/JavascriptPlugin"),
+        title: "JavaScriptPlugin",
+        summary: "JavaScript, TypeScript, TSX custom elements, CSS module imports, asset metadata imports, source maps, and minification."
       }
       %DocsLinkCard{
         href: localized_path("/docs/plugins/Assets"),
