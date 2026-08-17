@@ -78,4 +78,23 @@ class Klenod::Plugin::JavaScript::ParserTest < Minitest::Test
 
     assert_includes(error.message, "app:/broken.js")
   end
+
+  def test_native_transform_strips_typescript_types
+    skip "native parser is not compiled" unless Parser.native?
+
+    result =
+      Parser.transform(
+        <<~TS,
+          type Message = string;
+          const message: Message = "hello";
+          export default message;
+        TS
+        filename: "app:/message.ts",
+        source_kind: :typescript
+      )
+
+    refute_includes(result.code, "type Message")
+    refute_includes(result.code, ": Message")
+    assert_includes(result.code, "const message = \"hello\"")
+  end
 end

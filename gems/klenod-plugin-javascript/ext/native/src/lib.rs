@@ -1,12 +1,14 @@
-use magnus::{function, prelude::*, Error, RArray, Ruby};
+use magnus::{function, prelude::*, Error, RArray, RHash, Ruby};
 use swc_core::{
-    common::{sync::Lrc, FileName, SourceMap, Span},
+    common::{sync::Lrc, FileName, Globals, Mark, SourceMap, Span, GLOBALS},
     ecma::{
         ast::{
             Callee, ExportAll, ExportNamedSpecifier, ExportSpecifier, Expr, Lit, ModuleDecl,
-            ModuleItem,
+            ModuleItem, Pass, Program,
         },
-        parser::{lexer::Lexer, EsSyntax, Parser, StringInput, Syntax},
+        codegen::{text_writer::JsWriter, Emitter},
+        parser::{lexer::Lexer, EsSyntax, Parser, StringInput, Syntax, TsSyntax},
+        transforms::typescript::strip,
         visit::{Visit, VisitWith},
     },
 };
@@ -107,13 +109,87 @@ impl Visit for ImportVisitor<'_> {
 }
 
 fn parse_native(ruby: &Ruby, source: String, filename: String) -> Result<RArray, Error> {
+    let parsed = parse_module(ruby, source, filename.clone(), SourceKind::JavaScript)?;
+    records_to_array(
+        ruby,
+        import_records(
+            parsed.source_map,
+            parsed.source_start,
+            &filename,
+            &parsed.program,
+        ),
+    )
+}
+
+fn transform_native(
+    ruby: &Ruby,
+    source: String,
+    filename: String,
+    source_kind: String,
+) -> Result<RHash, Error> {
+    let source_kind = SourceKind::from_string(ruby, &source_kind)?;
+    let transformed_source = match source_kind {
+        SourceKind::JavaScript => source,
+        SourceKind::TypeScript => transform_typescript(ruby, source, filename.clone())?,
+    };
+    let parsed = parse_module(
+        ruby,
+        transformed_source.clone(),
+        filename.clone(),
+        SourceKind::JavaScript,
+    )?;
+    let hash = ruby.hash_new();
+    hash.aset("code", transformed_source)?;
+    hash.aset(
+        "imports",
+        records_to_array(
+            ruby,
+            import_records(
+                parsed.source_map,
+                parsed.source_start,
+                &filename,
+                &parsed.program,
+            ),
+        )?,
+    )?;
+    Ok(hash)
+}
+
+#[derive(Clone, Copy)]
+enum SourceKind {
+    JavaScript,
+    TypeScript,
+}
+
+impl SourceKind {
+    fn from_string(ruby: &Ruby, source_kind: &str) -> Result<Self, Error> {
+        match source_kind {
+            "javascript" => Ok(Self::JavaScript),
+            "typescript" => Ok(Self::TypeScript),
+            _ => Err(Error::new(
+                ruby.exception_arg_error(),
+                format!("unknown JavaScript source kind: {}", source_kind),
+            )),
+        }
+    }
+}
+
+struct ParsedProgram {
+    source_map: Lrc<SourceMap>,
+    source_start: u32,
+    program: Program,
+}
+
+fn parse_module(
+    ruby: &Ruby,
+    source: String,
+    filename: String,
+    source_kind: SourceKind,
+) -> Result<ParsedProgram, Error> {
     let source_map: Lrc<SourceMap> = Default::default();
     let source_file = source_map.new_source_file(FileName::Custom(filename.clone()).into(), source);
     let lexer = Lexer::new(
-        Syntax::Es(EsSyntax {
-            import_attributes: true,
-            ..Default::default()
-        }),
+        syntax_for(source_kind),
         Default::default(),
         StringInput::from(&*source_file),
         None,
@@ -125,25 +201,92 @@ fn parse_native(ruby: &Ruby, source: String, filename: String) -> Result<RArray,
             format!("{}: {}", filename, error.kind().msg()),
         )
     })?;
-    let mut visitor = ImportVisitor {
+    Ok(ParsedProgram {
         source_map,
         source_start: source_file.start_pos.0,
-        filename: &filename,
+        program: Program::Module(module),
+    })
+}
+
+fn syntax_for(source_kind: SourceKind) -> Syntax {
+    match source_kind {
+        SourceKind::JavaScript => Syntax::Es(EsSyntax {
+            import_attributes: true,
+            ..Default::default()
+        }),
+        SourceKind::TypeScript => Syntax::Typescript(TsSyntax {
+            tsx: false,
+            decorators: true,
+            ..Default::default()
+        }),
+    }
+}
+
+fn import_records(
+    source_map: Lrc<SourceMap>,
+    source_start: u32,
+    filename: &str,
+    program: &Program,
+) -> Vec<ImportRecord> {
+    let mut visitor = ImportVisitor {
+        source_map,
+        source_start,
+        filename,
         records: Vec::new(),
     };
-    module.visit_with(&mut visitor);
+    program.visit_with(&mut visitor);
 
-    let records = ruby.ary_new();
-    for record in visitor.records {
+    visitor.records
+}
+
+fn records_to_array(ruby: &Ruby, records: Vec<ImportRecord>) -> Result<RArray, Error> {
+    let array = ruby.ary_new();
+    for record in records {
         let hash = ruby.hash_new();
         hash.aset("specifier", record.specifier)?;
         hash.aset("kind", record.kind)?;
         hash.aset("start_offset", record.start_offset)?;
         hash.aset("end_offset", record.end_offset)?;
         hash.aset("loc", record.loc)?;
-        records.push(hash)?;
+        array.push(hash)?;
     }
-    Ok(records)
+    Ok(array)
+}
+
+fn transform_typescript(ruby: &Ruby, source: String, filename: String) -> Result<String, Error> {
+    let parsed = parse_module(ruby, source, filename, SourceKind::TypeScript)?;
+    let source_map = parsed.source_map;
+    let mut program = parsed.program;
+
+    GLOBALS.set(&Globals::default(), || {
+        let unresolved_mark = Mark::new();
+        let top_level_mark = Mark::new();
+        strip(unresolved_mark, top_level_mark).process(&mut program);
+    });
+
+    let mut bytes = Vec::new();
+    {
+        let writer = JsWriter::new(source_map.clone(), "\n", &mut bytes, None);
+        let mut emitter = Emitter {
+            cfg: Default::default(),
+            cm: source_map,
+            comments: None,
+            wr: writer,
+        };
+        emitter.emit_program(&program).map_err(|error| {
+            Error::new(
+                ruby.exception_runtime_error(),
+                format!("failed to emit JavaScript from TypeScript: {}", error),
+            )
+        })?;
+    }
+
+    String::from_utf8(bytes).map_err(|error| {
+        Error::new(
+            ruby.exception_runtime_error(),
+            format!("SWC generated invalid UTF-8: {}", error),
+        )
+    })
 }
 
 #[magnus::init]
@@ -153,5 +296,6 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     let javascript = plugin.define_module("JavaScript")?;
     let native = javascript.define_module("Native")?;
     native.define_singleton_method("parse_native", function!(parse_native, 2))?;
+    native.define_singleton_method("transform_native", function!(transform_native, 3))?;
     Ok(())
 }

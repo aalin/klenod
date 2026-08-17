@@ -216,6 +216,82 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
     end
   end
 
+  def test_typescript_import_emits_javascript_asset
+    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      File.write("#{dir}/scripts/app.ts", "const message: string = 'hello';\nexport default message;\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.ts\")\n")
+
+      context = context_for(dir)
+      record = context.evaluate("entry")
+      asset = javascript_asset(context, "scripts/app.ts")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_match(%r{\A/assets/scripts_app_ts\.[a-f0-9]{16}\.js\z}, exports::Default)
+      assert_equal("scripts/app.ts", asset.logical_name)
+      assert_includes(asset.bytes, "const message = 'hello'")
+      refute_includes(asset.bytes, ": string")
+    end
+  end
+
+  def test_typescript_static_imports_are_rewritten_to_hashed_asset_paths
+    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      File.write("#{dir}/scripts/app.ts", "import { message } from './message';\nconsole.log(message);\n")
+      File.write("#{dir}/scripts/message.ts", "export const message: string = 'hello';\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.ts\")\n")
+
+      context = context_for(dir)
+      context.evaluate("entry")
+
+      app_asset = javascript_asset(context, "scripts/app.ts")
+      message_asset = javascript_asset(context, "scripts/message.ts")
+
+      assert_includes(app_asset.bytes, "from '#{message_asset.output_path}'")
+    end
+  end
+
+  def test_typescript_can_import_javascript_with_explicit_extension
+    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      File.write("#{dir}/scripts/app.ts", "import './boot.js';\n")
+      File.write("#{dir}/scripts/boot.js", "console.log('boot');\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.ts\")\n")
+
+      context = context_for(dir)
+      context.evaluate("entry")
+
+      app_asset = javascript_asset(context, "scripts/app.ts")
+      boot_asset = javascript_asset(context, "scripts/boot.js")
+
+      assert_includes(app_asset.bytes, "import '#{boot_asset.output_path}'")
+    end
+  end
+
+  def test_typescript_source_maps_reference_original_typescript
+    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      source = "const message: string = 'hello';\n"
+      File.write("#{dir}/scripts/app.ts", source)
+
+      context = context_for(dir)
+      record = context.evaluate("scripts/app.ts")
+      map_asset = record.assets.find { it.metadata.fetch(:type) == :javascript_source_map }
+      source_map = JSON.parse(map_asset.bytes)
+
+      assert_equal(["scripts/app.ts"], source_map.fetch("sources"))
+      assert_equal([source], source_map.fetch("sourcesContent"))
+    end
+  end
+
   private
 
   def context_for(dir, mode: :development, javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin::Plugin.new)

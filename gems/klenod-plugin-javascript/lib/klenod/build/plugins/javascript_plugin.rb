@@ -17,7 +17,7 @@ module Klenod
       module JavaScriptPlugin
         class Plugin < Klenod::Build::Plugin
           CONTENT_TYPE = "application/javascript"
-          EXTENSIONS = [".js"].freeze
+          EXTENSIONS = [".js", ".ts"].freeze
           LOCAL_SPECIFIER_PATTERN = %r{\A(?:\.{1,2}/|/|app:/)}
           EXTERNAL_SPECIFIER_PATTERN = %r{\A(?:[A-Za-z][A-Za-z0-9+.-]*:)?//}
           VALID_SOURCE_MAP_MODES = [false, true, :development].freeze
@@ -34,14 +34,20 @@ module Klenod
             return nil unless dependency.kind.to_s.start_with?("javascript_")
             return nil unless extensionless_javascript_specifier?(dependency.specifier)
 
-            context.resolve_dependency(dependency.with(specifier: "#{dependency.specifier}.js"))
+            extensionless_resolve_extensions(dependency).each do |extension|
+              return context.resolve_dependency(dependency.with(specifier: "#{dependency.specifier}#{extension}"))
+            rescue ResolveError
+              next
+            end
+
+            nil
           end
 
           def transform(module_id, code, _context)
             return super unless EXTENSIONS.include?(module_id.extname)
 
-            imports = Klenod::Plugin::JavaScript::Parser.parse(code, filename: module_id.to_s)
-            dependencies = build_dependencies(module_id, imports)
+            transform = Klenod::Plugin::JavaScript::Parser.transform(code, filename: module_id.to_s, source_kind: source_kind(module_id))
+            dependencies = build_dependencies(module_id, transform.imports)
 
             TransformResult.new(
               module_source(nil),
@@ -49,16 +55,21 @@ module Klenod
               nil,
               [],
               [],
-              {javascript_source: code, javascript_imports: imports}
+              {
+                javascript_source: transform.code,
+                javascript_original_source: code,
+                javascript_imports: transform.imports
+              }
             )
           end
 
           def finalize(module_id, result, resolved_dependencies, dependency_records, context)
             source = result.metadata[:javascript_source]
+            original_source = result.metadata[:javascript_original_source]
             imports = result.metadata[:javascript_imports]
             return result unless source && imports
 
-            edit = rewrite_imports(module_id, source, imports, resolved_dependencies, dependency_records)
+            edit = rewrite_imports(module_id, source, original_source, imports, resolved_dependencies, dependency_records)
             source_map_asset = nil
             code = edit.code
 
@@ -130,7 +141,7 @@ module Klenod
             end
           end
 
-          def rewrite_imports(module_id, source, imports, resolved_dependencies, dependency_records)
+          def rewrite_imports(module_id, source, original_source, imports, resolved_dependencies, dependency_records)
             resolved_by_range =
               resolved_dependencies.to_h do |resolved_dependency|
                 metadata = resolved_dependency.dependency.metadata
@@ -147,15 +158,15 @@ module Klenod
                 SourceMap::Edit.replace(import.start_offset, import.end_offset, replacement)
               end
 
-            SourceMap::Editor.new(source, identity_source_map(module_id, source)).apply(edits)
+            SourceMap::Editor.new(source, identity_source_map(module_id, source, original_source)).apply(edits)
           end
 
-          def identity_source_map(module_id, source)
+          def identity_source_map(module_id, source, original_source)
             SourceMap::Map.new(
               version: 3,
               source_root: nil,
               sources: [module_id.path],
-              sources_content: [source],
+              sources_content: [original_source || source],
               names: [],
               segments: identity_segments(source)
             )
@@ -193,6 +204,18 @@ module Klenod
 
           def extensionless_javascript_specifier?(specifier)
             local_specifier?(specifier) && File.extname(specifier).empty?
+          end
+
+          def extensionless_resolve_extensions(dependency)
+            return [".ts", ".js"] if dependency.importer_id&.extname == ".ts"
+
+            [".js"]
+          end
+
+          def source_kind(module_id)
+            return :typescript if module_id.extname == ".ts"
+
+            :javascript
           end
 
           def module_source(output_path)

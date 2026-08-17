@@ -4,6 +4,7 @@ module Klenod
   module Plugin
     module JavaScript
       ImportRecord = Data.define(:specifier, :kind, :start_offset, :end_offset, :loc)
+      TransformResult = Data.define(:code, :imports)
 
       module Parser
         module_function
@@ -13,11 +14,21 @@ module Klenod
         end
 
         def parse(source, filename:)
-          native_records = native_parser&.parse_native(source, filename)
-          return native_records.map { native_import_record(it) } if native_records
+          transform(source, filename: filename, source_kind: :javascript).imports
+        end
+
+        def transform(source, filename:, source_kind:)
+          if source_kind == :typescript
+            native = native_parser || raise(SyntaxError, "TypeScript support requires the klenod-plugin-javascript native extension. Run `bundle exec rake compile` in gems/klenod-plugin-javascript.")
+            return native_transform_result(native.transform_native(source, filename, "typescript"))
+          end
+
+          if (native = native_parser)
+            return native_transform_result(native.transform_native(source, filename, "javascript"))
+          end
 
           scanner = FallbackScanner.new(source, filename)
-          scanner.imports
+          TransformResult.new(source, scanner.imports)
         end
 
         def native_parser
@@ -41,6 +52,13 @@ module Klenod
             record.fetch("start_offset"),
             record.fetch("end_offset"),
             record.fetch("loc")
+          )
+        end
+
+        def native_transform_result(result)
+          TransformResult.new(
+            result.fetch("code"),
+            result.fetch("imports").map { native_import_record(it) }
           )
         end
 
