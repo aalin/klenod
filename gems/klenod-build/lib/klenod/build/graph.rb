@@ -146,7 +146,7 @@ module Klenod
 
       def asset_references_for_module(record_or_module_id, type: nil, content_type: nil, recursive: true)
         seen_assets = {}
-        module_ids_for_assets(record_or_module_id, recursive: recursive)
+        module_ids_for_assets(record_or_module_id, recursive: recursive, type: type)
           .each_with_index
           .flat_map do |module_id, index|
             module_assets = @records.fetch(module_id).assets
@@ -414,28 +414,38 @@ module Klenod
         seen.to_a
       end
 
-      def module_ids_for_assets(record_or_module_id, recursive:)
+      def module_ids_for_assets(record_or_module_id, recursive:, type: nil)
         return Array(record_or_module_id).map { |module_ref| module_id_for(module_ref) }.uniq unless recursive
 
         seen = []
         Array(record_or_module_id).flat_map do |module_ref|
-          ordered_module_ids_for_assets(module_id_for(module_ref), seen)
+          ordered_module_ids_for_assets(module_id_for(module_ref), seen, type: type)
         end
       end
 
-      def ordered_module_ids_for_assets(module_id, seen)
+      def ordered_module_ids_for_assets(module_id, seen, type: nil)
         return [] if seen.include?(module_id)
         return [] unless @records.key?(module_id)
 
         seen << module_id
         record = @records.fetch(module_id)
-        dependency_ids = record.resolved_dependencies.map(&:module_id)
+        dependency_ids =
+          record
+            .resolved_dependencies
+            .reject { skip_asset_dependency?(it, type:) }
+            .map(&:module_id)
 
         if module_id.extname == ".css"
-          dependency_ids.flat_map { |dependency_id| ordered_module_ids_for_assets(dependency_id, seen) } + [module_id]
+          dependency_ids.flat_map { |dependency_id| ordered_module_ids_for_assets(dependency_id, seen, type: type) } + [module_id]
         else
-          [module_id] + dependency_ids.flat_map { |dependency_id| ordered_module_ids_for_assets(dependency_id, seen) }
+          [module_id] + dependency_ids.flat_map { |dependency_id| ordered_module_ids_for_assets(dependency_id, seen, type: type) }
         end
+      end
+
+      def skip_asset_dependency?(resolved_dependency, type:)
+        type == :css &&
+          resolved_dependency.module_id.extname == ".css" &&
+          resolved_dependency.dependency.kind.to_s.start_with?("javascript_")
       end
 
       def asset_matches?(asset, type:, content_type:)

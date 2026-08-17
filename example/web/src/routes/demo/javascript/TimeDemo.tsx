@@ -1,4 +1,5 @@
 import IntlTime from "./IntlTime.tsx";
+import styles from "./TimeDemo.css";
 import orbit from "./orbit.svg";
 import coffee from "../assets/coffee.jpg";
 
@@ -27,7 +28,8 @@ export default class TimeDemoElement extends HTMLElement {
     if (!time) return;
 
     this.replaceChildren(
-      <dl>
+      styles.style(),
+      <dl class="assets">
         <dt>Imported SVG</dt>
         <dd>
           <img src={orbit.src} width={orbit.width} height={orbit.height} alt="" />

@@ -111,7 +111,10 @@ module Klenod
             result.with(
               code: ruby_module_source(result.metadata[:css_classes], output_path, styles_dependency: result.dependencies.fetch(0)),
               assets: [asset, source_map_asset, *result.assets].compact,
-              metadata: result.metadata.merge(css_asset_path: output_path)
+              metadata: result.metadata.merge(
+                css_asset_path: output_path,
+                css_javascript_stylesheet_path: output_path
+              )
             )
           end
 

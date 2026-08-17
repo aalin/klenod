@@ -1,0 +1,21 @@
+.assets {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.35rem 1rem;
+  align-items: center;
+}
+
+dt {
+  color: color-mix(in srgb, currentColor 65%, transparent);
+  font-weight: 600;
+}
+
+dd {
+  margin: 0;
+}
+
+img {
+  display: block;
+  max-width: 10rem;
+  height: auto;
+}

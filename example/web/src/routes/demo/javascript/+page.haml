@@ -1,12 +1,13 @@
 :ruby
-  IntlTime = import("./IntlTime.tsx")
-  TimeDemo = import("./TimeDemo.tsx")
   PageHeader = import("/components/PageHeader.haml")
   Panel = import("/components/Panel.haml")
 
   DEFAULT_DATE_STYLE = "long"
   DEFAULT_TIME_STYLE = "short"
-  StyleValues = ["full", "long", "medium", "short", nil].freeze
+  STYLE_VALUES = ["full", "long", "medium", "short", nil].freeze
+
+  IntlTime = import("./IntlTime.tsx")
+  TimeDemo = import("./TimeDemo.tsx")
 
 %article
   %PageHeader{
@@ -23,7 +24,7 @@
           %th= I18n.t(:matrix, :time_style)
           %th= I18n.t(:matrix, :output)
       %tbody
-        = StyleValues.repeated_permutation(2).map do |date_style, time_style|
+        = STYLE_VALUES.repeated_permutation(2).map do |date_style, time_style|
           %tr
             %td= date_style.inspect
             %td= time_style.inspect

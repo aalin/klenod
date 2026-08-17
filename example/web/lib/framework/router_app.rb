@@ -177,6 +177,7 @@ module Example
     def asset_preload_link_header(css_asset_references, javascript_asset_references)
       [
         *stylesheet_preload_links(css_asset_references),
+        *asset_preload_links(javascript_asset_references),
         *modulepreload_links(javascript_asset_references)
       ].join(", ")
     end
@@ -189,6 +190,14 @@ module Example
     def modulepreload_links(asset_references)
       asset_references
         .map { |reference| %(<#{reference.asset.output_path}>; rel=modulepreload) }
+    end
+
+    def asset_preload_links(asset_references)
+      asset_references.flat_map do |reference|
+        Array(reference.asset.metadata[:preload_assets]).map do |preload|
+          %(<#{preload.fetch(:path)}>; rel=preload; as=#{preload.fetch(:as)})
+        end
+      end
     end
 
     def request_path(raw_request)

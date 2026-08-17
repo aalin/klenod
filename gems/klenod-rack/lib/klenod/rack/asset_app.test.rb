@@ -50,6 +50,24 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
     assert_equal("body {}", response.body)
   end
 
+  def test_serves_asset_preload_link_headers
+    asset =
+      Klenod::Build::Asset.new(
+        "styles/home.css",
+        "abc123",
+        "/assets/home.abc123.css.js",
+        nil,
+        "export default {};",
+        "application/javascript",
+        {type: :javascript, preload_assets: [{path: "/assets/home.abc123.css", as: "style"}]}
+      )
+    app = Klenod::Rack::AssetApp.new(AssetSource.new(asset, "export default {};"))
+
+    response = app.response_for("/assets/home.abc123.css.js")
+
+    assert_equal("</assets/home.abc123.css>; rel=preload; as=style", response.headers.fetch("link"))
+  end
+
   def test_rack_gemspec_owns_rack_asset_app
     spec = Gem::Specification.load(File.expand_path("../../../klenod-rack.gemspec", __dir__))
 

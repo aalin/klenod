@@ -45,6 +45,20 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_css_uses_mayu_stylesheet_for_javascript_imports
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", ".title { color: red; }\nimg { display: block; }\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.evaluate("styles/home.css")
+      css_asset = record.assets.find { it.metadata[:type] == :css }
+
+      assert_equal(css_asset.output_path, record.metadata.fetch(:css_javascript_stylesheet_path))
+      assert_includes(css_asset.bytes, "sourceMappingURL")
+    end
+  end
+
   def test_ruby_import_of_css_returns_element_selector_map
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -120,10 +134,12 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       context = Klenod::Build::Context.new(source_dir: dir)
       record = context.evaluate("styles/home.css")
       css = record.assets.first.bytes
+      base_javascript_css_path = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/base.css", nil)).metadata.fetch(:css_javascript_stylesheet_path)
 
       refute_includes(css, "@import")
       refute_includes(css, "/assets/styles_base_css")
       assert_includes(css, "/assets/logo.")
+      assert_equal(context.assets_for("styles/base.css").find { it.metadata[:type] == :css }.output_path, base_javascript_css_path)
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/home.css", nil)))
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/base.css", nil)))
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("images/logo.png", nil)))

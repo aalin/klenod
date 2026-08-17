@@ -48,6 +48,8 @@ module Klenod
           "content-length" => body.bytesize.to_s,
           "cache-control" => CACHE_CONTROL
         }
+        link = preload_link_header(asset)
+        headers["link"] = link if link
         headers["vary"] = "Accept-Encoding" if brotli_available
         if compressed
           headers["content-encoding"] = "br"
@@ -90,6 +92,17 @@ module Klenod
         end
       rescue HTTP::Accept::ParseError
         false
+      end
+
+      def preload_link_header(asset)
+        links =
+          Array(asset.metadata[:preload_assets]).map do |preload|
+            path = preload.fetch(:path)
+            as = preload.fetch(:as)
+            %(<#{path}>; rel=preload; as=#{as})
+          end
+
+        links.empty? ? nil : links.join(", ")
       end
 
       def brotli_asset_bytes(asset)
