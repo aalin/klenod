@@ -4,7 +4,7 @@ require "rake/extensiontask"
 
 Rake::ExtensionTask.new("native") do |extension|
   extension.lib_dir = "lib/klenod/plugin/javascript"
-  extension.ext_dir = "ext/klenod/plugin/javascript/native"
+  extension.ext_dir = "ext/native"
 end
 
 task default: :compile
