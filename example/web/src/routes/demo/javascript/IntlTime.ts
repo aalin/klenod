@@ -1,17 +1,17 @@
 class IntlTimeElement extends HTMLTimeElement {
-  static get observedAttributes() {
+  static get observedAttributes(): string[] {
     return ['datetime', 'lang', 'date-style', 'time-style'];
   }
 
-  connectedCallback() {
+  connectedCallback(): void {
     this.render();
   }
 
-  attributeChangedCallback() {
+  attributeChangedCallback(): void {
     if (this.isConnected) this.render();
   }
 
-  render() {
+  render(): void {
     const datetime = this.getAttribute('datetime');
     if (!datetime) return;
 
@@ -24,20 +24,24 @@ class IntlTimeElement extends HTMLTimeElement {
     this.textContent = formatter.format(date);
   }
 
-  locale() {
+  locale(): string {
     return this.getAttribute('lang') || navigator.language;
   }
 
-  formatOptions() {
-    const options = {};
+  formatOptions(): Intl.DateTimeFormatOptions {
+    const options: Intl.DateTimeFormatOptions = {};
     const dateStyle = this.getAttribute('date-style');
     const timeStyle = this.getAttribute('time-style');
 
-    if (dateStyle) options.dateStyle = dateStyle;
-    if (timeStyle) options.timeStyle = timeStyle;
+    if (isDateTimeStyle(dateStyle)) options.dateStyle = dateStyle;
+    if (isDateTimeStyle(timeStyle)) options.timeStyle = timeStyle;
 
     return options;
   }
+}
+
+function isDateTimeStyle(value: string | null): value is Intl.DateTimeFormatOptions['dateStyle'] {
+  return value === 'full' || value === 'long' || value === 'medium' || value === 'short';
 }
 
 customElements.define('intl-time', IntlTimeElement, { extends: 'time' });
