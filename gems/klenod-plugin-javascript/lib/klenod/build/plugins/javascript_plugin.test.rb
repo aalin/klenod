@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "json"
 require "minitest/autorun"
 require "tmpdir"
 
+require "klenod/build/source_map"
 require "klenod/plugin/javascript"
 require "klenod/runtime"
 
@@ -24,7 +26,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       assert_equal("scripts/app.js", asset.logical_name)
       assert_equal("application/javascript", asset.content_type)
       assert_equal(:javascript, asset.metadata.fetch(:type))
-      assert_equal("console.log('hello')\n", asset.bytes)
+      assert_includes(asset.bytes, "console.log('hello')\n")
     end
   end
 
@@ -108,7 +110,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       app_asset = javascript_asset(context, "scripts/app.js")
 
       assert_includes(app_asset.bytes, "import 'https://cdn.example.com/app.js'")
-      assert_equal(1, context.assets_for("scripts/app.js").length)
+      assert_equal(1, context.assets_for("scripts/app.js").count { it.metadata.fetch(:type) == :javascript })
     end
   end
 
@@ -140,19 +142,89 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       loaded = Klenod::Runtime.load_bundle(output)
 
       assert_match(%r{\A/assets/scripts_app_js\.[a-f0-9]{16}\.js\z}, loaded.exports("entry")::Default)
-      assert_equal(2, bundle.assets.length)
+      assert_equal(2, bundle.assets.count { |_path, asset| asset.metadata.fetch(:type) == :javascript })
       assert_equal(bundle.assets.keys, loaded.assets.keys)
+    end
+  end
+
+  def test_javascript_source_maps_can_be_disabled
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      File.write("#{dir}/scripts/app.js", "console.log('hello');\n")
+
+      context = context_for(dir, javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin::Plugin.new(source_maps: false))
+      record = context.evaluate("scripts/app.js")
+
+      assert_equal([:javascript], record.assets.map { it.metadata.fetch(:type) })
+      refute_includes(record.assets.fetch(0).bytes, "sourceMappingURL")
+    end
+  end
+
+  def test_javascript_source_maps_are_emitted_in_development
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      source = "console.log('hello');\n"
+      File.write("#{dir}/scripts/app.js", source)
+
+      context = context_for(dir)
+      record = context.evaluate("scripts/app.js")
+      js_asset = record.assets.find { it.metadata.fetch(:type) == :javascript }
+      map_asset = record.assets.find { it.metadata.fetch(:type) == :javascript_source_map }
+      source_map = JSON.parse(map_asset.bytes)
+
+      assert_match(%r{\A/assets/scripts_app_js\.[a-f0-9]{16}\.js\.map\z}, map_asset.output_path)
+      assert_includes(js_asset.bytes, "sourceMappingURL=#{File.basename(map_asset.output_path)}")
+      assert_equal(3, source_map.fetch("version"))
+      assert_equal(["scripts/app.js"], source_map.fetch("sources"))
+      assert_equal([source], source_map.fetch("sourcesContent"))
+    end
+  end
+
+  def test_javascript_source_maps_are_not_emitted_in_build_mode_by_default
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      File.write("#{dir}/scripts/app.js", "console.log('hello');\n")
+
+      context = context_for(dir, mode: :build)
+      record = context.collect("scripts/app.js").record
+
+      assert_equal([:javascript], record.assets.map { it.metadata.fetch(:type) })
+    end
+  end
+
+  def test_javascript_source_maps_preserve_mappings_after_dependency_rewrites
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      File.write("#{dir}/scripts/dep.js", "export const dep = 1;\n")
+      File.write(
+        "#{dir}/scripts/app.js",
+        <<~JS
+          import { dep } from "./dep.js";
+          console.log(dep);
+          console.log("done");
+        JS
+      )
+
+      context = context_for(dir)
+      record = context.evaluate("scripts/app.js")
+      map_asset = record.assets.find { it.metadata.fetch(:type) == :javascript_source_map }
+      source_map = Klenod::Build::SourceMap::Map.parse(map_asset.bytes)
+
+      assert_equal(["scripts/app.js"], source_map.sources)
+      assert_equal([0, 1, 2, 3], source_map.segments.map(&:original_line))
+      assert_equal([0, 1, 2, 3], source_map.segments.map(&:generated_line))
     end
   end
 
   private
 
-  def context_for(dir)
+  def context_for(dir, mode: :development, javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin::Plugin.new)
     Klenod::Build::Context.new(
       source_dir: dir,
+      mode: mode,
       plugins: [
         *Klenod::Build::Context.default_plugins,
-        Klenod::Build::Plugins::JavaScriptPlugin::Plugin.new
+        javascript_plugin
       ]
     )
   end

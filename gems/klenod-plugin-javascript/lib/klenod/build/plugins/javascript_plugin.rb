@@ -5,6 +5,7 @@ require "klenod/build/dependency"
 require "klenod/build/errors"
 require "klenod/build/hashing"
 require "klenod/build/plugin"
+require "klenod/build/source_map"
 require "klenod/build/transform_result"
 require "klenod/runtime"
 
@@ -19,6 +20,15 @@ module Klenod
           EXTENSIONS = [".js"].freeze
           LOCAL_SPECIFIER_PATTERN = %r{\A(?:\.{1,2}/|/|app:/)}
           EXTERNAL_SPECIFIER_PATTERN = %r{\A(?:[A-Za-z][A-Za-z0-9+.-]*:)?//}
+          VALID_SOURCE_MAP_MODES = [false, true, :development].freeze
+
+          def initialize(source_maps: :development)
+            unless VALID_SOURCE_MAP_MODES.include?(source_maps)
+              raise ArgumentError, "source_maps must be false, true, or :development"
+            end
+
+            @source_maps = source_maps
+          end
 
           def resolve(dependency, context)
             return nil unless dependency.kind.to_s.start_with?("javascript_")
@@ -43,12 +53,32 @@ module Klenod
             )
           end
 
-          def finalize(module_id, result, resolved_dependencies, dependency_records, _context)
+          def finalize(module_id, result, resolved_dependencies, dependency_records, context)
             source = result.metadata[:javascript_source]
             imports = result.metadata[:javascript_imports]
             return result unless source && imports
 
-            code = rewrite_imports(source, imports, resolved_dependencies, dependency_records)
+            edit = rewrite_imports(module_id, source, imports, resolved_dependencies, dependency_records)
+            source_map_asset = nil
+            code = edit.code
+
+            if source_maps_enabled?(context)
+              source_map_json = edit.source_map.to_json
+              source_map_hash = Hashing.short(source_map_json)
+              source_map_output_path = "/assets/#{asset_name(module_id)}.#{source_map_hash}.js.map"
+              source_map_asset =
+                Asset.new(
+                  module_id.path,
+                  source_map_hash,
+                  source_map_output_path,
+                  nil,
+                  source_map_json,
+                  "application/json",
+                  {type: :javascript_source_map}
+                )
+              code = "#{code.chomp}\n//# sourceMappingURL=#{File.basename(source_map_output_path)}\n"
+            end
+
             hash = Hashing.short(code)
             output_path = "/assets/#{asset_name(module_id)}.#{hash}.js"
             asset =
@@ -64,7 +94,7 @@ module Klenod
 
             result.with(
               code: module_source(output_path),
-              assets: [asset],
+              assets: [asset, source_map_asset].compact,
               metadata: result.metadata.merge(javascript_asset_path: output_path)
             )
           end
@@ -100,7 +130,7 @@ module Klenod
             end
           end
 
-          def rewrite_imports(source, imports, resolved_dependencies, dependency_records)
+          def rewrite_imports(module_id, source, imports, resolved_dependencies, dependency_records)
             resolved_by_range =
               resolved_dependencies.to_h do |resolved_dependency|
                 metadata = resolved_dependency.dependency.metadata
@@ -109,20 +139,44 @@ module Klenod
                 [range, record.metadata.fetch(:javascript_asset_path)]
               end
 
-            output = +""
-            cursor = 0
+            edits =
+              imports.filter_map do |import|
+                replacement = resolved_by_range[[import.start_offset, import.end_offset]]
+                next unless replacement
 
-            imports.each do |import|
-              replacement = resolved_by_range[[import.start_offset, import.end_offset]]
-              next unless replacement
+                SourceMap::Edit.replace(import.start_offset, import.end_offset, replacement)
+              end
 
-              output << source.byteslice(cursor, import.start_offset - cursor)
-              output << replacement
-              cursor = import.end_offset
+            SourceMap::Editor.new(source, identity_source_map(module_id, source)).apply(edits)
+          end
+
+          def identity_source_map(module_id, source)
+            SourceMap::Map.new(
+              version: 3,
+              source_root: nil,
+              sources: [module_id.path],
+              sources_content: [source],
+              names: [],
+              segments: identity_segments(source)
+            )
+          end
+
+          def identity_segments(source)
+            line_count = source.count("\n") + 1
+            line_count.times.map do |line|
+              SourceMap::Segment.new(line, 0, 0, line, 0, nil)
             end
+          end
 
-            output << source.byteslice(cursor, source.bytesize - cursor)
-            output
+          def source_maps_enabled?(context)
+            case @source_maps
+            when true
+              true
+            when :development
+              context.mode == :development
+            else
+              false
+            end
           end
 
           def unsupported_specifier_message(import)
