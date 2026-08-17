@@ -1,9 +1,12 @@
 [package]
-name = "klenod_plugin_javascript_native"
+name = "native"
 version = "0.0.1"
 edition = "2021"
 
 [lib]
+name = "native"
 crate-type = ["cdylib"]
 
 [dependencies]
+magnus = "0.8.2"
+swc_core = { version = "73.0.0", features = ["common", "ecma_ast", "ecma_parser", "ecma_visit"] }

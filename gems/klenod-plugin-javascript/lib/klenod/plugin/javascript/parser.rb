@@ -8,9 +8,40 @@ module Klenod
       module Parser
         module_function
 
+        def native?
+          !native_parser.nil?
+        end
+
         def parse(source, filename:)
+          native_records = native_parser&.parse_native(source, filename)
+          return native_records.map { native_import_record(it) } if native_records
+
           scanner = FallbackScanner.new(source, filename)
           scanner.imports
+        end
+
+        def native_parser
+          @native_parser =
+            if defined?(@native_parser)
+              @native_parser
+            else
+              begin
+                require "klenod/plugin/javascript/native"
+                Klenod::Plugin::JavaScript::Native
+              rescue LoadError
+                nil
+              end
+            end
+        end
+
+        def native_import_record(record)
+          ImportRecord.new(
+            record.fetch("specifier"),
+            record.fetch("kind").to_sym,
+            record.fetch("start_offset"),
+            record.fetch("end_offset"),
+            record.fetch("loc")
+          )
         end
 
         class FallbackScanner

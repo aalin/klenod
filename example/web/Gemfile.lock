@@ -24,6 +24,7 @@ PATH
   specs:
     klenod-plugin-javascript (0.0.1)
       klenod-build (= 0.0.1)
+      rb_sys (~> 0.9.39)
 
 PATH
   remote: ../../gems/klenod-rack
@@ -136,9 +137,12 @@ GEM
       protocol-http (~> 0.62)
     protocol-url (0.4.0)
     racc (1.8.1)
+    rake-compiler-dock (1.12.0)
     rb-fsevent (0.11.2)
     rb-inotify (0.11.1)
       ffi (~> 1.0)
+    rb_sys (0.9.128)
+      rake-compiler-dock (= 1.12.0)
     rbnacl (7.1.2)
       ffi (~> 1)
     rexml (3.4.4)
@@ -251,8 +255,10 @@ CHECKSUMS
   protocol-http2 (0.26.0) sha256=bac89cd78082b241ccd0cf7246f5160e4bb0c9c975fb4bf7deef5f88cc317486
   protocol-url (0.4.0) sha256=64d4c03b6b51ad815ac6fdaf77a1d91e5baf9220d26becb846c5459dacdea9e1
   racc (1.8.1) sha256=4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f
+  rake-compiler-dock (1.12.0) sha256=f13205c2738f3d2053afcd03491a9e4541b22a59a0bfc53fc8bc883bd8188023
   rb-fsevent (0.11.2) sha256=43900b972e7301d6570f64b850a5aa67833ee7d87b458ee92805d56b7318aefe
   rb-inotify (0.11.1) sha256=a0a700441239b0ff18eb65e3866236cd78613d6b9f78fea1f9ac47a85e47be6e
+  rb_sys (0.9.128) sha256=9ab81f4d6d4e1895de18762232362d1264475aa7035756b50441e442130538fd
   rbnacl (7.1.2) sha256=c58433e93b390a7b8c03a9da9e54f2de67e6cc3d6731553265299c6aac889a60
   rexml (3.4.4) sha256=19e0a2c3425dfbf2d4fc1189747bdb2f849b6c5e74180401b15734bc97b5d142
   rmagick (7.0.5) sha256=d159449a0fd560379ca63843c2b5d59b89f6299ba9df3e32201d2458a0cfa7a3

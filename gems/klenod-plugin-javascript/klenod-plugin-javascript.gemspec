@@ -31,7 +31,11 @@ Gem::Specification.new do |spec|
           !path.include?("/__test__/")
       end
     end
+  spec.extensions = ["ext/klenod/plugin/javascript/native/extconf.rb"]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "klenod-build", "= #{version}"
+  spec.add_dependency "rb_sys", "~> 0.9.39"
+
+  spec.add_development_dependency "rake-compiler", "~> 1.3"
 end
