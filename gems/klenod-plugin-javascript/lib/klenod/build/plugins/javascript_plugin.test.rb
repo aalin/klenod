@@ -85,8 +85,30 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
         context_for(dir).evaluate("entry")
       end
 
-      assert_includes(error.message, "Unsupported image import \"../images/logo.png\"")
+      assert_includes(error.message, "Unsupported asset import \"../images/logo.png\"")
       assert_includes(error.message, "Use a default import")
+    end
+  end
+
+  def test_default_svg_import_is_rewritten_to_javascript_metadata_asset
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/images"])
+      File.write("#{dir}/images/logo.svg", %(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32"><path d="M0 0h24v32H0z"/></svg>\n))
+      File.write("#{dir}/scripts/app.js", "import logo from '../images/logo.svg';\nconsole.log(logo.src, logo.width);\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.js\")\n")
+
+      context = context_for(dir)
+      context.evaluate("entry")
+      app_asset = javascript_asset(context, "scripts/app.js")
+      svg_asset = context.assets_for("images/logo.svg").find { it.metadata[:type] == :svg }
+      svg_module_asset = context.assets_for("images/logo.svg").find { it.metadata[:type] == :javascript && it.metadata[:svg_metadata] }
+
+      assert_equal("#{svg_asset.output_path}.js", svg_module_asset.output_path)
+      assert_includes(app_asset.bytes, "from '#{svg_module_asset.output_path}'")
+      assert_includes(svg_module_asset.bytes, %("src":"#{svg_asset.output_path}"))
+      assert_includes(svg_module_asset.bytes, %("width":24))
+      assert_includes(svg_module_asset.bytes, %("height":32))
+      assert_includes(svg_module_asset.bytes, %("contentType":"image/svg+xml"))
     end
   end
 

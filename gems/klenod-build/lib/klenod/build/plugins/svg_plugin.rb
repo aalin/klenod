@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "json"
+
 require_relative "../asset"
 require_relative "../dependency"
 require_relative "../errors"
@@ -51,6 +53,7 @@ module Klenod
                   height: dimensions.height
                 }
               )
+            javascript_asset = javascript_svg_asset(module_id, asset)
             svg_runtime_dependency =
               Dependency
                 .create(
@@ -64,9 +67,9 @@ module Klenod
               svg_module_source(asset, svg_runtime_dependency),
               [svg_runtime_dependency],
               nil,
-              [asset],
+              [asset, javascript_asset],
               [],
-              {asset_bytes: code}
+              {asset_bytes: code, svg_javascript_asset_path: javascript_asset.output_path}
             )
           end
 
@@ -104,6 +107,31 @@ module Klenod
                 )
 
             RUBY
+          end
+
+          def javascript_svg_asset(module_id, asset)
+            code = javascript_svg_module_source(asset)
+            hash = Hashing.short(code)
+            Asset.new(
+              module_id.path,
+              hash,
+              "#{asset.output_path}.js",
+              nil,
+              code,
+              "application/javascript",
+              {type: :svg_javascript_metadata, svg_metadata: true, svg_asset_path: asset.output_path}
+            )
+          end
+
+          def javascript_svg_module_source(asset)
+            metadata = {
+              src: asset.output_path,
+              width: asset.metadata[:width],
+              height: asset.metadata[:height],
+              contentType: asset.content_type
+            }
+
+            "export default #{JSON.generate(metadata)};\n"
           end
 
           def svg_dimensions(code)

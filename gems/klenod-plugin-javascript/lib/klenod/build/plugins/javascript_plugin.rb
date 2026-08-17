@@ -124,7 +124,7 @@ module Klenod
 
             hash = Hashing.short(code)
             output_path = "/assets/#{asset_name(module_id)}.#{hash}.js"
-            image_javascript_assets = image_javascript_assets(resolved_dependencies, dependency_records)
+            asset_javascript_assets = asset_javascript_assets(resolved_dependencies, dependency_records)
             asset =
               Asset.new(
                 module_id.path,
@@ -138,7 +138,7 @@ module Klenod
 
             result.with(
               code: module_source(output_path, custom_element_descriptor: custom_element_descriptor&.merge(asset_path: output_path)),
-              assets: [asset, source_map_asset, *image_javascript_assets].compact,
+              assets: [asset, source_map_asset, *asset_javascript_assets].compact,
               metadata: result.metadata.merge(
                 javascript_asset_path: output_path,
                 javascript_custom_element_descriptor: custom_element_descriptor&.merge(asset_path: output_path)
@@ -236,18 +236,22 @@ module Klenod
           end
 
           def import_replacement(module_id, source, dependency, record)
-            if (image_asset_path = record.metadata[:image_javascript_asset_path])
-              validate_image_import!(module_id, source, dependency)
-              return image_asset_path
+            if (asset_path = asset_javascript_asset_path(record))
+              validate_asset_import!(module_id, source, dependency)
+              return asset_path
             end
 
             record.metadata.fetch(:javascript_asset_path)
           end
 
-          def image_javascript_assets(resolved_dependencies, dependency_records)
+          def asset_javascript_asset_path(record)
+            record.metadata[:image_javascript_asset_path] || record.metadata[:svg_javascript_asset_path]
+          end
+
+          def asset_javascript_assets(resolved_dependencies, dependency_records)
             resolved_dependencies.filter_map do |resolved_dependency|
               record = dependency_records.fetch(resolved_dependency.dependency.id)
-              asset = record.assets.find { it.metadata[:type] == :image_javascript_metadata }
+              asset = record.assets.find { asset_javascript_metadata?(it) }
               next unless asset
 
               Asset.new(
@@ -262,10 +266,14 @@ module Klenod
             end
           end
 
-          def validate_image_import!(module_id, source, dependency)
+          def asset_javascript_metadata?(asset)
+            asset.metadata[:type] == :image_javascript_metadata || asset.metadata[:type] == :svg_javascript_metadata
+          end
+
+          def validate_asset_import!(module_id, source, dependency)
             return if dependency.kind == :javascript_import && default_import?(source, dependency)
 
-            raise DynamicImportError, "Unsupported image import #{dependency.specifier.inspect} in #{module_id}. Use a default import, e.g. `import image from \"#{dependency.specifier}\"`."
+            raise DynamicImportError, "Unsupported asset import #{dependency.specifier.inspect} in #{module_id}. Use a default import, e.g. `import asset from \"#{dependency.specifier}\"`."
           end
 
           def default_import?(source, dependency)

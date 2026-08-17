@@ -1,4 +1,6 @@
 import IntlTime from "./IntlTime.tsx";
+import orbit from "./orbit.svg";
+import coffee from "../assets/coffee.jpg";
 
 const Locales = [
   ["en-US", "United States"],
@@ -26,6 +28,14 @@ export default class TimeDemoElement extends HTMLElement {
 
     this.replaceChildren(
       <dl>
+        <dt>Imported SVG</dt>
+        <dd>
+          <img src={orbit.src} width={orbit.width} height={orbit.height} alt="" />
+        </dd>
+        <dt>Imported image</dt>
+        <dd>
+          <img src={coffee.src} width={160} height={Math.round(160 * coffee.height / coffee.width)} alt="" />
+        </dd>
         {Locales.map(([locale, label]) => (
           <>
             <dt>{label}</dt>
