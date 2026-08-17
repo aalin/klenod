@@ -24,6 +24,7 @@ module Klenod
             Klenod::Plugin::CSS::UrlDependency => :asset_url
           }.freeze
 
+          JAVASCRIPT_STYLESHEET_QUERY = "javascript"
           VALID_SOURCE_MAP_MODES = [false, true, :development].freeze
 
           def initialize(source_maps: :development, class_pattern: "[component].[local]?[hash]", tag_pattern: "[component]_[local]?[hash]")
@@ -36,8 +37,8 @@ module Klenod
             @tag_pattern = tag_pattern
           end
 
-          def resolve(dependency, _context)
-            resolve_class_names_runtime(dependency)
+          def resolve(dependency, context)
+            resolve_class_names_runtime(dependency) || resolve_javascript_stylesheet_dependency(dependency, context)
           end
 
           def load(module_id, _context)
@@ -47,8 +48,25 @@ module Klenod
           def transform(module_id, code, context)
             return super unless module_id.extname == ".css"
 
+            if javascript_stylesheet_module?(module_id)
+              javascript_result = transform_css(module_id, code, transform_names: false)
+              css_dependencies = build_dependencies(module_id, javascript_result.dependencies, context)
+
+              return TransformResult.new(
+                "Default = nil\n",
+                css_dependencies.dependencies,
+                nil,
+                [],
+                [],
+                {
+                  css_javascript_result: javascript_result,
+                  css_javascript_only: true,
+                  external_dependencies: css_dependencies.external_dependencies
+                }
+              )
+            end
+
             scoped_result = transform_css(module_id, code, transform_names: true)
-            javascript_result = transform_css(module_id, code, transform_names: false)
             css_dependencies = build_dependencies(module_id, scoped_result.dependencies, context)
             styles_dependency = class_names_runtime_dependency(module_id)
 
@@ -60,7 +78,6 @@ module Klenod
               [],
               {
                 css_result: scoped_result,
-                css_javascript_result: javascript_result,
                 css_classes: css_selectors(scoped_result),
                 external_dependencies: css_dependencies.external_dependencies
               }
@@ -69,25 +86,36 @@ module Klenod
 
           def finalize(module_id, result, resolved_dependencies, dependency_records, context)
             css_result = result.metadata[:css_result]
-            return result unless css_result
+            javascript_only = result.metadata[:css_javascript_only]
+            return result unless css_result || javascript_only
+
+            if javascript_only
+              javascript_css_edit = finalized_css_edit(
+                result.metadata.fetch(:css_javascript_result),
+                resolved_dependencies,
+                dependency_records,
+                result.metadata.fetch(:external_dependencies),
+                import_asset_type: :css_javascript_stylesheet
+              )
+              javascript_asset, javascript_source_map_asset = css_asset_pair(module_id, javascript_css_edit, :css_javascript_stylesheet, {}, context)
+
+              return result.with(
+                code: "Default = #{javascript_asset.output_path.inspect}\n",
+                assets: [javascript_asset, javascript_source_map_asset, *result.assets].compact,
+                metadata: result.metadata.merge(
+                  css_javascript_stylesheet_path: javascript_asset.output_path
+                )
+              )
+            end
 
             css_edit = finalized_css_edit(css_result, resolved_dependencies, dependency_records, result.metadata.fetch(:external_dependencies))
-            javascript_css_edit = finalized_css_edit(
-              result.metadata.fetch(:css_javascript_result),
-              resolved_dependencies,
-              dependency_records,
-              result.metadata.fetch(:external_dependencies),
-              import_asset_type: :css_javascript_stylesheet
-            )
             asset, source_map_asset = css_asset_pair(module_id, css_edit, :css, {classes: result.metadata[:css_classes]}, context)
-            javascript_asset, javascript_source_map_asset = css_asset_pair(module_id, javascript_css_edit, :css_javascript_stylesheet, {}, context)
 
             result.with(
               code: ruby_module_source(result.metadata[:css_classes], asset.output_path, styles_dependency: result.dependencies.fetch(0)),
-              assets: [asset, source_map_asset, javascript_asset, javascript_source_map_asset, *result.assets].compact,
+              assets: [asset, source_map_asset, *result.assets].compact,
               metadata: result.metadata.merge(
-                css_asset_path: asset.output_path,
-                css_javascript_stylesheet_path: javascript_asset.output_path
+                css_asset_path: asset.output_path
               )
             )
           end
@@ -112,6 +140,35 @@ module Klenod
 
           CssDependencies = ::Data.define(:dependencies, :external_dependencies)
           CssEdit = ::Data.define(:code, :source_map)
+
+          def resolve_javascript_stylesheet_dependency(dependency, context)
+            return nil unless javascript_stylesheet_dependency?(dependency)
+            return nil if external_url?(dependency.specifier)
+
+            base_module_id =
+              if dependency.importer_id
+                dependency.importer_id.merge(dependency.specifier)
+              else
+                ModuleId.new("app:/#{dependency.specifier.to_s.delete_prefix("/")}")
+              end
+            return nil unless base_module_id.scheme == :app && base_module_id.extname == ".css"
+
+            module_id = ModuleId.new("app:/#{base_module_id.relative_path}", JAVASCRIPT_STYLESHEET_QUERY)
+            return nil unless File.file?(context.absolute_path(module_id))
+
+            ResolvedDependency.new(dependency, module_id, {})
+          rescue ResolveError
+            nil
+          end
+
+          def javascript_stylesheet_dependency?(dependency)
+            dependency.kind == :javascript_import ||
+              (dependency.kind == :css_import && dependency.importer_id&.query == JAVASCRIPT_STYLESHEET_QUERY)
+          end
+
+          def javascript_stylesheet_module?(module_id)
+            module_id.query == JAVASCRIPT_STYLESHEET_QUERY
+          end
 
           def transform_css(module_id, code, transform_names:)
             Klenod::Plugin::CSS::Transformer.transform(

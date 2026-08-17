@@ -92,8 +92,7 @@ module Klenod
 
         def module_ids_for_paths(paths)
           paths
-            .map { |path| module_id_for_path(path) }
-            .compact
+            .flat_map { |path| module_ids_for_path(path) }
             .select { |module_id| records.key?(module_id) }
             .uniq
         end
@@ -148,13 +147,13 @@ module Klenod
           end
         end
 
-        def module_id_for_path(path)
+        def module_ids_for_path(path)
           absolute_path = Pathname.new(path).expand_path
           relative = absolute_path.relative_path_from(resolver.source_dir).to_s
 
-          records.each_key.find { |module_id| module_id.path == relative }
+          records.each_key.select { |module_id| module_id.path == relative }
         rescue ArgumentError
-          nil
+          []
         end
 
         def dependent_closure(module_ids)

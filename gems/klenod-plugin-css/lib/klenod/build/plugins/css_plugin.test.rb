@@ -46,18 +46,19 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
-  def test_css_tracks_unscoped_stylesheet_for_javascript_imports
+  def test_javascript_stylesheet_css_module_emits_only_unscoped_stylesheet
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
       File.write("#{dir}/styles/home.css", ".title { color: red; }\nimg { display: block; }\n")
 
       context = context_for(dir)
-      record = context.evaluate("styles/home.css")
+      record = context.evaluate("styles/home.css?javascript")
       css_asset = record.assets.find { it.metadata[:type] == :css }
       javascript_css_asset = record.assets.find { it.metadata[:type] == :css_javascript_stylesheet }
 
+      assert_nil(css_asset)
       assert_equal(javascript_css_asset.output_path, record.metadata.fetch(:css_javascript_stylesheet_path))
-      assert_includes(css_asset.bytes, "sourceMappingURL")
+      assert_match(%r{\A/assets/styles_home_css\.javascript\.[a-f0-9]{16}\.css\z}, javascript_css_asset.output_path)
       assert_includes(javascript_css_asset.bytes, ".title")
     end
   end
@@ -137,12 +138,10 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       context = context_for(dir)
       record = context.evaluate("styles/home.css")
       css = record.assets.first.bytes
-      base_javascript_css_path = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/base.css", nil)).metadata.fetch(:css_javascript_stylesheet_path)
 
       refute_includes(css, "@import")
       refute_includes(css, "/assets/styles_base_css")
       assert_includes(css, "/assets/logo.")
-      assert_equal(context.assets_for("styles/base.css").find { it.metadata[:type] == :css_javascript_stylesheet }.output_path, base_javascript_css_path)
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/home.css", nil)))
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/base.css", nil)))
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("images/logo.png", nil)))
@@ -171,7 +170,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
-  def test_css_importing_css_emits_both_assets_in_bundle_manifest
+  def test_css_importing_css_emits_scoped_assets_in_bundle_manifest
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
       File.write("#{dir}/styles/base.css", ".base { color: blue; }\n")
@@ -186,7 +185,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       refute_includes(home_asset.bytes, base_asset.output_path)
       assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, home_asset.output_path)
       assert_match(%r{\A/assets/styles_base_css\.[a-f0-9]{16}\.css\z}, base_asset.output_path)
-      assert_equal(8, bundle.assets.length)
+      assert_equal(4, bundle.assets.length)
     end
   end
 
@@ -271,7 +270,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       mod = loaded.load("entry")
 
       assert_match(/title/, mod.const_get(:Exports)::TITLE)
-      assert_equal(4, bundle.assets.length)
+      assert_equal(2, bundle.assets.length)
       assert_equal(bundle.assets.keys, loaded.assets.keys)
     end
   end
@@ -327,7 +326,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       refute(exports::Styles.loaded?)
 
       assert_match(/title/, exports.title_class)
-      assert_equal(4, context.assets_for("styles/home.css").length)
+      assert_equal(2, context.assets_for("styles/home.css").length)
       assert(exports::Styles.loaded?)
     end
   end
@@ -377,7 +376,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         )
       record = context.evaluate("styles/home.css")
 
-      assert_equal([:css, :css_javascript_stylesheet], record.assets.map { |asset| asset.metadata[:type] })
+      assert_equal([:css], record.assets.map { |asset| asset.metadata[:type] })
       refute_includes(record.assets.fetch(0).bytes, "sourceMappingURL")
     end
   end
@@ -409,7 +408,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       context = context_for(dir, mode: :build)
       record = context.collect("styles/home.css").record
 
-      assert_equal([:css, :css_javascript_stylesheet], record.assets.map { |asset| asset.metadata[:type] })
+      assert_equal([:css], record.assets.map { |asset| asset.metadata[:type] })
     end
   end
 

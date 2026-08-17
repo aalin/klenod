@@ -127,10 +127,37 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
 
       assert_includes(app_asset.bytes, "from '#{stylesheet_asset.output_path}' with { type: \"css\" }")
       assert_equal([{path: stylesheet_asset.output_path, as: "style"}], app_asset.metadata[:preload_assets])
+      assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/panel.css", "javascript")))
+      refute(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/panel.css", nil)))
+      assert_nil(context.assets_for("styles/panel.css").find { it.metadata[:type] == :css })
       assert_nil(context.assets_for("styles/panel.css").find { it.metadata[:type] == :javascript && it.metadata[:css_metadata] })
       assert_empty(context.assets_for("virtual:klenod/css-helper.js"))
       assert_empty(context.assets_for_module("scripts/app.ts", type: :css))
       assert_equal([app_asset.output_path], context.assets_for_module("scripts/app.ts", type: :javascript, recursive: false).map(&:output_path))
+    end
+  end
+
+  def test_javascript_css_import_invalidation_updates_only_javascript_stylesheet_asset
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/styles"])
+      css_path = "#{dir}/styles/panel.css"
+      File.write(css_path, ".panel { color: red; }\n")
+      File.write("#{dir}/scripts/app.ts", "import styles from '../styles/panel.css';\nconsole.log(styles);\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.ts\")\n")
+
+      context = context_for(dir)
+      context.evaluate("entry")
+      old_stylesheet_asset = context.assets_for("styles/panel.css").find { it.metadata[:type] == :css_javascript_stylesheet }
+
+      File.write(css_path, ".panel { color: blue; }\n")
+      result = context.invalidate_paths([css_path])
+      new_stylesheet_asset = context.assets_for("styles/panel.css").find { it.metadata[:type] == :css_javascript_stylesheet }
+
+      assert_equal(["app:/styles/panel.css?javascript"], result.reloaded_module_ids.map(&:to_s))
+      refute_equal(old_stylesheet_asset.output_path, new_stylesheet_asset.output_path)
+      assert_nil(context.assets_for("styles/panel.css").find { it.metadata[:type] == :css })
+      assert_includes(result.added_assets, new_stylesheet_asset.output_path)
+      assert_includes(result.removed_assets, old_stylesheet_asset.output_path)
     end
   end
 
