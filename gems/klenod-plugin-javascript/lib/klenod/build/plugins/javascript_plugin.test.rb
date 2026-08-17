@@ -32,7 +32,20 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       assert_equal("scripts/app.js", asset.logical_name)
       assert_equal("application/javascript", asset.content_type)
       assert_equal(:javascript, asset.metadata.fetch(:type))
-      assert_includes(asset.bytes, "console.log(\"hello\")")
+      assert_includes(asset.bytes, "console.log('hello')")
+    end
+  end
+
+  def test_javascript_can_be_minified_in_development
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      File.write("#{dir}/scripts/app.js", "console.log('hello');\n")
+
+      context = context_for(dir, javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin::Plugin.new(minify: true))
+      record = context.evaluate("scripts/app.js")
+      asset = record.assets.find { it.metadata.fetch(:type) == :javascript }
+
+      assert_includes(asset.bytes, "console.log(\"hello\");")
     end
   end
 
@@ -359,8 +372,8 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       assert_match(/\Aklenod-scripts-clock-jsx-[a-f0-9]{8}\z/, exports::Default.fetch(:tag))
       assert_equal(asset.output_path, exports::Default.fetch(:asset_path))
       assert_includes(asset.bytes, %(from "#{runtime_asset.output_path}"))
-      assert_includes(asset.bytes, "h(\"span\",{")
-      assert_includes(asset.bytes, "hidden:true")
+      assert_match(/h\("span",\s*\{/, asset.bytes)
+      assert_match(/hidden:\s*true/, asset.bytes)
       assert_includes(asset.bytes, "Object.defineProperty(ClockElement, \"__klenodCustomElementTag\"")
       assert_includes(asset.bytes, "customElements.define(#{exports::Default.fetch(:tag).inspect}, ClockElement);")
       assert_includes(runtime_asset.bytes, "type.__klenodCustomElementTag")
@@ -476,6 +489,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       record = context.collect("scripts/app.js").record
 
       assert_equal([:javascript], record.assets.map { it.metadata.fetch(:type) })
+      assert_includes(record.assets.fetch(0).bytes, "console.log(\"hello\");")
     end
   end
 
@@ -498,8 +512,8 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       source_map = Klenod::Build::SourceMap::Map.parse(map_asset.bytes)
 
       assert_equal(["scripts/app.js"], source_map.sources)
-      assert_equal([0], source_map.segments.map(&:original_line))
-      assert_equal([0], source_map.segments.map(&:generated_line))
+      assert_equal([0, 1, 2, 3], source_map.segments.map(&:original_line))
+      assert_equal([0, 1, 2, 3], source_map.segments.map(&:generated_line))
     end
   end
 
@@ -518,7 +532,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
 
       assert_match(%r{\A/assets/scripts_app_ts\.[a-f0-9]{16}\.js\z}, exports::Default)
       assert_equal("scripts/app.ts", asset.logical_name)
-      assert_includes(asset.bytes, "const message=\"hello\"")
+      assert_includes(asset.bytes, "const message = 'hello'")
       refute_includes(asset.bytes, ": string")
     end
   end
@@ -549,7 +563,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       assert_match(/\Aklenod-scripts-clock-tsx-[a-f0-9]{8}\z/, exports::Default.fetch(:tag))
       assert_equal(asset.output_path, exports::Default.fetch(:asset_path))
       assert_includes(asset.bytes, "customElements.define(#{exports::Default.fetch(:tag).inspect}, ClockElement);")
-      assert_includes(asset.bytes, "h(Fragment,null")
+      assert_match(/h\(Fragment,\s*null/, asset.bytes)
       refute_includes(asset.bytes, ": void")
     end
   end

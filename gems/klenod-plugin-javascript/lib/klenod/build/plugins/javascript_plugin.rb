@@ -31,7 +31,7 @@ module Klenod
           DEFAULT_EXPORT_IDENTIFIER_PATTERN = /\bexport\s+default\s+(#{IDENTIFIER_PATTERN})\s*;/
           DEFAULT_IMPORT_PREFIX_PATTERN = /\Aimport\s+#{IDENTIFIER_PATTERN}\s+from\z/
 
-          def initialize(source_maps: :development, minify: true)
+          def initialize(source_maps: :development, minify: false)
             unless VALID_SOURCE_MAP_MODES.include?(source_maps)
               raise ArgumentError, "source_maps must be false, true, or :development"
             end
@@ -60,11 +60,11 @@ module Klenod
             LoadResult.new(jsx_runtime_source, nil, nil)
           end
 
-          def transform(module_id, code, _context)
+          def transform(module_id, code, context)
             return super unless EXTENSIONS.include?(module_id.extname)
 
             custom_element = custom_element_module?(module_id)
-            transform = Klenod::Plugin::JavaScript::Parser.transform(code, filename: module_id.to_s, source_kind: source_kind(module_id), minify: @minify)
+            transform = Klenod::Plugin::JavaScript::Parser.transform(code, filename: module_id.to_s, source_kind: source_kind(module_id), minify: minify_enabled?(context))
             javascript_source, imports =
               if custom_element
                 inject_jsx_runtime(transform.code, transform.imports, module_id)
@@ -385,6 +385,10 @@ module Klenod
             else
               false
             end
+          end
+
+          def minify_enabled?(context)
+            context.mode == :build || @minify
           end
 
           def unsupported_specifier_message(import)

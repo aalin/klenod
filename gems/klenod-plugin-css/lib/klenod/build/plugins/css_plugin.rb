@@ -27,7 +27,7 @@ module Klenod
           JAVASCRIPT_STYLESHEET_QUERY = "javascript"
           VALID_SOURCE_MAP_MODES = [false, true, :development].freeze
 
-          def initialize(source_maps: :development, minify: true, class_pattern: "[component].[local]?[hash]", tag_pattern: "[component]_[local]?[hash]")
+          def initialize(source_maps: :development, minify: false, class_pattern: "[component].[local]?[hash]", tag_pattern: "[component]_[local]?[hash]")
             unless VALID_SOURCE_MAP_MODES.include?(source_maps)
               raise ArgumentError, "source_maps must be false, true, or :development"
             end
@@ -50,7 +50,7 @@ module Klenod
             return super unless module_id.extname == ".css"
 
             if javascript_stylesheet_module?(module_id)
-              javascript_result = transform_css(module_id, code, transform_names: false)
+              javascript_result = transform_css(module_id, code, transform_names: false, context: context)
               css_dependencies = build_dependencies(module_id, javascript_result.dependencies, context)
 
               return TransformResult.new(
@@ -67,7 +67,7 @@ module Klenod
               )
             end
 
-            scoped_result = transform_css(module_id, code, transform_names: true)
+            scoped_result = transform_css(module_id, code, transform_names: true, context: context)
             css_dependencies = build_dependencies(module_id, scoped_result.dependencies, context)
             styles_dependency = class_names_runtime_dependency(module_id)
 
@@ -171,15 +171,19 @@ module Klenod
             module_id.query == JAVASCRIPT_STYLESHEET_QUERY
           end
 
-          def transform_css(module_id, code, transform_names:)
+          def transform_css(module_id, code, transform_names:, context:)
             Klenod::Plugin::CSS::Transformer.transform(
               module_id.path,
               code,
-              minify: @minify,
+              minify: minify_enabled?(context),
               transform_names: transform_names,
               class_pattern: @class_pattern,
               tag_pattern: @tag_pattern
             )
+          end
+
+          def minify_enabled?(context)
+            context.mode == :build || @minify
           end
 
           def build_dependencies(module_id, dependencies, context)
