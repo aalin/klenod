@@ -26,7 +26,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       css_asset = css_record.assets.find { |asset| asset.metadata[:type] == :css }
 
       assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, css_asset.output_path)
-      assert_includes(css_asset.bytes, "color: red")
+      assert_includes(css_asset.bytes, "color:red")
     end
   end
 
@@ -86,7 +86,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       assert_match(/img/, mod.const_get(:Exports)::IMAGE)
       assert_match(/title/, mod.const_get(:Exports)::TITLE)
       assert_match(/img/, asset.metadata.fetch(:classes).fetch(:__img))
-      assert_includes(asset.bytes, "width: 100%")
+      assert_includes(asset.bytes, "width:100%")
     end
   end
 
@@ -434,7 +434,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
 
       assert_equal(["styles/home.css"], source_map.sources)
       assert_equal([1, 2], source_map.segments.map(&:original_line))
-      assert_equal([0, 4], source_map.segments.map(&:generated_line))
+      assert_equal([0, 0], source_map.segments.map(&:generated_line))
     end
   end
 

@@ -31,12 +31,13 @@ module Klenod
           DEFAULT_EXPORT_IDENTIFIER_PATTERN = /\bexport\s+default\s+(#{IDENTIFIER_PATTERN})\s*;/
           DEFAULT_IMPORT_PREFIX_PATTERN = /\Aimport\s+#{IDENTIFIER_PATTERN}\s+from\z/
 
-          def initialize(source_maps: :development)
+          def initialize(source_maps: :development, minify: true)
             unless VALID_SOURCE_MAP_MODES.include?(source_maps)
               raise ArgumentError, "source_maps must be false, true, or :development"
             end
 
             @source_maps = source_maps
+            @minify = minify
           end
 
           def resolve(dependency, context)
@@ -63,7 +64,7 @@ module Klenod
             return super unless EXTENSIONS.include?(module_id.extname)
 
             custom_element = custom_element_module?(module_id)
-            transform = Klenod::Plugin::JavaScript::Parser.transform(code, filename: module_id.to_s, source_kind: source_kind(module_id))
+            transform = Klenod::Plugin::JavaScript::Parser.transform(code, filename: module_id.to_s, source_kind: source_kind(module_id), minify: @minify)
             javascript_source, imports =
               if custom_element
                 inject_jsx_runtime(transform.code, transform.imports, module_id)

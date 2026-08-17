@@ -14,17 +14,17 @@ module Klenod
         end
 
         def parse(source, filename:)
-          transform(source, filename: filename, source_kind: :javascript).imports
+          transform(source, filename: filename, source_kind: :javascript, minify: false).imports
         end
 
-        def transform(source, filename:, source_kind:)
+        def transform(source, filename:, source_kind:, minify: false)
           if NATIVE_SOURCE_KINDS.include?(source_kind)
             native = native_parser || raise(SyntaxError, "TypeScript support requires the klenod-plugin-javascript native extension. Run `bundle exec rake compile` in gems/klenod-plugin-javascript.")
-            return native_transform_result(native.transform_native(source, filename, source_kind.to_s))
+            return native_transform_result(native.transform_native(source, filename, source_kind.to_s, {"minify" => minify}))
           end
 
           if (native = native_parser)
-            return native_transform_result(native.transform_native(source, filename, "javascript"))
+            return native_transform_result(native.transform_native(source, filename, "javascript", {"minify" => minify}))
           end
 
           scanner = FallbackScanner.new(source, filename)

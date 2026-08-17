@@ -1230,7 +1230,7 @@ class Klenod::Build::Context::Test < Minitest::Test
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
       assets_dir = "#{dir}/public"
-      File.write("#{dir}/styles/home.css", ".title { color: red; }\n" * 100)
+      File.write("#{dir}/styles/home.css", 100.times.map { |index| ".title-#{index} { color: red; margin: #{index}px; }\n" }.join)
       File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\n")
 
       context = context_with_css(dir)

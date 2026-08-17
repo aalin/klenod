@@ -183,7 +183,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       css_asset = css_record.assets.find { |asset| asset.metadata[:type] == :css }
 
       assert_match(%r{\A/assets/pages_page_haml_inline_0_css\.[a-f0-9]{16}\.css\z}, css_asset.output_path)
-      assert_includes(css_asset.bytes, "color: red")
+      assert_includes(css_asset.bytes, "color:red")
     end
   end
 
@@ -413,7 +413,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       refute_includes(styles.keys, :title)
       assert_match(/heading/, styles.fetch(:heading))
       refute_equal(old_asset_path, css_record.assets.first.output_path)
-      assert_includes(css_record.assets.first.bytes, "color: #00f")
+      assert_includes(css_record.assets.first.bytes, "color:#00f")
     end
   end
 

@@ -27,12 +27,13 @@ module Klenod
           JAVASCRIPT_STYLESHEET_QUERY = "javascript"
           VALID_SOURCE_MAP_MODES = [false, true, :development].freeze
 
-          def initialize(source_maps: :development, class_pattern: "[component].[local]?[hash]", tag_pattern: "[component]_[local]?[hash]")
+          def initialize(source_maps: :development, minify: true, class_pattern: "[component].[local]?[hash]", tag_pattern: "[component]_[local]?[hash]")
             unless VALID_SOURCE_MAP_MODES.include?(source_maps)
               raise ArgumentError, "source_maps must be false, true, or :development"
             end
 
             @source_maps = source_maps
+            @minify = minify
             @class_pattern = class_pattern
             @tag_pattern = tag_pattern
           end
@@ -174,7 +175,7 @@ module Klenod
             Klenod::Plugin::CSS::Transformer.transform(
               module_id.path,
               code,
-              minify: false,
+              minify: @minify,
               transform_names: transform_names,
               class_pattern: @class_pattern,
               tag_pattern: @tag_pattern

@@ -1,4 +1,4 @@
-use magnus::{function, prelude::*, Error, RArray, RHash, Ruby};
+use magnus::{function, prelude::*, Error, RArray, RHash, Ruby, TryConvert};
 use swc_core::{
     common::{
         comments::NoopComments, sync::Lrc, FileName, Globals, Mark, SourceMap, Span, GLOBALS,
@@ -140,9 +140,11 @@ fn transform_native(
     source: String,
     filename: String,
     source_kind: String,
+    options: RHash,
 ) -> Result<RHash, Error> {
     let source_kind = SourceKind::from_string(ruby, &source_kind)?;
-    let transformed_source = transform_source(ruby, source, filename.clone(), source_kind)?;
+    let minify = hash_fetch_bool(options, "minify", false)?;
+    let transformed_source = transform_source(ruby, source, filename.clone(), source_kind, minify)?;
     let parsed = parse_module(
         ruby,
         transformed_source.clone(),
@@ -307,8 +309,9 @@ fn transform_source(
     source: String,
     filename: String,
     source_kind: SourceKind,
+    minify: bool,
 ) -> Result<String, Error> {
-    if !source_kind.needs_transform() {
+    if !source_kind.needs_transform() && !minify {
         return Ok(source);
     }
 
@@ -342,7 +345,7 @@ fn transform_source(
     {
         let writer = JsWriter::new(source_map.clone(), "\n", &mut bytes, None);
         let mut emitter = Emitter {
-            cfg: Default::default(),
+            cfg: swc_core::ecma::codegen::Config::default().with_minify(minify),
             cm: source_map,
             comments: None,
             wr: writer,
@@ -361,6 +364,13 @@ fn transform_source(
             format!("SWC generated invalid UTF-8: {}", error),
         )
     })
+}
+
+fn hash_fetch_bool(hash: RHash, key: &str, default: bool) -> Result<bool, Error> {
+    match hash.get(key) {
+        Some(value) => bool::try_convert(value),
+        None => Ok(default),
+    }
 }
 
 impl SourceKind {
@@ -384,6 +394,6 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     let javascript = plugin.define_module("JavaScript")?;
     let native = javascript.define_module("Native")?;
     native.define_singleton_method("parse_native", function!(parse_native, 2))?;
-    native.define_singleton_method("transform_native", function!(transform_native, 3))?;
+    native.define_singleton_method("transform_native", function!(transform_native, 4))?;
     Ok(())
 }
