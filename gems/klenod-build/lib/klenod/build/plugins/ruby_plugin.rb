@@ -12,15 +12,13 @@ module Klenod
           def transform(module_id, code, context)
             return TransformResult.identity(code) unless module_id.extname == ".rb"
 
-            profiler = context.respond_to?(:profiler) ? context.profiler : nil
-            source_dir = context.source_dir if context.respond_to?(:source_dir)
             result =
               RubyImportRewriter
                 .new(
                   module_id: module_id,
                   kind: :ruby_import,
-                  source_dir: source_dir,
-                  profiler: profiler
+                  source_dir: context.source_dir,
+                  profiler: context.profiler
                 )
                 .rewrite(code)
             TransformResult.new(result.code, result.dependencies, nil, [], result.watched_patterns, {})

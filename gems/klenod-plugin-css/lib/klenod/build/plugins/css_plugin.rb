@@ -316,7 +316,7 @@ module Klenod
           end
 
           def source_map_for(source_map, module_id, context)
-            inline_origin = context.virtual_module_metadata(module_id)[:inline_css_origin] if context.respond_to?(:virtual_module_metadata)
+            inline_origin = context.virtual_module_metadata(module_id)[:inline_css_origin]
             return source_map unless inline_origin
 
             adjusted =

@@ -94,8 +94,7 @@ module Klenod
             import_dependencies = []
             watched_patterns = []
             markdown_filters = markdown_filter_nodes(code, module_id: module_id)
-            profiler = context.respond_to?(:profiler) ? context.profiler : nil
-            builder = Transformer::RubyBuilder.new(profiler: profiler)
+            builder = Transformer::RubyBuilder.new(profiler: context.profiler)
             context.unregister_virtual_modules(module_id)
 
             if context.absolute_path(companion_css).file? && css_plugin_available?(context)
@@ -171,7 +170,7 @@ module Klenod
                       module_id: module_id,
                       kind: :haml_import,
                       source_dir: context.source_dir,
-                      profiler: profiler,
+                      profiler: context.profiler,
                       dependency_id_offset: import_dependencies.length
                     )
                     .rewrite(source)
@@ -191,7 +190,7 @@ module Klenod
                 i18n_source: i18n_source_for(builder),
                 haml_helper_source: haml_helper_dependency && builder.constant_assignment("HamlHelper", "#{builder.import_call(haml_helper_dependency.id).source}::Default"),
                 styleable: !style_dependencies.empty?,
-                profiler: profiler,
+                profiler: context.profiler,
                 import_rewriter: import_rewriter,
                 markdown_components_source: markdown_components_dependency ? "__klenod_import__(#{markdown_components_dependency.id.inspect})::Default" : "{}",
                 global_variables: @global_variables,
@@ -200,27 +199,18 @@ module Klenod
             import_rewrite =
               if !haml_result.code.include?("import(") && !haml_result.code.include?("lazy_import(") && !haml_result.code.include?("import_glob(")
                 RubyImportRewriter::Result.new(haml_result.code, [], [])
-              elsif profiler
-                profiler.measure(:haml_import_rewrite, module_id: module_id.to_s) do
+              else
+                context.profiler.measure(:haml_import_rewrite, module_id: module_id.to_s) do
                   RubyImportRewriter
                     .new(
                       module_id: module_id,
                       kind: :haml_import,
                       source_dir: context.source_dir,
-                      profiler: profiler,
+                      profiler: context.profiler,
                       dependency_id_offset: import_dependencies.length
                     )
                     .rewrite(haml_result.code)
                 end
-              else
-                RubyImportRewriter
-                  .new(
-                    module_id: module_id,
-                    kind: :haml_import,
-                    source_dir: context.source_dir,
-                    dependency_id_offset: import_dependencies.length
-                  )
-                  .rewrite(haml_result.code)
               end
 
             watched_patterns.concat(import_rewrite.watched_patterns)

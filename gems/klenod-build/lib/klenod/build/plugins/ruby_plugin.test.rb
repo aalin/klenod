@@ -14,7 +14,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
   RubyPlugin = Klenod::Build::Plugins::RubyPlugin::Plugin
   ModuleId = Klenod::Build::ModuleId
   Profiler = Klenod::Build::Profiler
-  Context = Data.define(:profiler)
+  Context = Data.define(:source_dir, :profiler)
   GlobContext = Data.define(:source_dir, :profiler)
 
   def test_creates_dependencies_and_rewrites_literal_imports
@@ -22,7 +22,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         "Dep = import(\"../dep\")\n",
-        nil
+        transform_context
       )
 
     assert_equal(1, result.dependencies.length)
@@ -36,7 +36,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         "Dep = import(\"../dep\")\n",
-        Context.new(profiler)
+        transform_context(profiler:)
       )
 
     assert_equal(1, result.dependencies.length)
@@ -50,7 +50,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         "Dep = import  (  \"../dep\"  )\n",
-        nil
+        transform_context
       )
 
     assert_equal("../dep", result.dependencies.first.specifier)
@@ -63,7 +63,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         code,
-        nil
+        transform_context
       )
 
     assert_empty(result.dependencies)
@@ -76,7 +76,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         code,
-        nil
+        transform_context
       )
 
     assert_empty(result.dependencies)
@@ -89,7 +89,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         code,
-        nil
+        transform_context
       )
 
     assert_empty(result.dependencies)
@@ -102,7 +102,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         code,
-        nil
+        transform_context
       )
 
     assert_empty(result.dependencies)
@@ -115,7 +115,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         code,
-        nil
+        transform_context
       )
 
     assert_empty(result.dependencies)
@@ -127,7 +127,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         "Dep = import \"../dep\"\n",
-        nil
+        transform_context
       )
     end
   end
@@ -138,7 +138,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         code,
-        nil
+        transform_context
       )
 
     assert_empty(result.dependencies)
@@ -150,7 +150,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         "Dep = lazy_import(\"../dep\")\n",
-        nil
+        transform_context
       )
 
     assert_equal(1, result.dependencies.length)
@@ -164,7 +164,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
         "Dep = import(name)\n",
-        nil
+        transform_context
       )
     end
   end
@@ -258,5 +258,9 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
 
       yield dir
     end
+  end
+
+  def transform_context(source_dir: nil, profiler: nil)
+    Context.new(source_dir, profiler)
   end
 end

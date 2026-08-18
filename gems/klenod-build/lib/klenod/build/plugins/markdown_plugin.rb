@@ -46,7 +46,7 @@ module Klenod
             return super unless module_id.extname == ".md"
 
             frontmatter, markdown_source = parse_frontmatter(code)
-            builder = HamlPlugin::Transformer::RubyBuilder.new(profiler: context.respond_to?(:profiler) ? context.profiler : nil)
+            builder = HamlPlugin::Transformer::RubyBuilder.new(profiler: context.profiler)
             dependency = markdown_components_dependency(module_id, context)
             class_names_dependency = class_names_runtime_dependency(module_id)
             components_source = components_source_for(dependency)
