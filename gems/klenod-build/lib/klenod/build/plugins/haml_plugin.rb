@@ -364,11 +364,7 @@ module Klenod
           end
 
           def css_plugin_available?(context)
-            css_plugin_class =
-              Klenod::Build::Plugins.const_get(:CssPlugin, false).const_get(:Plugin, false)
-            context.respond_to?(:plugins) && context.plugins.any? { it.instance_of?(css_plugin_class) }
-          rescue NameError
-            false
+            context.plugins.any? { it.respond_to?(:javascript_stylesheet_module?, true) }
           end
         end
       end

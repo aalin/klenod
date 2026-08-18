@@ -38,8 +38,6 @@ Plugins can also implement `invalidate_module_ids` for custom invalidation and `
 - `HamlPlugin::Plugin`
 - `MarkdownPlugin::Plugin`
 - `GemImportPlugin::Plugin`
-- `CssPlugin::Plugin`
-- `JavaScriptPlugin::Plugin`
 - `SvgPlugin::Plugin`
 - `ImagePlugin::Plugin`
 - `JsonPlugin::Plugin`
@@ -48,6 +46,11 @@ Plugins can also implement `invalidate_module_ids` for custom invalidation and `
 - `TextPlugin::Plugin`
 
 `GoogleFontsPlugin::Plugin` and `RouterPlugin::Plugin` are built in but opt-in. The example web app configures both explicitly.
+
+CSS and JavaScript support live in separate plugin gems:
+
+- `klenod-plugin-css`
+- `klenod-plugin-javascript`
 
 Each built-in plugin namespace exposes its entry point as `Plugin`, leaving room for helpers, errors, and value objects beside the plugin class.
 
@@ -179,27 +182,6 @@ Configuration: none.
 
 `HamlPlugin::Plugin` uses this plugin. It does not transform standalone modules.
 
-## CssPlugin
-
-Handles `.css` modules through `mayu-css`.
-
-- Transforms and scopes CSS selectors.
-- Emits browser stylesheet assets.
-- Ruby/Haml imports receive a class-name map.
-- CSS imports from CSS become stylesheet dependencies.
-- CSS `url(...)` references become asset dependencies.
-- Can emit standard v3 `.css.map` assets with mapped dependency rewrites.
-
-Configuration:
-
-```ruby
-Klenod::Build::Plugins::CssPlugin::Plugin.new(
-  source_maps: :development
-)
-```
-
-- `source_maps`: `false`, `true`, or `:development`. Defaults to `:development`, which emits source maps only when the build context mode is `:development`.
-
 ## GoogleFontsPlugin
 
 Handles Google Fonts CSS imports such as `https://fonts.googleapis.com/css2?...`.
@@ -224,19 +206,6 @@ Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
 - `fetcher`: optional object/lambda used for downloading. It must respond to `call(url)`. If it also responds to `write(url, io)`, font downloads stream through that method.
 - `cache_path`: optional directory for raw Google CSS responses, keyed by full URL. `nil` disables the cache.
 - `refresh_cache`: when true, fetches and replaces cached CSS even if a cached response exists.
-
-## JavaScriptPlugin
-
-Handles `.js` modules as browser assets.
-
-- Emits the JavaScript file as a content-hashed asset.
-- Ruby/Haml imports receive the public asset path as a string.
-- Runtime bundle imports serialize that public path directly.
-- Does not parse JavaScript imports, transpile, minify, bundle, or emit JavaScript source maps yet.
-
-Configuration: none.
-
-Example framework behavior can decide how to include emitted JavaScript assets. The web example includes route-reachable assets with module script tags and advertises them with `rel=modulepreload`.
 
 ## SvgPlugin
 
