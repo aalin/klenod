@@ -64,10 +64,17 @@ module Klenod
             return super unless EXTENSIONS.include?(module_id.extname)
 
             custom_element = custom_element_module?(module_id)
-            transform = Klenod::Plugin::JavaScript::Parser.transform(code, filename: module_id.to_s, source_kind: source_kind(module_id), minify: minify_enabled?(context))
+            jsx_runtime_namespace = custom_element ? jsx_runtime_namespace(module_id) : nil
+            transform = Klenod::Plugin::JavaScript::Parser.transform(
+              code,
+              filename: module_id.to_s,
+              source_kind: source_kind(module_id),
+              minify: minify_enabled?(context),
+              jsx_runtime_namespace: jsx_runtime_namespace
+            )
             javascript_source, imports =
               if custom_element
-                inject_jsx_runtime(transform.code, transform.imports, module_id)
+                inject_jsx_runtime(transform.code, transform.imports, module_id, jsx_runtime_namespace)
               else
                 [transform.code, transform.imports]
               end
@@ -170,8 +177,8 @@ module Klenod
             CUSTOM_ELEMENT_EXTENSIONS.include?(module_id.extname)
           end
 
-          def inject_jsx_runtime(code, imports, module_id)
-            prefix = %(import { h, Fragment } from "#{JSX_RUNTIME_SPECIFIER}";\n)
+          def inject_jsx_runtime(code, imports, module_id, namespace)
+            prefix = %(import * as #{namespace} from "#{JSX_RUNTIME_SPECIFIER}";\n)
             [
               "#{prefix}#{code}",
               [
@@ -491,6 +498,10 @@ module Klenod
             name = asset_name(module_id).downcase.gsub(/_+/, "-")
             hash = Hashing.short(module_id.to_s, length: 8)
             "klenod-#{name}-#{hash}"
+          end
+
+          def jsx_runtime_namespace(module_id)
+            "__klenod_jsx_#{Hashing.short(module_id.to_s, length: 8)}"
           end
         end
       end

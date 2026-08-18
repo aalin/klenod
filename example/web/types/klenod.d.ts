@@ -23,13 +23,15 @@ type KlenodSvgAsset = {
   contentType: "image/svg+xml";
 };
 
-declare function h(
-  type: string | CustomElementConstructor | ((attrs: Record<string, unknown> | null, ...children: unknown[]) => Node),
-  attrs: any,
-  ...children: unknown[]
-): Node;
+declare const __klenod_jsx: {
+  h(
+    type: string | CustomElementConstructor | ((attrs: Record<string, unknown> | null, ...children: unknown[]) => Node),
+    attrs: any,
+    ...children: unknown[]
+  ): Node;
 
-declare function Fragment(attrs: any, ...children: unknown[]): DocumentFragment;
+  Fragment(attrs: any, ...children: unknown[]): DocumentFragment;
+};
 
 declare module "*.css" {
   const stylesheet: CSSStyleSheet;

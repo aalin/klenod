@@ -371,12 +371,44 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       assert_equal(true, exports::Default.fetch(:__klenod_custom_element))
       assert_match(/\Aklenod-scripts-clock-jsx-[a-f0-9]{8}\z/, exports::Default.fetch(:tag))
       assert_equal(asset.output_path, exports::Default.fetch(:asset_path))
-      assert_includes(asset.bytes, %(from "#{runtime_asset.output_path}"))
-      assert_match(/h\("span",\s*\{/, asset.bytes)
+      assert_match(/import \* as __klenod_jsx_[a-f0-9]{8} from "#{Regexp.escape(runtime_asset.output_path)}"/, asset.bytes)
+      assert_match(/__klenod_jsx_[a-f0-9]{8}\.h\("span",\s*\{/, asset.bytes)
       assert_match(/hidden:\s*true/, asset.bytes)
       assert_includes(asset.bytes, "Object.defineProperty(ClockElement, \"__klenodCustomElementTag\"")
       assert_includes(asset.bytes, "customElements.define(#{exports::Default.fetch(:tag).inspect}, ClockElement);")
       assert_includes(runtime_asset.bytes, "type.__klenodCustomElementTag")
+    end
+  end
+
+  def test_tsx_custom_element_does_not_collide_with_local_h_or_fragment
+    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      File.write(
+        "#{dir}/scripts/clock.tsx",
+        <<~TS
+          const h = "local h";
+          const Fragment = "local fragment";
+
+          export default class ClockElement extends HTMLElement {
+            connectedCallback(): void {
+              this.append(<><span>{h} {Fragment}</span></>);
+            }
+          }
+        TS
+      )
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/clock.tsx\")\n")
+
+      context = context_for(dir)
+      context.evaluate("entry")
+      asset = javascript_asset(context, "scripts/clock.tsx")
+
+      assert_match(/const h = ["']local h["']/, asset.bytes)
+      assert_match(/const Fragment = ["']local fragment["']/, asset.bytes)
+      assert_match(/import \* as __klenod_jsx_[a-f0-9]{8} from "/, asset.bytes)
+      assert_match(/__klenod_jsx_[a-f0-9]{8}\.h\(__klenod_jsx_[a-f0-9]{8}\.Fragment,\s*null/, asset.bytes)
+      refute_match(/import \{ h, Fragment \}/, asset.bytes)
     end
   end
 
@@ -563,7 +595,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       assert_match(/\Aklenod-scripts-clock-tsx-[a-f0-9]{8}\z/, exports::Default.fetch(:tag))
       assert_equal(asset.output_path, exports::Default.fetch(:asset_path))
       assert_includes(asset.bytes, "customElements.define(#{exports::Default.fetch(:tag).inspect}, ClockElement);")
-      assert_match(/h\(Fragment,\s*null/, asset.bytes)
+      assert_match(/__klenod_jsx_[a-f0-9]{8}\.h\(__klenod_jsx_[a-f0-9]{8}\.Fragment,\s*null/, asset.bytes)
       refute_includes(asset.bytes, ": void")
     end
   end

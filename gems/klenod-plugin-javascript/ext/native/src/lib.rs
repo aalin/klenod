@@ -144,7 +144,16 @@ fn transform_native(
 ) -> Result<RHash, Error> {
     let source_kind = SourceKind::from_string(ruby, &source_kind)?;
     let minify = hash_fetch_bool(options, "minify", false)?;
-    let transformed_source = transform_source(ruby, source, filename.clone(), source_kind, minify)?;
+    let jsx_runtime_namespace =
+        hash_fetch_string(options, "jsx_runtime_namespace", "__klenod_jsx")?;
+    let transformed_source = transform_source(
+        ruby,
+        source,
+        filename.clone(),
+        source_kind,
+        minify,
+        &jsx_runtime_namespace,
+    )?;
     let parsed = parse_module(
         ruby,
         transformed_source.clone(),
@@ -310,6 +319,7 @@ fn transform_source(
     filename: String,
     source_kind: SourceKind,
     minify: bool,
+    jsx_runtime_namespace: &str,
 ) -> Result<String, Error> {
     if !source_kind.needs_transform() && !minify {
         return Ok(source);
@@ -330,8 +340,8 @@ fn transform_source(
                 source_map.clone(),
                 None::<NoopComments>,
                 react::Options {
-                    pragma: Some("h".into()),
-                    pragma_frag: Some("Fragment".into()),
+                    pragma: Some(format!("{}.h", jsx_runtime_namespace).into()),
+                    pragma_frag: Some(format!("{}.Fragment", jsx_runtime_namespace).into()),
                     ..Default::default()
                 },
                 top_level_mark,
@@ -370,6 +380,14 @@ fn hash_fetch_bool(hash: RHash, key: &str, default: bool) -> Result<bool, Error>
     match hash.get(key) {
         Some(value) => bool::try_convert(value),
         None => Ok(default),
+    }
+}
+
+fn hash_fetch_string(hash: RHash, key: &str, default: &str) -> Result<String, Error> {
+    match hash.get(key) {
+        Some(value) => Option::<String>::try_convert(value)
+            .map(|value| value.unwrap_or_else(|| default.to_string())),
+        None => Ok(default.to_string()),
     }
 }
 

@@ -17,14 +17,14 @@ module Klenod
           transform(source, filename: filename, source_kind: :javascript, minify: false).imports
         end
 
-        def transform(source, filename:, source_kind:, minify: false)
+        def transform(source, filename:, source_kind:, minify: false, jsx_runtime_namespace: nil)
           if NATIVE_SOURCE_KINDS.include?(source_kind)
             native = native_parser || raise(SyntaxError, "TypeScript support requires the klenod-plugin-javascript native extension. Run `bundle exec rake compile` in gems/klenod-plugin-javascript.")
-            return native_transform_result(native.transform_native(source, filename, source_kind.to_s, {"minify" => minify}))
+            return native_transform_result(native.transform_native(source, filename, source_kind.to_s, {"minify" => minify, "jsx_runtime_namespace" => jsx_runtime_namespace}))
           end
 
           if (native = native_parser)
-            return native_transform_result(native.transform_native(source, filename, "javascript", {"minify" => minify}))
+            return native_transform_result(native.transform_native(source, filename, "javascript", {"minify" => minify, "jsx_runtime_namespace" => jsx_runtime_namespace}))
           end
 
           scanner = FallbackScanner.new(source, filename)

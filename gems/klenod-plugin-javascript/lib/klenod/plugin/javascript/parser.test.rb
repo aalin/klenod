@@ -128,7 +128,7 @@ class Klenod::Plugin::JavaScript::ParserTest < Minitest::Test
         source_kind: :javascript_jsx
       )
 
-    assert_includes(result.code, "h(\"section\", {")
+    assert_includes(result.code, "__klenod_jsx.h(\"section\", {")
     assert_includes(result.code, "hidden: true")
     refute_includes(result.code, "<section")
   end
@@ -149,8 +149,8 @@ class Klenod::Plugin::JavaScript::ParserTest < Minitest::Test
         source_kind: :typescript_jsx
       )
 
-    assert_includes(result.code, "h(Fragment, null")
-    assert_includes(result.code, "h(\"span\", null")
+    assert_includes(result.code, "__klenod_jsx.h(__klenod_jsx.Fragment, null")
+    assert_includes(result.code, "__klenod_jsx.h(\"span\", null")
     refute_includes(result.code, ": void")
     refute_includes(result.code, "<span")
   end
