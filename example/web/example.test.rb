@@ -395,6 +395,7 @@ class Klenod::ExampleTest < Minitest::Test
         "/docs/plugins/HamlPlugin",
         "/docs/plugins/MarkdownPlugin",
         "/docs/plugins/CssPlugin",
+        "/docs/plugins/JavascriptPlugin",
         "/docs/plugins/RouterPlugin",
         "/docs/plugins/Assets",
         "/docs/plugins/DataPlugins",
@@ -430,6 +431,10 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html_by_path.fetch("/docs/plugins/HamlPlugin"), "Translation companions use")
     assert_includes(html_by_path.fetch("/docs/plugins/IntlPlugin"), "is absent, Haml still compiles")
     assert_includes(html_by_path.fetch("/docs/plugins/GoogleFontsPlugin"), "cache_path")
+    assert_includes(html_by_path.fetch("/docs/plugins/JavascriptPlugin"), "language-js")
+    assert_includes(html_by_path.fetch("/docs/plugins/JavascriptPlugin"), "language-ts")
+    assert_includes(html_by_path.fetch("/docs/plugins/JavascriptPlugin"), "language-tsx")
+    assert_match(%r{components/markdown/InlineCode\.(k|kd|nx|s2)\?}, html_by_path.fetch("/docs/plugins/JavascriptPlugin"))
     assert_match(/<details(?=[^>]*open)[^>]*>\s*<summary[^>]*>Guides/, html_by_path.fetch("/docs/haml-components"))
     assert_match(/<details(?=[^>]*open)[^>]*>\s*<summary[^>]*>Plugins/, html_by_path.fetch("/docs/plugins/HamlPlugin"))
     refute_includes(html_by_path.fetch("/docs/haml-components"), "{&quot;class&quot;")

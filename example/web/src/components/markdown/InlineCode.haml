@@ -18,6 +18,9 @@
   require "rouge/lexers/css"
   require "rouge/lexers/html"
   require "rouge/lexers/javascript"
+  require "rouge/lexers/jsx"
+  require "rouge/lexers/typescript"
+  require "rouge/lexers/tsx"
   require "rouge/lexers/erb"
   require "rouge/lexers/markdown"
   require "rouge/lexers/sass"
@@ -27,7 +30,13 @@
   SUPPORTED_LEXERS = {
     "ruby" => ::Rouge::Lexer.find("ruby"),
     "haml" => ::Rouge::Lexer.find("haml"),
-    "css" => ::Rouge::Lexer.find("css")
+    "css" => ::Rouge::Lexer.find("css"),
+    "js" => ::Rouge::Lexer.find("javascript"),
+    "javascript" => ::Rouge::Lexer.find("javascript"),
+    "jsx" => ::Rouge::Lexer.find("jsx"),
+    "ts" => ::Rouge::Lexer.find("typescript"),
+    "typescript" => ::Rouge::Lexer.find("typescript"),
+    "tsx" => ::Rouge::Lexer.find("tsx")
   }.freeze
   HIGHLIGHT_CACHE = {}
 
