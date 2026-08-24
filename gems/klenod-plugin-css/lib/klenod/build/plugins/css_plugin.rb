@@ -379,7 +379,7 @@ module Klenod
             edits =
               css_edit
                 .code
-                .to_enum(:scan, /^[ \t]*@import\s+(?:url\(\s*)?["']{2}\s*\)?\s*;\s*\n?/i)
+                .to_enum(:scan, /@import\s+(?:url\(\s*)?["']{2}\s*\)?\s*;\s*/i)
                 .map do
                   match = Regexp.last_match
                   SourceMap::Edit.delete(match.begin(0), match.end(0))

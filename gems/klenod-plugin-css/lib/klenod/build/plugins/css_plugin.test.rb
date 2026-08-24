@@ -355,6 +355,23 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_minified_css_removes_consecutive_empty_imports
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/first.css", ".first { color: red; }\n")
+      File.write("#{dir}/styles/second.css", ".second { color: blue; }\n")
+      File.write(
+        "#{dir}/styles/home.css",
+        "@import \"./first.css\";\n@import \"./second.css\";\n.home { color: green; }\n"
+      )
+      plugin = Klenod::Build::Plugins::CssPlugin::Plugin.new(minify: true, source_maps: false)
+
+      record = context_for(dir, css_plugin: plugin).evaluate("styles/home.css")
+
+      refute_includes(record.assets.fetch(0).bytes, "@import")
+    end
+  end
+
   def test_css_external_imports_are_preserved
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")

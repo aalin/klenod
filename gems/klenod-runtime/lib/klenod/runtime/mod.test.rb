@@ -577,4 +577,59 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_equal([layout_css_asset, entry_css_asset], bundle.assets_for_module(["styles/layout.css", "entry.rb"], type: :css, recursive: false))
     assert_equal([0, 1], bundle.asset_references_for_module(["styles/layout.css", "entry.rb"], type: :css, recursive: false).map(&:index))
   end
+
+  def test_bundle_assets_for_module_finds_assets_named_for_virtual_module_ids
+    virtual_id = "virtual:klenod/google_fonts/source_sans.rb?url=source-sans"
+    google_css_asset =
+      Klenod::Runtime::AssetSpec.new(
+        virtual_id,
+        "font123",
+        "/assets/google-fonts.font123.css",
+        "text/css",
+        {type: :css, google_fonts: true}
+      )
+    root_css_asset =
+      Klenod::Runtime::AssetSpec.new(
+        "styles/root.css",
+        "root123",
+        "/assets/root.root123.css",
+        "text/css",
+        {type: :css}
+      )
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"root" => "app:/styles/root.css"},
+        {
+          "app:/styles/root.css" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "app:/styles/root.css",
+              "styles/root.css",
+              "",
+              {"font" => Klenod::Runtime::ImportSpec.new(virtual_id, nil, true)},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("app:/styles/root.css")
+            ),
+          virtual_id =>
+            Klenod::Runtime::ModuleSpec.new(
+              virtual_id,
+              "klenod/google_fonts/source_sans.rb",
+              "",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for(virtual_id)
+            )
+        },
+        {
+          google_css_asset.output_path => google_css_asset,
+          root_css_asset.output_path => root_css_asset
+        }
+      )
+
+    assert_equal(
+      [google_css_asset, root_css_asset],
+      bundle.assets_for_module("root", type: :css)
+    )
+  end
 end

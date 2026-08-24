@@ -53,6 +53,25 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
     end
   end
 
+  def test_build_bundle_includes_google_fonts_stylesheet_for_importing_css
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n.title { color: red; }\n")
+      plugin = plugin_with_responses(
+        GOOGLE_CSS_URL => %(@font-face { src: url("#{FONT_URL}") format("woff2"); }),
+        FONT_URL => "font bytes"
+      )
+
+      context = context_with(dir, plugin, mode: :build)
+      bundle = context.build(entrypoints: ["styles/home.css"], output: "#{dir}/bundle.mpk")
+      css_assets = bundle.assets_for_module("styles/home.css", type: :css)
+
+      assert_equal(2, css_assets.length)
+      assert(css_assets.fetch(0).metadata[:google_fonts])
+      assert_equal("styles/home.css", css_assets.fetch(1).logical_name)
+    end
+  end
+
   def test_google_fonts_import_deduplicates_repeated_font_urls
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
@@ -295,9 +314,10 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
     end
   end
 
-  def context_with(dir, plugin)
+  def context_with(dir, plugin, mode: :development)
     Klenod::Build::Context.new(
       source_dir: dir,
+      mode: mode,
       plugins: [
         plugin,
         Klenod::Build::Plugins::CssPlugin::Plugin.new

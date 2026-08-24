@@ -99,7 +99,7 @@ module Klenod
         module_ids_for_assets(module_ref, recursive: recursive)
           .each_with_index
           .flat_map do |module_id, index|
-            assets_for(@modules.fetch(module_id).source_path).filter_map do |asset|
+            assets_for_runtime_module(module_id).filter_map do |asset|
               next unless asset_matches?(asset, type: type, content_type: content_type)
               next if seen_assets.key?(asset.output_path)
 
@@ -144,6 +144,12 @@ module Klenod
       end
 
       private
+
+      def assets_for_runtime_module(module_id)
+        module_spec = @modules.fetch(module_id)
+        logical_names = [module_spec.id, module_spec.source_path].uniq
+        @assets.values.select { |asset| logical_names.include?(asset.logical_name) }
+      end
 
       SCHEME_PATTERN = /\A[A-Za-z][A-Za-z0-9+.-]*:/
 
