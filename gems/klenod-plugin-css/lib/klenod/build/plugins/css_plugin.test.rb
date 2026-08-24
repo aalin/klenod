@@ -121,6 +121,109 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_local_css_variables_resolve_file_and_global_references
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/vars.css", ":root { --accent-color: rebeccapurple; }\n")
+      File.write(
+        "#{dir}/styles/button.css",
+        <<~CSS
+          .button {
+            background: var(--accent-color from "./vars.css");
+            border-color: var(--accent-color from "./vars.css");
+            color: var(--text-color from global);
+          }
+        CSS
+      )
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/button.css\")\n")
+
+      context = context_for(dir, css_plugin: local_css_variables_plugin)
+      entry_record = context.evaluate("entry")
+      button_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/button.css", nil))
+      vars_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/vars.css", nil))
+      variable = vars_record.metadata.fetch(:css_variables).fetch("--accent-color")
+      button_css = button_record.assets.find { it.metadata[:type] == :css }.bytes
+      vars_css = vars_record.assets.find { it.metadata[:type] == :css }.bytes
+
+      assert_includes(vars_css, variable)
+      assert_equal(2, button_css.scan("var(#{variable})").length)
+      assert_includes(button_css, "var(--text-color)")
+      assert_includes(
+        button_record.resolved_dependencies.map { [it.dependency.kind, it.module_id.to_s] },
+        [:css_variable, "app:/styles/vars.css"]
+      )
+      assert_equal(
+        ["styles/vars.css", "styles/button.css"],
+        context.assets_for_module(entry_record, type: :css).map(&:logical_name)
+      )
+    end
+  end
+
+  def test_runtime_bundle_preserves_local_css_variable_dependencies
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/vars.css", ":root { --accent-color: red; }\n")
+      File.write(
+        "#{dir}/styles/button.css",
+        ".button { color: var(--accent-color from \"./vars.css\"); }\n"
+      )
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/button.css\")\n")
+      output = "#{dir}/bundle.mpk"
+
+      context = context_for(dir, mode: :build, css_plugin: local_css_variables_plugin)
+      context.build(entrypoints: ["entry"], output: output)
+      loaded = Klenod::Runtime.load_bundle(output)
+      button_asset = loaded.assets_for("styles/button.css").find { it.metadata[:type] == :css }
+      vars_asset = loaded.assets_for("styles/vars.css").find { it.metadata[:type] == :css }
+
+      assert(vars_asset.metadata.fetch(:variables).key?("--accent-color"))
+      assert_equal(
+        ["styles/vars.css", "styles/button.css"],
+        loaded.assets_for_module("entry", type: :css).map(&:logical_name)
+      )
+      assert_includes(
+        loaded.modules.fetch("app:/styles/button.css").imports.values.map(&:target_id),
+        "app:/styles/vars.css"
+      )
+      assert_equal({}, button_asset.metadata.fetch(:variables))
+    end
+  end
+
+  def test_local_css_variables_are_disabled_by_default
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write(
+        "#{dir}/styles/button.css",
+        ":root { --accent-color: red; } .button { color: var(--accent-color); }\n"
+      )
+
+      record = context_for(dir).collect("styles/button.css").record
+      css = record.assets.find { it.metadata[:type] == :css }.bytes
+
+      assert_equal({}, record.metadata.fetch(:css_variables))
+      assert_includes(css, "--accent-color")
+    end
+  end
+
+  def test_missing_local_css_variable_reports_a_build_error
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/vars.css", ":root { --other-color: red; }\n")
+      File.write(
+        "#{dir}/styles/button.css",
+        ".button { color: var(--accent-color from \"./vars.css\"); }\n"
+      )
+
+      error = assert_raises(Klenod::Build::UnsupportedFileError) do
+        context_for(dir, css_plugin: local_css_variables_plugin).collect("styles/button.css")
+      end
+
+      assert_includes(error.message, 'CSS variable "--accent-color"')
+      assert_includes(error.message, 'from "./vars.css"')
+      assert_includes(error.message, "module app:/styles/vars.css")
+    end
+  end
+
   def test_css_can_be_minified_in_development
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
@@ -434,6 +537,35 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_local_css_variable_change_refinalizes_consumer_and_reevaluates_importers
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      vars_path = "#{dir}/styles/vars.css"
+      File.write(vars_path, ":root { --accent-color: red; }\n")
+      File.write(
+        "#{dir}/styles/button.css",
+        ".button { color: var(--accent-color from \"./vars.css\"); }\n"
+      )
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/button.css\")\n")
+
+      context = context_for(dir, css_plugin: local_css_variables_plugin)
+      context.evaluate("entry")
+      button_id = Klenod::Build::ModuleId.new("styles/button.css", nil)
+      old_css = context.graph.records.fetch(button_id).assets.find { it.metadata[:type] == :css }.bytes
+
+      File.write(vars_path, ":root { --accent-color: blue; }\n")
+      result = context.invalidate_paths([vars_path])
+      vars_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/vars.css", nil))
+      new_css = context.graph.records.fetch(button_id).assets.find { it.metadata[:type] == :css }.bytes
+      variable = vars_record.metadata.fetch(:css_variables).fetch("--accent-color")
+
+      assert_equal(["app:/styles/vars.css"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/styles/button.css", "app:/entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      refute_equal(old_css, new_css)
+      assert_includes(new_css, "var(#{variable})")
+    end
+  end
+
   def test_lazy_ruby_import_of_css_defers_asset_until_called
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
@@ -581,5 +713,9 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         css_plugin
       ]
     )
+  end
+
+  def local_css_variables_plugin
+    Klenod::Build::Plugins::CssPlugin::Plugin.new(local_css_variables: true)
   end
 end

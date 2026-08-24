@@ -582,6 +582,7 @@ name = "native"
 version = "0.0.1"
 dependencies = [
  "base64",
+ "cssparser",
  "lightningcss",
  "magnus",
  "parcel_sourcemap",

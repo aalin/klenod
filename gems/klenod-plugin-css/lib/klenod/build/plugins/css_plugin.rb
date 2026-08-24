@@ -27,7 +27,14 @@ module Klenod
           JAVASCRIPT_STYLESHEET_QUERY = "javascript"
           VALID_SOURCE_MAP_MODES = [false, true, :development].freeze
 
-          def initialize(source_maps: :development, minify: false, class_pattern: "[component].[local]?[hash]", tag_pattern: "[component]_[local]?[hash]")
+          def initialize(
+            source_maps: :development,
+            minify: false,
+            class_pattern: "[component].[local]?[hash]",
+            tag_pattern: "[component]_[local]?[hash]",
+            local_css_variables: false,
+            variable_pattern: "[component]-[local]?[hash]"
+          )
             unless VALID_SOURCE_MAP_MODES.include?(source_maps)
               raise ArgumentError, "source_maps must be false, true, or :development"
             end
@@ -36,6 +43,8 @@ module Klenod
             @minify = minify
             @class_pattern = class_pattern
             @tag_pattern = tag_pattern
+            @local_css_variables = local_css_variables
+            @variable_pattern = variable_pattern
           end
 
           def resolve(dependency, context)
@@ -70,18 +79,20 @@ module Klenod
             scoped_result = transform_css(module_id, code, transform_names: true, context: context)
             css_dependencies = build_dependencies(module_id, scoped_result.dependencies, context)
             compose_dependencies = build_compose_dependencies(module_id, scoped_result)
+            variable_dependencies = build_variable_dependencies(module_id, scoped_result)
             styles_dependency = class_names_runtime_dependency(module_id)
             selectors = css_selectors(scoped_result)
 
             TransformResult.new(
               ruby_module_source(selectors, nil, styles_dependency: styles_dependency),
-              [styles_dependency, *css_dependencies.dependencies, *compose_dependencies],
+              [styles_dependency, *css_dependencies.dependencies, *compose_dependencies, *variable_dependencies],
               nil,
               [],
               [],
               {
                 css_result: scoped_result,
                 css_classes: selectors,
+                css_variables: scoped_result.serialized_variables,
                 external_dependencies: css_dependencies.external_dependencies
               }
             )
@@ -113,7 +124,13 @@ module Klenod
 
             css_edit = finalized_css_edit(css_result, resolved_dependencies, dependency_records, result.metadata.fetch(:external_dependencies))
             classes = finalized_css_selectors(css_result, resolved_dependencies, dependency_records)
-            asset, source_map_asset = css_asset_pair(module_id, css_edit, :css, {classes: classes}, context)
+            asset, source_map_asset = css_asset_pair(
+              module_id,
+              css_edit,
+              :css,
+              {classes: classes, variables: css_result.variables},
+              context
+            )
 
             result.with(
               code: ruby_module_source(classes, asset.output_path, styles_dependency: result.dependencies.fetch(0)),
@@ -182,7 +199,9 @@ module Klenod
               minify: minify_enabled?(context),
               transform_names: transform_names,
               class_pattern: @class_pattern,
-              tag_pattern: @tag_pattern
+              tag_pattern: @tag_pattern,
+              local_css_variables: @local_css_variables && transform_names,
+              variable_pattern: @variable_pattern
             )
           end
 
@@ -236,6 +255,25 @@ module Klenod
               end
           end
 
+          def build_variable_dependencies(module_id, css_result)
+            css_result
+              .references
+              .values
+              .grep(Klenod::Plugin::CSS::VariableDependency)
+              .map(&:specifier)
+              .uniq
+              .each_with_index
+              .map do |specifier, index|
+                Dependency
+                  .create(
+                    specifier: specifier,
+                    importer_id: module_id,
+                    kind: :css_variable
+                  )
+                  .with(id: "#{module_id}:variable:#{index}")
+              end
+          end
+
           def plugin_resolvable_external_import?(dependency, css_dependency, context)
             return false unless css_dependency.is_a?(Klenod::Plugin::CSS::ImportDependency)
 
@@ -247,7 +285,61 @@ module Klenod
 
           def finalized_css_edit(css_result, resolved_dependencies, dependency_records, external_dependencies, import_asset_type: :css)
             replace_dependencies(css_result, resolved_dependencies, dependency_records, external_dependencies, import_asset_type:)
+              .then { replace_variable_references(css_result, it, resolved_dependencies, dependency_records) }
               .then { remove_empty_imports(it) }
+          end
+
+          def replace_variable_references(css_result, css_edit, resolved_dependencies, dependency_records)
+            variable_records =
+              resolved_dependencies
+                .select { it.dependency.kind == :css_variable }
+                .to_h do |resolved_dependency|
+                  [
+                    resolved_dependency.dependency.specifier,
+                    dependency_records.fetch(resolved_dependency.dependency.id)
+                  ]
+                end
+
+            replacements =
+              css_result.references.to_h do |placeholder, reference|
+                record = variable_records.fetch(reference.specifier)
+                variables = record.metadata[:css_variables]
+                unless variables
+                  raise UnsupportedFileError,
+                    "CSS variable from #{reference.specifier.inspect} resolved to module #{record.id}, which does not export local CSS variables"
+                end
+                variable =
+                  variables.fetch(reference.name) do
+                    raise UnsupportedFileError,
+                      "CSS variable #{reference.name.inspect} from #{reference.specifier.inspect} is not exported by module #{record.id}"
+                  end
+                [placeholder, variable]
+              end
+
+            edits =
+              replacements.flat_map do |placeholder, replacement|
+                offsets = offsets_for(css_edit.code, placeholder)
+                if offsets.empty?
+                  raise KeyError, "Could not find CSS variable placeholder #{placeholder.inspect}"
+                end
+                offsets.map do |start_offset|
+                  SourceMap::Edit.replace(start_offset, start_offset + placeholder.length, replacement)
+                end
+              end
+            return css_edit if edits.empty?
+
+            edited = SourceMap::Editor.new(css_edit.code, css_edit.source_map).apply(edits)
+            CssEdit.new(edited.code, edited.source_map)
+          end
+
+          def offsets_for(code, value)
+            offsets = []
+            offset = 0
+            while (found = code.index(value, offset))
+              offsets << found
+              offset = found + value.length
+            end
+            offsets
           end
 
           def replace_dependencies(css_result, resolved_dependencies, dependency_records, external_dependencies, import_asset_type:)

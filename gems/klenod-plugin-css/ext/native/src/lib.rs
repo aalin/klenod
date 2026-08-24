@@ -1,7 +1,9 @@
 use lightningcss::dependencies::DependencyOptions;
 use lightningcss::{
+    properties::{css_modules::Specifier, custom::Variable},
     selector::{Component, Selector},
     stylesheet::{MinifyOptions, ParserOptions, PrinterOptions, StyleSheet},
+    values::ident::DashedIdent,
     visitor::{Visit, VisitTypes, Visitor},
 };
 use magnus::{
@@ -33,19 +35,22 @@ struct TransformOptions {
     transform_names: bool,
     class_pattern: String,
     tag_pattern: String,
+    variable_pattern: String,
+    local_css_variables: bool,
 }
 
 struct TransformNamesVisitor<'a> {
     options: TransformOptions,
     classes: &'a mut HashMap<String, String>,
     elements: &'a mut HashMap<String, String>,
+    variables: &'a mut HashMap<String, String>,
 }
 
 impl<'a, 'i> Visitor<'i> for TransformNamesVisitor<'a> {
     type Error = Infallible;
 
     fn visit_types(&self) -> VisitTypes {
-        VisitTypes::RULES
+        VisitTypes::RULES | VisitTypes::DASHED_IDENTS | VisitTypes::VARIABLES
     }
 
     fn visit_selector(&mut self, selector: &mut Selector<'i>) -> Result<(), Self::Error> {
@@ -83,28 +88,79 @@ impl<'a, 'i> Visitor<'i> for TransformNamesVisitor<'a> {
 
         Ok(())
     }
+
+    fn visit_dashed_ident(&mut self, ident: &mut DashedIdent) -> Result<(), Self::Error> {
+        if !self.options.local_css_variables {
+            return Ok(());
+        }
+
+        let original = ident.0.to_string();
+        let formatted = format_variable(
+            &self.options.variable_pattern,
+            &self.options.component,
+            &original,
+            &self.options.hash,
+        );
+        self.variables.insert(original, formatted.clone());
+        if self.options.transform_names {
+            ident.0 = formatted.into();
+        }
+
+        Ok(())
+    }
+
+    fn visit_variable(&mut self, variable: &mut Variable) -> Result<(), Self::Error> {
+        if !matches!(
+            variable.name.from,
+            Some(Specifier::File(_)) | Some(Specifier::Global)
+        ) {
+            variable.visit_children(self)?;
+        } else if let Some(fallback) = &mut variable.fallback {
+            fallback.visit(self)?;
+        }
+
+        Ok(())
+    }
 }
 
-fn transform_native(ruby: &Ruby, source: String, filename: String, options: RHash) -> Result<RHash, Error> {
+fn transform_native(
+    ruby: &Ruby,
+    source: String,
+    filename: String,
+    options: RHash,
+) -> Result<RHash, Error> {
     let minify = hash_fetch_bool(ruby, options, "minify", true)?;
     let transform_names = hash_fetch_bool(ruby, options, "transform_names", true)?;
-    let class_pattern = hash_fetch_string(ruby, options, "class_pattern", "[component].[local]?[hash]")?;
-    let tag_pattern = hash_fetch_string(ruby, options, "tag_pattern", "[component]_[local]?[hash]")?;
-    let mut stylesheet = parse_stylesheet(ruby, &filename, &source)?;
+    let local_css_variables = hash_fetch_bool(ruby, options, "local_css_variables", false)?;
+    let class_pattern =
+        hash_fetch_string(ruby, options, "class_pattern", "[component].[local]?[hash]")?;
+    let tag_pattern =
+        hash_fetch_string(ruby, options, "tag_pattern", "[component]_[local]?[hash]")?;
+    let variable_pattern = hash_fetch_string(
+        ruby,
+        options,
+        "variable_pattern",
+        "[component]-[local]?[hash]",
+    )?;
+    let mut stylesheet = parse_stylesheet(ruby, &filename, &source, local_css_variables)?;
     let mut classes = HashMap::new();
     let mut elements = HashMap::new();
+    let mut variables = HashMap::new();
     let selector_options = TransformOptions {
         component: component_name(&filename),
         hash: hash(&source),
         transform_names,
         class_pattern,
         tag_pattern,
+        variable_pattern,
+        local_css_variables,
     };
 
     let _ = stylesheet.visit(&mut TransformNamesVisitor {
         options: selector_options,
         classes: &mut classes,
         elements: &mut elements,
+        variables: &mut variables,
     });
 
     let mut source_map = SourceMap::new("/");
@@ -128,24 +184,41 @@ fn transform_native(ruby: &Ruby, source: String, filename: String, options: RHas
     hash.aset("code", result.code)?;
     hash.aset("classes", string_map_to_hash(ruby, classes)?)?;
     hash.aset("elements", string_map_to_hash(ruby, elements)?)?;
+    hash.aset(
+        "serialized_variables",
+        serialized_variable_map_to_hash(ruby, &variables)?,
+    )?;
+    hash.aset("variables", string_map_to_hash(ruby, variables)?)?;
     hash.aset("source_map", source_map.to_json(None).ok())?;
     hash.aset(
         "dependencies",
-        serde_json::from_str::<serde_json::Value>(&serde_json::to_string(&result.dependencies.unwrap()).unwrap())
-            .unwrap()
-            .to_string(),
+        serde_json::from_str::<serde_json::Value>(
+            &serde_json::to_string(&result.dependencies.unwrap()).unwrap(),
+        )
+        .unwrap()
+        .to_string(),
     )?;
     hash.aset(
         "exports",
-        serde_json::from_str::<serde_json::Value>(&serde_json::to_string(&result.exports.unwrap()).unwrap())
-            .unwrap()
-            .to_string(),
+        serde_json::from_str::<serde_json::Value>(
+            &serde_json::to_string(&result.exports.unwrap()).unwrap(),
+        )
+        .unwrap()
+        .to_string(),
+    )?;
+    hash.aset(
+        "references",
+        serde_json::from_str::<serde_json::Value>(
+            &serde_json::to_string(&result.references.unwrap_or_default()).unwrap(),
+        )
+        .unwrap()
+        .to_string(),
     )?;
     Ok(hash)
 }
 
 fn minify_native(ruby: &Ruby, source: String, filename: String) -> Result<String, Error> {
-    let mut stylesheet = parse_stylesheet(ruby, &filename, &source)?;
+    let mut stylesheet = parse_stylesheet(ruby, &filename, &source, false)?;
     stylesheet.minify(MinifyOptions::default()).unwrap();
 
     Ok(stylesheet
@@ -159,18 +232,23 @@ fn minify_native(ruby: &Ruby, source: String, filename: String) -> Result<String
 }
 
 fn serialize_native(ruby: &Ruby, source: String, filename: String) -> Result<String, Error> {
-    let stylesheet = parse_stylesheet(ruby, &filename, &source)?;
+    let stylesheet = parse_stylesheet(ruby, &filename, &source, false)?;
     Ok(serde_json::to_string(&stylesheet).unwrap())
 }
 
-fn parse_stylesheet<'i>(ruby: &Ruby, filename: &str, source: &'i str) -> Result<StyleSheet<'i>, Error> {
+fn parse_stylesheet<'i>(
+    ruby: &Ruby,
+    filename: &str,
+    source: &'i str,
+    local_css_variables: bool,
+) -> Result<StyleSheet<'i>, Error> {
     StyleSheet::parse(
         source,
         ParserOptions {
             filename: filename.to_string(),
             css_modules: Some(lightningcss::css_modules::Config {
                 pattern: lightningcss::css_modules::Pattern::parse("[local]").unwrap(),
-                dashed_idents: false,
+                dashed_idents: local_css_variables,
                 animation: false,
                 grid: false,
                 container: false,
@@ -205,6 +283,19 @@ fn string_map_to_hash(ruby: &Ruby, map: HashMap<String, String>) -> Result<RHash
     Ok(hash)
 }
 
+fn serialized_variable_map_to_hash(
+    ruby: &Ruby,
+    map: &HashMap<String, String>,
+) -> Result<RHash, Error> {
+    let hash = ruby.hash_new();
+    for (key, value) in map {
+        let mut serialized = String::new();
+        cssparser::serialize_identifier(value, &mut serialized).unwrap();
+        hash.aset(key.clone(), serialized)?;
+    }
+    Ok(hash)
+}
+
 fn component_name(filename: &str) -> String {
     std::path::Path::new(filename)
         .with_extension("")
@@ -217,6 +308,13 @@ fn format_selector(pattern: &str, component: &str, local: &str, hash: &str) -> S
         .replace("[component]", component)
         .replace("[local]", local)
         .replace("[hash]", hash)
+}
+
+fn format_variable(pattern: &str, component: &str, local: &str, hash: &str) -> String {
+    format!(
+        "--{}",
+        format_selector(pattern, component, local.trim_start_matches("--"), hash)
+    )
 }
 
 fn hash(source: &str) -> String {

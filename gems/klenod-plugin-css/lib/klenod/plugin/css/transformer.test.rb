@@ -39,14 +39,17 @@ class Klenod::Plugin::CSS::TransformerTest < Minitest::Test
     result =
       Klenod::Plugin::CSS::Transformer.transform(
         "components/Card.css",
-        ".title { color: red; }\nmain { display: block; }\n",
+        ":root { --gap: 1rem; }\n.title { color: red; }\nmain { display: block; }\n",
         minify: false,
         class_pattern: "c_[hash]_[local]",
-        tag_pattern: "t_[local]_[hash]"
+        tag_pattern: "t_[local]_[hash]",
+        local_css_variables: true,
+        variable_pattern: "v_[hash]_[local]"
       )
 
     assert_match(/\Ac_[A-Za-z0-9_-]{8}_title\z/, result.classes.fetch(:title))
     assert_match(/\At_main_[A-Za-z0-9_-]{8}\z/, result.elements.fetch(:main))
+    assert_match(/\A--v_[A-Za-z0-9_-]{8}_gap\z/, result.variables.fetch("--gap"))
   end
 
   def test_transform_reports_dependencies_and_source_map
@@ -88,5 +91,48 @@ class Klenod::Plugin::CSS::TransformerTest < Minitest::Test
     )
     assert_equal([Klenod::Plugin::CSS::ComposeLocal[name: :heading]], title.composes)
     assert_equal([Klenod::Plugin::CSS::ComposeGlobal[name: "utility"]], external.composes)
+  end
+
+  def test_transform_can_localize_css_variables_and_report_dependencies
+    result =
+      Klenod::Plugin::CSS::Transformer.transform(
+        "styles/button.css",
+        <<~CSS,
+          :root { --accent-color: red; }
+          .button {
+            background: var(--accent-color);
+            border-color: var(--border-color from "./vars.css");
+            color: var(--text-color from global);
+          }
+        CSS
+        minify: false,
+        local_css_variables: true
+      )
+
+    variable = result.variables.fetch("--accent-color")
+
+    assert_match(/\A--styles\/button-accent-color\?/, variable)
+    assert_includes(result.code, variable.gsub("/", "\\/").gsub("?", "\\?"))
+    assert_includes(result.code, "var(--text-color)")
+    assert_equal(
+      Klenod::Plugin::CSS::VariableDependency[
+        name: "--border-color",
+        specifier: "./vars.css"
+      ],
+      result.references.values.fetch(0)
+    )
+  end
+
+  def test_transform_keeps_css_variables_global_by_default
+    result =
+      Klenod::Plugin::CSS::Transformer.transform(
+        "styles/button.css",
+        ":root { --accent-color: red; } .button { color: var(--accent-color); }",
+        minify: false
+      )
+
+    assert_empty(result.variables)
+    assert_includes(result.code, "--accent-color")
+    assert_empty(result.references)
   end
 end
