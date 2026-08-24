@@ -22,6 +22,10 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
+      - name: Compile native extensions
+        run: |
+          bundle exec rake -C gems/klenod-plugin-javascript compile
+          bundle exec rake -C gems/klenod-plugin-css compile
       - name: Install example web bundle
         working-directory: example/web
         run: bundle install

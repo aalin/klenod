@@ -106,6 +106,7 @@ module KlenodPerformance
 
           require_relative "lib/framework"
           require "klenod"
+          require "klenod/plugin/css"
 
           source_dir "src"
           entrypoint "pages/server"
