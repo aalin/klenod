@@ -69,17 +69,19 @@ module Klenod
 
             scoped_result = transform_css(module_id, code, transform_names: true, context: context)
             css_dependencies = build_dependencies(module_id, scoped_result.dependencies, context)
+            compose_dependencies = build_compose_dependencies(module_id, scoped_result)
             styles_dependency = class_names_runtime_dependency(module_id)
+            selectors = css_selectors(scoped_result)
 
             TransformResult.new(
-              ruby_module_source(css_selectors(scoped_result), nil, styles_dependency: styles_dependency),
-              [styles_dependency, *css_dependencies.dependencies],
+              ruby_module_source(selectors, nil, styles_dependency: styles_dependency),
+              [styles_dependency, *css_dependencies.dependencies, *compose_dependencies],
               nil,
               [],
               [],
               {
                 css_result: scoped_result,
-                css_classes: css_selectors(scoped_result),
+                css_classes: selectors,
                 external_dependencies: css_dependencies.external_dependencies
               }
             )
@@ -110,13 +112,15 @@ module Klenod
             end
 
             css_edit = finalized_css_edit(css_result, resolved_dependencies, dependency_records, result.metadata.fetch(:external_dependencies))
-            asset, source_map_asset = css_asset_pair(module_id, css_edit, :css, {classes: result.metadata[:css_classes]}, context)
+            classes = finalized_css_selectors(css_result, resolved_dependencies, dependency_records)
+            asset, source_map_asset = css_asset_pair(module_id, css_edit, :css, {classes: classes}, context)
 
             result.with(
-              code: ruby_module_source(result.metadata[:css_classes], asset.output_path, styles_dependency: result.dependencies.fetch(0)),
+              code: ruby_module_source(classes, asset.output_path, styles_dependency: result.dependencies.fetch(0)),
               assets: [asset, source_map_asset, *result.assets].compact,
               metadata: result.metadata.merge(
-                css_asset_path: asset.output_path
+                css_asset_path: asset.output_path,
+                css_classes: classes
               )
             )
           end
@@ -210,6 +214,26 @@ module Klenod
               end
 
             CssDependencies.new(resolved_dependencies, external_dependencies.freeze)
+          end
+
+          def build_compose_dependencies(module_id, css_result)
+            css_result
+              .exports
+              .values
+              .flat_map(&:composes)
+              .grep(Klenod::Plugin::CSS::ComposeDependency)
+              .map(&:specifier)
+              .uniq
+              .each_with_index
+              .map do |specifier, index|
+                Dependency
+                  .create(
+                    specifier: specifier,
+                    importer_id: module_id,
+                    kind: :css_compose
+                  )
+                  .with(id: "#{module_id}:compose:#{index}")
+              end
           end
 
           def plugin_resolvable_external_import?(dependency, css_dependency, context)
@@ -391,6 +415,58 @@ module Klenod
 
           def css_selectors(result)
             result.classes.merge(result.elements.transform_keys { :"__#{it}" })
+          end
+
+          def finalized_css_selectors(css_result, resolved_dependencies, dependency_records)
+            compose_records =
+              resolved_dependencies
+                .select { it.dependency.kind == :css_compose }
+                .to_h do |resolved_dependency|
+                  [
+                    resolved_dependency.dependency.specifier,
+                    dependency_records.fetch(resolved_dependency.dependency.id)
+                  ]
+                end
+            resolved_classes = {}
+
+            resolve_class =
+              lambda do |name, resolving|
+                return resolved_classes.fetch(name) if resolved_classes.key?(name)
+                if resolving.include?(name)
+                  raise Error, "Circular local CSS composition involving #{name.inspect}"
+                end
+
+                generated_name = css_result.classes.fetch(name)
+                export = css_result.exports.fetch(generated_name)
+                values = [export.name]
+
+                export.composes.each do |compose|
+                  case compose
+                  when Klenod::Plugin::CSS::ComposeLocal
+                    values.concat(resolve_class.call(compose.name, [*resolving, name]).split)
+                  when Klenod::Plugin::CSS::ComposeGlobal
+                    values << compose.name
+                  when Klenod::Plugin::CSS::ComposeDependency
+                    record = compose_records.fetch(compose.specifier)
+                    dependency_classes = record.metadata[:css_classes]
+                    unless dependency_classes
+                      raise UnsupportedFileError,
+                        "CSS composes from #{compose.specifier.inspect} resolved to module #{record.id}, which does not export CSS classes"
+                    end
+                    dependency_class =
+                      dependency_classes.fetch(compose.name) do
+                        raise UnsupportedFileError,
+                          "CSS composes class #{compose.name.inspect} from #{compose.specifier.inspect}, but module #{record.id} does not export it"
+                      end
+                    values.concat(dependency_class.split)
+                  end
+                end
+
+                resolved_classes[name] = values.uniq.join(" ")
+              end
+
+            css_result.classes.each_key { resolve_class.call(it, []) }
+            resolved_classes.merge(css_result.elements.transform_keys { :"__#{it}" })
           end
 
           def asset_name(module_id)

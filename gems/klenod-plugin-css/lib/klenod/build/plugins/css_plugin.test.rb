@@ -30,6 +30,97 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_css_class_map_resolves_local_global_and_dependency_compositions
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/typography.css", ".typography { font-weight: 700; }\n")
+      File.write(
+        "#{dir}/styles/heading.css",
+        <<~CSS
+          .heading { composes: typography from "./typography.css"; color: gray; }
+          .title { composes: heading; }
+          .external { composes: utility from global; }
+        CSS
+      )
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Styles = import("styles/heading.css")
+          TITLE = Styles.fetch(:title)
+          EXTERNAL = Styles.fetch(:external)
+        RUBY
+      )
+
+      context = context_for(dir)
+      entry_record = context.evaluate("entry")
+      exports = context.graph.mods.fetch(entry_record.id).const_get(:Exports)
+      heading_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/heading.css", nil))
+      typography_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/typography.css", nil))
+      raw_classes = heading_record.metadata.fetch(:css_result).classes
+      typography_class = typography_record.metadata.fetch(:css_classes).fetch(:typography)
+
+      assert_equal(
+        [raw_classes.fetch(:title), raw_classes.fetch(:heading), typography_class],
+        exports::TITLE.split
+      )
+      assert_equal([raw_classes.fetch(:external), "utility"], exports::EXTERNAL.split)
+      assert_includes(
+        heading_record.resolved_dependencies.map { [it.dependency.kind, it.module_id.to_s] },
+        [:css_compose, "app:/styles/typography.css"]
+      )
+      assert_equal(
+        ["styles/typography.css", "styles/heading.css"],
+        context.assets_for_module(entry_record, type: :css).map(&:logical_name)
+      )
+    end
+  end
+
+  def test_runtime_bundle_preserves_composed_css_class_map
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/typography.css", ".typography { font-weight: 700; }\n")
+      File.write(
+        "#{dir}/styles/heading.css",
+        ".heading { composes: typography from \"./typography.css\"; color: gray; }\n"
+      )
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/heading.css\")\nHEADING = Styles.fetch(:heading)\n")
+      output = "#{dir}/bundle.mpk"
+
+      context = context_for(dir, mode: :build)
+      context.build(entrypoints: ["entry"], output: output)
+      loaded = Klenod::Runtime.load_bundle(output)
+      heading = loaded.exports("entry")::HEADING
+      typography_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/typography.css", nil))
+
+      assert_equal(2, heading.split.length)
+      assert_includes(heading.split, typography_record.metadata.fetch(:css_classes).fetch(:typography))
+      assert_equal(
+        ["styles/typography.css", "styles/heading.css"],
+        loaded.assets_for_module("entry.rb", type: :css).map(&:logical_name)
+      )
+    end
+  end
+
+  def test_composing_a_missing_css_class_reports_a_build_error
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/typography.css", ".body { font-weight: 400; }\n")
+      File.write(
+        "#{dir}/styles/heading.css",
+        ".heading { composes: typography from \"./typography.css\"; }\n"
+      )
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/heading.css\")\n")
+
+      error = assert_raises(Klenod::Build::UnsupportedFileError) do
+        context_for(dir).collect("entry")
+      end
+
+      assert_includes(error.message, "class :typography")
+      assert_includes(error.message, 'from "./typography.css"')
+      assert_includes(error.message, "module app:/styles/typography.css does not export it")
+    end
+  end
+
   def test_css_can_be_minified_in_development
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
@@ -313,6 +404,33 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       assert_equal(["app:/styles/home.css"], result.reloaded_module_ids.map(&:to_s))
       assert_equal(["app:/entry.rb"], result.reevaluated_module_ids.map(&:to_s))
       assert_equal([:heading], classes)
+    end
+  end
+
+  def test_composed_css_dependency_change_refinalizes_consumer_and_reevaluates_importers
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      typography_path = "#{dir}/styles/typography.css"
+      File.write(typography_path, ".typography { color: red; }\n")
+      File.write(
+        "#{dir}/styles/heading.css",
+        ".heading { composes: typography from \"./typography.css\"; color: gray; }\n"
+      )
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/heading.css\")\nHEADING = Styles.fetch(:heading)\n")
+
+      context = context_for(dir)
+      entry_record = context.evaluate("entry")
+      old_heading = context.graph.mods.fetch(entry_record.id).const_get(:Exports)::HEADING
+
+      File.write(typography_path, ".typography { color: blue; }\n")
+      result = context.invalidate_paths([typography_path])
+      new_heading = context.graph.mods.fetch(entry_record.id).const_get(:Exports)::HEADING
+      typography_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/typography.css", nil))
+
+      assert_equal(["app:/styles/typography.css"], result.reloaded_module_ids.map(&:to_s))
+      assert_equal(["app:/styles/heading.css", "app:/entry.rb"], result.reevaluated_module_ids.map(&:to_s))
+      refute_equal(old_heading, new_heading)
+      assert_includes(new_heading.split, typography_record.metadata.fetch(:css_classes).fetch(:typography))
     end
   end
 

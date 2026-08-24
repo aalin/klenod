@@ -18,6 +18,7 @@ module Klenod
       UrlDependency = Data.define(:url, :placeholder, :loc)
       Export = Data.define(:name, :composes, :referenced?)
       ComposeLocal = Data.define(:name)
+      ComposeGlobal = Data.define(:name)
       ComposeDependency = Data.define(:name, :specifier)
 
       Loc = Data.define(:file_path, :start, :end) do
@@ -72,6 +73,8 @@ module Klenod
               case compose.fetch("type")
               when "local"
                 ComposeLocal[name: compose.fetch("name").to_sym]
+              when "global"
+                ComposeGlobal[name: compose.fetch("name")]
               when "dependency"
                 ComposeDependency[name: compose.fetch("name").to_sym, specifier: compose.fetch("specifier")]
               end

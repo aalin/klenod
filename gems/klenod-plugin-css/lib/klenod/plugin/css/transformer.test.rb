@@ -65,4 +65,28 @@ class Klenod::Plugin::CSS::TransformerTest < Minitest::Test
     assert_equal(["styles/home.css"], source_map.fetch("sources"))
     assert_equal([source], source_map.fetch("sourcesContent"))
   end
+
+  def test_transform_reports_local_global_and_dependency_compositions
+    result =
+      Klenod::Plugin::CSS::Transformer.transform(
+        "styles/heading.css",
+        <<~CSS,
+          .heading { composes: typography from "./typography.css"; }
+          .title { composes: heading; }
+          .external { composes: utility from global; }
+        CSS
+        minify: false
+      )
+
+    heading = result.exports.fetch(result.classes.fetch(:heading))
+    title = result.exports.fetch(result.classes.fetch(:title))
+    external = result.exports.fetch(result.classes.fetch(:external))
+
+    assert_equal(
+      [Klenod::Plugin::CSS::ComposeDependency[name: :typography, specifier: "./typography.css"]],
+      heading.composes
+    )
+    assert_equal([Klenod::Plugin::CSS::ComposeLocal[name: :heading]], title.composes)
+    assert_equal([Klenod::Plugin::CSS::ComposeGlobal[name: "utility"]], external.composes)
+  end
 end
