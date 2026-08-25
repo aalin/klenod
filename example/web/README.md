@@ -1,89 +1,115 @@
 # Klenod Web Example
 
-This example exercises the current module graph, plugin pipeline, emitted assets, and watch-mode update events.
+This example is a small web application built with Klenod.
 
-Run it from the repository root:
+## Getting started
+
+From the repository root, install the dependencies and compile the native
+JavaScript and CSS plugin extensions once:
 
 ```sh
-example/web/bin/build
-example/web/bin/dev
-example/web/bin/routes
-example/web/bin/server
+bundle install
+bundle exec rake -C gems/klenod-plugin-javascript compile
+bundle exec rake -C gems/klenod-plugin-css compile
+cd example/web
+bundle install
 ```
 
-`bin/build` writes `example/web/dist/klenod.bundle` and `example/web/dist/public`, printing the collected module count, emitted assets, generated assets, and written files. The web example wires its Klenod build options directly from the example framework instead of using a CLI config file. `bin/server` starts a production-style `async-http` server from that built bundle without using the build graph. It passes `source_root:` when loading the bundle so `__FILE__` and raw Ruby backtraces point at the runtime source root:
+The remaining commands are run from `example/web/`.
 
-```ruby
-bundle = Klenod::Runtime.load_bundle("example/web/dist/klenod.bundle", source_root: "/app/src")
+Start the development server:
+
+```sh
+bin/dev
 ```
 
-Export the built bundle graph as Graphviz DOT and render it as SVG:
+Then open `https://localhost:9292`. The server uses the `localhost` gem for its
+local TLS certificate and supports HTTP/2 when the client does.
+
+To try the production flow, build the app before starting the runtime server:
+
+```sh
+bin/build
+bin/server
+```
+
+## Commands
+
+- `bin/dev` starts the development server.
+- `bin/build` builds a production bundle and writes its assets.
+- `bin/server` loads and serves the production bundle.
+- `bin/routes` prints the discovered routes.
+
+By default, development assets stay in memory. They can also be mirrored to
+disk; the initial manifest and subsequent successful asset updates are written
+to the selected directory:
+
+```sh
+ASSETS_DIR=tmp/public bin/dev
+```
+
+## How the build works
+
+The build configuration is in `lib/web_config.rb`. The build starts at
+`src/entrypoint.rb`. Klenod reads the imports and collects the modules into a
+graph. Plugins transform the source files and create assets. Collection does
+not evaluate the application modules.
+
+`bin/build` writes the assets and serializes the graph. `bin/server` loads the
+bundle with `klenod-runtime`. The runtime evaluates each module when the
+application uses that module.
+
+In development, Klenod keeps the graph active. After a source change, Klenod
+updates the changed module and its dependents. The production server uses
+`source_root:` to set the correct paths for `__FILE__`, source maps, and
+backtraces.
+
+## Source layout and routing
+
+`src/` contains the web application. `src/entrypoint.rb` connects the generated
+router to the server. `src/routes/` contains the routes. `src/components/`
+contains reusable components. `lib/` contains the small example web framework.
+
+Klenod builds the route tree from `src/routes/`. A `+page.haml` or `+page.rb`
+file defines a page. A `+layout` file wraps pages in its directory and child
+directories. `+error` and `+not-found` files handle errors and missing pages.
+Klenod collects companion CSS and translation files with each Haml file.
+
+Directory names define dynamic, catch-all, grouped, parallel, and intercepted
+segments. A `+route.rb` file defines HTTP handlers. A directory can contain a
+page and a handler. This is a hybrid route. For a hybrid route, `GET`, `POST`,
+and `HEAD` render the page when the request prefers HTML. Other requests use the
+handler.
+
+## Inspecting and profiling builds
+
+Export a built bundle graph as Graphviz DOT and render it as SVG:
 
 ```sh
 bundle exec klenod graph dist/klenod.bundle > graph.dot
 dot -Tsvg graph.dot > graph.svg
 ```
 
-To profile a build with Vernier:
+Profile a build with Vernier:
 
 ```sh
-cd example/web
 bundle exec vernier run -- bin/build
 ```
 
-Vernier writes a profile file in the current directory. Use `bundle exec vernier view -- <profile>` for a terminal summary, or open the generated profile in a compatible profile viewer.
+Vernier writes a profile in the current directory. View a terminal summary with
+`bundle exec vernier view -- <profile>`, or open it in a compatible profile
+viewer.
 
-`bin/routes` prints a Rails-style route table with the HTTP method, server path, route type, and source file for each discovered `+page.haml` and `+route.rb`.
+## Docker
 
-`bin/dev` starts the development `async-http` server on `https://localhost:9292`. It watches the source tree, matches each request through the router plugin, serves emitted CSS/image assets from the build context, and renders detailed development exception pages.
-
-`bin/server` starts the production server on `https://localhost:9292` from the bundle and assets written by `bin/build`. It logs exceptions server-side, but returns a generic 500 response instead of rendering development error details.
-
-The example server uses the `localhost` gem for its local TLS certificate. HTTPS clients negotiate HTTP/2 when supported and fall back to HTTP/1.x otherwise:
-
-```sh
-example/web/bin/dev
-curl -k -I --http2 https://localhost:9292/demo
-```
-
-Build and run the production server in Docker from the repository root:
+Build and run the production server from the repository root:
 
 ```sh
 docker build -f example/web/Dockerfile -t klenod-example-web .
 docker run --rm -p 9292:9292 klenod-example-web
 ```
 
-The Docker image uses a multi-stage build. The build stage installs the full Klenod build stack and writes `dist/`; the final runtime image installs `klenod-runtime`, `klenod-rack`, and the example app runtime gems, but not `klenod-build` or the compatibility `klenod` gem.
-
-`bin/dev` can also mirror emitted assets to disk:
-
-```sh
-ASSETS_DIR=example/web/tmp/public example/web/bin/dev
-```
-
-When `ASSETS_DIR` is set, the examples write the current asset manifest once and then apply `event.asset_updates` after each successful graph update.
-
-The server entry imports the virtual router:
-
-```ruby
-Router = import("virtual:router")
-```
-
-Pages import their own assets. For example, `src/routes/+page.haml` imports an image with query-driven variants, and `src/routes/demo/+page.haml` imports `demo.js`. Route-reachable JavaScript assets are emitted as content-hashed files, included with `<script type="module">`, and advertised with `rel=modulepreload`.
-
-`Router::Default.match(path).page` returns the matched component class. `Router::Default.match(path).handler` returns a matched `+route.rb` handler class. The server entry wraps rendered pages through `match.layouts`, passing the current HTML as `children: [inner]`, renders named parallel routes from `match.slots`, and dispatches route handlers through the example `Example::Route` base class. The nested route `src/routes/demo/blog/[slug]/+page.haml` demonstrates dynamic params at `/demo/blog/graph`.
-
-The example includes a small route gallery:
-
-- `/demo/docs/guides/routing` demonstrates catch-all params.
-- `/demo/shop` and `/demo/shop/sale/red` demonstrate optional catch-all params.
-- `/about` demonstrates a route group.
-- `/api/status` demonstrates a `+route.rb` handler that returns JSON.
-- `/demo/hybrid` demonstrates a route directory with both `+page.haml` and `+route.rb`; browser requests render HTML, while API-style requests use the handler.
-- `/demo/dashboard` demonstrates a small logistics dashboard with `@sidebar` and `@modal` parallel slots. `/demo/dashboard/settings` renders `dashboard/settings/+page.haml` as the primary route and matching slot pages into `dashboard/+layout.haml`.
-- `/feed/photo`, `/profile`, and `/login` demonstrate intercepted route segment metadata.
-- `/demo/routing` reads `Router::Default.tree` and displays structural route metadata.
-
-`framework.rb` defines the example `Example::H` factory used by the Haml plugin. `src/routes/+page.haml` renders through that factory, imports `src/components/Figure.haml`, and automatically imports its companion `src/routes/+page.css` as `Styles`.
-
-The example uses explicit extensions for page imports. If both `+page.rb` and `+page.haml` exist, an extensionless import like `import("./+page")` is ambiguous and Klenod asks for `import("./+page.haml")` or `import("./+page.rb")`. A `+route.rb` handler can live in the same directory as a page. For hybrid routes, browser-style `GET`, `POST`, and `HEAD` requests that prefer `text/html` render the page; API-style requests and `PUT`, `PATCH`, `DELETE`, and `OPTIONS` requests use `+route.rb`.
+The multi-stage image uses the complete build stack to create `dist/`. Its final
+runtime image contains the built application, `klenod-runtime`, `klenod-rack`,
+and the example's runtime gems, but not `klenod-build` or the compatibility
+`klenod` gem.
