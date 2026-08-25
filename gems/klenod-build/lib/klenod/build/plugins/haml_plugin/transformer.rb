@@ -14,7 +14,7 @@ module Klenod
         class Transformer
           VALID_CONST_PATH = /\A[A-Z]\w*(?:::[A-Z]\w*)*\z/
 
-          ConstPath = ::Data.define(:value) do
+          ConstPath = Data.define(:value) do
             def self.parse(value, name:)
               path = value.to_s
               raise ArgumentError, "#{name} must be a Ruby constant path" unless path.match?(VALID_CONST_PATH)
@@ -135,7 +135,7 @@ module Klenod
 
           private
 
-          Template = ::Data.define(:ruby, :render, :static_constants)
+          Template = Data.define(:ruby, :render, :static_constants)
 
           def measure_compile(name)
             return yield unless @profiler

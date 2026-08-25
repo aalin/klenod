@@ -421,7 +421,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       {
         "pages/page.haml" => <<~HAML
           :ruby
-            User = ::Data.define(:id)
+            User = Data.define(:id)
 
             def initialize
               @user = User.new(15)
@@ -455,7 +455,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
         "page.haml" => <<~HAML
           :ruby
             Card = import("components/card.haml")
-            User = ::Data.define(:id)
+            User = Data.define(:id)
 
             def initialize
               @user = User.new(15)
@@ -779,7 +779,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       {
         "pages/list.haml" => <<~HAML
           :ruby
-            Item = ::Data.define(:name)
+            Item = Data.define(:name)
 
             def initialize
               @items = [Item.new("A"), Item.new("B")]
@@ -806,7 +806,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       {
         "pages/list.haml" => <<~HAML
           :ruby
-            Item = ::Data.define(:name)
+            Item = Data.define(:name)
 
             def initialize
               @items = [Item.new("A"), Item.new("B")]
@@ -833,7 +833,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       {
         "pages/list.haml" => <<~HAML
           :ruby
-            Item = ::Data.define(:name)
+            Item = Data.define(:name)
 
             def initialize
               @items = [Item.new("A"), Item.new("B")]
@@ -869,7 +869,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       {
         "pages/list.haml" => <<~HAML
           :ruby
-            Item = ::Data.define(:name)
+            Item = Data.define(:name)
 
             def initialize
               @items = [Item.new("A"), Item.new("B")]

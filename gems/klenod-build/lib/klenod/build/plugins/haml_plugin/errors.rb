@@ -96,7 +96,7 @@ module Klenod
           end
         end
 
-        HamlTransformResult = ::Data.define(:code, :source_map, :metadata, :ast) do
+        HamlTransformResult = Data.define(:code, :source_map, :metadata, :ast) do
           def self.from_ast(ast, source:, metadata:)
             code = ast.source
 

@@ -87,11 +87,11 @@ module Klenod
 
           private
 
-          Dimensions = ::Data.define(:width, :height)
+          Dimensions = Data.define(:width, :height)
 
           def svg_runtime_source
             <<~RUBY
-              Svg = ::Data.define(:src, :width, :height, :content_type)
+              Svg = Data.define(:src, :width, :height, :content_type)
             RUBY
           end
 

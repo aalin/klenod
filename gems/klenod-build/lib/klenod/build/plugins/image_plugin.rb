@@ -21,8 +21,8 @@ module Klenod
           IMAGE_RUNTIME_SPECIFIER = "virtual:klenod/image"
           IMAGE_RUNTIME_MODULE_ID = ModuleId.new("#{IMAGE_RUNTIME_SPECIFIER}.rb", nil)
 
-          ImageDefaultKey = ::Data.define(:source_path, :source_hash, :format, :quality)
-          ImageVariantKey = ::Data.define(:source_path, :source_hash, :width, :format, :quality)
+          ImageDefaultKey = Data.define(:source_path, :source_hash, :format, :quality)
+          ImageVariantKey = Data.define(:source_path, :source_hash, :width, :format, :quality)
 
           def initialize(widths: [], formats: nil)
             @widths = widths
@@ -88,7 +88,7 @@ module Klenod
 
           private
 
-          Dimensions = ::Data.define(:width, :height, :format)
+          Dimensions = Data.define(:width, :height, :format)
 
           def image_dimensions(path)
             size = ImageSize.path(path)
@@ -177,12 +177,12 @@ module Klenod
             end
           end
 
-          ImageOptions = ::Data.define(:widths, :formats, :explicit_formats, :quality)
+          ImageOptions = Data.define(:widths, :formats, :explicit_formats, :quality)
 
           def image_runtime_source
             <<~RUBY
               Image =
-                ::Data.define(:src, :width, :height, :content_type, :variants) do
+                Data.define(:src, :width, :height, :content_type, :variants) do
                   def srcset
                     return nil if variants.empty?
 
@@ -197,7 +197,7 @@ module Klenod
                   end
                 end
 
-              ImageVariant = ::Data.define(:src, :width, :height, :content_type, :format, :descriptor, :metadata)
+              ImageVariant = Data.define(:src, :width, :height, :content_type, :format, :descriptor, :metadata)
             RUBY
           end
 

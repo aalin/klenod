@@ -13,7 +13,7 @@ module Klenod
     module Plugins
       module RouterPlugin
         class Plugin < Klenod::Build::Plugin
-          RouteSegment = ::Data.define(:name, :kind, :param_name, :path_part) do
+          RouteSegment = Data.define(:name, :kind, :param_name, :path_part) do
             def self.parse(name)
               case name
               when /\A\[\[\.\.\.(?<param_name>[A-Za-z_]\w*)\]\]\z/
@@ -38,11 +38,11 @@ module Klenod
             end
           end
 
-          RouteParam = ::Data.define(:name, :kind)
+          RouteParam = Data.define(:name, :kind)
           PARAM_SEGMENT_KINDS = [:dynamic, :catch_all, :optional_catch_all].freeze
           ROUTE_FILE_BASENAMES = ["+page", "+layout", "+route", "+error", "+not-found"].freeze
 
-          PageRoute = ::Data.define(:path, :page_module_id, :handler_module_id, :segments, :layout_module_ids, :slot_layout_module_id) do
+          PageRoute = Data.define(:path, :page_module_id, :handler_module_id, :segments, :layout_module_ids, :slot_layout_module_id) do
             def params
               segments
                 .select { |segment| segment.param_name && PARAM_SEGMENT_KINDS.include?(segment.kind) }
@@ -61,13 +61,13 @@ module Klenod
             end
           end
 
-          SpecialView = ::Data.define(:kind, :path, :view_module_id, :segments, :layout_module_ids, :status) do
+          SpecialView = Data.define(:kind, :path, :view_module_id, :segments, :layout_module_ids, :status) do
             def module_id
               view_module_id
             end
           end
 
-          RouteManifest = ::Data.define(:routes, :special_views) do
+          RouteManifest = Data.define(:routes, :special_views) do
             def entrypoints
               [
                 *routes.flat_map { |route| [route.page_module_id, route.handler_module_id] },
@@ -371,12 +371,12 @@ module Klenod
           def generate_router_source(manifest)
             imports = import_refs(manifest)
             <<~RUBY
-              Segment = ::Data.define(:name, :kind, :param_name, :path_part)
-              Param = ::Data.define(:name, :kind)
+              Segment = Data.define(:name, :kind, :param_name, :path_part)
+              Param = Data.define(:name, :kind)
               #{import_definitions(imports)}
 
               module Default
-                Route = ::Data.define(:path, :page_module_id, :handler_module_id, :segments, :match_parts, :layout_module_ids, :slot_layout_module_id, :page_ref, :handler_ref, :layout_refs) do
+                Route = Data.define(:path, :page_module_id, :handler_module_id, :segments, :match_parts, :layout_module_ids, :slot_layout_module_id, :page_ref, :handler_ref, :layout_refs) do
                   def params
                     segments
                       .select { |segment| segment.param_name && [:dynamic, :catch_all, :optional_catch_all].include?(segment.kind) }
@@ -411,7 +411,7 @@ module Klenod
                   end
                 end
 
-                SpecialView = ::Data.define(:kind, :path, :status, :module_id, :segments, :match_parts, :layout_module_ids, :page_ref, :layout_refs) do
+                SpecialView = Data.define(:kind, :path, :status, :module_id, :segments, :match_parts, :layout_module_ids, :page_ref, :layout_refs) do
                   def page
                     Default.resolve_import(page_ref)
                   end
@@ -454,7 +454,7 @@ module Klenod
                   end
                 end
 
-                SlotMatch = ::Data.define(:route, :params, :layout_module_id) do
+                SlotMatch = Data.define(:route, :params, :layout_module_id) do
                   def page
                     route.page
                   end
@@ -464,7 +464,7 @@ module Klenod
                   end
                 end
 
-                Match = ::Data.define(:route, :params, :slots) do
+                Match = Data.define(:route, :params, :slots) do
                   def page
                     route.page
                   end
@@ -478,7 +478,7 @@ module Klenod
                   end
                 end
 
-                SpecialMatch = ::Data.define(:route, :params) do
+                SpecialMatch = Data.define(:route, :params) do
                   def page
                     route.page
                   end

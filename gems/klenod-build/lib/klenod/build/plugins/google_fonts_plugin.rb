@@ -24,7 +24,7 @@ module Klenod
           FONT_URL_PATTERN = /url\((?<quote>["']?)(?<url>https:\/\/fonts\.gstatic\.com\/[^"')]+)\k<quote>\)/
 
           Error = Class.new(StandardError)
-          FontFace = ::Data.define(:family, :style, :weight)
+          FontFace = Data.define(:family, :style, :weight)
 
           class CssCache
             def initialize(path)

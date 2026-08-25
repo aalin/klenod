@@ -249,7 +249,7 @@ module Klenod
 
           private
 
-          InlineCssSource = ::Data.define(:text, :line_offset, :column_offset)
+          InlineCssSource = Data.define(:text, :line_offset, :column_offset)
 
           def validate_global_variables(global_variables)
             return nil if global_variables.nil?

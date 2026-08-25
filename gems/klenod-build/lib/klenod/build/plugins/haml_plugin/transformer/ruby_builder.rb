@@ -14,7 +14,7 @@ module Klenod
           class RubyBuilder
             include SyntaxTree::DSL
 
-            Fragment = ::Data.define(:source, :node) do
+            Fragment = Data.define(:source, :node) do
               def node?
                 !node.nil?
               end
