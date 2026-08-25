@@ -6,6 +6,7 @@ require "uri"
 require "klenod/build/asset"
 require "klenod/build/dependency"
 require "klenod/build/errors"
+require "klenod/build/filesystem_resolver"
 require "klenod/build/hashing"
 require "klenod/build/plugin"
 require "klenod/build/source_map"
@@ -175,12 +176,11 @@ module Klenod
               end
             return nil unless base_module_id.scheme == :app && base_module_id.extname == ".css"
 
-            module_id = ModuleId.new("app:/#{base_module_id.relative_path}", JAVASCRIPT_STYLESHEET_QUERY)
-            return nil unless File.file?(context.absolute_path(module_id))
+            path = FilesystemResolver.new(root: context.source_dir).resolve(base_module_id.relative_path)
+            relative_path = path.relative_path_from(context.source_dir).to_s
+            module_id = ModuleId.new("app:/#{relative_path}", JAVASCRIPT_STYLESHEET_QUERY)
 
             ResolvedDependency.new(dependency, module_id, {})
-          rescue ResolveError
-            nil
           end
 
           def javascript_stylesheet_dependency?(dependency)

@@ -154,6 +154,63 @@ class Klenod::Build::Resolver::Test < Minitest::Test
     end
   end
 
+  def test_rejects_incorrect_case_for_explicit_imports
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/components")
+      File.write("#{dir}/components/PageHeader.haml", "")
+
+      resolver = Resolver.new(source_dir: dir)
+      error = assert_raises(Klenod::Build::ResolveError) do
+        resolver.resolve(
+          Dependency.create(specifier: "components/pageheader.haml", importer_id: nil, kind: :entrypoint)
+        )
+      end
+
+      assert_equal(
+        "Incorrect case for components/pageheader.haml. Use components/PageHeader.haml.",
+        error.message
+      )
+      assert_equal("components/pageheader.haml", error.unresolved_path)
+    end
+  end
+
+  def test_rejects_incorrect_case_for_extensionless_imports
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/components")
+      File.write("#{dir}/components/PageHeader.haml", "")
+
+      resolver = Resolver.new(source_dir: dir)
+      error = assert_raises(Klenod::Build::ResolveError) do
+        resolver.resolve(
+          Dependency.create(specifier: "components/pageheader", importer_id: nil, kind: :entrypoint)
+        )
+      end
+
+      assert_equal(
+        "Incorrect case for components/pageheader. Use components/PageHeader.haml.",
+        error.message
+      )
+    end
+  end
+
+  def test_suggests_canonical_files_for_extensionless_imports
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/components")
+      File.write("#{dir}/components/PageHeader.rb", "")
+      File.write("#{dir}/components/PageHeader.haml", "")
+
+      resolver = Resolver.new(source_dir: dir)
+      error = assert_raises(Klenod::Build::ResolveError) do
+        resolver.resolve(
+          Dependency.create(specifier: "components/PageHeder", importer_id: nil, kind: :entrypoint)
+        )
+      end
+
+      assert_includes(error.message, "components/PageHeader.rb")
+      assert_includes(error.message, "components/PageHeader.haml")
+    end
+  end
+
   def test_rejects_source_dir_escape
     Dir.mktmpdir do |dir|
       resolver = Resolver.new(source_dir: dir)

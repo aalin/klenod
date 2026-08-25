@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "errors"
+require_relative "filesystem_resolver"
 require_relative "module_id"
 require_relative "dependency"
 
@@ -14,6 +15,7 @@ module Klenod
         @source_dir = Pathname.new(@source_dir_path)
         @extensions = extensions
         @profiler = profiler
+        @filesystem_resolver = FilesystemResolver.new(root: @source_dir, extensions: @extensions)
         @resolved_module_ids = {}
         @absolute_paths = {}
       end
@@ -32,7 +34,7 @@ module Klenod
           @profiler&.count(:resolver_cache_hit)
         else
           @profiler&.count(:resolver_cache_miss)
-          resolved_path = resolve_existing_path(base_path)
+          resolved_path = @filesystem_resolver.resolve(module_id.relative_path)
           relative = relative_source_path(resolved_path)
           resolved_module_id = @resolved_module_ids[key] = ModuleId.new("app:/#{relative}", module_id.query)
         end
@@ -74,18 +76,6 @@ module Klenod
         else
           ModuleId.new("app:/#{specifier.delete_prefix("/")}")
         end
-      end
-
-      def resolve_existing_path(path)
-        return path if File.file?(path)
-
-        @extensions.each do |extension|
-          candidate = "#{path}#{extension}"
-          return candidate if File.file?(candidate)
-        end
-
-        relative = relative_source_path(path)
-        raise ResolveError.new("Could not resolve #{relative}", unresolved_path: relative)
       end
 
       def assert_inside_source_dir!(path)

@@ -88,6 +88,26 @@ The `context` argument is the active `Klenod::Build::Graph`. It gives plugins ac
 
 Collection hooks must not evaluate application modules. These hooks are `resolve`, `load`, `transform`, and `finalize`.
 
+## Resolve Filesystem Modules
+
+Use `FilesystemResolver` when a plugin owns files in a directory:
+
+```ruby
+@resolver = Klenod::Build::FilesystemResolver.new(
+  root: import_root,
+  extensions: [".rb", ".haml"],
+  path_prefix: "gem://message/"
+)
+
+path = @resolver.resolve(module_id.relative_path)
+```
+
+The resolver checks path case on all operating systems. It raises `ResolveError` for an incorrect or missing path.
+
+The error can contain three suggested filenames. Set `path_prefix` to show canonical module IDs in these suggestions.
+
+The plugin must supply its extension order. The resolver does not infer extensions from the importing module.
+
 ## Transform Results
 
 `TransformResult` contains the result of one transform:

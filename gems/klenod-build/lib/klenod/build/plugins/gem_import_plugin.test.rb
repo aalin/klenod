@@ -82,6 +82,40 @@ module Klenod
             assert_includes(error.message, "Could not find gem")
           end
 
+          def test_rejects_incorrect_case
+            with_fake_gem("klenod-ui") do |dir|
+              FileUtils.mkdir_p("#{dir}/klenod/components")
+              File.write("#{dir}/klenod/components/PageHeader.rb", "VALUE = :header\n")
+
+              context = context_for(source_dir: dir)
+              error = assert_raises(Klenod::Build::ResolveError) do
+                context.evaluate("gem://klenod-ui/components/pageheader")
+              end
+
+              assert_equal(
+                "Incorrect case for gem://klenod-ui/components/pageheader. Use gem://klenod-ui/components/PageHeader.rb.",
+                error.message
+              )
+              assert_equal("gem://klenod-ui/components/pageheader", error.unresolved_path)
+            end
+          end
+
+          def test_suggests_canonical_gem_files
+            with_fake_gem("klenod-ui") do |dir|
+              FileUtils.mkdir_p("#{dir}/klenod/components")
+              File.write("#{dir}/klenod/components/PageHeader.rb", "")
+              File.write("#{dir}/klenod/components/PageHeader.haml", "")
+
+              context = context_for(source_dir: dir)
+              error = assert_raises(Klenod::Build::ResolveError) do
+                context.evaluate("gem://klenod-ui/components/PageHeder")
+              end
+
+              assert_includes(error.message, "gem://klenod-ui/components/PageHeader.rb")
+              assert_includes(error.message, "gem://klenod-ui/components/PageHeader.haml")
+            end
+          end
+
           private
 
           def context_for(source_dir:)

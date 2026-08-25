@@ -151,6 +151,22 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
     end
   end
 
+  def test_css_import_rejects_incorrect_case
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/styles"])
+      File.write("#{dir}/styles/Panel.css", ".panel { color: red; }\n")
+      File.write("#{dir}/scripts/app.ts", "import styles from '../styles/panel.css';\nconsole.log(styles);\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.ts\")\n")
+
+      error = assert_raises(Klenod::Build::ResolveError) do
+        context_for(dir).evaluate("entry")
+      end
+
+      assert_includes(error.message, "Incorrect case for styles/panel.css")
+      assert_includes(error.message, "Use styles/Panel.css")
+    end
+  end
+
   def test_javascript_css_import_invalidation_updates_only_javascript_stylesheet_asset
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/styles"])

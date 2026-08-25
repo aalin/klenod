@@ -2,6 +2,7 @@
 
 require_relative "../dependency"
 require_relative "../errors"
+require_relative "../filesystem_resolver"
 require_relative "../hashing"
 require_relative "../load_result"
 require_relative "../module_id"
@@ -20,6 +21,7 @@ module Klenod
             @extensions = extensions
             @resolved_paths = {}
             @gem_import_roots = {}
+            @filesystem_resolvers = {}
           end
 
           def resolve(dependency, _context)
@@ -54,20 +56,12 @@ module Klenod
 
           def resolve_existing_path(module_id)
             @resolved_paths.fetch([module_id.to_s, module_id.query]) do |key|
-              path = path_for(module_id)
-              resolved =
-                if path.file?
-                  path
-                else
-                  @extensions
-                    .map { |extension| Pathname.new("#{path}#{extension}") }
-                    .find(&:file?)
-                end
-
-              raise ResolveError.new("Could not resolve #{module_id}", unresolved_path: module_id.to_s) unless resolved
-
+              path_for(module_id)
+              resolved = filesystem_resolver_for(module_id).resolve(module_id.relative_path)
               @resolved_paths[key] = resolved
             end
+          rescue ResolveError => error
+            raise ResolveError.new(error.message, unresolved_path: module_id.to_s)
           end
 
           def path_for(module_id)
@@ -86,6 +80,17 @@ module Klenod
             end
           rescue Gem::LoadError => error
             raise ResolveError, "Could not find gem #{gem_name.inspect}: #{error.message}"
+          end
+
+          def filesystem_resolver_for(module_id)
+            @filesystem_resolvers.fetch(module_id.host) do |gem_name|
+              @filesystem_resolvers[gem_name] =
+                FilesystemResolver.new(
+                  root: import_root_for(gem_name),
+                  extensions: @extensions,
+                  path_prefix: "gem://#{gem_name}/"
+                )
+            end
           end
 
           def assert_inside_import_root!(module_id, import_root, path)
