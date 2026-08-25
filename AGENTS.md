@@ -18,7 +18,6 @@ Keep these boundaries intact:
 Read these first when continuing architecture work:
 
 - `README.md`
-- `PLAN.md`
 - `ARCHITECTURE.md`
 - `docs/graph-and-plugin-phases.md`
 - `example/web/README.md`
@@ -307,8 +306,6 @@ For route handler line numbers, `example/web/bin/routes` scans `def GET`, `def P
 - Be careful with staged user changes. Check `git status --short` before and after.
 
 ## Known Follow-Ups
-
-From `PLAN.md` and recent work:
 
 - Revisit route utility ordering and visualization so displayed routes follow actual router match priority.
 - Continue plugin-owned import support and polish for `gem://...` module trees.
