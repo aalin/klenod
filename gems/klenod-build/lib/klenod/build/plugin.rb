@@ -30,10 +30,6 @@ module Klenod
       def invalidate_module_ids(_paths, _context)
         []
       end
-
-      def emit_assets(_record, _context)
-        []
-      end
     end
   end
 end

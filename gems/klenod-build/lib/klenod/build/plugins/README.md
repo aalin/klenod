@@ -27,7 +27,7 @@ Plugins participate in graph collection through these hooks:
 - `import_value`: provides the value that development code receives from an evaluated import.
 - `runtime_import_value`: provides the value or instruction that a runtime bundle stores.
 
-Plugins can also implement `invalidate_module_ids` for custom invalidation and `emit_assets` for assets derived from collected records.
+Plugins can also implement `invalidate_module_ids` for custom invalidation.
 
 ## Default Plugin Set
 
