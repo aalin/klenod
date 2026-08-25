@@ -2,20 +2,25 @@
 
 Klenod is an experimental module bundler for Ruby, inspired by JavaScript bundlers.
 
-Klenod reads files from a source directory, applies plugins, records a dependency graph, and writes a runtime bundle. The runtime bundle can run without build plugins.
+Klenod reads files from a source directory, applies plugins, records a dependency graph, and writes a runtime bundle.
+The runtime bundle can run without build plugins.
 
-The project is still early. The core graph, bundle, asset, router, Haml, CSS, and example-app paths are usable.
+Klenod was created because I needed a better module system for my web framework [Mayu](https://github.com/mayu-live/framework).
+
+The project is still early in development. Contributions are welcome.
 
 ## Packages
 
-The repository contains four gems:
+The repository contains six gems:
 
 - `klenod-runtime`: loads bundles, evaluates modules, reads source maps, and rewrites backtraces.
 - `klenod-build`: builds graphs, runs plugins, watches files, writes bundles, and provides the CLI.
 - `klenod-rack`: provides Rack helpers for serving bundled assets.
+- `klenod-plugin-css`: adds CSS assets and CSS Modules support.
+- `klenod-plugin-javascript`: adds JavaScript and TypeScript assets.
 - `klenod`: provides a compatibility gem that depends on build and rack.
 
-Production applications that only load a prebuilt bundle usually need `klenod-runtime` only.
+Production applications that only load a prebuilt bundle usually only need `klenod-runtime`.
 
 ## Basic Usage
 
@@ -211,94 +216,31 @@ In development, frameworks can serve `context.asset(path).bytes` or `context.ass
 
 ## Plugins
 
-The default build context includes plugins for Ruby, Haml, Markdown, CSS, SVG, images, and data files.
+The default build context includes these plugins:
 
-Read [Built-in Build Plugins](gems/klenod-build/lib/klenod/build/plugins/README.md) for the plugin list and plugin configuration.
+- [`RubyPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#rubyplugin): collects Ruby imports and prepares them for the runtime.
+- [`IntlPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#intlplugin): loads companion translation files for Haml.
+- [`HamlPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#hamlplugin): transforms Haml into Ruby component classes.
+- [`MarkdownPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#markdownplugin): transforms Markdown into component factory calls.
+- [`GemImportPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#gemimportplugin): resolves modules from exposed paths in installed gems.
+- [`SvgPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#svgplugin): emits SVG assets and image metadata.
+- [`ImagePlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#imageplugin): emits raster images and responsive variants.
+- [`JsonPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#dataplugin-and-data-formats): imports JSON data.
+- [`YamlPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#dataplugin-and-data-formats): imports YAML data.
+- [`TomlPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#dataplugin-and-data-formats): imports TOML data.
+- [`TextPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#dataplugin-and-data-formats): imports text files.
 
-## Haml And Markdown
+The data format plugins use the shared [`DataPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#dataplugin-and-data-formats) base class.
 
-The Haml plugin is an adapter. It does not own rendering policy.
+These built-in plugins are optional:
 
-Applications configure a component base class and an HTML factory:
+- [`GoogleFontsPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#googlefontsplugin): downloads Google Fonts and emits local assets.
+- [`RouterPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#routerplugin): generates a virtual router from a route tree.
 
-```ruby
-Klenod::Build::Plugins::HamlPlugin::Plugin.new(
-  component_base_class: "Example::Component",
-  factory: "Example::H"
-)
-```
+CSS and JavaScript support are separate plugin gems:
 
-Haml files export a component class as `Default`.
-
-```ruby
-Page = import("./+page.haml")
-```
-
-Companion files use fixed names:
-
-- `+page.css` imports as `Styles`.
-- `+page.intl.*.toml` imports as translations.
-
-Markdown files can import as components when `MarkdownPlugin` uses the same factory:
-
-```ruby
-Article = import("./article.md")
-```
-
-Haml can also include inline Markdown:
-
-```haml
-:markdown
-  # Hello
-
-  A paragraph with [a link](/demo).
-```
-
-If `src/markdown-components.rb` exists, Markdown rendering uses its `Default` hash for tag-to-component mappings.
-
-## Router Plugin
-
-Routing belongs to the optional `RouterPlugin`.
-
-Add the plugin, then import `virtual:router`:
-
-```ruby
-router_plugin = Klenod::Build::Plugins::RouterPlugin::Plugin.new
-
-context = Klenod::Build::Context.new(
-  source_dir: "src",
-  plugins: [
-    Klenod::Build::Plugins::RubyPlugin::Plugin.new,
-    router_plugin
-  ]
-)
-
-router = context.entry("virtual:router").exports::Default
-match = router.match("/blog/hello")
-```
-
-The router supports:
-
-- `+page.rb` and `+page.haml`
-- `+route.rb`
-- `+layout.rb` and `+layout.haml`
-- `+error.rb` and `+error.haml`
-- `+not-found.rb` and `+not-found.haml`
-- dynamic and catch-all segments
-- route groups
-- parallel route slots
-- intercepted route segments
-
-A match exposes:
-
-- `match.page`
-- `match.handler`
-- `match.layouts`
-- `match.slots`
-- `match.params`
-- `match.route`
-
-The router does not decide request policy. A framework decides whether a request renders a page or calls a route handler.
+- [`CssPlugin`](gems/klenod-plugin-css/README.md): scopes CSS Modules and emits CSS assets.
+- [`JavaScriptPlugin`](gems/klenod-plugin-javascript/README.md): collects JavaScript dependencies and emits JavaScript assets.
 
 ## Examples
 

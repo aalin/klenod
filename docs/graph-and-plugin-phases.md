@@ -1,63 +1,75 @@
-# Graph And Plugin Phases
+# Graph and Plugin Phases
 
-Klenod separates graph collection from module evaluation.
+Klenod keeps graph collection separate from module evaluation.
 
 ## Graph States
 
-A module can be collected without being evaluated.
+A module can be collected without evaluation.
 
-- Collected: Klenod has read the source, transformed it, resolved imports, collected dependency records, emitted assets, and stored a `ModuleRecord`.
-- Evaluated: Klenod has instantiated a `Klenod::Runtime::Mod` for that record and Ruby top-level code has run.
+- Collected: Klenod reads the source, transforms it, resolves its imports, collects dependency records, emits assets, and stores a `ModuleRecord`.
+- Evaluated: Klenod creates a `Klenod::Runtime::Mod` for the record and runs the top-level Ruby code.
 
-`context.entry(...)` and `context.collect(...)` collect modules and return handles without evaluating app code. `entry.exports`, `entry.call(...)`, `context.exports(...)`, and `context.evaluate(...)` evaluate modules on demand.
+`context.entry(...)` and `context.collect(...)` collect modules. They return handles and do not evaluate application code.
 
-Build mode only needs collected records. It serializes those records into runtime module specs so production can evaluate them later through `Klenod::Runtime::Bundle`.
+These methods evaluate modules when necessary:
+
+- `entry.exports`
+- `entry.call(...)`
+- `context.exports(...)`
+- `context.evaluate(...)`
+
+Build mode only needs collected records. It serializes these records as runtime module specifications. Production evaluates the modules through `Klenod::Runtime::Bundle`.
 
 ## Plugin Hook Phases
 
-Plugin hooks belong to different phases:
+Plugin hooks run during different phases:
 
-- `resolve(dependency, context)` maps an import specifier to a canonical module id.
-- `load(module_id, context)` provides source for virtual modules or custom files.
-- `transform(module_id, code, context)` rewrites source and records dependencies, assets, metadata, source maps, and watched patterns.
-- `finalize(module_id, result, resolved_dependencies, dependency_records, context)` adjusts a transform after eager dependency records are collected.
-- `import_value(resolved_dependency, record, context)` provides the value seen by an evaluated module in development.
-- `runtime_import_value(resolved_dependency, record, context)` provides the value serialized into runtime bundles.
+- `resolve(dependency, context)` maps an import specifier to a canonical module ID.
+- `load(module_id, context)` supplies source code for virtual modules or custom files.
+- `transform(module_id, code, context)` changes source code and records dependencies, assets, metadata, source maps, and watched patterns.
+- `finalize(module_id, result, resolved_dependencies, dependency_records, context)` changes a transform after Klenod collects eager dependency records.
+- `import_value(resolved_dependency, record, context)` supplies the value that an evaluated module receives during development.
+- `runtime_import_value(resolved_dependency, record, context)` supplies the value that Klenod serializes in a runtime bundle.
+- `invalidate_module_ids(paths, context)` supplies more module IDs to invalidate after source paths change.
 
-`transform` and `finalize` are graph collection hooks. They must not require evaluated app exports.
+The `resolve`, `load`, `transform`, and `finalize` hooks collect the graph. These hooks must not require evaluated application exports.
 
-Module ids use URI-like schemes. App source files are stored as `app:/path/to/file.rb`, virtual modules as `virtual:/name.rb`, and plugin-owned module trees can use schemes such as `gem://gem-name/path.rb`. Relative import specifiers resolve from the importer with URL-style rules before app filesystem lookup; plugins can resolve non-app schemes first.
+Module IDs use URI-like schemes. Application source files use IDs such as `app:/path/to/file.rb`. Virtual modules use IDs such as `virtual:/name.rb`.
+
+Plugin-owned module trees can use IDs such as `gem://gem-name/path.rb`. Klenod resolves relative import specifiers from the importer with URL-style rules. Plugins can resolve non-application schemes before Klenod searches the application file system.
 
 ## `import_value`
 
-`import_value` is used when Ruby code is evaluated in the build/dev process.
+Klenod uses `import_value` when it evaluates Ruby code during development.
 
-Example: a Ruby or Haml module imports a CSS file in development:
+For example, a Ruby or Haml module can import a CSS file:
 
 ```ruby
 Styles = import("./+page.css")
 ```
 
-When that importing module is evaluated, Klenod asks plugins for the import value. The CSS plugin returns the class-name map from the collected CSS record. The evaluated module receives that value as `Styles`.
+During evaluation, Klenod asks each plugin for the import value. The CSS plugin returns `Exports::Default` from the generated CSS module.
 
-This hook can depend on build/dev objects such as `Klenod::Build::Asset` and live collected records. It should not be used for production bundle serialization.
+This value is a `ClassNames` object. It contains the scoped class names. The evaluated module receives this object as `Styles`.
 
-Plugins can also use `import_value` when the imported module's `Exports` module is not the value callers should receive.
+The hook can use build and development objects. Examples include `Klenod::Build::Asset` objects and live collected records. Do not use this hook for production bundle serialization.
 
-For example, imagine a plugin for `.thing` files that transforms each file into a Ruby module with a `Default` export:
+A plugin can also use `import_value` when callers must not receive the complete `Exports` module.
+
+For example, a plugin for `.thing` files can generate a Ruby module with a `Default` export:
 
 ```ruby
 Default = Thing.new(name: "Demo")
 ```
 
-Without an import hook, this code receives the whole generated exports module:
+Without an import hook, `import` returns the complete generated exports module:
 
 ```ruby
 Thing = import("./demo.thing")
-# => Mod("demo.thing")::Exports
+# => Mod("app:/demo.thing")::Exports
 ```
 
-If the intended import value is `Exports::Default`, the plugin can provide that during development/evaluation:
+The plugin can return `Exports::Default` during development:
 
 ```ruby
 def import_value(_resolved_dependency, record, context)
@@ -67,26 +79,30 @@ def import_value(_resolved_dependency, record, context)
 end
 ```
 
-Then importing code receives the actual default object:
+The caller then receives the default object:
 
 ```ruby
 Thing = import("./demo.thing")
 # => #<Thing name="Demo">
 ```
 
-Returning `nil` means "this plugin does not handle this import value." Klenod then asks the next plugin, and if no plugin handles it, falls back to returning the target module's `Exports`.
+A `nil` return value means that the plugin does not supply an import value. Klenod then asks the next plugin.
+
+If no plugin supplies a value, Klenod returns the target module's `Exports` module.
 
 ## `runtime_import_value`
 
-`runtime_import_value` is used while building a runtime bundle.
+Klenod uses `runtime_import_value` when it builds a runtime bundle.
 
-Build mode does not evaluate app modules, so it cannot ask evaluated exports for import values. Instead, it serializes runtime module specs and stores any special import value metadata directly in the bundle.
+Build mode does not evaluate application modules. Thus, it cannot get import values from evaluated exports. It serializes runtime module specifications and special import-value metadata instead.
 
-Example: CSS imports need the same class-name map at runtime. The CSS plugin therefore also provides `runtime_import_value`, and the runtime bundle stores that map in the import spec. When production evaluates the importing module later, the runtime import resolves to the stored class map without requiring the CSS plugin.
+For example, a generated CSS module creates a `ClassNames` object as `Exports::Default`. The CSS plugin returns a `Klenod::Runtime::DefaultImport` instruction for the bundle.
 
-Plugins should implement `runtime_import_value` only for values that are safe to serialize and available from collected records or transform metadata.
+During production evaluation, the runtime evaluates the CSS module. It then returns `Exports::Default` to the importer. Production does not require the CSS plugin.
 
-For the `.thing` plugin above, the runtime bundle should not need the build plugin just to know that imports should read `Exports::Default`. The plugin can return a small serializable instruction instead:
+Only use `runtime_import_value` for values that are safe to serialize. These values must be available from collected records or transform metadata.
+
+The runtime bundle does not need the `.thing` build plugin to use `Exports::Default`. The plugin can return a small serializable instruction:
 
 ```ruby
 def runtime_import_value(_resolved_dependency, record, _context)
@@ -96,24 +112,29 @@ def runtime_import_value(_resolved_dependency, record, _context)
 end
 ```
 
-During bundle execution, the runtime uses that instruction to instantiate the target module, read its `Exports`, and return `Exports::Default` to the importer.
+During bundle execution, the runtime uses this instruction to evaluate the target module. It reads `Exports` and returns `Exports::Default` to the importer.
 
-The two hooks therefore answer the same question in different environments:
+The two hooks answer the same question in different environments:
 
 ```text
-development/evaluation:
-  import_value -> actual Ruby value now
+development evaluation:
+  import_value -> current Ruby value
 
 bundle serialization:
-  runtime_import_value -> serializable instruction or data for later
+  runtime_import_value -> serializable instruction or data
 ```
 
-Some plugins return plain serializable data from both hooks. A CSS plugin can return a class-name hash in development and store the same hash in the bundle. Other plugins return a live value from `import_value` and a `Klenod::Runtime::DefaultImport` marker from `runtime_import_value`.
+Some plugins return plain serializable data from both hooks. Data-format plugins use the hooks as follows:
 
-## Rule Of Thumb
+- `import_value` returns the evaluated `Exports::Default` value.
+- `runtime_import_value` returns the same parsed value from collected metadata.
 
-Use `import_value` for development-time evaluated imports.
+Other plugins return a live value from `import_value`. They return a `Klenod::Runtime::DefaultImport` marker from `runtime_import_value`.
 
-Use `runtime_import_value` for production bundle import values.
+## Rule of Thumb
 
-Do not make `runtime_import_value` call `import_value` unless that is explicitly safe for the plugin. Runtime serialization must not depend on evaluated build-time exports.
+Use `import_value` for evaluated imports during development.
+
+Use `runtime_import_value` for import values in production bundles.
+
+Do not make `runtime_import_value` call `import_value` unless the plugin can do this safely. Runtime serialization must not depend on evaluated build-time exports.
