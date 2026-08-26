@@ -37,5 +37,5 @@ span::before {
 .body {
   display: grid;
   gap: var(--space-4);
-  max-width: 72ch;
+  max-width: 36rem;
 }
