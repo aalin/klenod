@@ -22,11 +22,12 @@ class Klenod::Build::ResolutionErrorFormatter::Test < Minitest::Test
 
           Import:      /components/Docssection.haml
           Imported by: routes/page.haml:2
+          Source root: /app/src
 
           Use:
             - /components/DocsSection.haml
       TEXT
-      Klenod::Build::ResolutionErrorFormatter.format(error)
+      Klenod::Build::ResolutionErrorFormatter.format(error, source_root: "/app/src")
     )
   end
 
@@ -80,6 +81,22 @@ class Klenod::Build::ResolutionErrorFormatter::Test < Minitest::Test
       .with_resolution_context(dependency: dependency, importer_id: dependency.importer_id)
 
     assert_equal("gem://klenod-ui/components/Page.rb:4", error.imported_by)
+  end
+
+  def test_formats_a_compact_ansi_error_heading
+    error = resolution_error(:incorrect_case, suggestions: ["app:/components/DocsSection.haml"])
+    formatted = Klenod::Build::ResolutionErrorFormatter.format(
+      error,
+      source_context: "Source:\n\e[1;31m> 2 | broken\e[0m\n  3 | valid",
+      ansi: true
+    )
+
+    assert_match(/\A\e\[1;31;47m ERROR /, formatted)
+    assert_includes(formatted, "Incorrect import path casing")
+    assert_includes(formatted, "#{Klenod::Build::ResolutionErrorFormatter::ANSI_BACKGROUND}\n\n  Import:")
+    assert_includes(formatted, "> 2 | broken#{Klenod::Build::ResolutionErrorFormatter::ANSI_BACKGROUND}")
+    assert_match(/\e\[0m\z/, formatted)
+    refute_includes(formatted, "Backtrace:")
   end
 
   private

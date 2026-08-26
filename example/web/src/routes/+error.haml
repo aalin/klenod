@@ -31,6 +31,7 @@
   if resolution_error && $error_source
     source_details = "#{$error_source.fetch(:path)}\n#{source_excerpt($error_source.fetch(:source), $error_source.fetch(:line))}"
   end
+  backtrace_details = "" if resolution_error
 
 %article
   %PageHeader{
@@ -54,6 +55,11 @@
               %dt Imported by
               %dd
                 %code= $error.imported_by
+          = if $source_root
+            %div
+              %dt Source root
+              %dd
+                %code= $source_root
         = if !$error.suggestions.empty?
           .resolution-suggestions
             %strong= $error.reason == :incorrect_case ? "Use:" : "Did you mean?"
@@ -72,9 +78,10 @@
           %div
             %dt Path
             %dd= $path
-    %Panel{ title: "Backtrace" }
-      %pre.trace-block
-        %code= backtrace_details
+    = if !backtrace_details.empty?
+      %Panel{ title: "Backtrace" }
+        %pre.trace-block
+          %code= backtrace_details
     = if !source_details.empty?
       %Panel{ title: "Source context" }
         %pre.source-block

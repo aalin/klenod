@@ -702,6 +702,7 @@ class Klenod::ExampleTest < Minitest::Test
     error.set_backtrace([])
     formatted = Example::ServerErrors.format_exception(error, config.context)
     update_formatted = Example::ServerErrors.format_update_error(dependency.importer_id, error, config.context)
+    source_root = config.context.graph.source_dir.to_s
     error_page = Example::DevelopmentErrorPage.new(config: config, context: config.context)
     status, _headers, body =
       error_page.response_for(
@@ -713,20 +714,26 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(500, status)
     assert_includes(Example::ServerFormatting.strip_ansi(formatted), "Import:      /components/Docssection.haml")
+    refute_includes(formatted, "Backtrace:")
     assert_includes(update_formatted, "Imported by: entrypoint.rb:1")
+    assert_includes(update_formatted, "Source root: #{source_root}")
     assert_includes(Example::ServerFormatting.strip_ansi(update_formatted), "Source:\n> 1 | # frozen_string_literal: true")
     refute_includes(update_formatted, "haml_import")
     assert_includes(html, "Incorrect import path casing")
     assert_includes(html, "<dt>Import</dt><dd><code>/components/Docssection.haml</code></dd>")
     assert_includes(html, "<dt>Imported by</dt><dd><code>entrypoint.rb:1</code></dd>")
+    assert_includes(html, "<dt>Source root</dt><dd><code>#{source_root}</code></dd>")
     assert_includes(html, "<strong>Use</strong>")
     assert_includes(html, "<code>/components/DocsSection.haml</code>")
     assert_includes(html, "<h2>Source</h2>")
     assert_includes(html, "&gt; 1 | # frozen_string_literal: true")
+    refute_includes(html, "<h2>Backtrace</h2>")
     refute_includes(html, "haml_import")
 
     context = config.context
-    context.entry(config.entrypoints.fetch(0))
+    entry = context.entry(config.entrypoints.fetch(0))
+    routed_formatted = entry.exports::App.send(:format_render_error, error, context)
+    refute_includes(routed_formatted, "Backtrace:")
     error_component = context.exports("virtual:router.rb")::Default.error("/docs/assets").page
     rendered =
       Example::H.render(
@@ -736,7 +743,8 @@ class Klenod::ExampleTest < Minitest::Test
             status: 500,
             error: error,
             error_details: "Resolution details\nBacktrace:\nframe.rb:1",
-            error_source: nil
+            error_source: nil,
+            source_root: source_root
           )
           .render
       )
@@ -744,6 +752,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(rendered, "Module resolution error")
     assert_includes(rendered, "Incorrect import path casing")
     assert_includes(rendered, "/components/DocsSection.haml")
+    assert_includes(rendered, source_root)
+    refute_includes(rendered, "Backtrace")
     refute_includes(rendered, "haml_import")
   end
 
@@ -899,6 +909,24 @@ class Klenod::ExampleTest < Minitest::Test
     recent_errors.remember(error, logged_at: -Example::RecentErrorLog::DEFAULT_REPEAT_INTERVAL)
 
     _stdout, stderr = capture_io { recent_errors.warn_unless_recent(RuntimeError.new("broken module"), "formatted error") }
+
+    assert_equal("formatted error\n", stderr)
+  end
+
+  def test_example_server_does_not_suppress_repeated_module_resolution_errors
+    recent_errors = Example::RecentErrorLog.new
+    error =
+      Klenod::Build::ResolveError.new(
+        nil,
+        unresolved_path: "components/Missing.haml",
+        reason: :not_found,
+        requested_specifier: "/components/Missing.haml",
+        suggestions: []
+      )
+
+    recent_errors.remember(error)
+
+    _stdout, stderr = capture_io { recent_errors.warn_unless_recent(error, "formatted error") }
 
     assert_equal("formatted error\n", stderr)
   end

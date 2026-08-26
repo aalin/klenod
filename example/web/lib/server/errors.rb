@@ -8,6 +8,14 @@ module Example
 
     def format_exception(error, context)
       return format_parse_update_error(error) if error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError)
+      if resolution_error?(error)
+        return Klenod::Build::ResolutionErrorFormatter.format(
+          error,
+          source_root: source_root(context),
+          source_context: source_context_for_resolution_error(error, context),
+          ansi: ansi?
+        )
+      end
 
       mods =
         context.graph.mods.each_with_object({}) do |(module_id, mod), index|
@@ -15,22 +23,19 @@ module Example
           index[module_id.path] = mod
         end
 
-      rewriter = Klenod::Runtime::BacktraceRewriter.new(mods)
-      return rewriter.format_exception(error) unless resolution_error?(error)
-
-      formatted = Klenod::Build::ResolutionErrorFormatter.format(error)
-      title, details = formatted.split("\n", 2)
-      rewriter.format_exception(error, title: title, details: details&.sub(/\A\n/, ""))
+      Klenod::Runtime::BacktraceRewriter.new(mods).format_exception(error)
     end
 
     def format_update_error(module_id, error, context)
       return format_parse_update_error(error) if error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError)
 
       if resolution_error?(error)
-        return [
-          Klenod::Build::ResolutionErrorFormatter.format(error),
-          source_context_for_resolution_error(error, context)
-        ].compact.join("\n\n")
+        return Klenod::Build::ResolutionErrorFormatter.format(
+          error,
+          source_root: source_root(context),
+          source_context: source_context_for_resolution_error(error, context),
+          ansi: ansi?
+        )
       end
 
       [
@@ -68,9 +73,17 @@ module Example
       error.is_a?(Klenod::Build::ResolveError) && error.resolution_failure?
     end
 
+    def source_root(context)
+      context.graph.source_dir if context&.respond_to?(:graph)
+    end
+
+    def ansi?
+      !ENV.key?("NO_COLOR")
+    end
+
     def source_context_for_resolution_error(error, context)
       location = error.source_location
-      return nil unless location&.line
+      return nil unless location&.line && context&.respond_to?(:graph)
 
       module_id = Klenod::Build::ModuleId.parse(location.path)
       source_path = context.graph.absolute_path(module_id)

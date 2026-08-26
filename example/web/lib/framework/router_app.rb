@@ -44,7 +44,10 @@ module Example
         warn formatted_error
         error_request = Request.from(raw_request, params: error_match.params, localized: localized)
         error_props = {path: path, status: 500, error: error, error_details: strip_ansi(formatted_error)}
-        error_props[:error_source] = resolution_error_source(error, context) if resolution_error?(error)
+        if resolution_error?(error)
+          error_props[:error_source] = resolution_error_source(error, context)
+          error_props[:source_root] = resolution_source_root(context)
+        end
         render_page_response(error_match, error_request, context, raw_request: raw_request, status: 500, props: error_props)
       end
     end
@@ -135,14 +138,15 @@ module Example
             context.modules
           end
 
-        rewriter = Klenod::Runtime::BacktraceRewriter.new(mods || {})
         if resolution_error?(error) && defined?(Klenod::Build::ResolutionErrorFormatter)
-          formatted = Klenod::Build::ResolutionErrorFormatter.format(error)
-          title, details = formatted.split("\n", 2)
-          return rewriter.format_exception(error, title: title, details: details&.sub(/\A\n/, ""))
+          return Klenod::Build::ResolutionErrorFormatter.format(
+            error,
+            source_root: resolution_source_root(context),
+            ansi: !ENV.key?("NO_COLOR")
+          )
         end
 
-        return rewriter.format_exception(error)
+        return Klenod::Runtime::BacktraceRewriter.new(mods || {}).format_exception(error)
       end
 
       error.full_message
@@ -167,6 +171,10 @@ module Example
       {path: location.path, source: source_path.read, line: location.line}
     rescue Klenod::Build::ResolveError, ArgumentError
       nil
+    end
+
+    def resolution_source_root(context)
+      context.graph.source_dir if context.respond_to?(:graph)
     end
 
     def stylesheet_links(asset_references)

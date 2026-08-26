@@ -29,7 +29,7 @@ module Example
     end
 
     def warn_unless_recent(error, formatted)
-      return if recent?(error)
+      return if recent?(error) && !resolution_error?(error)
 
       warn formatted
       remember(error)
@@ -41,6 +41,10 @@ module Example
 
     def key(error)
       [error.class.name, ServerFormatting.strip_ansi(error.message)]
+    end
+
+    def resolution_error?(error)
+      error.respond_to?(:resolution_failure?) && error.resolution_failure?
     end
 
     def current_time

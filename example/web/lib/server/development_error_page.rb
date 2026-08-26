@@ -46,7 +46,7 @@ module Example
       end
     end
 
-    def resolution_error_values(request, error, formatted)
+    def resolution_error_values(request, error, _formatted)
       {
         "ERROR_LABEL" => "Module resolution error",
         "ERROR_TITLE" => escape_html(error.title),
@@ -54,7 +54,7 @@ module Example
         "REQUEST_PATH" => escape_html(request_path(request)),
         "ERROR_LIST" => resolution_details_html(error),
         "SOURCE_SECTION" => resolution_source_section_html(error),
-        "BACKTRACE_SECTION" => resolution_backtrace_section_html(formatted)
+        "BACKTRACE_SECTION" => ""
       }
     end
 
@@ -121,6 +121,7 @@ module Example
     def resolution_details_html(error)
       rows = [resolution_detail_row("Import", error.requested_specifier)]
       rows << resolution_detail_row("Imported by", error.imported_by) if error.imported_by
+      rows << resolution_detail_row("Source root", context.graph.source_dir) if context&.respond_to?(:graph)
       suggestions =
         if error.suggestions.empty?
           ""
@@ -148,14 +149,6 @@ module Example
       source_section_html(source_path.read, location.line)
     rescue Klenod::Build::ResolveError, ArgumentError
       ""
-    end
-
-    def resolution_backtrace_section_html(formatted)
-      plain = ServerFormatting.strip_ansi(formatted)
-      _summary, separator, backtrace = plain.partition("Backtrace:\n")
-      return "" if separator.empty? || backtrace.strip.empty?
-
-      pre_section_html("Backtrace", backtrace.strip)
     end
 
     def resolution_error?(error)
