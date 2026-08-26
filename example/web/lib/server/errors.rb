@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "klenod/build/resolution_error_formatter"
+
 module Example
   module ServerErrors
     module_function
@@ -13,11 +15,23 @@ module Example
           index[module_id.path] = mod
         end
 
-      Klenod::Runtime::BacktraceRewriter.new(mods).format_exception(error)
+      rewriter = Klenod::Runtime::BacktraceRewriter.new(mods)
+      return rewriter.format_exception(error) unless resolution_error?(error)
+
+      formatted = Klenod::Build::ResolutionErrorFormatter.format(error)
+      title, details = formatted.split("\n", 2)
+      rewriter.format_exception(error, title: title, details: details&.sub(/\A\n/, ""))
     end
 
     def format_update_error(module_id, error, context)
       return format_parse_update_error(error) if error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError)
+
+      if resolution_error?(error)
+        return [
+          Klenod::Build::ResolutionErrorFormatter.format(error),
+          source_context_for_resolution_error(error, context)
+        ].compact.join("\n\n")
+      end
 
       [
         "#{module_id}: #{error.class}",
@@ -48,6 +62,23 @@ module Example
 
     def strip_ansi(value)
       value.gsub(/\e\[[0-9;]*m/, "")
+    end
+
+    def resolution_error?(error)
+      error.is_a?(Klenod::Build::ResolveError) && error.resolution_failure?
+    end
+
+    def source_context_for_resolution_error(error, context)
+      location = error.source_location
+      return nil unless location&.line
+
+      module_id = Klenod::Build::ModuleId.parse(location.path)
+      source_path = context.graph.absolute_path(module_id)
+      return nil unless source_path.file?
+
+      source_excerpt(source_path.read, location.line)
+    rescue Klenod::Build::ResolveError, ArgumentError
+      nil
     end
 
     def source_context_for_update_error(module_id, error, context)

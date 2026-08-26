@@ -44,13 +44,15 @@ module Klenod
         @constant_display_names = constant_display_names_for(mods)
       end
 
-      def format_exception(e, source_path: nil)
+      def format_exception(e, source_path: nil, title: nil, details: nil)
         reset = "\e[0;48;5;52m"
         rewrite_exception(e)
         sources = format_sources(e.backtrace)
+        title ||= "#{e.class.name}: #{e.message}"
 
         [
-          "\e[1;31;47m ERROR \e[3;31;47m #{e.class.name}: #{e.message} #{reset}",
+          "\e[1;31;47m ERROR \e[3;31;47m #{title} #{reset}",
+          details,
           "\e[1;34mBacktrace:#{reset}",
           e
             .backtrace

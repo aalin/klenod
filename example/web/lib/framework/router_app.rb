@@ -43,7 +43,9 @@ module Example
         formatted_error = format_render_error(error, context)
         warn formatted_error
         error_request = Request.from(raw_request, params: error_match.params, localized: localized)
-        render_page_response(error_match, error_request, context, raw_request: raw_request, status: 500, props: {path: path, status: 500, error: error, error_details: strip_ansi(formatted_error)})
+        error_props = {path: path, status: 500, error: error, error_details: strip_ansi(formatted_error)}
+        error_props[:error_source] = resolution_error_source(error, context) if resolution_error?(error)
+        render_page_response(error_match, error_request, context, raw_request: raw_request, status: 500, props: error_props)
       end
     end
 
@@ -133,7 +135,14 @@ module Example
             context.modules
           end
 
-        return Klenod::Runtime::BacktraceRewriter.new(mods || {}).format_exception(error)
+        rewriter = Klenod::Runtime::BacktraceRewriter.new(mods || {})
+        if resolution_error?(error) && defined?(Klenod::Build::ResolutionErrorFormatter)
+          formatted = Klenod::Build::ResolutionErrorFormatter.format(error)
+          title, details = formatted.split("\n", 2)
+          return rewriter.format_exception(error, title: title, details: details&.sub(/\A\n/, ""))
+        end
+
+        return rewriter.format_exception(error)
       end
 
       error.full_message
@@ -141,6 +150,23 @@ module Example
 
     def strip_ansi(value)
       value.gsub(/\e\[[0-9;]*m/, "")
+    end
+
+    def resolution_error?(error)
+      defined?(Klenod::Build::ResolveError) && error.is_a?(Klenod::Build::ResolveError) && error.resolution_failure?
+    end
+
+    def resolution_error_source(error, context)
+      location = error.source_location
+      return nil unless location&.line && context.respond_to?(:graph)
+
+      module_id = Klenod::Build::ModuleId.parse(location.path)
+      source_path = context.graph.absolute_path(module_id)
+      return nil unless source_path.file?
+
+      {path: location.path, source: source_path.read, line: location.line}
+    rescue Klenod::Build::ResolveError, ArgumentError
+      nil
     end
 
     def stylesheet_links(asset_references)

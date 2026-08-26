@@ -224,6 +224,14 @@ dependency =
 
 `Dependency.create` creates an eager dependency. Klenod resolves and collects eager dependencies before it calls `finalize`.
 
+Set `loc` to a `SourceLocation` when the plugin knows the import position:
+
+```ruby
+loc = Klenod::Build::SourceLocation.new(module_id.to_s, line, column)
+```
+
+Line and column numbers start at 1. Klenod uses this location in module resolution errors.
+
 Set `eager: false` when generated source uses `__klenod_lazy_import__`. The runtime then defers the import until application code calls it.
 
 Use `finalize` when generated output needs information from dependency records. Examples include class names, asset paths, and dependency metadata.

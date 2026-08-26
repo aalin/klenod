@@ -159,7 +159,7 @@ module Klenod
               if ruby_nodes.empty?
                 ""
               else
-                measure_compile(:haml_compile_ruby_filters) { compile_ruby_filters(ruby_nodes, builder: builder, import_rewriter: import_rewriter) }
+                measure_compile(:haml_compile_ruby_filters) { compile_ruby_filters(ruby_nodes, source: source, builder: builder, import_rewriter: import_rewriter) }
               end
             markdown_compiler = MarkdownCompiler.new(factory: factory, components_source: markdown_components_source)
             render =
@@ -487,13 +487,16 @@ module Klenod
             end
           end
 
-          def compile_ruby_filters(nodes, builder:, import_rewriter: nil)
-            builder.ruby_filters(nodes.map { |node| compile_ruby_filter(node, builder: builder, import_rewriter: import_rewriter) })
+          def compile_ruby_filters(nodes, source:, builder:, import_rewriter: nil)
+            builder.ruby_filters(nodes.map { |node| compile_ruby_filter(node, source: source, builder: builder, import_rewriter: import_rewriter) })
           end
 
-          def compile_ruby_filter(node, builder:, import_rewriter: nil)
+          def compile_ruby_filter(node, builder:, source: "", import_rewriter: nil)
             text = node.value.fetch(:text)
-            text = import_rewriter.call(text) if import_rewriter && text.include?("import")
+            if import_rewriter && text.include?("import")
+              source_column_offset = source.lines.fetch(node.line, "").match(/\A\s*/).to_s.length
+              text = import_rewriter.call(text, source_line_offset: node.line, source_column_offset: source_column_offset)
+            end
             heredoc_body_lines = ruby_heredoc_body_lines(text)
             source = +""
             text.each_line.with_index(node.line + 1) do |line, line_no|

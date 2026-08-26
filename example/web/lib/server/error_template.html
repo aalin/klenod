@@ -56,6 +56,10 @@
         overflow-wrap: anywhere;
       }
 
+      .summary code {
+        user-select: all;
+      }
+
       .lead {
         font-size: 1.2rem;
         font-weight: 750;
@@ -74,6 +78,41 @@
 
       .error-list li::marker {
         color: #9c1d1d;
+      }
+
+      .resolution-details {
+        display: grid;
+        gap: 0.6rem;
+        margin: 0;
+      }
+
+      .resolution-details div {
+        display: grid;
+        grid-template-columns: 7rem minmax(0, 1fr);
+        gap: 0.75rem;
+      }
+
+      .resolution-details dt {
+        color: #516074;
+        font-weight: 750;
+      }
+
+      .resolution-details dd {
+        min-width: 0;
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .resolution-suggestions {
+        display: grid;
+        gap: 0.45rem;
+      }
+
+      .resolution-suggestions ul {
+        display: grid;
+        gap: 0.35rem;
+        margin: 0;
+        padding-left: 1.25rem;
       }
 
       .panel {

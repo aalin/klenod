@@ -181,6 +181,8 @@ module Klenod
             module_id = ModuleId.new("app:/#{relative_path}", JAVASCRIPT_STYLESHEET_QUERY)
 
             ResolvedDependency.new(dependency, module_id, {})
+          rescue ResolveError => error
+            raise error.with_path_prefix("app:/")
           end
 
           def javascript_stylesheet_dependency?(dependency)
@@ -219,7 +221,11 @@ module Klenod
                       specifier: dependency.url,
                       importer_id: module_id,
                       kind: CSS_DEPENDENCY_TYPES.fetch(dependency.class),
-                      loc: dependency.loc,
+                      loc: SourceLocation.new(
+                        module_id.to_s,
+                        dependency.loc.start.line,
+                        dependency.loc.start.column
+                      ),
                       metadata: {placeholder: dependency.placeholder}
                     )
                     .with(id: "#{module_id}:dependency:#{index}")

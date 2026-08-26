@@ -162,8 +162,10 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
         context_for(dir).evaluate("entry")
       end
 
-      assert_includes(error.message, "Incorrect case for styles/panel.css")
-      assert_includes(error.message, "Use styles/Panel.css")
+      assert_equal('Incorrect case for "../styles/panel.css". Use "../styles/Panel.css".', error.message)
+      assert_equal("app:/scripts/app.ts", error.source_location.path)
+      assert_equal(1, error.source_location.line)
+      assert_operator(error.source_location.column, :>, 0)
     end
   end
 

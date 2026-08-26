@@ -40,6 +40,8 @@ module Klenod
         end
 
         ResolvedDependency.new(dependency, resolved_module_id, {})
+      rescue ResolveError => error
+        raise error.with_path_prefix("app:/").with_resolution_context(dependency: dependency, importer_id: dependency.importer_id)
       end
 
       def absolute_path(module_id)

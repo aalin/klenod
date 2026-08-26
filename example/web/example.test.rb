@@ -680,6 +680,73 @@ class Klenod::ExampleTest < Minitest::Test
     refute_includes(html, "\e[31m")
   end
 
+  def test_example_server_formats_module_resolution_errors_as_structured_html
+    config = example_config
+    dependency =
+      Klenod::Build::Dependency.create(
+        specifier: "/components/Docssection.haml",
+        importer_id: Klenod::Build::ModuleId.new("app:/entrypoint.rb"),
+        kind: :haml_import,
+        loc: Klenod::Build::SourceLocation.new("app:/entrypoint.rb", 1, 1)
+      )
+    error =
+      Klenod::Build::ResolveError
+        .new(
+          nil,
+          unresolved_path: "components/Docssection.haml",
+          reason: :incorrect_case,
+          requested_specifier: "app:/components/Docssection.haml",
+          suggestions: ["app:/components/DocsSection.haml"]
+        )
+        .with_resolution_context(dependency: dependency, importer_id: dependency.importer_id)
+    error.set_backtrace([])
+    formatted = Example::ServerErrors.format_exception(error, config.context)
+    update_formatted = Example::ServerErrors.format_update_error(dependency.importer_id, error, config.context)
+    error_page = Example::DevelopmentErrorPage.new(config: config, context: config.context)
+    status, _headers, body =
+      error_page.response_for(
+        HeaderRequest["GET", "/docs/assets", HeaderList.new([["Accept", "text/html"]])],
+        error,
+        formatted
+      )
+    html = body.join
+
+    assert_equal(500, status)
+    assert_includes(Example::ServerFormatting.strip_ansi(formatted), "Import:      /components/Docssection.haml")
+    assert_includes(update_formatted, "Imported by: entrypoint.rb:1")
+    assert_includes(Example::ServerFormatting.strip_ansi(update_formatted), "Source:\n> 1 | # frozen_string_literal: true")
+    refute_includes(update_formatted, "haml_import")
+    assert_includes(html, "Incorrect import path casing")
+    assert_includes(html, "<dt>Import</dt><dd><code>/components/Docssection.haml</code></dd>")
+    assert_includes(html, "<dt>Imported by</dt><dd><code>entrypoint.rb:1</code></dd>")
+    assert_includes(html, "<strong>Use</strong>")
+    assert_includes(html, "<code>/components/DocsSection.haml</code>")
+    assert_includes(html, "<h2>Source</h2>")
+    assert_includes(html, "&gt; 1 | # frozen_string_literal: true")
+    refute_includes(html, "haml_import")
+
+    context = config.context
+    context.entry(config.entrypoints.fetch(0))
+    error_component = context.exports("virtual:router.rb")::Default.error("/docs/assets").page
+    rendered =
+      Example::H.render(
+        error_component
+          .instantiate(
+            path: "/docs/assets",
+            status: 500,
+            error: error,
+            error_details: "Resolution details\nBacktrace:\nframe.rb:1",
+            error_source: nil
+          )
+          .render
+      )
+
+    assert_includes(rendered, "Module resolution error")
+    assert_includes(rendered, "Incorrect import path casing")
+    assert_includes(rendered, "/components/DocsSection.haml")
+    refute_includes(rendered, "haml_import")
+  end
+
   def test_example_server_formats_haml_parse_error_html_as_sections
     config = example_config
     error_page = Example::DevelopmentErrorPage.new(config: config, context: config.context)

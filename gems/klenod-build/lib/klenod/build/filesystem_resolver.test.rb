@@ -25,7 +25,7 @@ class Klenod::Build::FilesystemResolver::Test < Minitest::Test
       end
 
       assert_equal(
-        "Incorrect case for components/pageheader.haml. Use components/PageHeader.haml.",
+        'Incorrect case for "components/pageheader.haml". Use "components/PageHeader.haml".',
         error.message
       )
     end
@@ -38,7 +38,7 @@ class Klenod::Build::FilesystemResolver::Test < Minitest::Test
       end
 
       assert_equal(
-        "Incorrect case for Components/PageHeader.haml. Use components/PageHeader.haml.",
+        'Incorrect case for "Components/PageHeader.haml". Use "components/PageHeader.haml".',
         error.message
       )
     end
@@ -51,7 +51,7 @@ class Klenod::Build::FilesystemResolver::Test < Minitest::Test
       end
 
       assert_equal(
-        "Incorrect case for components/pageheader. Use components/PageHeader.haml.",
+        'Incorrect case for "components/pageheader". Use "components/PageHeader.haml".',
         error.message
       )
     end

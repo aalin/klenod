@@ -167,7 +167,7 @@ class Klenod::Build::Resolver::Test < Minitest::Test
       end
 
       assert_equal(
-        "Incorrect case for components/pageheader.haml. Use components/PageHeader.haml.",
+        'Incorrect case for "components/pageheader.haml". Use "components/PageHeader.haml".',
         error.message
       )
       assert_equal("components/pageheader.haml", error.unresolved_path)
@@ -187,7 +187,7 @@ class Klenod::Build::Resolver::Test < Minitest::Test
       end
 
       assert_equal(
-        "Incorrect case for components/pageheader. Use components/PageHeader.haml.",
+        'Incorrect case for "components/pageheader". Use "components/PageHeader.haml".',
         error.message
       )
     end

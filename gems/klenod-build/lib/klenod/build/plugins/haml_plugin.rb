@@ -163,7 +163,7 @@ module Klenod
             translations_source = builder.frozen_literal(translations_for(context, module_id)).source
             component_class_name = component_class_name(module_id)
             import_rewriter =
-              lambda do |source|
+              lambda do |source, source_line_offset: 0, source_column_offset: 0|
                 result =
                   RubyImportRewriter
                     .new(
@@ -171,7 +171,9 @@ module Klenod
                       kind: :haml_import,
                       source_dir: context.source_dir,
                       profiler: context.profiler,
-                      dependency_id_offset: import_dependencies.length
+                      dependency_id_offset: import_dependencies.length,
+                      source_line_offset: source_line_offset,
+                      source_column_offset: source_column_offset
                     )
                     .rewrite(source)
                 import_dependencies.concat(result.dependencies)

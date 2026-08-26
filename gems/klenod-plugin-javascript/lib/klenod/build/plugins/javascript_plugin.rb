@@ -221,7 +221,7 @@ module Klenod
                   specifier: import.specifier,
                   importer_id: module_id,
                   kind: import.kind,
-                  loc: import.loc,
+                  loc: source_location(import.loc, module_id),
                   metadata: {
                     start_offset: import.start_offset,
                     end_offset: import.end_offset,
@@ -231,6 +231,13 @@ module Klenod
                 )
                 .with(id: "#{module_id}:dependency:#{index}")
             end
+          end
+
+          def source_location(value, module_id)
+            match = value.to_s.match(/\A(?<path>.*):(?<line>\d+):(?<column>\d+)\z/)
+            return SourceLocation.new(module_id.to_s, nil, nil) unless match
+
+            SourceLocation.new(match[:path], match[:line].to_i, match[:column].to_i)
           end
 
           def rewrite_imports(module_id, source, original_source, imports, resolved_dependencies, dependency_records)

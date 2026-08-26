@@ -31,15 +31,21 @@ module Klenod
 
         unless case_corrections.empty?
           raise ResolveError.new(
-            incorrect_case_message(relative_path, case_corrections),
-            unresolved_path: display_path(relative_path)
+            nil,
+            unresolved_path: display_path(relative_path),
+            reason: :incorrect_case,
+            requested_specifier: display_path(relative_path),
+            suggestions: case_corrections.uniq.map { display_path(it) }.first(MAX_CORRECTIONS)
           )
         end
 
         corrections = spelling_corrections(relative_path)
         raise ResolveError.new(
-          missing_path_message(relative_path, corrections),
-          unresolved_path: display_path(relative_path)
+          nil,
+          unresolved_path: display_path(relative_path),
+          reason: :not_found,
+          requested_specifier: display_path(relative_path),
+          suggestions: corrections.map { display_path(it) }
         )
       end
 
@@ -123,32 +129,6 @@ module Klenod
           .select { |path| root.join(path).file? }
           .map { normalize_path(it) }
           .sort
-      end
-
-      def incorrect_case_message(relative_path, corrections)
-        requested = display_path(relative_path)
-        corrections = corrections.uniq.map { display_path(it) }.first(MAX_CORRECTIONS)
-        return "Incorrect case for #{requested}. Use #{corrections.fetch(0)}." if corrections.one?
-
-        "Incorrect case for #{requested}. #{suggestion_message(corrections)}"
-      end
-
-      def missing_path_message(relative_path, corrections)
-        message = "Could not resolve #{display_path(relative_path)}"
-        return message if corrections.empty?
-
-        "#{message}. #{suggestion_message(corrections.map { display_path(it) })}"
-      end
-
-      def suggestion_message(corrections)
-        "Did you mean #{sentence_list(corrections)}?"
-      end
-
-      def sentence_list(values)
-        return values.fetch(0) if values.one?
-        return values.join(" or ") if values.length == 2
-
-        "#{values[0...-1].join(", ")}, or #{values.fetch(-1)}"
       end
 
       def display_path(relative_path)

@@ -497,26 +497,9 @@ module Klenod
           transform.dependencies.map do |dependency|
             resolve_dependency(dependency)
           rescue ResolveError => error
-            raise ResolveError.new(
-              dependency_resolution_error_message(module_id, dependency, error.message),
-              unresolved_path: error.unresolved_path,
-              dependency: dependency,
-              importer_id: module_id
-            )
+            raise error.with_resolution_context(dependency: dependency, importer_id: module_id)
           end
         end
-      end
-
-      def dependency_resolution_error_message(module_id, dependency, message)
-        details = [
-          "while resolving #{dependency.specifier.inspect}",
-          "for #{module_id}",
-          "from #{dependency.importer_id || "unknown importer"}"
-        ]
-        details << "kind: #{dependency.kind}" if dependency.kind
-        details << "at #{dependency.loc}" if dependency.loc
-
-        "#{message} (#{details.join(", ")})"
       end
 
       def load_eager_dependency_records(resolved_dependencies)

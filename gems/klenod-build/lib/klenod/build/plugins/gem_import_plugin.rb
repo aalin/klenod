@@ -31,6 +31,8 @@ module Klenod
             resolved_path = resolve_existing_path(module_id)
             resolved_id = module_id_for_path(module_id, resolved_path)
             ResolvedDependency.new(dependency, resolved_id, {scheme: :gem, path: resolved_path.to_s})
+          rescue ResolveError => error
+            raise error.with_resolution_context(dependency: dependency, importer_id: dependency.importer_id)
           end
 
           def load(module_id, _context)
@@ -61,7 +63,13 @@ module Klenod
               @resolved_paths[key] = resolved
             end
           rescue ResolveError => error
-            raise ResolveError.new(error.message, unresolved_path: module_id.to_s)
+            raise ResolveError.new(
+              error.resolution_failure? ? nil : error.message,
+              unresolved_path: module_id.to_s,
+              reason: error.reason,
+              requested_specifier: error.requested_specifier,
+              suggestions: error.suggestions
+            )
           end
 
           def path_for(module_id)

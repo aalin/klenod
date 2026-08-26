@@ -39,12 +39,14 @@ module Klenod
       IMPORT_SOURCE_PATTERN = /(?<![A-Za-z0-9_])(?:import|lazy_import|import_glob)\s*(?:\(|["'])/
       FAST_LITERAL_IMPORT_PATTERN = /(?<![A-Za-z0-9_])(import|lazy_import)\s*\(\s*("(?:\\.|[^"\\#])*")\s*\)/
 
-      def initialize(module_id:, kind:, source_dir: nil, profiler: nil, dependency_id_offset: 0)
+      def initialize(module_id:, kind:, source_dir: nil, profiler: nil, dependency_id_offset: 0, source_line_offset: 0, source_column_offset: 0)
         @module_id = module_id
         @kind = kind
         @source_dir = source_dir && Pathname.new(source_dir).expand_path
         @profiler = profiler
         @dependency_id_offset = dependency_id_offset
+        @source_line_offset = source_line_offset
+        @source_column_offset = source_column_offset
       end
 
       def rewrite(code)
@@ -97,7 +99,8 @@ module Klenod
               .create(
                 specifier: specifier,
                 importer_id: @module_id,
-                kind: @kind
+                kind: @kind,
+                loc: source_location_for_offset(code, match.begin(0))
               )
               .with(eager: IMPORT_METHODS.fetch(match[1]).fetch(:eager))
               .with(id: "#{@module_id}:dependency:#{@dependency_id_offset + index}")
@@ -294,7 +297,7 @@ module Klenod
             specifier: call.specifier,
             importer_id: @module_id,
             kind: @kind,
-            loc: call.location
+            loc: source_location(call.location)
           )
           .with(eager: call.eager)
           .with(id: "#{@module_id}:dependency:#{dependency_index}")
@@ -322,7 +325,7 @@ module Klenod
                 specifier: specifier,
                 importer_id: @module_id,
                 kind: @kind,
-                loc: call.location
+                loc: source_location(call.location)
               )
               .with(eager: call.eager)
               .with(metadata: {glob_key: specifier.split("?", 2).first})
@@ -339,6 +342,21 @@ module Klenod
         ]
 
         [dependencies, watched_patterns]
+      end
+
+      def source_location(location)
+        SourceLocation.new(
+          @module_id.to_s,
+          location.start_line + @source_line_offset,
+          location.start_column + 1 + @source_column_offset
+        )
+      end
+
+      def source_location_for_offset(source, offset)
+        prefix = source[0...offset]
+        line = prefix.count("\n") + 1
+        column = prefix.length - (prefix.rindex("\n") || -1)
+        SourceLocation.new(@module_id.to_s, line + @source_line_offset, column + @source_column_offset)
       end
 
       def absolute_pattern_for(path_pattern)

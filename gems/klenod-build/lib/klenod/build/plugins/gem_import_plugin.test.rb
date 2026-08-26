@@ -93,7 +93,7 @@ module Klenod
               end
 
               assert_equal(
-                "Incorrect case for gem://klenod-ui/components/pageheader. Use gem://klenod-ui/components/PageHeader.rb.",
+                'Incorrect case for "gem://klenod-ui/components/pageheader". Use "gem://klenod-ui/components/PageHeader.rb".',
                 error.message
               )
               assert_equal("gem://klenod-ui/components/pageheader", error.unresolved_path)
@@ -113,6 +113,21 @@ module Klenod
 
               assert_includes(error.message, "gem://klenod-ui/components/PageHeader.rb")
               assert_includes(error.message, "gem://klenod-ui/components/PageHeader.haml")
+            end
+          end
+
+          def test_suggests_a_relative_replacement_inside_a_gem
+            with_fake_gem("klenod-ui") do |dir|
+              FileUtils.mkdir_p("#{dir}/klenod/components")
+              File.write("#{dir}/klenod/components/PageHeader.rb", "")
+              File.write("#{dir}/klenod/components/Entry.rb", "Header = import(\"./pageheader\")\n")
+
+              error = assert_raises(Klenod::Build::ResolveError) do
+                context_for(source_dir: dir).evaluate("gem://klenod-ui/components/Entry.rb")
+              end
+
+              assert_equal("./pageheader", error.requested_specifier)
+              assert_equal(["./PageHeader.rb"], error.suggestions)
             end
           end
 

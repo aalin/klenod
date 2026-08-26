@@ -1448,7 +1448,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_nil(applied.asset_write_result)
       assert_equal(result.errors, applied.errors)
       assert_equal(result.errors.to_a, applied.each_error.to_a)
-      assert_equal(["app:/entry.rb: Klenod::Build::ResolveError: Could not resolve dep (while resolving \"dep\", for app:/entry.rb, from app:/entry.rb, kind: ruby_import)"], applied.error_messages)
+      assert_equal(['app:/entry.rb: Klenod::Build::ResolveError: Could not resolve "dep"'], applied.error_messages)
       refute(applied.asset_files_changed?)
       assert_equal([], applied.written_asset_paths)
       assert_equal([], applied.removed_asset_paths)

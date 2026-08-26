@@ -30,6 +30,21 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
     end
   end
 
+  def test_css_import_resolution_errors_include_the_source_location
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/reset.css", "body { margin: 0; }\n")
+      File.write("#{dir}/styles/main.css", "@import \"./resett.css\";\n")
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/main.css\")\n")
+
+      error = assert_raises(Klenod::Build::ResolveError) { context_for(dir).evaluate("entry") }
+
+      assert_equal("./resett.css", error.requested_specifier)
+      assert_equal(["./reset.css"], error.suggestions)
+      assert_equal(Klenod::Build::SourceLocation.new("app:/styles/main.css", 1, 9), error.source_location)
+    end
+  end
+
   def test_css_class_map_resolves_local_global_and_dependency_compositions
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")

@@ -27,7 +27,19 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
 
     assert_equal(1, result.dependencies.length)
     assert_equal("../dep", result.dependencies.first.specifier)
+    assert_equal(Klenod::Build::SourceLocation.new("app:/pages/page.rb", 1, 7), result.dependencies.first.loc)
     assert_includes(result.code, "__klenod_import__(\"app:/pages/page.rb:dependency:0\")")
+  end
+
+  def test_records_locations_for_imports_that_use_the_syntax_tree_scan
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        "Dep = import(\n  \"../dep\"\n)\n",
+        transform_context
+      )
+
+    assert_equal(Klenod::Build::SourceLocation.new("app:/pages/page.rb", 1, 7), result.dependencies.first.loc)
   end
 
   def test_rewrites_literal_imports_without_syntax_tree_scan

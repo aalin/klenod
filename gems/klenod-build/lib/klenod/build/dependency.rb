@@ -2,6 +2,13 @@
 
 module Klenod
   module Build
+    SourceLocation =
+      Data.define(:path, :line, :column) do
+        def to_s
+          [path, line, column].compact.join(":")
+        end
+      end
+
     Dependency =
       Data.define(:id, :specifier, :importer_id, :kind, :loc, :metadata, :eager) do
         def self.create(specifier:, importer_id:, kind:, loc: nil, metadata: {})

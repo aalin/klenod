@@ -10,9 +10,27 @@
     [backtrace.strip, sources.strip]
   end
 
+  def source_excerpt(source, line)
+    lines = source.lines
+    index = line - 1
+    first = [index - 2, 0].max
+    last = [index + 2, lines.length - 1].min
+    width = (last + 1).to_s.length
+
+    (first..last).map do |line_index|
+      marker = line_index == index ? ">" : " "
+      number = (line_index + 1).to_s.rjust(width)
+      "#{marker} #{number} | #{lines.fetch(line_index).chomp}"
+    end.join("\n")
+  end
+
 :ruby
   error_details = $error_details || $error.full_message
   backtrace_details, source_details = split_error_details(error_details)
+  resolution_error = $error.respond_to?(:resolution_failure?) && $error.resolution_failure?
+  if resolution_error && $error_source
+    source_details = "#{$error_source.fetch(:path)}\n#{source_excerpt($error_source.fetch(:source), $error_source.fetch(:line))}"
+  end
 
 %article
   %PageHeader{
@@ -22,16 +40,38 @@
   }
   %section.error-details
     %Panel{ title: "Error summary" }
-      .message-card
-        %span= $error.class
-        %p= $error.message
-      %dl.summary-list
-        %div
-          %dt Status
-          %dd= $status
-        %div
-          %dt Path
-          %dd= $path
+      = if resolution_error
+        .message-card
+          %span Module resolution error
+          %p= $error.title
+        %dl.summary-list
+          %div
+            %dt Import
+            %dd
+              %code= $error.requested_specifier
+          = if $error.imported_by
+            %div
+              %dt Imported by
+              %dd
+                %code= $error.imported_by
+        = if !$error.suggestions.empty?
+          .resolution-suggestions
+            %strong= $error.reason == :incorrect_case ? "Use:" : "Did you mean?"
+            %ul
+              = $error.suggestions.map do |suggestion|
+                %li
+                  %code= suggestion
+      = else
+        .message-card
+          %span= $error.class
+          %p= $error.message
+        %dl.summary-list
+          %div
+            %dt Status
+            %dd= $status
+          %div
+            %dt Path
+            %dd= $path
     %Panel{ title: "Backtrace" }
       %pre.trace-block
         %code= backtrace_details

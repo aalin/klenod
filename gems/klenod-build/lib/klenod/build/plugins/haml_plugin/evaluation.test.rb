@@ -1006,7 +1006,9 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
 
       refute_includes(record.transformed_source, "import(\"components/details.haml\")")
       assert_includes(record.transformed_source, "__klenod_import__(\"app:/page.haml:dependency:0\")")
-      assert_equal(["app:/page.haml:dependency:0"], record.dependencies.select { |dependency| dependency.kind == :haml_import }.map(&:id))
+      haml_dependency = record.dependencies.find { |dependency| dependency.kind == :haml_import }
+      assert_equal("app:/page.haml:dependency:0", haml_dependency.id)
+      assert_equal(Klenod::Build::SourceLocation.new("app:/page.haml", 2, 13), haml_dependency.loc)
       assert_same(details_class, exports::Default.const_get(:Details))
       assert_equal(
         [
