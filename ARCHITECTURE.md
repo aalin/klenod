@@ -165,7 +165,7 @@ The Haml transformer can automatically apply scoped tag classes and explicit Ham
 
 CSS order is derived from route-scoped graph traversal. Root/layout CSS should come before page and component CSS.
 
-External CSS-like imports can be handled by adjacent plugins instead of overloading the CSS plugin. `GoogleFontsPlugin` resolves Google Fonts CSS URLs, downloads the CSS during collection to discover font files, rewrites font URLs to local asset paths, and emits font files as lazy IO-generated assets. The default fetcher uses one `Async::HTTP::Internet` instance so multiple font downloads can reuse HTTP clients while remaining bounded by the IO queue.
+External CSS-like imports can be handled by adjacent plugins instead of overloading the CSS plugin. `GoogleFontsPlugin` resolves Google Fonts CSS URLs, downloads the CSS during collection to discover font files, rewrites font URLs to local asset paths, and emits font files as lazy IO-generated assets. It also uses a vendored, attributed [Capsize](https://github.com/seek-oss/capsize) metrics snapshot to emit `"<Family> Fallback"` faces with CSS metric overrides; applications explicitly include those generated family names in their font stacks. The default fetcher uses one `Async::HTTP::Internet` instance so multiple font downloads can reuse HTTP clients while remaining bounded by the IO queue.
 
 ## Haml
 

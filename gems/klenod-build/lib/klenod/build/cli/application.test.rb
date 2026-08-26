@@ -18,6 +18,8 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
     assert_includes(spec.files, "lib/klenod/build/context.rb")
     assert_includes(spec.files, "lib/klenod/build/graphviz.rb")
     assert_includes(spec.files, "lib/klenod/build/plugins/haml_plugin.rb")
+    assert_includes(spec.files, "lib/klenod/build/plugins/google_fonts_plugin/font_metrics.json")
+    assert_includes(spec.files, "lib/klenod/build/plugins/google_fonts_plugin/font_metrics.txt")
     assert_includes(spec.files, "lib/klenod/build/cli/application.rb")
     assert_includes(spec.files, "lib/klenod/build/watcher.rb")
     refute_includes(spec.files, "exe/klenod")

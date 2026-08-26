@@ -17,11 +17,22 @@
       ```ruby
       Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
         cache_path: "tmp/cache/google_fonts",
-        refresh_cache: false
+        refresh_cache: false,
+        adjust_font_fallback: true
       )
       ```
 
       Font file URLs from the returned Google CSS are downloaded and rewritten to content-hashed local asset paths.
+
+  %DocsSection{ title: "Adjusted fallbacks" }
+    :markdown
+      By default, the plugin uses vendored [Capsize](https://github.com/seek-oss/capsize) metrics to emit a local `"<Family> Fallback"` face with `size-adjust`, `ascent-override`, `descent-override`, and `line-gap-override`. Add that generated family immediately after the Google Font in your stack:
+
+      ```css
+      --font-sans: "Source Sans 3", "Source Sans 3 Fallback", system-ui, sans-serif;
+      ```
+
+      Set `adjust_font_fallback: false` to disable generation. If a newly released Google Font is not in the vendored collection yet, the build warns and preserves the original font CSS.
 
   %DocsSection{ title: "Caching" }
     :markdown

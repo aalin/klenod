@@ -138,6 +138,16 @@ namespace :version do
   end
 end
 
+namespace :google_fonts do
+  namespace :metrics do
+    desc "Update vendored Capsize font metrics to the latest revision"
+    task :update do
+      require_relative "tools/update_google_font_metrics"
+      GoogleFontMetricsUpdater.update
+    end
+  end
+end
+
 require "standard/rake"
 
 desc "Build all gem packages into pkg/"

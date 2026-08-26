@@ -189,6 +189,7 @@ Handles Google Fonts CSS imports such as `https://fonts.googleapis.com/css2?...`
 - Resolves Google Fonts CSS URLs imported from CSS.
 - Downloads the raw Google CSS, optionally through a persistent raw-CSS cache.
 - Parses `@font-face` metadata.
+- Generates metric-adjusted local fallback faces to reduce layout shift while web fonts load.
 - Rewrites `fonts.gstatic.com` font URLs to local emitted font assets.
 - Emits the rewritten Google Fonts CSS as a normal CSS asset.
 - Emits font files as lazy IO-generated assets.
@@ -199,13 +200,25 @@ Configuration:
 Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
   fetcher: nil,
   cache_path: nil,
-  refresh_cache: false
+  refresh_cache: false,
+  adjust_font_fallback: true
 )
 ```
 
 - `fetcher`: optional object/lambda used for downloading. It must respond to `call(url)`. If it also responds to `write(url, io)`, font downloads stream through that method.
 - `cache_path`: optional directory for raw Google CSS responses, keyed by full URL. `nil` disables the cache.
 - `refresh_cache`: when true, fetches and replaces cached CSS even if a cached response exists.
+- `adjust_font_fallback`: when true, emits a `"<Family> Fallback"` face backed by Times New Roman for serif fonts, Courier New for monospace fonts, or Arial for other categories. Metrics are derived from the vendored [Capsize](https://github.com/seek-oss/capsize) collection.
+
+Add the generated family immediately after the web font in application CSS:
+
+```css
+:root {
+  --font-sans: "Source Sans 3", "Source Sans 3 Fallback", system-ui, sans-serif;
+}
+```
+
+If a Google Font is newer than the vendored snapshot, the plugin warns and keeps the original Google CSS without an adjusted fallback for that family. Maintainers can refresh the snapshot to the latest Capsize revision with `bundle exec rake google_fonts:metrics:update`. The generated notice records the exact upstream commit used.
 
 ## SvgPlugin
 

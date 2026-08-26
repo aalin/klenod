@@ -47,9 +47,128 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       assert_equal("normal", font_asset.metadata[:style])
       assert_equal("400", font_asset.metadata[:weight])
       assert_equal(:io, font_asset.queue_kind)
+      assert_includes(google_css_asset.bytes, <<~CSS)
+        @font-face {
+          font-family: "Source Sans 3 Fallback";
+          src: local("Arial");
+          size-adjust: 93.76%;
+          ascent-override: 109.21%;
+          descent-override: 42.66%;
+          line-gap-override: 0.00%;
+        }
+      CSS
       refute(font_asset.ready?)
       assert_equal("font bytes", font_asset.bytes)
       assert(font_asset.ready?)
+    end
+  end
+
+  def test_fallback_calculator_matches_next_style_roboto_metrics
+    metrics = Klenod::Build::Plugins::GoogleFontsPlugin::FontMetrics.new
+    calculator = Klenod::Build::Plugins::GoogleFontsPlugin::FallbackCalculator.new(metrics)
+    fallback = calculator.call("Roboto")
+
+    assert_equal("Roboto Fallback", fallback.family)
+    assert_equal("Arial", fallback.local_family)
+    assert_equal("99.78%", fallback.size_adjust)
+    assert_equal("92.98%", fallback.ascent_override)
+    assert_equal("24.47%", fallback.descent_override)
+    assert_equal("0.00%", fallback.line_gap_override)
+    assert_equal("Courier New", calculator.call("IBM Plex Mono").local_family)
+  end
+
+  def test_serif_fonts_use_times_new_roman_and_repeated_faces_share_one_fallback
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
+      plugin = plugin_with_responses(
+        GOOGLE_CSS_URL => <<~CSS,
+          @font-face {
+            font-family: "Source Serif 4";
+            font-style: normal;
+            font-weight: 400;
+            src: url("#{FONT_URL}") format("woff2");
+          }
+          @font-face {
+            font-family: "Source Serif 4";
+            font-style: normal;
+            font-weight: 700;
+            src: url("#{OTHER_FONT_URL}") format("woff2");
+          }
+        CSS
+        FONT_URL => "regular font bytes",
+        OTHER_FONT_URL => "bold font bytes"
+      )
+
+      context = context_with(dir, plugin)
+      context.evaluate("styles/home.css")
+      css = context.assets.values.find { |asset| asset.metadata[:google_fonts] && asset.metadata[:type] == :css }.bytes
+
+      assert_equal(1, css.scan('font-family: "Source Serif 4 Fallback"').length)
+      assert_includes(css, 'src: local("Times New Roman")')
+      assert_includes(css, "size-adjust: 117.91%")
+    end
+  end
+
+  def test_adjust_font_fallback_can_be_disabled
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
+      plugin =
+        Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
+          adjust_font_fallback: false,
+          fetcher: ->(url) do
+            {
+              GOOGLE_CSS_URL => <<~CSS,
+                @font-face {
+                  font-family: "Source Sans 3";
+                  src: url("#{FONT_URL}") format("woff2");
+                }
+              CSS
+              FONT_URL => "font bytes"
+            }.fetch(url)
+          end
+        )
+
+      context = context_with(dir, plugin)
+      context.evaluate("styles/home.css")
+      css = context.assets.values.find { |asset| asset.metadata[:google_fonts] && asset.metadata[:type] == :css }.bytes
+
+      refute_includes(css, "Fallback")
+      refute_includes(css, "size-adjust")
+    end
+  end
+
+  def test_missing_metrics_warn_once_and_keep_original_font_faces
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
+      plugin = plugin_with_responses(
+        GOOGLE_CSS_URL => <<~CSS,
+          @font-face {
+            font-family: "A Font From The Future";
+            src: url("#{FONT_URL}") format("woff2");
+          }
+          @font-face {
+            font-family: "A Font From The Future";
+            src: url("#{OTHER_FONT_URL}") format("woff2");
+          }
+        CSS
+        FONT_URL => "regular font bytes",
+        OTHER_FONT_URL => "bold font bytes"
+      )
+
+      _stdout, stderr = capture_io do
+        context = context_with(dir, plugin)
+        context.evaluate("styles/home.css")
+        css = context.assets.values.find { |asset| asset.metadata[:google_fonts] && asset.metadata[:type] == :css }.bytes
+
+        assert_equal(2, css.scan('font-family: "A Font From The Future"').length)
+        refute_includes(css, "A Font From The Future Fallback")
+      end
+
+      assert_equal(1, stderr.scan("A Font From The Future").length)
+      assert_includes(stderr, "google_fonts:metrics:update")
     end
   end
 

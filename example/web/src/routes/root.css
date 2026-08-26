@@ -33,9 +33,9 @@
   --space-6: 2rem;
   --space-7: 3rem;
   --page-width: 70rem;
-  --font-sans: "Source Sans 3", system-ui, sans-serif;
-  --font-serif: "Source Serif 4", Georgia, serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: "Source Sans 3", "Source Sans 3 Fallback", system-ui, sans-serif;
+  --font-serif: "Source Serif 4", "Source Serif 4 Fallback", Georgia, serif;
+  --font-mono: "IBM Plex Mono", "IBM Plex Mono Fallback", ui-monospace, monospace;
   --font-size-small: 0.86rem;
   --font-size-body: 1rem;
   --font-size-h1: clamp(2rem, 3vw, 3.15rem);

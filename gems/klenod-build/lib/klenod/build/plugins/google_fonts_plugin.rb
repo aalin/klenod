@@ -12,6 +12,7 @@ require_relative "../hashing"
 require_relative "../module_id"
 require_relative "../plugin"
 require_relative "../transform_result"
+require_relative "google_fonts_plugin/font_metrics"
 
 module Klenod
   module Build
@@ -130,10 +131,13 @@ module Klenod
             end
           end
 
-          def initialize(fetcher: nil, cache_path: nil, refresh_cache: false)
+          def initialize(fetcher: nil, cache_path: nil, refresh_cache: false, adjust_font_fallback: true)
             @fetcher = fetcher || DefaultFetcher.new
             @css_cache = cache_path && CssCache.new(cache_path)
             @refresh_cache = refresh_cache
+            @adjust_font_fallback = adjust_font_fallback
+            @fallback_calculator = FallbackCalculator.new(FontMetrics.new)
+            @missing_fallback_metrics = {}
             @assets_by_module_id = {}
           end
 
@@ -166,6 +170,7 @@ module Klenod
 
                 %(url(#{quote}#{asset.output_path}#{quote}))
               end
+            rewritten_css = append_fallback_font_faces(rewritten_css, font_faces.values) if @adjust_font_fallback
 
             css_asset = css_asset(module_id, url, rewritten_css, font_assets.keys)
             @assets_by_module_id[module_id] = [css_asset, *font_assets.values]
@@ -244,6 +249,43 @@ module Klenod
               "text/css",
               {type: :css, google_fonts: true, font_source_urls: font_source_urls}
             )
+          end
+
+          def append_fallback_font_faces(css, font_faces)
+            fallback_css =
+              font_faces
+                .filter_map(&:family)
+                .uniq
+                .filter_map { fallback_font_face_css(it) }
+            return css if fallback_css.empty?
+
+            "#{css.rstrip}\n\n#{fallback_css.join("\n\n")}\n"
+          end
+
+          def fallback_font_face_css(family)
+            fallback = @fallback_calculator.call(family)
+            unless fallback
+              unless @missing_fallback_metrics[family]
+                warn "Could not adjust fallback for Google Font #{family.inspect}; run `bundle exec rake google_fonts:metrics:update` to refresh the vendored metrics."
+                @missing_fallback_metrics[family] = true
+              end
+              return
+            end
+
+            <<~CSS.rstrip
+              @font-face {
+                font-family: #{css_string(fallback.family)};
+                src: local(#{css_string(fallback.local_family)});
+                size-adjust: #{fallback.size_adjust};
+                ascent-override: #{fallback.ascent_override};
+                descent-override: #{fallback.descent_override};
+                line-gap-override: #{fallback.line_gap_override};
+              }
+            CSS
+          end
+
+          def css_string(value)
+            %("#{value.gsub("\\", "\\\\").gsub("\"", "\\\"")}")
           end
 
           def font_asset(url, font_face, context)

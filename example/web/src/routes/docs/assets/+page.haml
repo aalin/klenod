@@ -50,4 +50,4 @@
 
   %DocsSection{ title: "Google Fonts" }
     :markdown
-      `GoogleFontsPlugin` resolves Google Fonts CSS imports, downloads or reuses cached raw CSS, rewrites `fonts.gstatic.com` URLs to local emitted font assets, and emits the rewritten stylesheet as a normal CSS asset. Font files are lazy IO-generated assets so downloads can overlap with CPU-bound image generation without becoming unbounded.
+      `GoogleFontsPlugin` resolves Google Fonts CSS imports, downloads or reuses cached raw CSS, rewrites `fonts.gstatic.com` URLs to local emitted font assets, and emits the rewritten stylesheet as a normal CSS asset. It also emits Capsize-powered metric-adjusted fallback faces by default. Font files are lazy IO-generated assets so downloads can overlap with CPU-bound image generation without becoming unbounded.

@@ -26,7 +26,8 @@ Gem::Specification.new do |spec|
         "lib/klenod/build.rb",
         "lib/klenod/build/cli.rb",
         "lib/klenod/build/watcher.rb",
-        *Dir["lib/klenod/build/**/*.rb"]
+        *Dir["lib/klenod/build/**/*.rb"],
+        *Dir["lib/klenod/build/plugins/google_fonts_plugin/*.{json,txt}"]
       ].select do |path|
         File.file?(path) &&
           !path.end_with?(".test.rb") &&

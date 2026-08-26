@@ -3,6 +3,7 @@
 require "klenod/build"
 require "klenod/plugin/css"
 require "klenod/plugin/javascript"
+require "uri"
 
 module Example
   module WebConfig
@@ -66,14 +67,17 @@ module Example
       lambda do |url|
         case url
         when %r{\Ahttps://fonts\.googleapis\.com/css2}
+          family_specifier = URI.decode_www_form(URI(url).query || "").to_h.fetch("family")
+          family = family_specifier.split(":", 2).fetch(0)
+          slug = family.downcase.gsub(/[^a-z0-9]+/, "")
           <<~CSS
             @font-face {
-              font-family: "Source Sans 3";
-              src: url("https://fonts.gstatic.com/s/sourcesans3/example.woff2") format("woff2");
+              font-family: #{family.inspect};
+              src: url("https://fonts.gstatic.com/s/#{slug}/example.woff2") format("woff2");
             }
           CSS
-        when "https://fonts.gstatic.com/s/sourcesans3/example.woff2"
-          "fake source sans font"
+        when %r{\Ahttps://fonts\.gstatic\.com/s/[^/]+/example\.woff2\z}
+          "fake google font"
         else
           raise KeyError, "No Google Fonts fixture for #{url}"
         end
