@@ -19,4 +19,8 @@ Rake::ExtensionTask.new("native", gemspec) do |extension|
   end
 end
 
+# Ensure the generic gem task packages the cross-compiled extension instead of
+# rebuilding it with the host Ruby's linker configuration.
+task gem: :cross if ENV.key?("RUBY_TARGET")
+
 task default: :compile
