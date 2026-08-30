@@ -285,4 +285,5 @@ RUBOCOP_CACHE_ROOT=/private/tmp/rubocop_cache bundle exec standardrb path/to/fil
 
 - [Architecture](ARCHITECTURE.md)
 - [Graph And Plugin Phases](docs/graph-and-plugin-phases.md)
+- [Releasing](docs/releasing.md)
 - [Web Example](example/web/README.md)

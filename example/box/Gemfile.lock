@@ -10,7 +10,6 @@ PATH
       kramdown (~> 2.5)
       kramdown-parser-gfm (~> 1.1)
       listen (~> 3.10)
-      mayu-css (~> 0.1.5)
       protocol-url (~> 0.4)
       rmagick (~> 7.0)
       samovar (~> 2.5)
@@ -77,8 +76,6 @@ GEM
       rb-fsevent (~> 0.10, >= 0.10.3)
       rb-inotify (~> 0.9, >= 0.9.10)
     logger (1.7.0)
-    mayu-css (0.1.5-arm64-darwin)
-    mayu-css (0.1.5-x86_64-linux)
     metrics (0.15.0)
     observer (0.1.2)
     openssl (4.0.2)
@@ -150,8 +147,6 @@ CHECKSUMS
   kramdown-parser-gfm (1.1.0) sha256=fb39745516427d2988543bf01fc4cf0ab1149476382393e0e9c48592f6581729
   listen (3.10.0) sha256=c6e182db62143aeccc2e1960033bebe7445309c7272061979bb098d03760c9d2
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
-  mayu-css (0.1.5-arm64-darwin) sha256=692b2c0263fa2c4c2af179a9413ac6b06e01f595b65f4dca4ff90b0cb374c77b
-  mayu-css (0.1.5-x86_64-linux) sha256=ed3bb215e50b039de766b2b72a02493b56083a85e1aa76fa8424d7798d7e5b8e
   metrics (0.15.0) sha256=61ded5bac95118e995b1bc9ed4a5f19bc9814928a312a85b200abbdac9039072
   observer (0.1.2) sha256=d8a3107131ba661138d748e7be3dbafc0d82e732fffba9fccb3d7829880950ac
   openssl (4.0.2) sha256=1037ad2868ae58df9ad917891c0c0f9815a1172f6846d4bcdd508e4c2ee747c2

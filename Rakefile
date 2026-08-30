@@ -92,6 +92,7 @@ namespace :test do
   minitest_task(:standalone, "Run standalone example tests", ["example/standalone/**/*.test.rb"])
   minitest_task(:box, "Run Ruby::Box example tests", ["example/box/**/*.test.rb"])
   minitest_task(:performance, "Run performance example tests", ["example/performance/**/*.test.rb"])
+  minitest_task(:release, "Run release tooling tests", ["tools/**/*.test.rb"])
 
   desc "Run web example tests with the example/web bundle"
   task :web do
@@ -163,5 +164,5 @@ task build: "version:check" do
 end
 
 desc "Run all gem and example tests"
-task test: ["version:check", "test:gems", "test:examples"]
+task test: ["version:check", "test:gems", "test:examples", "test:release"]
 task default: %i[test standard]

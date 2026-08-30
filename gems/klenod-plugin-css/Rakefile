@@ -2,9 +2,21 @@
 
 require "rake/extensiontask"
 
-Rake::ExtensionTask.new("native") do |extension|
+root = __dir__
+gemspec = Gem::Specification.load(File.join(root, "klenod-plugin-css.gemspec"))
+
+Rake::ExtensionTask.new("native", gemspec) do |extension|
   extension.lib_dir = "lib/klenod/plugin/css"
   extension.ext_dir = "ext/native"
+  extension.source_pattern = "{Cargo.toml,Cargo.lock,src/**/*.rs}"
+  extension.cross_compile = ENV.key?("RUBY_TARGET")
+  extension.cross_platform = [ENV["RUBY_TARGET"]].compact
+  extension.cross_compiling do |native_spec|
+    native_spec.dependencies.reject! { it.name == "rb_sys" }
+    native_spec.files.reject! { it.end_with?(".rs") || it.match?(/Cargo\.(toml|lock)$/) || it.end_with?("extconf.rb") }
+    requirements = [gemspec.required_ruby_version, native_spec.required_ruby_version].flat_map(&:requirements).map { |operator, version| "#{operator} #{version}" }
+    native_spec.required_ruby_version = Gem::Requirement.new(*requirements)
+  end
 end
 
 task default: :compile

@@ -24,7 +24,9 @@ Gem::Specification.new do |spec|
       [
         "README.md",
         *Dir["lib/**/*.rb"],
-        *Dir["ext/**/*"]
+        *Dir["ext/native/Cargo.*"],
+        "ext/native/extconf.rb",
+        *Dir["ext/native/src/**/*.rs"]
       ].select do |path|
         File.file?(path) &&
           !path.end_with?(".test.rb") &&

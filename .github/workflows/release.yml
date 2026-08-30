@@ -1,0 +1,196 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      ruby-abi: ${{ steps.release.outputs.ruby-abi }}
+      source-matrix: ${{ steps.release.outputs.source-matrix }}
+      native-matrix: ${{ steps.release.outputs.native-matrix }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install native dependencies
+        run: sudo apt-get update && sudo apt-get install -y imagemagick libmagickwand-dev pkg-config
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Verify tag and release metadata
+        id: release
+        run: |
+          version="$(tr -d '[:space:]' < KLENOD_VERSION)"
+          ruby_abi="$(cut -d. -f1,2 .ruby-version)"
+          test "$GITHUB_REF_TYPE" = "tag"
+          test "$GITHUB_REF_NAME" = "v${version}"
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          bundle exec rake version:check
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "ruby-abi=${ruby_abi}" >> "$GITHUB_OUTPUT"
+          echo "source-matrix=$(ruby tools/release_artifacts.rb source-matrix)" >> "$GITHUB_OUTPUT"
+          echo "native-matrix=$(ruby tools/release_artifacts.rb native-matrix)" >> "$GITHUB_OUTPUT"
+      - name: Compile native extensions
+        run: |
+          bundle exec rake -C gems/klenod-plugin-javascript compile
+          bundle exec rake -C gems/klenod-plugin-css compile
+      - name: Install example web bundle
+        working-directory: example/web
+        run: bundle install
+      - name: Run tests and Standard
+        run: bundle exec rake
+
+  source-gem:
+    name: Source gem — ${{ matrix.gem.name }}
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        gem: ${{ fromJSON(needs.verify.outputs.source-matrix) }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+      - name: Build source gem
+        env:
+          GEM_NAME: ${{ matrix.gem.name }}
+          GEM_DIRECTORY: ${{ matrix.gem.directory }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          mkdir -p pkg
+          gem build "${GEM_DIRECTORY}/${GEM_NAME}.gemspec" --output "pkg/${GEM_NAME}-${VERSION}.gem"
+      - name: Upload source gem
+        uses: actions/upload-artifact@v4
+        with:
+          name: gem-source-${{ matrix.gem.name }}
+          path: pkg/*.gem
+          if-no-files-found: error
+          retention-days: 30
+
+  native-gem:
+    name: Native gem — ${{ matrix.gem.name }} / ${{ matrix.gem.platform }}
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        gem: ${{ fromJSON(needs.verify.outputs.native-matrix) }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+      - name: Cross-compile native gem
+        id: cross-gem
+        uses: oxidize-rb/actions/cross-gem@v1
+        with:
+          working-directory: ${{ matrix.gem.directory }}
+          platform: ${{ matrix.gem.platform }}
+          ruby-versions: ${{ needs.verify.outputs.ruby-abi }}
+      - name: Upload native gem
+        uses: actions/upload-artifact@v4
+        with:
+          name: gem-native-${{ matrix.gem.name }}-${{ matrix.gem.platform }}
+          path: ${{ steps.cross-gem.outputs.gem-path }}
+          if-no-files-found: error
+          retention-days: 30
+
+  release-artifacts:
+    name: Verify release artifacts
+    needs:
+      - verify
+      - source-gem
+      - native-gem
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+      - name: Download built gems
+        uses: actions/download-artifact@v4
+        with:
+          pattern: gem-*
+          path: release
+          merge-multiple: true
+      - name: Verify artifact inventory
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: ruby tools/release_artifacts.rb verify release "$VERSION" release/SHA256SUMS
+      - name: Upload verified release
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-gems
+          path: |
+            release/*.gem
+            release/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish release
+    needs:
+      - verify
+      - release-artifacts
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+      - name: Download verified release
+        uses: actions/download-artifact@v4
+        with:
+          name: release-gems
+          path: release
+      - name: Configure RubyGems credentials
+        uses: rubygems/configure-rubygems-credentials@dc5a8d8553e6ee01fc26761a49e99e733d17954a # v2.1.0
+      - name: Publish gems to RubyGems.org
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: ruby tools/release_artifacts.rb publish release "$VERSION"
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/*.gem release/SHA256SUMS --clobber
+          else
+            gh release create "$TAG" release/*.gem release/SHA256SUMS \
+              --verify-tag \
+              --generate-notes \
+              --title "Klenod ${VERSION}"
+          fi
