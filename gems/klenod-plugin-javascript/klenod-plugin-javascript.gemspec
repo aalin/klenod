@@ -37,7 +37,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "klenod-build", "= #{version}"
-  spec.add_dependency "rb_sys", "~> 0.9.39"
+  spec.add_dependency "rb_sys", "~> 0.9.124"
 
   spec.add_development_dependency "rake-compiler", "~> 1.3"
 end

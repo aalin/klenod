@@ -13,7 +13,7 @@ jobs:
     name: Ruby
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install native dependencies
@@ -31,3 +31,5 @@ jobs:
         run: bundle install
       - name: Run the default task
         run: bundle exec rake
+      - name: Build source gems
+        run: bundle exec rake build

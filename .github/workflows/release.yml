@@ -23,7 +23,7 @@ jobs:
       native-matrix: ${{ steps.release.outputs.native-matrix }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -56,6 +56,8 @@ jobs:
         run: bundle install
       - name: Run tests and Standard
         run: bundle exec rake
+      - name: Build source gems
+        run: bundle exec rake build
 
   source-gem:
     name: Source gem — ${{ matrix.gem.name }}
@@ -67,21 +69,21 @@ jobs:
         gem: ${{ fromJSON(needs.verify.outputs.source-matrix) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
       - name: Build source gem
+        working-directory: ${{ matrix.gem.directory }}
         env:
           GEM_NAME: ${{ matrix.gem.name }}
-          GEM_DIRECTORY: ${{ matrix.gem.directory }}
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
-          mkdir -p pkg
-          gem build "${GEM_DIRECTORY}/${GEM_NAME}.gemspec" --output "pkg/${GEM_NAME}-${VERSION}.gem"
+          mkdir -p ../../pkg
+          gem build "${GEM_NAME}.gemspec" --output "../../pkg/${GEM_NAME}-${VERSION}.gem"
       - name: Upload source gem
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: gem-source-${{ matrix.gem.name }}
           path: pkg/*.gem
@@ -98,20 +100,20 @@ jobs:
         gem: ${{ fromJSON(needs.verify.outputs.native-matrix) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
       - name: Cross-compile native gem
         id: cross-gem
-        uses: oxidize-rb/actions/cross-gem@v1
+        uses: oxidize-rb/actions/cross-gem@e5f9a49a7812a078584072f6e3f657ad247c8771 # v1.4.4
         with:
           working-directory: ${{ matrix.gem.directory }}
           platform: ${{ matrix.gem.platform }}
           ruby-versions: ${{ needs.verify.outputs.ruby-abi }}
       - name: Upload native gem
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: gem-native-${{ matrix.gem.name }}-${{ matrix.gem.platform }}
           path: ${{ steps.cross-gem.outputs.gem-path }}
@@ -127,13 +129,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
       - name: Download built gems
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: gem-*
           path: release
@@ -143,7 +145,7 @@ jobs:
           VERSION: ${{ needs.verify.outputs.version }}
         run: ruby tools/release_artifacts.rb verify release "$VERSION" release/SHA256SUMS
       - name: Upload verified release
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-gems
           path: |
@@ -164,13 +166,13 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
       - name: Download verified release
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: release-gems
           path: release
