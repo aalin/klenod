@@ -1,13 +1,19 @@
 # klenod
 
-`klenod` is the compatibility/meta gem for Klenod.
+`klenod` provides the full development toolkit for
+[Klenod](https://github.com/aalin/klenod).
 
-It depends on the build and Rack packages and exposes the broad development surface through:
+It depends on [klenod-build](https://github.com/aalin/klenod/tree/main/gems/klenod-build),
+[klenod-runtime](https://github.com/aalin/klenod/tree/main/gems/klenod-runtime),
+and [klenod-rack](https://github.com/aalin/klenod/tree/main/gems/klenod-rack).
+
+Use this gem when you want the complete Klenod API and development tooling:
 
 ```ruby
 require "klenod"
 ```
 
-Install this gem when you want the full Klenod toolkit in development. Production bundle loaders can depend directly on `klenod-runtime` instead.
+Production applications that only load generated bundles can depend directly
+on `klenod-runtime` instead.
 
 The `klenod` executable wrapper also lives here and delegates to the build CLI implementation.

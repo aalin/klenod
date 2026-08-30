@@ -1,4 +1,4 @@
-# Ruby::Box example
+# `Ruby::Box` example
 
 This example builds two runtime bundles with the same entrypoint and module id
 (`main.rb`), then loads each bundle into a separate `Ruby::Box`.

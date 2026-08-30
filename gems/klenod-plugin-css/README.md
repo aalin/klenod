@@ -1,16 +1,14 @@
 # klenod-plugin-css
 
-CSS asset and CSS Modules plugin for Klenod, powered by
+CSS asset and CSS Modules plugin for
+[Klenod](https://github.com/aalin/klenod), powered by
 [Lightning CSS](https://lightningcss.dev/).
-
-The plugin scopes selectors and emits content-hashed CSS assets. `@import`,
-`url()`, `composes ... from`, and cross-file local variable references become
-Klenod graph dependencies, so changes invalidate the modules that depend on
-them.
 
 ## Options
 
 ```ruby
+require "klenod/plugin/css"
+
 Klenod::Build::Plugins::CSSPlugin.new(
   source_maps: :development,
   minify: false,

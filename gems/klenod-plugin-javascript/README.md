@@ -1,21 +1,22 @@
 # klenod-plugin-javascript
 
-JavaScript asset plugin for Klenod, powered by [SWC](https://swc.rs/).
+JavaScript asset plugin for [Klenod](https://github.com/aalin/klenod), powered
+by [SWC](https://swc.rs/).
 
-Importing a JavaScript file adds it to the Klenod module graph. Local static
-imports, re-exports, and string-literal dynamic imports become graph
-dependencies and are collected recursively. Each module is emitted as a
-content-hashed asset, and its import specifiers are rewritten to the emitted
-dependency paths.
+It:
 
-The plugin supports `.js`, `.ts`, `.jsx`, and `.tsx` files. SWC transforms
-TypeScript and JSX, and JSX uses Klenod's helper to create HTML elements for
-custom-element implementations. External URL imports are preserved; bare
-package imports and npm resolution are not currently supported.
+- collects static imports, re-exports, and string-literal dynamic imports
+- transforms JavaScript, TypeScript, JSX, and TSX
+- rewrites local imports to content-hashed asset paths
+- preserves external URL imports
+
+Bare package imports and npm resolution are not currently supported.
 
 ## Options
 
 ```ruby
+require "klenod/plugin/javascript"
+
 Klenod::Build::Plugins::JavaScriptPlugin.new(
   source_maps: :development,
   minify: false

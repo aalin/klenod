@@ -13,12 +13,12 @@ The project is still early in development. Contributions are welcome.
 
 The repository contains six gems:
 
-- `klenod-runtime`: loads bundles, evaluates modules, reads source maps, and rewrites backtraces.
-- `klenod-build`: builds graphs, runs plugins, watches files, writes bundles, and provides the CLI.
-- `klenod-rack`: provides Rack helpers for serving bundled assets.
-- `klenod-plugin-css`: adds CSS assets and CSS Modules support.
-- `klenod-plugin-javascript`: adds JavaScript and TypeScript assets.
-- `klenod`: provides a compatibility gem that depends on build and rack.
+- [`klenod`](gems/klenod): provides a compatibility gem that depends on `klenod-build`.
+- [`klenod-runtime`](gems/klenod-runtime): loads bundles, evaluates modules, reads source maps, and rewrites backtraces.
+- [`klenod-build`](gems/klenod-build): builds graphs, runs plugins, watches files, writes bundles, and provides the CLI.
+- [`klenod-rack`](gems/klenod-rack): provides Rack helpers for serving bundled assets.
+- [`klenod-plugin-css`](gems/klenod-plugin-css): adds CSS assets and CSS Modules support.
+- [`klenod-plugin-javascript`](gems/klenod-plugin-javascript): adds JavaScript and TypeScript assets.
 
 Production applications that only load a prebuilt bundle usually only need `klenod-runtime`.
 
@@ -73,7 +73,9 @@ The hash keys are the matched import specifiers without query strings.
 
 Klenod separates graph collection from module evaluation.
 
-Collection reads source, transforms it, records dependencies, emits assets, and stores a module record. Evaluation instantiates a `Klenod::Runtime::Mod` and runs the module Ruby code.
+Collection reads source, transforms it, records dependencies, emits assets, and stores a module record.
+
+Evaluation instantiates a `Klenod::Runtime::Mod` and runs the module Ruby code inside it.
 
 These APIs collect without evaluating application code:
 
@@ -244,39 +246,11 @@ CSS and JavaScript support are separate plugin gems:
 
 ## Examples
 
-The web example is the main integration test and reference application.
+The [web example](example/web/README.md) is the main integration test and
+reference application.
 
-Run these commands from `example/web`:
-
-```sh
-cd example/web
-bin/build
-bin/dev
-bin/routes
-bin/server
-```
-
-`bin/dev` starts a development server on `http://localhost:9292`.
-
-The example includes routes for:
-
-- Haml pages and layouts
-- CSS modules
-- image variants
-- TOML data imports
-- forms and sessions
-- route handlers
-- hybrid page and handler routes
-- not-found and error rendering
-- route metadata
-
-Read [example/web/README.md](example/web/README.md) for the complete example guide.
-
-The standalone example shows non-web bundle use:
-
-```sh
-bundle exec ruby example/standalone/example.test.rb
-```
+The [standalone example](example/standalone/README.md) demonstrates non-web
+bundle use.
 
 ## Development
 
