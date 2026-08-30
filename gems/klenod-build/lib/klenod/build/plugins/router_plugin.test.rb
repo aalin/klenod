@@ -622,8 +622,8 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
           mode: :development,
           plugins: [
             RouterPlugin.new(route_base_class: "#{self.class.name}::RouteBase"),
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
-            Klenod::Build::Plugins::HamlPlugin::Plugin.new(factory: "Object")
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::HamlPlugin.new(factory: "Object")
           ]
         )
       router_record = context.evaluate("virtual:router")
@@ -657,9 +657,9 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
           mode: :development,
           plugins: [
             RouterPlugin.new(route_base_class: "#{self.class.name}::RouteBase"),
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
-            Klenod::Build::Plugins::HamlPlugin::Plugin.new,
-            Klenod::Build::Plugins::CssPlugin::Plugin.new
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::HamlPlugin.new,
+            Klenod::Build::Plugins::CSSPlugin.new
           ]
         )
       router_record = context.evaluate("virtual:router")
@@ -889,7 +889,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
       mode: mode,
       plugins: [
         plugin || RouterPlugin.new(route_base_class: "#{self.class.name}::RouteBase"),
-        Klenod::Build::Plugins::RubyPlugin::Plugin.new
+        Klenod::Build::Plugins::RubyPlugin.new
       ]
     )
   end

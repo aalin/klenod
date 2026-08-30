@@ -9,7 +9,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       File.write("#{dir}/pages/hello-world.haml", "%h1 Hello\n")
 
       plugin =
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
           factory: "#{self.class.name}::FakeFramework::H"
         )
@@ -276,7 +276,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
         HAML
       },
       plugin: plugin,
-      plugins: [Klenod::Build::Plugins::RubyPlugin::Plugin.new, plugin]
+      plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin]
     ) do |_dir, _context, _record, exports|
       assert_equal([:h2, "HELLO"], exports::Default.new.render)
     end
@@ -467,7 +467,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       },
       entry: "page.haml",
       plugin: plugin,
-      plugins: [Klenod::Build::Plugins::RubyPlugin::Plugin.new, plugin]
+      plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin]
     ) do |_dir, _context, _record, exports|
       user = exports::Default::User.new(15)
 
@@ -956,7 +956,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
 
   def test_haml_transformer_supports_output_control_flow_without_else
     plugin =
-      Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+      Klenod::Build::Plugins::HamlPlugin.new(
         factory: "#{self.class.name}::FakeFramework::H"
       )
     context = Klenod::Build::Context.new(source_dir: TEST_FIXTURE_DIR, plugins: [plugin])
@@ -996,10 +996,10 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
         HAML
       )
       plugin =
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin::Plugin.new, plugin])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin])
       record = context.evaluate("page.haml")
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
       details_class = context.graph.mods.fetch(ModuleId.new("components/details.haml", nil)).const_get(:Exports)::Default

@@ -247,7 +247,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/pages/gallery")
       File.write("#{dir}/pages/page.rb", "Images = import_glob(\"./gallery/*.txt\")\n")
 
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [RubyPlugin.new, Klenod::Build::Plugins::TextPlugin::Plugin.new])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [RubyPlugin.new, Klenod::Build::Plugins::TextPlugin.new])
       context.collect("pages/page.rb")
 
       new_path = "#{dir}/pages/gallery/new.txt"

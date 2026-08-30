@@ -16,7 +16,7 @@ package imports and npm resolution are not currently supported.
 ## Options
 
 ```ruby
-Klenod::Build::Plugins::JavaScriptPlugin::Plugin.new(
+Klenod::Build::Plugins::JavaScriptPlugin.new(
   source_maps: :development,
   minify: false
 )

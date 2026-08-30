@@ -11,8 +11,8 @@ VERSION_FILES = {
   "gems/klenod-build/lib/klenod/build/version.rb" => ["Klenod", "Build", "VERSION"],
   "gems/klenod-runtime/lib/klenod/runtime/version.rb" => ["Klenod", "Runtime", "VERSION"],
   "gems/klenod-rack/lib/klenod/rack/version.rb" => ["Klenod", "Rack", "VERSION"],
-  "gems/klenod-plugin-javascript/lib/klenod/plugin/javascript/version.rb" => ["Klenod", "Plugin", "JavaScript", "VERSION"],
-  "gems/klenod-plugin-css/lib/klenod/plugin/css/version.rb" => ["Klenod", "Plugin", "CSS", "VERSION"]
+  "gems/klenod-plugin-javascript/lib/klenod/plugin/javascript/version.rb" => ["Klenod", "Build", "Plugins", "JavaScriptPlugin", "VERSION"],
+  "gems/klenod-plugin-css/lib/klenod/plugin/css/version.rb" => ["Klenod", "Build", "Plugins", "CSSPlugin", "VERSION"]
 }.freeze
 
 TEST_LIBS = [

@@ -16,6 +16,10 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
     "44415478da63fccfc00044b26060606000000d010101d750b30a0000000049454e44ae426082"
   ].pack("H*")
 
+  def test_namespace_constructs_the_plugin
+    assert_instance_of Klenod::Build::Plugins::JavaScriptPlugin::Plugin, Klenod::Build::Plugins::JavaScriptPlugin.new
+  end
+
   def test_ruby_import_of_javascript_returns_asset_path_and_emits_asset
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -41,7 +45,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/scripts")
       File.write("#{dir}/scripts/app.js", "console.log('hello');\n")
 
-      context = context_for(dir, javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin::Plugin.new(minify: true))
+      context = context_for(dir, javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin.new(minify: true))
       record = context.evaluate("scripts/app.js")
       asset = record.assets.find { it.metadata.fetch(:type) == :javascript }
 
@@ -364,7 +368,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   end
 
   def test_ruby_import_of_jsx_returns_custom_element_descriptor
-    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+    skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
 
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -399,7 +403,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   end
 
   def test_tsx_custom_element_does_not_collide_with_local_h_or_fragment
-    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+    skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
 
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -431,7 +435,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   end
 
   def test_runtime_bundle_preserves_custom_element_descriptor
-    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+    skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
 
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -456,7 +460,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   end
 
   def test_jsx_custom_element_can_default_export_identifier
-    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+    skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
 
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -478,7 +482,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   end
 
   def test_jsx_custom_element_requires_supported_default_export
-    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+    skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
 
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -502,7 +506,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/scripts")
       File.write("#{dir}/scripts/app.js", "console.log('hello');\n")
 
-      context = context_for(dir, javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin::Plugin.new(source_maps: false))
+      context = context_for(dir, javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin.new(source_maps: false))
       record = context.evaluate("scripts/app.js")
 
       assert_equal([:javascript], record.assets.map { it.metadata.fetch(:type) })
@@ -568,7 +572,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   end
 
   def test_typescript_import_emits_javascript_asset
-    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+    skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
 
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -588,7 +592,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   end
 
   def test_tsx_custom_element_import_returns_descriptor
-    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+    skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
 
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -619,7 +623,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   end
 
   def test_typescript_static_imports_are_rewritten_to_hashed_asset_paths
-    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+    skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
 
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -638,7 +642,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   end
 
   def test_typescript_can_import_javascript_with_explicit_extension
-    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+    skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
 
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -657,7 +661,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   end
 
   def test_typescript_source_maps_reference_original_typescript
-    skip "native parser is not compiled" unless Klenod::Plugin::JavaScript::Parser.native?
+    skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
 
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -676,13 +680,13 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
 
   private
 
-  def context_for(dir, mode: :development, javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin::Plugin.new)
+  def context_for(dir, mode: :development, javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin.new)
     Klenod::Build::Context.new(
       source_dir: dir,
       mode: mode,
       plugins: [
         *Klenod::Build::Context.default_plugins,
-        Klenod::Build::Plugins::CssPlugin::Plugin.new,
+        Klenod::Build::Plugins::CSSPlugin.new,
         javascript_plugin
       ]
     )

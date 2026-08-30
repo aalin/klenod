@@ -64,6 +64,21 @@ puts Message::TEXT
 
 Klenod resolves the file and sends its source through each transform hook. The message plugin returns Ruby source for the runtime module.
 
+## Package a Third-Party Plugin
+
+Use `klenod-plugin-<name>` for a published plugin gem and expose its entry file
+as `klenod/plugin/<name>`. Keep its Ruby constants in a namespace owned by the
+author or project rather than adding constants to `Klenod::Build::Plugins`,
+which is reserved for plugins maintained with Klenod.
+
+For example, `klenod-plugin-message` could provide:
+
+```ruby
+require "klenod/plugin/message"
+
+Acme::Klenod::MessagePlugin.new
+```
+
 ## Plugin Hooks
 
 All plugins inherit from `Klenod::Build::Plugin`. Override only the hooks that your plugin needs.
@@ -407,6 +422,6 @@ class MessagePluginTest < Minitest::Test
 end
 ```
 
-Add only the plugins that the test needs. Add `RubyPlugin::Plugin` when the test imports dependencies from generated or application Ruby code.
+Add only the plugins that the test needs. Add `RubyPlugin` when the test imports dependencies from generated or application Ruby code.
 
 Test development evaluation and production bundles when the plugin defines import-value hooks. Test file additions and removals when the plugin defines invalidation behavior.

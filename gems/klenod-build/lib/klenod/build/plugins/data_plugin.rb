@@ -11,6 +11,10 @@ module Klenod
   module Build
     module Plugins
       module DataPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < Klenod::Build::Plugin
           def self.extensions(*values)
             const_set(:EXTENSIONS, values.freeze)
@@ -46,6 +50,10 @@ module Klenod
       end
 
       module JsonPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < DataPlugin::Plugin
           extensions ".json"
 
@@ -58,6 +66,10 @@ module Klenod
       end
 
       module YamlPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < DataPlugin::Plugin
           extensions ".yaml", ".yml"
 
@@ -70,6 +82,10 @@ module Klenod
       end
 
       module TomlPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < DataPlugin::Plugin
           extensions ".toml"
 
@@ -82,6 +98,10 @@ module Klenod
       end
 
       module TextPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < DataPlugin::Plugin
           extensions ".txt", ".text"
 

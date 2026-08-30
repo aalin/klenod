@@ -22,6 +22,10 @@ module Klenod
   module Build
     module Plugins
       module HamlPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         DEFAULT_COMPONENT_BASE_CLASS = ComponentDefaults::DEFAULT_COMPONENT_BASE_CLASS
         DEFAULT_FACTORY = ComponentDefaults::DEFAULT_FACTORY
         HAML_HELPER_SPECIFIER = "virtual:klenod/haml_helper"

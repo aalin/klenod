@@ -114,17 +114,17 @@ module KlenodPerformance
           assets_dir "dist/public"
 
           plugins [
-            Klenod::Build::Plugins::RouterPlugin::Plugin.new,
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
-            Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+            Klenod::Build::Plugins::RouterPlugin.new,
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::HamlPlugin.new(
               component_base_class: "Example::Component",
               factory: "Example::H",
               cache_static_subtrees: true
             ),
-            Klenod::Build::Plugins::CssPlugin::Plugin.new,
-            Klenod::Build::Plugins::SvgPlugin::Plugin.new,
-            Klenod::Build::Plugins::JsonPlugin::Plugin.new,
-            Klenod::Build::Plugins::TextPlugin::Plugin.new
+            Klenod::Build::Plugins::CSSPlugin.new,
+            Klenod::Build::Plugins::SvgPlugin.new,
+            Klenod::Build::Plugins::JsonPlugin.new,
+            Klenod::Build::Plugins::TextPlugin.new
           ]
         RUBY
       )

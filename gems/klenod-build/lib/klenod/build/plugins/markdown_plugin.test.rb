@@ -213,7 +213,7 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
   def test_text_plugin_does_not_handle_markdown_files
     Dir.mktmpdir do |dir|
       File.write("#{dir}/page.md", "# Hello\n")
-      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin::Plugin.new, Klenod::Build::Plugins::TextPlugin::Plugin.new])
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new, Klenod::Build::Plugins::TextPlugin.new])
 
       assert_raises(Klenod::Build::UnsupportedFileError) { context.evaluate("page.md") }
     end
@@ -235,12 +235,12 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
     Klenod::Build::Context.new(
       source_dir: dir,
       plugins: [
-        Klenod::Build::Plugins::RubyPlugin::Plugin.new,
-        Klenod::Build::Plugins::MarkdownPlugin::Plugin.new(
+        Klenod::Build::Plugins::RubyPlugin.new,
+        Klenod::Build::Plugins::MarkdownPlugin.new(
           component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
           factory: "#{self.class.name}::FakeFramework::H"
         ),
-        Klenod::Build::Plugins::TextPlugin::Plugin.new
+        Klenod::Build::Plugins::TextPlugin.new
       ]
     )
   end

@@ -138,12 +138,12 @@ class Klenod::ExampleTest < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+            Klenod::Build::Plugins::HamlPlugin.new(
               component_base_class: "Example::Component",
               factory: "Example::H",
               global_variables: "@__props"
             ),
-            Klenod::Build::Plugins::CssPlugin::Plugin.new
+            Klenod::Build::Plugins::CSSPlugin.new
           ]
         )
       record = context.evaluate("component.haml")

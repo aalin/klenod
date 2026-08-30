@@ -11,7 +11,7 @@ them.
 ## Options
 
 ```ruby
-Klenod::Build::Plugins::CssPlugin::Plugin.new(
+Klenod::Build::Plugins::CSSPlugin.new(
   source_maps: :development,
   minify: false,
   class_pattern: "[component].[local]?[hash]",

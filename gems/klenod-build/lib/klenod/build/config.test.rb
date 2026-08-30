@@ -19,7 +19,7 @@ class Klenod::Build::Config::Test < Minitest::Test
           assets_dir "public"
           mode :build
           plugins [
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new
+            Klenod::Build::Plugins::RubyPlugin.new
           ]
         RUBY
       )

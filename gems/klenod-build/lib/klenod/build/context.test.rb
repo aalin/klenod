@@ -190,7 +190,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       context =
         Klenod::Build::Context.new(
           source_dir: dir,
-          plugins: [VirtualFilePlugin.new, Klenod::Build::Plugins::RubyPlugin::Plugin.new]
+          plugins: [VirtualFilePlugin.new, Klenod::Build::Plugins::RubyPlugin.new]
         )
       record = context.evaluate("virtual:file")
 
@@ -269,7 +269,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+            Klenod::Build::Plugins::RubyPlugin.new,
             ExtensionOnlyPlugin.new
           ]
         )
@@ -487,7 +487,7 @@ class Klenod::Build::Context::Test < Minitest::Test
           source_dir: dir,
           plugins: [
             GemFilePlugin.new(sources),
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new
+            Klenod::Build::Plugins::RubyPlugin.new
           ]
         )
 
@@ -520,7 +520,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+            Klenod::Build::Plugins::RubyPlugin.new,
             DelayedLoadPlugin.new(events)
           ]
         )
@@ -553,7 +553,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+            Klenod::Build::Plugins::RubyPlugin.new,
             CountingLoadPlugin.new(events)
           ]
         )
@@ -586,7 +586,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
+            Klenod::Build::Plugins::RubyPlugin.new,
             DelayedTransformPlugin.new(events)
           ]
         )
@@ -841,7 +841,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       output = "#{dir}/dist/klenod.bundle"
       assets_dir = "#{dir}/dist/public"
       plugins = default_plugins_with(
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           component_base_class: "#{self.class.name}::TestFramework::Component",
           factory: "#{self.class.name}::TestFramework::H"
         )
@@ -968,7 +968,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       )
       output = "#{dir}/bundle.mpk"
       plugins = default_plugins_with(
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           component_base_class: "Object",
           factory: "RuntimeTestH"
         )
@@ -1024,7 +1024,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       output = "#{dir}/klenod.bundle"
       assets_dir = "#{dir}/public"
       plugins = default_plugins_with(
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           component_base_class: "#{self.class.name}::TestFramework::Component",
           factory: "#{self.class.name}::TestFramework::H"
         )
@@ -1111,7 +1111,7 @@ class Klenod::Build::Context::Test < Minitest::Test
           source_dir: dir,
           plugins: [
             RuntimeOnlyImportValuePlugin.new,
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new
+            Klenod::Build::Plugins::RubyPlugin.new
           ]
         )
 
@@ -1193,8 +1193,8 @@ class Klenod::Build::Context::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
-            Klenod::Build::Plugins::ImagePlugin::Plugin.new(widths: [2], formats: ["png"])
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::ImagePlugin.new(widths: [2], formats: ["png"])
           ]
         )
 
@@ -1685,7 +1685,7 @@ class Klenod::Build::Context::Test < Minitest::Test
   def plugins_with_css(plugins = Klenod::Build::Context.default_plugins)
     [
       *plugins,
-      Klenod::Build::Plugins::CssPlugin::Plugin.new
+      Klenod::Build::Plugins::CSSPlugin.new
     ]
   end
 

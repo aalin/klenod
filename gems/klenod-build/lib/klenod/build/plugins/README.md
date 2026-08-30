@@ -33,26 +33,28 @@ Plugins can also implement `invalidate_module_ids` for custom invalidation.
 
 `Klenod::Build::Context.default_plugins` includes:
 
-- `RubyPlugin::Plugin`
-- `IntlPlugin::Plugin`
-- `HamlPlugin::Plugin`
-- `MarkdownPlugin::Plugin`
-- `GemImportPlugin::Plugin`
-- `SvgPlugin::Plugin`
-- `ImagePlugin::Plugin`
-- `JsonPlugin::Plugin`
-- `YamlPlugin::Plugin`
-- `TomlPlugin::Plugin`
-- `TextPlugin::Plugin`
+- `RubyPlugin`
+- `IntlPlugin`
+- `HamlPlugin`
+- `MarkdownPlugin`
+- `GemImportPlugin`
+- `SvgPlugin`
+- `ImagePlugin`
+- `JsonPlugin`
+- `YamlPlugin`
+- `TomlPlugin`
+- `TextPlugin`
 
-`GoogleFontsPlugin::Plugin` and `RouterPlugin::Plugin` are built in but opt-in. The example web app configures both explicitly.
+`GoogleFontsPlugin` and `RouterPlugin` are built in but opt-in. The example web app configures both explicitly.
 
 CSS and JavaScript support live in separate plugin gems:
 
 - `klenod-plugin-css`
 - `klenod-plugin-javascript`
 
-Each built-in plugin namespace exposes its entry point as `Plugin`, leaving room for helpers, errors, and value objects beside the plugin class.
+Each built-in plugin namespace provides `.new(...)` as its public constructor.
+The returned implementation class is available as `Plugin`, leaving room for
+helpers, errors, and value objects beside it.
 
 ## RubyPlugin
 
@@ -95,7 +97,7 @@ Handles `.haml` modules.
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+Klenod::Build::Plugins::HamlPlugin.new(
   component_base_class: "Example::Component",
   factory: "Example::H",
   global_variables: "@__props",
@@ -108,7 +110,7 @@ Klenod::Build::Plugins::HamlPlugin::Plugin.new(
 - `global_variables`: optional Ruby expression used to rewrite app-style global variable reads in Haml Ruby code. For example, `global_variables: "@__props"` compiles `$title` to `@__props[:title]`. Built-in Ruby globals such as `$!`, `$1`, and `$LOAD_PATH` are left untouched.
 - `cache_static_subtrees`: optional experimental optimization. When enabled, fully static Haml tag subtrees are compiled once into frozen constants and reused across renders. Defaults to `false`.
 
-`:markdown` filters use `MarkdownPlugin::Plugin`'s source-root component map convention when `markdown-components.rb` exists.
+`:markdown` filters use `MarkdownPlugin`'s source-root component map convention when `markdown-components.rb` exists.
 
 ## GemImportPlugin
 
@@ -125,7 +127,7 @@ Handles `gem://...` module ids.
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::GemImportPlugin::Plugin.new(
+Klenod::Build::Plugins::GemImportPlugin.new(
   import_root: "klenod",
   extensions: [".rb", ".haml"]
 )
@@ -147,7 +149,7 @@ Handles `.md` modules and Haml `:markdown` filters through `kramdown` with the G
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::MarkdownPlugin::Plugin.new(
+Klenod::Build::Plugins::MarkdownPlugin.new(
   component_base_class: "Example::Component",
   factory: "Example::H"
 )
@@ -180,7 +182,7 @@ Provides translation helpers for Haml companion files.
 
 Configuration: none.
 
-`HamlPlugin::Plugin` uses this plugin. It does not transform standalone modules.
+`HamlPlugin` uses this plugin. It does not transform standalone modules.
 
 ## GoogleFontsPlugin
 
@@ -197,7 +199,7 @@ Handles Google Fonts CSS imports such as `https://fonts.googleapis.com/css2?...`
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
+Klenod::Build::Plugins::GoogleFontsPlugin.new(
   fetcher: nil,
   cache_path: nil,
   refresh_cache: false,
@@ -254,7 +256,7 @@ Behavior:
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::ImagePlugin::Plugin.new(
+Klenod::Build::Plugins::ImagePlugin.new(
   widths: [320, 640, 960],
   formats: ["webp", "jpeg"]
 )
@@ -306,7 +308,7 @@ Generates an optional virtual router module.
 Configuration:
 
 ```ruby
-Klenod::Build::Plugins::RouterPlugin::Plugin.new(
+Klenod::Build::Plugins::RouterPlugin.new(
   specifier: "virtual:router",
   pages_dir: "pages",
   extensions: [".rb", ".haml"],

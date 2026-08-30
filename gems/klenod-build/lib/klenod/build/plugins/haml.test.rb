@@ -17,7 +17,7 @@ module Klenod
       class HamlPluginSmokeTest < Minitest::Test
         def test_haml_plugin_can_be_required_and_constructed_with_options
           plugin =
-            HamlPlugin::Plugin.new(
+            HamlPlugin.new(
               component_base_class: "Object",
               factory: "Object",
               global_variables: "@__props",

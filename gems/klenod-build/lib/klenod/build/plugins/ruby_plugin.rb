@@ -8,6 +8,10 @@ module Klenod
   module Build
     module Plugins
       module RubyPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < Klenod::Build::Plugin
           def transform(module_id, code, context)
             return TransformResult.identity(code) unless module_id.extname == ".rb"

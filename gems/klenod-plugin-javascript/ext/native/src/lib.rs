@@ -408,9 +408,10 @@ impl SourceKind {
 #[magnus::init]
 fn init(ruby: &Ruby) -> Result<(), Error> {
     let klenod = ruby.define_module("Klenod")?;
-    let plugin = klenod.define_module("Plugin")?;
-    let javascript = plugin.define_module("JavaScript")?;
-    let native = javascript.define_module("Native")?;
+    let build = klenod.define_module("Build")?;
+    let plugins = build.define_module("Plugins")?;
+    let javascript_plugin = plugins.define_module("JavaScriptPlugin")?;
+    let native = javascript_plugin.define_module("Native")?;
     native.define_singleton_method("parse_native", function!(parse_native, 2))?;
     native.define_singleton_method("transform_native", function!(transform_native, 4))?;
     Ok(())

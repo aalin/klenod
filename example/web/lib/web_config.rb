@@ -25,37 +25,37 @@ module Example
 
     def plugins
       [
-        Klenod::Build::Plugins::RouterPlugin::Plugin.new(
+        Klenod::Build::Plugins::RouterPlugin.new(
           pages_dir: "routes",
           route_base_class: "Example::Route"
         ),
-        Klenod::Build::Plugins::RubyPlugin::Plugin.new,
-        Klenod::Build::Plugins::IntlPlugin::Plugin.new,
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::RubyPlugin.new,
+        Klenod::Build::Plugins::IntlPlugin.new,
+        Klenod::Build::Plugins::HamlPlugin.new(
           component_base_class: "Example::Component",
           factory: "Example::H",
           global_variables: "@__props",
           i18n_class: "Example::I18n",
           cache_static_subtrees: false
         ),
-        Klenod::Build::Plugins::MarkdownPlugin::Plugin.new(
+        Klenod::Build::Plugins::MarkdownPlugin.new(
           component_base_class: "Example::Component",
           factory: "Example::H"
         ),
-        Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
           fetcher: google_fonts_fetcher,
           cache_path: google_fonts_cache_path
         ),
-        Klenod::Build::Plugins::CssPlugin::Plugin.new,
-        Klenod::Build::Plugins::JavaScriptPlugin::Plugin.new,
-        Klenod::Build::Plugins::SvgPlugin::Plugin.new,
-        Klenod::Build::Plugins::ImagePlugin::Plugin.new(
+        Klenod::Build::Plugins::CSSPlugin.new,
+        Klenod::Build::Plugins::JavaScriptPlugin.new,
+        Klenod::Build::Plugins::SvgPlugin.new,
+        Klenod::Build::Plugins::ImagePlugin.new(
           widths: [320, 640, 960]
         ),
-        Klenod::Build::Plugins::JsonPlugin::Plugin.new,
-        Klenod::Build::Plugins::YamlPlugin::Plugin.new,
-        Klenod::Build::Plugins::TomlPlugin::Plugin.new,
-        Klenod::Build::Plugins::TextPlugin::Plugin.new
+        Klenod::Build::Plugins::JsonPlugin.new,
+        Klenod::Build::Plugins::YamlPlugin.new,
+        Klenod::Build::Plugins::TomlPlugin.new,
+        Klenod::Build::Plugins::TextPlugin.new
       ]
     end
 

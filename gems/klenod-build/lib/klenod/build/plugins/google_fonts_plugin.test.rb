@@ -115,7 +115,7 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/styles")
       File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
       plugin =
-        Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
           adjust_font_fallback: false,
           fetcher: ->(url) do
             {
@@ -220,7 +220,7 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
       fetched = []
       plugin =
-        Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
           fetcher: lambda do |url|
             fetched << url
             case url
@@ -252,7 +252,7 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       css = %(@font-face { src: url("#{FONT_URL}") format("woff2"); })
       fetched = []
       plugin =
-        Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
           cache_path: cache_path,
           fetcher: lambda do |url|
             fetched << url
@@ -282,7 +282,7 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       CSS
       write_cache_entry(cache_path, GOOGLE_CSS_URL, cached_css)
       plugin =
-        Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
           cache_path: cache_path,
           fetcher: ->(url) { raise "unexpected fetch #{url}" }
         )
@@ -306,7 +306,7 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       fresh_css = %(@font-face { src: url("#{FONT_URL}") format("woff2"); })
       fetched = []
       plugin =
-        Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
           cache_path: cache_path,
           refresh_cache: true,
           fetcher: lambda do |url|
@@ -331,7 +331,7 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       css = %(@font-face { src: url("#{FONT_URL}") format("woff2"); })
       fetched = []
       plugin =
-        Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
           cache_path: cache_path,
           fetcher: lambda do |url|
             fetched << url
@@ -351,7 +351,7 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/styles")
       File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
       plugin =
-        Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
+        Klenod::Build::Plugins::GoogleFontsPlugin.new(
           fetcher: ->(url) { raise "missing #{url}" }
         )
 
@@ -439,13 +439,13 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       mode: mode,
       plugins: [
         plugin,
-        Klenod::Build::Plugins::CssPlugin::Plugin.new
+        Klenod::Build::Plugins::CSSPlugin.new
       ]
     )
   end
 
   def plugin_with_responses(responses)
-    Klenod::Build::Plugins::GoogleFontsPlugin::Plugin.new(
+    Klenod::Build::Plugins::GoogleFontsPlugin.new(
       fetcher: ->(url) { responses.fetch(url) }
     )
   end

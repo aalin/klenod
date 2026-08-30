@@ -283,7 +283,7 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
   end
 
   def haml_plugin(**options)
-    Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+    Klenod::Build::Plugins::HamlPlugin.new(
       component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
       factory: "#{self.class.name}::FakeFramework::H",
       **options

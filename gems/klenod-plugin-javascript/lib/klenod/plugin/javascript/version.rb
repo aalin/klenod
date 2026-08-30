@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 module Klenod
-  module Plugin
-    module JavaScript
-      VERSION = "0.0.1"
+  module Build
+    module Plugins
+      module JavaScriptPlugin
+        VERSION = "0.0.1"
+      end
     end
   end
 end

@@ -8,6 +8,10 @@ module Klenod
   module Build
     module Plugins
       module IntlPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < Klenod::Build::Plugin
           INTL_FILE_RE = /\.intl\.(?<locale>[^\/]+)\.toml\z/
 

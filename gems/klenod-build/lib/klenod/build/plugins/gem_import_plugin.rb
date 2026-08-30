@@ -12,6 +12,10 @@ module Klenod
   module Build
     module Plugins
       module GemImportPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < Klenod::Build::Plugin
           DEFAULT_IMPORT_ROOT = "klenod"
           DEFAULT_EXTENSIONS = [".rb", ".haml"].freeze

@@ -9,7 +9,11 @@ require "klenod/plugin/css"
 require "klenod/runtime"
 require "klenod/build/plugins/image_plugin"
 
-class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
+class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
+  def test_namespace_constructs_the_plugin
+    assert_instance_of Klenod::Build::Plugins::CSSPlugin::Plugin, Klenod::Build::Plugins::CSSPlugin.new
+  end
+
   def test_ruby_import_of_css_returns_class_map_and_emits_asset
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
@@ -244,7 +248,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/styles")
       File.write("#{dir}/styles/home.css", ".title { color: red; }\n")
 
-      context = context_for(dir, css_plugin: Klenod::Build::Plugins::CssPlugin::Plugin.new(minify: true))
+      context = context_for(dir, css_plugin: Klenod::Build::Plugins::CSSPlugin.new(minify: true))
       record = context.evaluate("styles/home.css")
       css_asset = record.assets.find { |asset| asset.metadata[:type] == :css }
 
@@ -379,7 +383,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
         "#{dir}/styles/home.css",
         "@import \"./first.css\";\n@import \"./second.css\";\n.home { color: green; }\n"
       )
-      plugin = Klenod::Build::Plugins::CssPlugin::Plugin.new(minify: true, source_maps: false)
+      plugin = Klenod::Build::Plugins::CSSPlugin.new(minify: true, source_maps: false)
 
       record = context_for(dir, css_plugin: plugin).evaluate("styles/home.css")
 
@@ -667,7 +671,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
       context =
         context_for(
           dir,
-          css_plugin: Klenod::Build::Plugins::CssPlugin::Plugin.new(source_maps: false)
+          css_plugin: Klenod::Build::Plugins::CSSPlugin.new(source_maps: false)
         )
       record = context.evaluate("styles/home.css")
 
@@ -736,7 +740,7 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
 
   private
 
-  def context_for(dir, mode: :development, css_plugin: Klenod::Build::Plugins::CssPlugin::Plugin.new)
+  def context_for(dir, mode: :development, css_plugin: Klenod::Build::Plugins::CSSPlugin.new)
     Klenod::Build::Context.new(
       source_dir: dir,
       mode: mode,
@@ -748,6 +752,6 @@ class Klenod::Build::Plugins::CssPlugin::Test < Minitest::Test
   end
 
   def local_css_variables_plugin
-    Klenod::Build::Plugins::CssPlugin::Plugin.new(local_css_variables: true)
+    Klenod::Build::Plugins::CSSPlugin.new(local_css_variables: true)
   end
 end

@@ -16,6 +16,10 @@ module Klenod
   module Build
     module Plugins
       module ImagePlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < Klenod::Build::Plugin
           EXTENSIONS = [".avif", ".gif", ".jpeg", ".jpg", ".png", ".webp"].freeze
           IMAGE_RUNTIME_SPECIFIER = "virtual:klenod/image"

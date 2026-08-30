@@ -18,9 +18,11 @@ static PARSE_ERROR: Lazy<ExceptionClass> = Lazy::new(|ruby| {
         .class_object()
         .const_get::<_, RModule>("Klenod")
         .unwrap()
-        .const_get::<_, RModule>("Plugin")
+        .const_get::<_, RModule>("Build")
         .unwrap()
-        .const_get::<_, RModule>("CSS")
+        .const_get::<_, RModule>("Plugins")
+        .unwrap()
+        .const_get::<_, RModule>("CSSPlugin")
         .unwrap()
         .const_get("ParseError")
         .unwrap();
@@ -333,9 +335,10 @@ fn hash(source: &str) -> String {
 #[magnus::init]
 fn init(ruby: &Ruby) -> Result<(), Error> {
     let klenod = ruby.define_module("Klenod")?;
-    let plugin = klenod.define_module("Plugin")?;
-    let css = plugin.define_module("CSS")?;
-    let native = css.define_module("Native")?;
+    let build = klenod.define_module("Build")?;
+    let plugins = build.define_module("Plugins")?;
+    let css_plugin = plugins.define_module("CSSPlugin")?;
+    let native = css_plugin.define_module("Native")?;
     native.define_singleton_method("transform_native", function!(transform_native, 3))?;
     native.define_singleton_method("minify_native", function!(minify_native, 2))?;
     native.define_singleton_method("serialize_native", function!(serialize_native, 2))?;

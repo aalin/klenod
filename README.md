@@ -121,7 +121,7 @@ assets_dir "public"
 mode :development
 
 plugins [
-  Klenod::Build::Plugins::RubyPlugin::Plugin.new
+  Klenod::Build::Plugins::RubyPlugin.new
 ]
 ```
 
@@ -239,7 +239,7 @@ These built-in plugins are optional:
 
 CSS and JavaScript support are separate plugin gems:
 
-- [`CssPlugin`](gems/klenod-plugin-css/README.md): scopes CSS Modules and emits CSS assets.
+- [`CSSPlugin`](gems/klenod-plugin-css/README.md): scopes CSS Modules and emits CSS assets.
 - [`JavaScriptPlugin`](gems/klenod-plugin-javascript/README.md): collects JavaScript dependencies and emits JavaScript assets.
 
 ## Examples

@@ -138,7 +138,7 @@ module Klenod
               source_dir: source_dir,
               plugins: [
                 Plugin.new,
-                RubyPlugin::Plugin.new
+                RubyPlugin.new
               ]
             )
           end

@@ -12,6 +12,10 @@ module Klenod
   module Build
     module Plugins
       module RouterPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < Klenod::Build::Plugin
           RouteSegment = Data.define(:name, :kind, :param_name, :path_part) do
             def self.parse(name)

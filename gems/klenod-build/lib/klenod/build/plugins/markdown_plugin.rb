@@ -18,6 +18,10 @@ module Klenod
   module Build
     module Plugins
       module MarkdownPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < Klenod::Build::Plugin
           include ClassNamesRuntime
 

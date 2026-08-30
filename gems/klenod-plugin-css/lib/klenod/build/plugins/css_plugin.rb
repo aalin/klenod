@@ -16,13 +16,17 @@ require "klenod/build/plugins/class_names_runtime"
 module Klenod
   module Build
     module Plugins
-      module CssPlugin
+      module CSSPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < Klenod::Build::Plugin
           include ClassNamesRuntime
 
           CSS_DEPENDENCY_TYPES = {
-            Klenod::Plugin::CSS::ImportDependency => :css_import,
-            Klenod::Plugin::CSS::UrlDependency => :asset_url
+            ImportDependency => :css_import,
+            UrlDependency => :asset_url
           }.freeze
 
           JAVASCRIPT_STYLESHEET_QUERY = "javascript"
@@ -63,7 +67,7 @@ module Klenod
               javascript_result = transform_css(module_id, code, transform_names: false, context: context)
               css_dependencies = build_dependencies(module_id, javascript_result.dependencies, context)
 
-              return TransformResult.new(
+              return Klenod::Build::TransformResult.new(
                 "Default = nil\n",
                 css_dependencies.dependencies,
                 nil,
@@ -84,7 +88,7 @@ module Klenod
             styles_dependency = class_names_runtime_dependency(module_id)
             selectors = css_selectors(scoped_result)
 
-            TransformResult.new(
+            Klenod::Build::TransformResult.new(
               ruby_module_source(selectors, nil, styles_dependency: styles_dependency),
               [styles_dependency, *css_dependencies.dependencies, *compose_dependencies, *variable_dependencies],
               nil,
@@ -195,7 +199,7 @@ module Klenod
           end
 
           def transform_css(module_id, code, transform_names:, context:)
-            Klenod::Plugin::CSS::Transformer.transform(
+            Transformer.transform(
               module_id.path,
               code,
               minify: minify_enabled?(context),
@@ -246,7 +250,7 @@ module Klenod
               .exports
               .values
               .flat_map(&:composes)
-              .grep(Klenod::Plugin::CSS::ComposeDependency)
+              .grep(ComposeDependency)
               .map(&:specifier)
               .uniq
               .each_with_index
@@ -265,7 +269,7 @@ module Klenod
             css_result
               .references
               .values
-              .grep(Klenod::Plugin::CSS::VariableDependency)
+              .grep(VariableDependency)
               .map(&:specifier)
               .uniq
               .each_with_index
@@ -281,7 +285,7 @@ module Klenod
           end
 
           def plugin_resolvable_external_import?(dependency, css_dependency, context)
-            return false unless css_dependency.is_a?(Klenod::Plugin::CSS::ImportDependency)
+            return false unless css_dependency.is_a?(ImportDependency)
 
             context.resolve_dependency(dependency)
             true
@@ -540,11 +544,11 @@ module Klenod
 
                 export.composes.each do |compose|
                   case compose
-                  when Klenod::Plugin::CSS::ComposeLocal
+                  when ComposeLocal
                     values.concat(resolve_class.call(compose.name, [*resolving, name]).split)
-                  when Klenod::Plugin::CSS::ComposeGlobal
+                  when ComposeGlobal
                     values << compose.name
-                  when Klenod::Plugin::CSS::ComposeDependency
+                  when ComposeDependency
                     record = compose_records.fetch(compose.specifier)
                     dependency_classes = record.metadata[:css_classes]
                     unless dependency_classes

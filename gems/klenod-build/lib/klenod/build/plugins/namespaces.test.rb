@@ -9,23 +9,23 @@ module Klenod
     module Plugins
       class NamespacesTest < Minitest::Test
         def test_plugin_namespaces_expose_plugin_classes
-          assert_operator RubyPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
-          assert_operator IntlPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
-          assert_operator HamlPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
-          assert_operator MarkdownPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
-          assert_operator GemImportPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
-          assert_operator GoogleFontsPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
-          assert_operator SvgPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
-          assert_operator ImagePlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
-          assert_operator DataPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
-          assert_operator RouterPlugin::Plugin.new, :is_a?, Klenod::Build::Plugin
+          assert_operator RubyPlugin.new, :is_a?, Klenod::Build::Plugin
+          assert_operator IntlPlugin.new, :is_a?, Klenod::Build::Plugin
+          assert_operator HamlPlugin.new, :is_a?, Klenod::Build::Plugin
+          assert_operator MarkdownPlugin.new, :is_a?, Klenod::Build::Plugin
+          assert_operator GemImportPlugin.new, :is_a?, Klenod::Build::Plugin
+          assert_operator GoogleFontsPlugin.new, :is_a?, Klenod::Build::Plugin
+          assert_operator SvgPlugin.new, :is_a?, Klenod::Build::Plugin
+          assert_operator ImagePlugin.new, :is_a?, Klenod::Build::Plugin
+          assert_operator DataPlugin.new, :is_a?, Klenod::Build::Plugin
+          assert_operator RouterPlugin.new, :is_a?, Klenod::Build::Plugin
         end
 
         def test_data_format_namespaces_expose_plugin_classes
-          assert_operator JsonPlugin::Plugin.new, :is_a?, DataPlugin::Plugin
-          assert_operator YamlPlugin::Plugin.new, :is_a?, DataPlugin::Plugin
-          assert_operator TomlPlugin::Plugin.new, :is_a?, DataPlugin::Plugin
-          assert_operator TextPlugin::Plugin.new, :is_a?, DataPlugin::Plugin
+          assert_operator JsonPlugin.new, :is_a?, DataPlugin::Plugin
+          assert_operator YamlPlugin.new, :is_a?, DataPlugin::Plugin
+          assert_operator TomlPlugin.new, :is_a?, DataPlugin::Plugin
+          assert_operator TextPlugin.new, :is_a?, DataPlugin::Plugin
         end
       end
     end

@@ -16,7 +16,7 @@ class Klenod::Build::Plugins::HamlPlugin::BacktraceTest < Klenod::Build::Plugins
       )
 
       plugin =
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
@@ -48,7 +48,7 @@ class Klenod::Build::Plugins::HamlPlugin::BacktraceTest < Klenod::Build::Plugins
       )
 
       plugin =
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
@@ -81,7 +81,7 @@ class Klenod::Build::Plugins::HamlPlugin::BacktraceTest < Klenod::Build::Plugins
       )
 
       plugin =
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
@@ -108,7 +108,7 @@ class Klenod::Build::Plugins::HamlPlugin::BacktraceTest < Klenod::Build::Plugins
       )
 
       plugin =
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
@@ -140,7 +140,7 @@ class Klenod::Build::Plugins::HamlPlugin::BacktraceTest < Klenod::Build::Plugins
       )
 
       plugin =
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
@@ -182,7 +182,7 @@ class Klenod::Build::Plugins::HamlPlugin::BacktraceTest < Klenod::Build::Plugins
       )
 
       plugin =
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
@@ -226,7 +226,7 @@ class Klenod::Build::Plugins::HamlPlugin::BacktraceTest < Klenod::Build::Plugins
       )
 
       plugin =
-        Klenod::Build::Plugins::HamlPlugin::Plugin.new(
+        Klenod::Build::Plugins::HamlPlugin.new(
           factory: "#{self.class.name}::FakeFramework::H"
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))

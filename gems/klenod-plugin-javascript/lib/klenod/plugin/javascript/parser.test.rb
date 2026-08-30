@@ -5,8 +5,8 @@ require "minitest/autorun"
 require "klenod/plugin/javascript"
 require "klenod/plugin/javascript/parser"
 
-class Klenod::Plugin::JavaScript::ParserTest < Minitest::Test
-  Parser = Klenod::Plugin::JavaScript::Parser
+class Klenod::Build::Plugins::JavaScriptPlugin::ParserTest < Minitest::Test
+  Parser = Klenod::Build::Plugins::JavaScriptPlugin::Parser
 
   def test_uses_native_parser_when_compiled
     skip "native parser is not compiled" unless Parser.native?

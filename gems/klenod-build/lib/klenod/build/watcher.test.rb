@@ -195,7 +195,7 @@ class Klenod::Build::Watcher::Test < Minitest::Test
       source_dir: dir,
       plugins: [
         *Klenod::Build::Context.default_plugins,
-        Klenod::Build::Plugins::CssPlugin::Plugin.new
+        Klenod::Build::Plugins::CSSPlugin.new
       ]
     )
   end

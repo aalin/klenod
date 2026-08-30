@@ -17,6 +17,10 @@ module Klenod
   module Build
     module Plugins
       module JavaScriptPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < Klenod::Build::Plugin
           CONTENT_TYPE = "application/javascript"
           EXTENSIONS = [".js", ".jsx", ".ts", ".tsx"].freeze
@@ -65,7 +69,7 @@ module Klenod
 
             custom_element = custom_element_module?(module_id)
             jsx_runtime_namespace = custom_element ? jsx_runtime_namespace(module_id) : nil
-            transform = Klenod::Plugin::JavaScript::Parser.transform(
+            transform = Parser.transform(
               code,
               filename: module_id.to_s,
               source_kind: source_kind(module_id),
@@ -80,7 +84,7 @@ module Klenod
               end
             dependencies = build_dependencies(module_id, imports)
 
-            TransformResult.new(
+            Klenod::Build::TransformResult.new(
               module_source(nil),
               dependencies,
               nil,
@@ -190,7 +194,7 @@ module Klenod
 
           def jsx_runtime_import_record(prefix, module_id)
             start_offset = prefix.index(JSX_RUNTIME_SPECIFIER) || raise(KeyError, "Missing JSX runtime specifier in injected import")
-            Klenod::Plugin::JavaScript::ImportRecord.new(
+            ImportRecord.new(
               JSX_RUNTIME_SPECIFIER,
               :javascript_import,
               start_offset,
@@ -201,7 +205,7 @@ module Klenod
           end
 
           def shifted_import_record(import, offset)
-            Klenod::Plugin::JavaScript::ImportRecord.new(
+            ImportRecord.new(
               import.specifier,
               import.kind,
               import.start_offset + offset,

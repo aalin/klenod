@@ -14,6 +14,10 @@ module Klenod
   module Build
     module Plugins
       module SvgPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < Klenod::Build::Plugin
           EXTENSIONS = [".svg"].freeze
           SVG_RUNTIME_SPECIFIER = "virtual:klenod/svg"

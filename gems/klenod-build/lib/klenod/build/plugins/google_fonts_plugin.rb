@@ -18,6 +18,10 @@ module Klenod
   module Build
     module Plugins
       module GoogleFontsPlugin
+        def self.new(...)
+          Plugin.new(...)
+        end
+
         class Plugin < Klenod::Build::Plugin
           GOOGLE_FONTS_HOST = "fonts.googleapis.com"
           GOOGLE_FONTS_PATH = "/css2"

@@ -501,7 +501,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
 
   def context_for(dir, plugin: haml_plugin, css: true)
     plugins = default_plugins_with(plugin)
-    plugins = [*plugins, Klenod::Build::Plugins::CssPlugin::Plugin.new] if css
+    plugins = [*plugins, Klenod::Build::Plugins::CSSPlugin.new] if css
     Klenod::Build::Context.new(source_dir: dir, plugins:)
   end
 end

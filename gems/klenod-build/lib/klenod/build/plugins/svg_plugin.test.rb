@@ -127,9 +127,9 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
         Klenod::Build::Context.new(
           source_dir: dir,
           plugins: [
-            Klenod::Build::Plugins::RubyPlugin::Plugin.new,
-            Klenod::Build::Plugins::CssPlugin::Plugin.new,
-            Klenod::Build::Plugins::SvgPlugin::Plugin.new
+            Klenod::Build::Plugins::RubyPlugin.new,
+            Klenod::Build::Plugins::CSSPlugin.new,
+            Klenod::Build::Plugins::SvgPlugin.new
           ]
         )
       context.evaluate("styles/home.css")
