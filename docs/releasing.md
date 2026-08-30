@@ -19,18 +19,25 @@ Use `release` as the environment name in each RubyGems.org publisher configurati
 
 ## Creating a release
 
-Update `KLENOD_VERSION` and synchronize the generated version constants:
+Prepare the version bump from a clean worktree:
 
 ```sh
-bundle exec rake version:sync
-bundle exec rake version:check
+bin/bump-version 0.1.0
 ```
 
-Commit the version change, then create and push an annotated tag whose name exactly matches `v#{KLENOD_VERSION}`:
+The script updates `KLENOD_VERSION`, generated version constants, and the root
+and example lockfiles. It validates the result and prints the commands for
+reviewing and committing the changes.
+
+After the version commit has been merged into `main`, follow the printed
+commands to create and push an annotated tag whose name exactly matches
+`v#{KLENOD_VERSION}`:
 
 ```sh
+git switch main
+git pull --ff-only
 git tag -a v0.1.0 -m "Release 0.1.0"
-git push origin main v0.1.0
+git push origin v0.1.0
 ```
 
 The release workflow verifies the tag and test suite, builds source and native gems in parallel, verifies the complete artifact inventory, publishes the gems in dependency order, and finally creates a GitHub release containing the gems and `SHA256SUMS`.

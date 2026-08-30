@@ -1,0 +1,99 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "open3"
+require "rbconfig"
+require "rubygems/version"
+require "shellwords"
+
+ROOT = File.expand_path("..", __dir__)
+VERSION_FILE = File.join(ROOT, "KLENOD_VERSION")
+VERSION_PATTERN = /\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\z/
+VERSION_FILES = Dir.glob("gems/*/lib/**/version.rb", base: ROOT).sort.freeze
+GEMFILES = %w[
+  Gemfile
+  example/box/Gemfile
+  example/web/Gemfile
+].freeze
+MANAGED_FILES = [
+  "KLENOD_VERSION",
+  *VERSION_FILES,
+  *GEMFILES.map { "#{it}.lock" }
+].freeze
+
+def capture!(*command)
+  output, error, status = Open3.capture3(*command, chdir: ROOT)
+  return output if status.success?
+
+  warn error unless error.empty?
+  abort "Command failed: #{Shellwords.join(command)}"
+end
+
+def run!(*command)
+  puts "+ #{Shellwords.join(command)}"
+  return if system(*command, chdir: ROOT)
+
+  raise "Command failed: #{Shellwords.join(command)}"
+end
+
+def restore_files(originals)
+  originals.each do |path, content|
+    File.binwrite(File.join(ROOT, path), content)
+  end
+end
+
+unless ARGV.length == 1 && VERSION_PATTERN.match?(ARGV.fetch(0))
+  abort "Usage: bin/bump-version VERSION\nVERSION must use the numeric MAJOR.MINOR.PATCH format."
+end
+
+new_version = ARGV.fetch(0)
+current_version = File.read(VERSION_FILE).strip
+unless Gem::Version.new(new_version) > Gem::Version.new(current_version)
+  abort "VERSION must be newer than #{current_version}."
+end
+
+unless capture!("git", "status", "--porcelain").empty?
+  abort "The worktree must be clean before bumping the version."
+end
+
+originals = MANAGED_FILES.to_h { [it, File.binread(File.join(ROOT, it))] }
+ruby = RbConfig.ruby
+bundle = [ruby, "-S", "bundle"]
+
+begin
+  File.write(VERSION_FILE, "#{new_version}\n")
+  run!(*bundle, "exec", "rake", "version:sync")
+
+  GEMFILES.each do |gemfile|
+    run!(*bundle, "lock", "--local", "--gemfile=#{gemfile}")
+  end
+
+  run!(*bundle, "exec", "rake", "version:check")
+  run!("git", "diff", "--check")
+rescue Interrupt, StandardError => error
+  restore_files(originals)
+  warn "Version bump failed; restored managed files."
+  abort error.message
+end
+
+changed_files = capture!("git", "diff", "--name-only").lines(chomp: true)
+tag = "v#{new_version}"
+
+puts <<~INSTRUCTIONS
+
+  Bumped Klenod from #{current_version} to #{new_version}.
+
+  Review and commit the version bump:
+
+    git diff
+    git add #{Shellwords.join(changed_files)}
+    git commit -m #{Shellwords.escape("Bump version to #{new_version}")}
+    git push origin HEAD
+
+  After that commit has been merged into main:
+
+    git switch main
+    git pull --ff-only
+    git tag -a #{tag} -m #{Shellwords.escape("Release #{new_version}")}
+    git push origin #{tag}
+INSTRUCTIONS
