@@ -1,6 +1,6 @@
 %header
   .content
-    = if $kicker
+    = if $kicker && request.representation?(:html)
       %p.kicker= $kicker
     %h1= $title
     = if $summary

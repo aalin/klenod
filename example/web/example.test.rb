@@ -870,19 +870,22 @@ class Klenod::ExampleTest < Minitest::Test
     routed_formatted = entry.exports::App.send(:format_render_error, error, context)
     refute_includes(routed_formatted, "Backtrace:")
     error_component = context.exports("virtual:router.rb")::Default.error("/docs/assets").page
+    request = Example::Request.from(Request["GET", "/docs/assets"]).with(representation: :html)
     rendered =
-      Example::H.render(
-        error_component
-          .instantiate(
-            path: "/docs/assets",
-            status: 500,
-            error: error,
-            error_details: "Resolution details\nBacktrace:\nframe.rb:1",
-            error_source: nil,
-            source_root: source_root
-          )
-          .render
-      )
+      Example::Context.with(request: request) do
+        Example::H.render(
+          error_component
+            .instantiate(
+              path: "/docs/assets",
+              status: 500,
+              error: error,
+              error_details: "Resolution details\nBacktrace:\nframe.rb:1",
+              error_source: nil,
+              source_root: source_root
+            )
+            .render
+        )
+      end
 
     assert_includes(rendered, "Module resolution error")
     assert_includes(rendered, "Incorrect import path casing")
@@ -1147,6 +1150,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("Cookie, Accept", headers.fetch("vary"))
     refute_includes(headers, "link")
     assert_empty(request.interim_responses)
+    assert(markdown.start_with?("# Getting Started\n"))
     assert_includes(markdown, "# Getting Started")
     assert_includes(markdown, "## Create A Context")
     assert_includes(markdown, "```ruby")
@@ -1168,6 +1172,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
     assert_equal("Cookie, Accept", headers.fetch("vary"))
     assert_includes(body.join, "<!doctype html>")
+    assert_includes(body.join, ">Docs</p>")
   end
 
   def test_example_app_renders_hybrid_page_as_markdown
@@ -1243,6 +1248,13 @@ class Klenod::ExampleTest < Minitest::Test
     request = Example::Request.from(HeaderRequest["GET", "/api/status", headers])
 
     assert_equal({"accept" => "application/json"}, request.headers)
+  end
+
+  def test_example_request_queries_the_selected_representation
+    request = Example::Request.from(Request["GET", "/docs"]).with(representation: :markdown)
+
+    assert(request.representation?(:markdown))
+    refute(request.representation?(:html))
   end
 
   def test_example_request_parses_nested_query_params

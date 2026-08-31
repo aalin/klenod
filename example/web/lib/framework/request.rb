@@ -4,7 +4,7 @@ require "rbnacl"
 require "uri"
 
 module Example
-  Request = Data.define(:method, :path, :params, :query, :headers, :cookies, :form, :session, :raw, :canonical_path, :locale, :route_locale) do
+  Request = Data.define(:method, :path, :params, :query, :headers, :cookies, :form, :session, :raw, :canonical_path, :locale, :route_locale, :representation) do
     def self.from(raw, params: {}, localized: nil)
       raw_path = raw&.path.to_s
       raw_path = "/" if raw_path.empty?
@@ -25,7 +25,8 @@ module Example
         raw,
         localized&.path || (path.empty? ? "/" : path),
         localized&.locale,
-        localized&.route_locale
+        localized&.route_locale,
+        nil
       ]
     end
 
@@ -96,7 +97,11 @@ module Example
     end
 
     def with_params(params)
-      self.class[method, path, params, query, headers, cookies, form, session, raw, canonical_path, locale, route_locale]
+      with(params: params)
+    end
+
+    def representation?(value)
+      representation == value.to_sym
     end
 
     def csrf_token

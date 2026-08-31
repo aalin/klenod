@@ -71,6 +71,7 @@ module Example
     end
 
     def render_markdown_response(match, request, status:, props:)
+      request = request.with(representation: :markdown)
       body =
         Context.with(request: request, routes: routes) do
           MarkdownRenderer.render(page_instance(match.page, props).render)
@@ -83,6 +84,7 @@ module Example
     end
 
     def render_html_response(match, request, context, raw_request:, status:, props:)
+      request = request.with(representation: :html)
       page = match.page
       layouts = match.layouts
       prepare_slot_pages(match, layouts)
