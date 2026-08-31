@@ -152,6 +152,41 @@ class Klenod::ExampleTest < Minitest::Test
     )
   end
 
+  def test_example_markdown_renderer_uses_document_heading_level_for_details_summaries
+    node =
+      Example::H.fragment(
+        Example::H[:h2, "Asset patterns"],
+        Example::H[
+          :div,
+          Example::H[:details, Example::H[:summary, "CSS url()"], Example::H[:p, "CSS assets"]],
+          Example::H[:details, Example::H[:summary, "picture"], Example::H[:h4, "Sources"]]
+        ],
+        Example::H[:h3, "Metadata"],
+        Example::H[:details, Example::H[:summary, "Variants"], Example::H[:p, "Generated variants"]]
+      )
+
+    assert_equal(
+      <<~MARKDOWN,
+        ## Asset patterns
+
+        ### CSS url()
+
+        CSS assets
+
+        ### picture
+
+        #### Sources
+
+        ### Metadata
+
+        #### Variants
+
+        Generated variants
+      MARKDOWN
+      Example::MarkdownRenderer.render(node)
+    )
+  end
+
   def test_example_representation_negotiator_honors_accept_precedence
     negotiator = Example::RepresentationNegotiator::PAGE
 

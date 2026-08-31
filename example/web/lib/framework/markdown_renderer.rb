@@ -12,6 +12,7 @@ module Example
     end
 
     def initialize
+      @heading_level = 0
       @literal_blocks = []
     end
 
@@ -77,6 +78,8 @@ module Example
         "  \n"
       when :hr
         block("---")
+      when :details
+        details(element)
       when :dl
         definition_list(element)
       when :dt, :dd
@@ -114,7 +117,24 @@ module Example
     end
 
     def heading(element, level)
+      @heading_level = level
       block("#{"#" * level} #{render_children(element.children).strip}")
+    end
+
+    def details(element)
+      parent_heading_level = @heading_level
+      rendered_summary = false
+
+      element.children.map do |child|
+        if !rendered_summary && child.is_a?(H::Element) && child.tag.to_sym == :summary
+          rendered_summary = true
+          heading(child, [@heading_level + 1, 6].min)
+        else
+          render_node(child)
+        end
+      end.join
+    ensure
+      @heading_level = parent_heading_level
     end
 
     def wrap_inline(marker, element)
