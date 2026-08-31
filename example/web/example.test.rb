@@ -67,6 +67,63 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(:p, node.tag)
     assert_equal([Example::H::Text["Fish & chips"]], node.children)
     assert_equal(%(<p title="&quot;quoted&quot;">Fish &amp; chips</p>), Example::H.render(node))
+    assert_equal(Example::H.render(node), Example::HTMLRenderer.render(node))
+  end
+
+  def test_example_markdown_renderer_serializes_semantic_descriptors
+    node =
+      Example::H.fragment(
+        Example::H[:h1, "Descriptor *rendering*"],
+        Example::H[
+          :p,
+          "Read ",
+          Example::H[:strong, "the docs"],
+          " or ",
+          Example::H[:a, "visit Klenod", href: "https://klenod.dev/docs", title: "Documentation"],
+          "."
+        ],
+        Example::H[
+          :ul,
+          Example::H[:li, "First"],
+          Example::H[:li, "Second", Example::H[:ul, Example::H[:li, "Nested"]]]
+        ],
+        Example::H[:pre, Example::H.fragment(Example::H[:code, "puts `ok`\n", class: "language-ruby"])],
+        Example::H[
+          :table,
+          Example::H[:thead, Example::H[:tr, Example::H[:th, "Name"], Example::H[:th, "Value"]]],
+          Example::H[:tbody, Example::H[:tr, Example::H[:td, "Klenod"], Example::H[:td, "Ruby | modules"]]]
+        ],
+        Example::H[:img, src: "/logo.svg", alt: "Klenod logo"],
+        Example::H::Comment["not rendered"]
+      )
+    markdown = Example::MarkdownRenderer.render(node)
+
+    assert_includes(markdown, "# Descriptor \\*rendering\\*")
+    assert_includes(markdown, "Read **the docs** or [visit Klenod](https://klenod.dev/docs \"Documentation\").")
+    assert_includes(markdown, "- First")
+    assert_includes(markdown, "- Second")
+    assert_includes(markdown, "  - Nested")
+    assert_includes(markdown, "```ruby\nputs `ok`\n```")
+    assert_includes(markdown, "| Name | Value |\n| --- | --- |\n| Klenod | Ruby \\| modules |")
+    assert_includes(markdown, "![Klenod logo](/logo.svg)")
+    refute_includes(markdown, "not rendered")
+  end
+
+  def test_example_representation_negotiator_honors_accept_precedence
+    negotiator = Example::RepresentationNegotiator::PAGE
+
+    assert_equal(:html, negotiator.preferred(nil, default: :html))
+    assert_equal(:html, negotiator.preferred("*/*", default: :html))
+    assert_equal(:markdown, negotiator.preferred("text/markdown", default: :html))
+    assert_equal(:markdown, negotiator.preferred("text/markdown, text/html", default: :html))
+    assert_equal(:html, negotiator.preferred("text/markdown;q=0.8, text/html;q=0.9", default: :html))
+    assert_equal(:markdown, negotiator.preferred("text/*;q=0.8, text/html;q=0.7", default: :html))
+    assert_equal(:markdown, negotiator.preferred("text/html;q=0, */*", default: :html))
+    assert_equal(:markdown, negotiator.preferred("text/html;Q=0, text/markdown", default: :html))
+    assert_nil(negotiator.preferred("text/html;q=0, text/markdown;q=0", default: :html))
+    assert_nil(negotiator.preferred("application/pdf", default: :html))
+    assert_equal(:html, negotiator.preferred("invalid", default: :html))
+    assert_nil(negotiator.preferred("application/json, text/markdown;q=0.8", default: :html, require_top_match: true))
   end
 
   def test_example_h_renders_custom_element_descriptors_as_elements
@@ -996,6 +1053,98 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("application/json; charset=utf-8", json_headers.fetch("content-type"))
     assert_equal("Accept", json_headers.fetch("vary"))
     assert_equal({"type" => "hybrid", "path" => "/demo/hybrid", "request" => "api"}, JSON.parse(json_body.join))
+  end
+
+  def test_example_app_negotiates_markdown_without_layout_or_assets
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    request = EarlyHintsRequest.new("GET", "/docs/getting-started", HeaderList.new([["Accept", "text/markdown"]]))
+
+    status, headers, body = entry.call(request, context)
+    markdown = body.join
+
+    assert_equal(200, status)
+    assert_equal("text/markdown; charset=utf-8", headers.fetch("content-type"))
+    assert_equal("Cookie, Accept", headers.fetch("vary"))
+    refute_includes(headers, "link")
+    assert_empty(request.interim_responses)
+    assert_includes(markdown, "# Getting Started")
+    assert_includes(markdown, "## Create A Context")
+    assert_includes(markdown, "```ruby")
+    assert_includes(markdown, "bundle exec klenod build")
+    refute_includes(markdown, "<!doctype html>")
+    refute_includes(markdown, "Documentation\nOverview")
+    refute_includes(markdown, "ThemeSwitcher")
+  end
+
+  def test_example_app_can_render_html_after_markdown
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    entry.call(HeaderRequest["GET", "/docs/getting-started", HeaderList.new([["Accept", "text/markdown"]])], context)
+    status, headers, body = entry.call(HeaderRequest["GET", "/docs/getting-started", HeaderList.new([["Accept", "text/html"]])], context)
+
+    assert_equal(200, status)
+    assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert_equal("Cookie, Accept", headers.fetch("vary"))
+    assert_includes(body.join, "<!doctype html>")
+  end
+
+  def test_example_app_renders_hybrid_page_as_markdown
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    status, headers, body =
+      entry.call(HeaderRequest["GET", "/demo/hybrid", HeaderList.new([["Accept", "text/markdown"]])], context)
+
+    assert_equal(200, status)
+    assert_equal("text/markdown; charset=utf-8", headers.fetch("content-type"))
+    assert_includes(body.join, "Hybrid page and route handler")
+  end
+
+  def test_example_app_returns_not_acceptable_for_unsupported_page_representation
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    status, headers, body =
+      entry.call(HeaderRequest["GET", "/docs", HeaderList.new([["Accept", "application/pdf"]])], context)
+
+    assert_equal(406, status)
+    assert_equal("text/plain; charset=utf-8", headers.fetch("content-type"))
+    assert_equal("Accept", headers.fetch("vary"))
+    assert_includes(body.join, "text/html")
+    assert_includes(body.join, "text/markdown")
+  end
+
+  def test_example_app_renders_localized_not_found_and_error_pages_as_markdown
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    markdown_headers = HeaderList.new([["Accept", "text/markdown"]])
+
+    localized_status, localized_headers, localized_body =
+      entry.call(HeaderRequest["GET", "/sv/demo/markdown", markdown_headers], context)
+    missing_status, missing_headers, missing_body =
+      entry.call(HeaderRequest["GET", "/demo/missing", markdown_headers], context)
+    error_status = error_headers = error_body = nil
+    _stdout, _stderr = capture_io do
+      error_status, error_headers, error_body =
+        entry.call(HeaderRequest["GET", "/demo/error", markdown_headers], context)
+    end
+
+    assert_equal(200, localized_status)
+    assert_equal("text/markdown; charset=utf-8", localized_headers.fetch("content-type"))
+    assert_includes(localized_body.join, "](/sv/demo/markdown)")
+    assert_equal(404, missing_status)
+    assert_equal("text/markdown; charset=utf-8", missing_headers.fetch("content-type"))
+    assert_includes(missing_body.join, "Page not found")
+    assert_equal(500, error_status)
+    assert_equal("text/markdown; charset=utf-8", error_headers.fetch("content-type"))
+    assert_includes(error_body.join, "Something went wrong")
   end
 
   def test_example_app_dispatches_hybrid_route_non_page_methods_to_handler

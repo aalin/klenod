@@ -186,9 +186,7 @@ module Example
 
     def accepts_html?(request)
       accept = request_headers(request).fetch("accept", "").to_s
-      return true if accept.empty?
-
-      ["text/html", "*/*"].include?(preferred_accept_type(accept))
+      RepresentationNegotiator::HTML.preferred(accept, default: :html) == :html
     end
 
     def request_headers(request)
@@ -198,28 +196,6 @@ module Example
       index = {}
       headers.each { |name, value| index[name.to_s.downcase] = value }
       index
-    end
-
-    def preferred_accept_type(accept)
-      accept
-        .split(",")
-        .map
-        .with_index { |entry, index| accept_entry(entry, index) }
-        .compact
-        .max_by { |entry| [entry.fetch(:quality), -entry.fetch(:index)] }
-        &.fetch(:type, nil)
-    end
-
-    def accept_entry(entry, index)
-      type, *params = entry.strip.split(";").map(&:strip)
-      return nil if type.empty?
-
-      quality =
-        params
-          .find { |param| param.start_with?("q=") }
-          &.delete_prefix("q=")
-          &.to_f || 1.0
-      {type:, quality:, index:}
     end
 
     def request_path(request)

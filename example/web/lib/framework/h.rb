@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "cgi/escape"
-
 module Example
   module H
     Element = Data.define(:tag, :key, :slot, :props, :children)
@@ -53,9 +51,6 @@ module Example
       end
     end
 
-    VOID_TAGS = %i[area base br col embed hr img input link meta param source track wbr].to_set.freeze
-    HTML_ESCAPE_PATTERN = /[&"<>]/
-
     def self.[](tag, *children, **props)
       tag = tag.fetch(:tag) if custom_element_descriptor?(tag)
       return render_component(tag, **props, children: children) if tag.is_a?(Class)
@@ -75,9 +70,7 @@ module Example
     end
 
     def self.render(value)
-      output = +""
-      append_rendered(output, value)
-      output
+      HTMLRenderer.render(value)
     end
 
     def self.text_content(value)
@@ -103,36 +96,6 @@ module Example
       end
     end
 
-    def self.escape_html(value)
-      string = value.to_s
-      return string unless string.match?(HTML_ESCAPE_PATTERN)
-
-      CGI.escapeHTML(string)
-    end
-
-    def self.append_rendered(output, value)
-      case value
-      when nil, false
-        nil
-      when Element
-        append_element(output, value)
-      when Text
-        output << escape_html(value.value)
-      when Comment
-        output << "<!--"
-        output << value.value.to_s.gsub("--", "- -")
-        output << "-->"
-      when Fragment
-        value.children.each { |child| append_rendered(output, child) }
-      when Children
-        value.each { |child| append_rendered(output, child) }
-      when Array
-        value.each { |child| append_rendered(output, child) }
-      else
-        output << escape_html(value)
-      end
-    end
-
     def self.append_text_content(output, value)
       case value
       when nil, false
@@ -150,58 +113,6 @@ module Example
       else
         output << value.to_s
       end
-    end
-
-    def self.append_element(output, element)
-      props = element.props
-      props = localize_anchor_props(props.dup) if element.tag == :a
-      rendered_attributes = rendered_attributes(props)
-
-      output << "<#{element.tag}#{rendered_attributes}>"
-      return if VOID_TAGS.include?(element.tag)
-
-      element.children.each { |child| append_rendered(output, child) }
-      output << "</#{element.tag}>"
-    end
-
-    def self.rendered_attributes(props)
-      return "" if props.empty?
-
-      output = +""
-      props.each do |name, value|
-        next if value.nil? || value == false
-
-        output << " "
-        output << (name.is_a?(Symbol) ? name.to_s : escape_html(name))
-        next if value == true
-
-        output << '="'
-        output << escape_html(attribute_value(name, value))
-        output << '"'
-      end
-      output
-    end
-
-    def self.attribute_value(name, value)
-      return style_attribute(value) if style_attribute?(name, value)
-
-      value
-    end
-
-    def self.style_attribute?(name, value)
-      value.is_a?(Hash) && name.to_sym == :style
-    end
-
-    def self.style_attribute(value)
-      value.filter_map do |property, property_value|
-        next if property_value.nil? || property_value == false
-
-        "#{style_property_name(property)}: #{property_value}"
-      end.join("; ")
-    end
-
-    def self.style_property_name(property)
-      property.to_s.tr("_", "-")
     end
 
     def self.localize_anchor_props(props)

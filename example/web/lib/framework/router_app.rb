@@ -26,10 +26,13 @@ module Example
 
       request = Request.from(raw_request, params: match.params, localized: localized)
       return call_route_handler(match.handler, request, vary_accept: hybrid_get_request?(match, request)) if route_handler_request?(match, request)
-      return Response.text("Method not allowed\n", status: 405).to_a unless page_request?(match, request)
+      return Response.text("Method not allowed\n", status: 405).to_a unless page_method?(match, request)
+
+      representation = preferred_page_representation(request)
+      return not_acceptable_response unless representation
 
       begin
-        render_page_response(match, request, context, raw_request: raw_request)
+        render_page_response(match, request, context, raw_request: raw_request, representation: representation)
       rescue NotFoundError
         not_found_match = router.not_found(localized.path)
         raise unless not_found_match
@@ -56,7 +59,30 @@ module Example
 
     attr_reader :router, :routes
 
-    def render_page_response(match, request, context, raw_request: nil, status: 200, props: {})
+    def render_page_response(match, request, context, raw_request: nil, status: 200, props: {}, representation: nil)
+      representation ||= preferred_page_representation(request)
+      return not_acceptable_response unless representation
+
+      if representation == :markdown
+        return render_markdown_response(match, request, status: status, props: props)
+      end
+
+      render_html_response(match, request, context, raw_request: raw_request, status: status, props: props)
+    end
+
+    def render_markdown_response(match, request, status:, props:)
+      body =
+        Context.with(request: request, routes: routes) do
+          MarkdownRenderer.render(page_instance(match.page, props).render)
+        end
+
+      commit_session(
+        Response.markdown(body, status: status, headers: {"vary" => "Cookie, Accept"}),
+        request
+      ).to_a
+    end
+
+    def render_html_response(match, request, context, raw_request:, status:, props:)
       page = match.page
       layouts = match.layouts
       prepare_slot_pages(match, layouts)
@@ -190,7 +216,7 @@ module Example
     end
 
     def html_response_headers(css_asset_references, javascript_asset_references, include_link: true)
-      headers = {"vary" => "Cookie"}
+      headers = {"vary" => "Cookie, Accept"}
       link = asset_preload_link_header(css_asset_references, javascript_asset_references)
       headers["link"] = link if include_link && !link.empty?
       headers
@@ -277,47 +303,28 @@ module Example
       return true if %w[PUT PATCH DELETE OPTIONS].include?(method)
       return false unless %w[GET POST HEAD].include?(method)
 
-      !accepts_html?(request)
+      !preferred_page_representation(request, require_top_match: true)
     end
 
-    def page_request?(match, request)
-      return false unless match.page
-      return true unless match.handler
-
-      %w[GET POST HEAD].include?(request_method(request)) && accepts_html?(request)
+    def page_method?(match, request)
+      match.page && %w[GET POST HEAD].include?(request_method(request))
     end
 
     def hybrid_get_request?(match, request)
       match.page && request_method(request) == "GET"
     end
 
-    def accepts_html?(request)
+    def preferred_page_representation(request, require_top_match: false)
       accept = request.headers.fetch("accept", nil).to_s
-      return true if accept.empty?
-
-      preferred_accept_type(accept) == "text/html"
+      RepresentationNegotiator::PAGE.preferred(accept, default: :html, require_top_match: require_top_match)
     end
 
-    def preferred_accept_type(accept)
-      accept
-        .split(",")
-        .map
-        .with_index { |entry, index| accept_entry(entry, index) }
-        .compact
-        .max_by { |entry| [entry.fetch(:quality), -entry.fetch(:index)] }
-        &.fetch(:type, nil)
-    end
-
-    def accept_entry(entry, index)
-      type, *params = entry.strip.split(";").map(&:strip)
-      return nil if type.empty?
-
-      quality =
-        params
-          .find { |param| param.start_with?("q=") }
-          &.delete_prefix("q=")
-          &.to_f || 1.0
-      {type:, quality:, index:}
+    def not_acceptable_response
+      Response.text(
+        "This resource is available in:\n- text/html\n- text/markdown\n",
+        status: 406,
+        headers: {"vary" => "Accept", "cache-control" => "no-store"}
+      ).to_a
     end
 
     def with_vary_accept(response)

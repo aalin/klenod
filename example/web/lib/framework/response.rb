@@ -29,6 +29,14 @@ module Example
       ]
     end
 
+    def self.markdown(value, status: 200, headers: {})
+      self[
+        status,
+        {"content-type" => "text/markdown; charset=utf-8"}.merge(headers),
+        [value.to_s]
+      ]
+    end
+
     def self.redirect(location, status: 302, headers: {})
       self[status, {"location" => location}.merge(headers), []]
     end

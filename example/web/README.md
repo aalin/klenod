@@ -33,6 +33,15 @@ bin/build
 bin/server
 ```
 
+Page routes also provide a content-negotiated Markdown representation:
+
+```sh
+curl --insecure -H 'Accept: text/markdown' https://localhost:9292/docs/getting-started
+```
+
+Markdown responses contain the page content without route layouts or browser
+assets and include `Vary: Accept` for caches.
+
 ## Commands
 
 - `bin/dev` starts the development server.
