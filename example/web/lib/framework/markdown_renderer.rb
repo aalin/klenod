@@ -82,13 +82,31 @@ module Example
       when :button, :label, :small, :span, :time
         render_children(element.children)
       else
-        content = render_children(element.children)
-        BLOCK_TAGS.include?(tag) ? block(content.strip) : content
+        if BLOCK_TAGS.include?(tag)
+          block(render_block_children(element.children).strip)
+        else
+          render_children(element.children)
+        end
       end
     end
 
     def render_children(children)
       children.map { |child| render_node(child) }.join
+    end
+
+    def render_block_children(children)
+      rendered_children = children.filter_map do |child|
+        rendered = render_node(child)
+        [child, rendered] unless rendered.empty?
+      end
+
+      rendered_children.each_with_index.each_with_object(+"") do |((child, rendered), index), output|
+        previous_child, previous_rendered = rendered_children[index - 1] if index.positive?
+        if previous_child.is_a?(H::Element) && child.is_a?(H::Element) && !previous_rendered.end_with?("\n") && !rendered.start_with?("\n")
+          output << "\n"
+        end
+        output << rendered
+      end
     end
 
     def heading(element, level)

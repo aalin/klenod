@@ -109,6 +109,20 @@ class Klenod::ExampleTest < Minitest::Test
     refute_includes(markdown, "not rendered")
   end
 
+  def test_example_markdown_renderer_separates_adjacent_elements_in_block_containers
+    node =
+      Example::H[
+        :footer,
+        Example::H[:a, "Explore demos", href: "/demo"],
+        Example::H[:a, "View assets", href: "/demo/assets"]
+      ]
+
+    assert_equal("[Explore demos](/demo)\n[View assets](/demo/assets)\n", Example::MarkdownRenderer.render(node))
+
+    paragraph = Example::H[:p, Example::H[:a, "One", href: "/one"], " and ", Example::H[:a, "two", href: "/two"]]
+    assert_equal("[One](/one) and [two](/two)\n", Example::MarkdownRenderer.render(paragraph))
+  end
+
   def test_example_representation_negotiator_honors_accept_precedence
     negotiator = Example::RepresentationNegotiator::PAGE
 
