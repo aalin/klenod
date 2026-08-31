@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.email = ["andreas.alin@gmail.com"]
 
   spec.summary = "CSS plugin for Klenod."
-  spec.description = "Optional CSS asset plugin for Klenod build graphs."
+  spec.description = "CSS asset and CSS Modules plugin for Klenod."
   spec.homepage = "https://github.com/aalin/klenod"
   spec.license = "MIT"
   spec.required_ruby_version = ">= #{ruby_version}"

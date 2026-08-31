@@ -10,8 +10,8 @@ Gem::Specification.new do |spec|
   spec.authors = ["Andrés Alin"]
   spec.email = ["andreas.alin@gmail.com"]
 
-  spec.summary = "Build graph and plugins for Klenod."
-  spec.description = "Klenod build constructs Ruby module graphs, runs plugins, emits assets, and serializes runtime bundles."
+  spec.summary = "Build system for Klenod."
+  spec.description = "Build system and devtools for Klenod."
   spec.homepage = "https://github.com/aalin/klenod"
   spec.license = "MIT"
   spec.required_ruby_version = ">= #{ruby_version}"

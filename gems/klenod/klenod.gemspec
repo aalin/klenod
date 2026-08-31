@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.email = ["andreas.alin@gmail.com"]
 
   spec.summary = "Experimental Ruby module bundler."
-  spec.description = "Compatibility gem for Klenod build, runtime, and Rack packages."
+  spec.description = "Umbrella package for Klenod."
   spec.homepage = "https://github.com/aalin/klenod"
   spec.license = "MIT"
   spec.required_ruby_version = ">= #{ruby_version}"
@@ -26,4 +26,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "klenod-build", "= #{version}"
   spec.add_dependency "klenod-rack", "= #{version}"
+  spec.add_dependency "klenod-runtime", "= #{version}"
 end

@@ -10,8 +10,8 @@ Gem::Specification.new do |spec|
   spec.authors = ["Andrés Alin"]
   spec.email = ["andreas.alin@gmail.com"]
 
-  spec.summary = "Runtime loader for Klenod bundles."
-  spec.description = "Klenod runtime loads serialized Ruby module bundles without build plugins or development dependencies."
+  spec.summary = "Production runtime for Klenod bundles."
+  spec.description = "Production runtime for Klenod."
   spec.homepage = "https://github.com/aalin/klenod"
   spec.license = "MIT"
   spec.required_ruby_version = ">= #{ruby_version}"

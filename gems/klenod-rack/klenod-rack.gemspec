@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.email = ["andreas.alin@gmail.com"]
 
   spec.summary = "Rack asset serving helpers for Klenod."
-  spec.description = "Klenod Rack serves content-hashed runtime bundle assets from Rack-compatible applications."
+  spec.description = "Rack-compatible asset serving helpers for Klenod."
   spec.homepage = "https://github.com/aalin/klenod"
   spec.license = "MIT"
   spec.required_ruby_version = ">= #{ruby_version}"

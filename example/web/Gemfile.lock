@@ -50,6 +50,7 @@ PATH
     klenod (0.0.1)
       klenod-build (= 0.0.1)
       klenod-rack (= 0.0.1)
+      klenod-runtime (= 0.0.1)
 
 GEM
   remote: https://rubygems.org/
