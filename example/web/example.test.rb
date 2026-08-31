@@ -123,6 +123,35 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("[One](/one) and [two](/two)\n", Example::MarkdownRenderer.render(paragraph))
   end
 
+  def test_example_markdown_renderer_serializes_definition_lists
+    node =
+      Example::H[
+        :dl,
+        Example::H[:dt, "First Term"],
+        Example::H[:dd, "This is the definition of the first term."],
+        Example::H[:dt, "Second Term"],
+        Example::H[:dd, "This is one definition of the second term."],
+        Example::H[:dd, "This is another definition of the second term."],
+        Example::H[:dt, "Source"],
+        Example::H[:dd, Example::H[:code, "/assets/example.avif"]]
+      ]
+
+    assert_equal(
+      <<~MARKDOWN,
+        First Term
+        : This is the definition of the first term.
+
+        Second Term
+        : This is one definition of the second term.
+        : This is another definition of the second term.
+
+        Source
+        : `/assets/example.avif`
+      MARKDOWN
+      Example::MarkdownRenderer.render(node)
+    )
+  end
+
   def test_example_representation_negotiator_honors_accept_precedence
     negotiator = Example::RepresentationNegotiator::PAGE
 

@@ -77,6 +77,10 @@ module Example
         "  \n"
       when :hr
         block("---")
+      when :dl
+        definition_list(element)
+      when :dt, :dd
+        render_children(element.children)
       when :table
         table(element)
       when :button, :label, :small, :span, :time
@@ -188,6 +192,33 @@ module Example
 
       quoted = content.lines(chomp: true).map { |line| line.empty? ? ">" : "> #{line}" }.join("\n")
       block(quoted)
+    end
+
+    def definition_list(element)
+      entries = []
+      previous_tag = nil
+
+      element.children.each do |child|
+        unless child.is_a?(H::Element) && %i[dt dd].include?(child.tag.to_sym)
+          content = render_node(child).strip
+          entries << content unless content.empty?
+          next
+        end
+
+        tag = child.tag.to_sym
+        entries << "" if tag == :dt && previous_tag == :dd
+        content = render_children(child.children).strip
+        entries << ((tag == :dd) ? definition(content) : content) unless content.empty?
+        previous_tag = tag
+      end
+
+      block(entries.join("\n"))
+    end
+
+    def definition(content)
+      lines = content.lines(chomp: true)
+      first = lines.shift
+      ([": #{first}"] + lines.map { |line| line.empty? ? "  " : "  #{line}" }).join("\n")
     end
 
     def table(element)
