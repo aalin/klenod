@@ -109,6 +109,11 @@ podman build -t klenod-example-web .
 podman run --rm -p 9292:9292 klenod-example-web
 ```
 
+Then open `http://localhost:9292`. The container serves plaintext HTTP/2 or
+HTTP/1.x so a deployment proxy can terminate TLS. The included `fly.toml`
+configures Fly Proxy to use HTTP/2 cleartext (h2c) between the proxy and the
+container.
+
 The default container build installs the published Klenod gems from RubyGems.
 To build the same image from the gems in this repository while developing
 Klenod, use `Dockerfile.dev` instead:

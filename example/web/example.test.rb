@@ -852,6 +852,33 @@ class Klenod::ExampleTest < Minitest::Test
     refute_includes(response.headers, "content-length")
   end
 
+  def test_server_runner_supports_plaintext_http2
+    runner = Example::ServerRunner.new(
+      port: 9292,
+      tls: false,
+      asset_app: nil,
+      app: nil,
+      error_handler: nil
+    )
+
+    assert_equal("http", runner.scheme)
+    assert_equal("HTTP/2 (h2c) + HTTP/1.x", runner.protocol_name)
+    assert_same(Async::HTTP::Protocol::HTTP, runner.send(:protocol))
+  end
+
+  def test_server_runner_uses_https_by_default
+    runner = Example::ServerRunner.new(
+      port: 9292,
+      asset_app: nil,
+      app: nil,
+      error_handler: nil
+    )
+
+    assert_equal("https", runner.scheme)
+    assert_equal("HTTPS + HTTP/2 + HTTP/1.x", runner.protocol_name)
+    assert_same(Async::HTTP::Protocol::HTTPS, runner.send(:protocol))
+  end
+
   def test_dev_server_handles_chrome_devtools_probe
     source_dir = "/tmp/klenod_example/src"
     probe = Example::ChromeDevtoolsProbe.new(source_dir: source_dir, uuid: "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b")

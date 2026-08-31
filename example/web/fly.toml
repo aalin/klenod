@@ -1,0 +1,24 @@
+# fly.toml app configuration file generated for klenod on 2026-08-30T21:13:24-05:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'klenod'
+primary_region = 'iad'
+
+[build]
+[http_service]
+  internal_port = 9292
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+  [http_service.http_options]
+    h2_backend = true
+
+[[vm]]
+  memory = '256mb'
+  cpus = 1
+  memory_mb = 256

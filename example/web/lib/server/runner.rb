@@ -2,6 +2,7 @@
 
 require "async"
 require "async/http"
+require "async/http/protocol/http"
 require "async/http/protocol/https"
 require "localhost"
 require "protocol/http/response"
@@ -10,22 +11,23 @@ require_relative "formatting"
 
 module Example
   class ServerRunner
-    def initialize(port:, asset_app:, app:, error_handler:, host: "localhost")
+    def initialize(port:, asset_app:, app:, error_handler:, host: "localhost", tls: true)
       @host = host
       @port = port
       @asset_app = asset_app
       @app = app
       @error_handler = error_handler
+      @tls = tls
     end
 
     attr_reader :host, :port
 
     def scheme
-      "https"
+      @tls ? "https" : "http"
     end
 
     def protocol_name
-      "HTTPS + HTTP/2 + HTTP/1.x"
+      @tls ? "HTTPS + HTTP/2 + HTTP/1.x" : "HTTP/2 (h2c) + HTTP/1.x"
     end
 
     def run
@@ -52,11 +54,15 @@ module Example
     private
 
     def endpoint
-      @endpoint ||= Async::HTTP::Endpoint.parse("#{scheme}://#{host}:#{port}", protocol: protocol, ssl_context: ssl_context)
+      @endpoint ||= begin
+        options = {protocol: protocol}
+        options[:ssl_context] = ssl_context if @tls
+        Async::HTTP::Endpoint.parse("#{scheme}://#{host}:#{port}", **options)
+      end
     end
 
     def protocol
-      Async::HTTP::Protocol::HTTPS
+      @tls ? Async::HTTP::Protocol::HTTPS : Async::HTTP::Protocol::HTTP
     end
 
     def ssl_context

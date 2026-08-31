@@ -1,0 +1,6 @@
+# flyctl launch added from .gitignore
+profile-*vernier.json.gz
+tmp
+dist
+vendor
+fly.toml

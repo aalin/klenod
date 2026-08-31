@@ -23,7 +23,8 @@ module Example
       source_root: ENV.fetch("SOURCE_ROOT", DEFAULT_SOURCE_ROOT),
       entrypoint: ENV.fetch("ENTRYPOINT", DEFAULT_ENTRYPOINT),
       host: ENV.fetch("HOST", "localhost"),
-      port: Integer(ENV.fetch("PORT", "9292"))
+      port: Integer(ENV.fetch("PORT", "9292")),
+      tls: ENV.fetch("TLS", "true") == "true"
     )
       @bundle_path = File.expand_path(bundle_path)
       @assets_dir = File.expand_path(assets_dir)
@@ -31,6 +32,7 @@ module Example
       @entrypoint = entrypoint
       @host = host
       @port = port
+      @tls = tls
     end
 
     def run
@@ -43,7 +45,7 @@ module Example
 
     private
 
-    attr_reader :bundle_path, :assets_dir, :source_root, :entrypoint, :host, :port
+    attr_reader :bundle_path, :assets_dir, :source_root, :entrypoint, :host, :port, :tls
 
     def bundle
       @bundle ||= Klenod::Runtime.load_bundle(bundle_path, source_root: source_root)
@@ -62,6 +64,7 @@ module Example
         ServerRunner.new(
           port: port,
           host: host,
+          tls: tls,
           asset_app: asset_app,
           app: ->(request) { entry.call(request, bundle) },
           error_handler: ->(_request, error) { error_response_for(error) }

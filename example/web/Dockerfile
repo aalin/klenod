@@ -42,6 +42,7 @@ ENV GEM_HOME=/usr/local/bundle
 ENV PATH="${GEM_HOME}/bin:${PATH}"
 ENV HOST=0.0.0.0
 ENV PORT=9292
+ENV TLS=false
 
 WORKDIR /app
 
