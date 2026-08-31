@@ -100,16 +100,23 @@ Vernier writes a profile in the current directory. View a terminal summary with
 `bundle exec vernier view -- <profile>`, or open it in a compatible profile
 viewer.
 
-## Docker
+## Containers
 
-Build and run the production server from the repository root:
+Build and run the production container from `example/web`:
 
 ```sh
-docker build -f example/web/Dockerfile -t klenod-example-web .
-docker run --rm -p 9292:9292 klenod-example-web
+podman build -t klenod-example-web .
+podman run --rm -p 9292:9292 klenod-example-web
 ```
 
-The multi-stage image uses the complete build stack to create `dist/`. Its final
-runtime image contains the built application, `klenod-runtime`, `klenod-rack`,
-and the example's runtime gems, but not `klenod-build` or the compatibility
-`klenod` gem.
+The default container build installs the published Klenod gems from RubyGems.
+To build the same image from the gems in this repository while developing
+Klenod, use `Dockerfile.dev` instead:
+
+```sh
+podman build -f Dockerfile.dev -t klenod-example-web ../..
+```
+
+Both multi-stage images use the complete build stack to create `dist/`. Their
+final runtime image contains the built application and its runtime gems, but
+not `klenod-build` or the compatibility `klenod` gem.

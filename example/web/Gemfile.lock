@@ -187,6 +187,7 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
+  async-http (~> 0.95.1)
   http-accept (~> 2.2)
   klenod!
   klenod-build!
