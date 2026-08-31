@@ -70,6 +70,61 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(Example::H.render(node), Example::HTMLRenderer.render(node))
   end
 
+  def test_example_context_inherits_shadows_and_restores_values
+    outer_request = Object.new
+    inner_request = Object.new
+
+    Example::Context.with(request: outer_request, optional: nil) do
+      assert_same(outer_request, Example::Context.current.fetch(:request))
+      assert_nil(Example::Context.current.fetch(:optional))
+      assert_raises(KeyError) { Example::Context.current.fetch(:missing) }
+
+      assert_raises(RuntimeError) do
+        Example::Context.with(request: inner_request, theme: :dark) do
+          assert_same(inner_request, Example::Context.current.fetch(:request))
+          assert_equal(:dark, Example::Context.current.fetch(:theme))
+          raise "render failed"
+        end
+      end
+
+      assert_same(outer_request, Example::Context.current.fetch(:request))
+      assert_raises(KeyError) { Example::Context.current.fetch(:theme) }
+    end
+
+    assert_nil(Example::Context.current)
+  end
+
+  def test_example_context_boundaries_lazily_render_slotted_components_once
+    renders = 0
+    child =
+      Class.new(Example::Component) do
+        def render
+          Example::H[:span, context.fetch(:theme)]
+        end
+      end
+    provider =
+      Class.new(Example::Component) do
+        def render
+          provide_context(theme: prop(:theme)) do
+            Example::H.fragment(children[:label], children[:label], children, children)
+          end
+        end
+      end
+
+    node =
+      Example::H[provider, theme: "dark"] do
+        renders += 1
+        [
+          Example::H[:strong, Example::Context.current.fetch(:theme), slot: :label],
+          Example::H[child]
+        ]
+      end
+
+    assert_equal(0, renders)
+    assert_equal("<strong>dark</strong><strong>dark</strong><span>dark</span><span>dark</span>", Example::H.render(node))
+    assert_equal(1, renders)
+  end
+
   def test_example_markdown_renderer_serializes_semantic_descriptors
     node =
       Example::H.fragment(

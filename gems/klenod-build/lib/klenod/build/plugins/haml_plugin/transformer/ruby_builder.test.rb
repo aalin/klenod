@@ -41,6 +41,20 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_includes(fragment.source, '"intro"')
   end
 
+  def test_ruby_builder_builds_component_factory_calls_with_lazy_children
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    fragment =
+      builder.component_factory_call(
+        factory: "#{self.class.name}::FakeFramework::H",
+        tag: "Card",
+        children: ['"Title"', 'H[:p, "Body"]'],
+        props: {title: '"Hello"'}
+      )
+
+    assert_includes(fragment.source, "H[Card, title: \"Hello\"] do")
+    assert_includes(fragment.source, '["Title", H[:p, "Body"]]')
+  end
+
   def test_ruby_builder_fragments_keep_parsed_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     unmarked = builder.expression('H[:p, **{:class => "intro"}]')

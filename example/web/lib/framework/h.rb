@@ -7,11 +7,65 @@ module Example
     Comment = Data.define(:value)
     Fragment = Data.define(:key, :slot, :children)
 
+    class ContextBoundary
+      attr_reader :values
+
+      def initialize(values, &producer)
+        @values = values.freeze
+        @producer = producer
+      end
+
+      def children
+        return @children if defined?(@children)
+
+        @children = H.normalize_child(@producer.call).freeze
+      end
+    end
+
+    class Slots
+      def initialize(explicit = nil, children: nil, &producer)
+        @explicit = (explicit || {}).to_h { |name, value| [name&.to_sym, value] }
+        @children = children
+        @producer = producer
+        @resolved_explicit = {}
+      end
+
+      def fetch(name, default = nil)
+        key = name&.to_sym
+        values = [*explicit_children(key), *produced_slots.fetch(key, [])]
+        return values unless values.empty?
+
+        default
+      end
+
+      private
+
+      def explicit_children(name)
+        return [] unless @explicit.key?(name)
+        return @resolved_explicit.fetch(name) if @resolved_explicit.key?(name)
+
+        value = @explicit.fetch(name)
+        value = value.call if value.respond_to?(:call)
+        @resolved_explicit[name] = H.normalize_child(value).freeze
+      end
+
+      def produced_slots
+        return @produced_slots if defined?(@produced_slots)
+
+        children = [*@children]
+        children.concat(H.normalize_child(@producer.call)) if @producer
+        @produced_slots = H.partition_slots(children).transform_values(&:freeze).freeze
+      end
+    end
+
     class Children
       include Enumerable
 
+      attr_reader :slots
+
       def initialize(slots, name = nil)
         @slots = slots
+        @slots = Slots.new(@slots) unless @slots.is_a?(Slots)
         @name = name
       end
 
@@ -51,9 +105,11 @@ module Example
       end
     end
 
-    def self.[](tag, *children, **props)
+    def self.[](tag, *children, **props, &lazy_children)
       tag = tag.fetch(:tag) if custom_element_descriptor?(tag)
-      return render_component(tag, **props, children: children) if tag.is_a?(Class)
+      return render_component(tag, *children, **props, &lazy_children) if tag.is_a?(Class)
+
+      children.concat(normalize_child(lazy_children.call)) if lazy_children
 
       key = props.delete(:key)
       slot = props.delete(:slot)&.to_sym
@@ -67,6 +123,10 @@ module Example
 
     def self.fragment(*children, key: nil, slot: nil)
       Fragment[key, slot&.to_sym, normalize_children(children)]
+    end
+
+    def self.context(**values, &producer)
+      ContextBoundary.new(values, &producer)
     end
 
     def self.render(value)
@@ -87,7 +147,7 @@ module Example
       case child
       when nil, false
         []
-      when Element, Text, Comment, Fragment, Children
+      when Element, Text, Comment, Fragment, ContextBoundary, Children
         [child]
       when Array
         normalize_children(child)
@@ -102,6 +162,10 @@ module Example
         nil
       when Element, Fragment
         value.children.each { |child| append_text_content(output, child) }
+      when ContextBoundary
+        Context.with(**value.values) do
+          value.children.each { |child| append_text_content(output, child) }
+        end
       when Text
         output << value.value.to_s
       when Comment
@@ -137,9 +201,8 @@ module Example
       true
     end
 
-    def self.render_component(tag, **props)
-      child_slots = partition_slots(props.delete(:children) || [])
-      slots = merge_slots(props.delete(:slots), child_slots)
+    def self.render_component(tag, *children, **props, &producer)
+      slots = Slots.new(props.delete(:slots), children: children, &producer)
       children = Children.new(slots)
 
       if tag.respond_to?(:instantiate)
@@ -164,13 +227,6 @@ module Example
       else
         child
       end
-    end
-
-    def self.merge_slots(existing_slots, child_slots)
-      slots = {}
-      (existing_slots || {}).each { |name, children| slots[name] = normalize_children(children) }
-      child_slots.each { |name, children| slots[name] = [*slots[name], *children] }
-      slots
     end
   end
 end

@@ -201,6 +201,40 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_rewrites_configured_context_variables
+    plugin = haml_plugin(
+      component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
+      context_variables: "context"
+    )
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %h1= @@request.path
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, _exports|
+      assert_includes(record.transformed_source, "(context).fetch(:request).path")
+    end
+  end
+
+  def test_haml_transformer_leaves_class_variables_unmodified_without_context_configuration
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            @@value = "ordinary class variable"
+
+          %h1= @@value
+        HAML
+      }
+    ) do |_dir, _context, record, exports|
+      assert_equal([:h1, "ordinary class variable"], exports::Default.new.render)
+      assert_includes(record.transformed_source, "@@value")
+    end
+  end
+
   def test_haml_transformer_renders_named_and_default_slots
     evaluate_haml(
       {

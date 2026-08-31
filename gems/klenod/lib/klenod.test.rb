@@ -22,16 +22,17 @@ class Klenod::MetaGemTest < Minitest::Test
     refute(defined?(Klenod::Dev))
   end
 
-  def test_meta_gemspec_depends_on_build_and_rack_packages
+  def test_meta_gemspec_depends_on_runtime_build_and_rack_packages
     spec = Gem::Specification.load(File.expand_path("../klenod.gemspec", __dir__))
     dependency_names = spec.dependencies.map(&:name)
     dependency_requirements = spec.dependencies.to_h { |dependency| [dependency.name, dependency.requirement.to_s] }
 
     assert_includes(dependency_names, "klenod-build")
     assert_includes(dependency_names, "klenod-rack")
-    refute_includes(dependency_names, "klenod-runtime")
+    assert_includes(dependency_names, "klenod-runtime")
     assert_equal("= #{Klenod::VERSION}", dependency_requirements.fetch("klenod-build"))
     assert_equal("= #{Klenod::VERSION}", dependency_requirements.fetch("klenod-rack"))
+    assert_equal("= #{Klenod::VERSION}", dependency_requirements.fetch("klenod-runtime"))
   end
 
   def test_split_gem_versions_match_root_version

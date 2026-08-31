@@ -14,7 +14,8 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
     end
 
     module H
-      def self.[](tag, *children, **props)
+      def self.[](tag, *children, **props, &lazy_children)
+        children = lazy_children.call if lazy_children
         return tag.new(**props, children: children).render if tag.is_a?(Class)
 
         props.empty? ? [tag, *children] : [tag, *children, props]

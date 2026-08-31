@@ -22,16 +22,19 @@ class ComponentImport < TestFramework::ComponentBase
     # SourceMapMark:4
     TestFramework::H[
       Details,
-      begin
-        # SourceMapMark:5
-        TestFramework::H[:p, "Lorem ipsum"]
-      end,
       summary:
         begin
           # SourceMapMark:4
           "More information"
         end
-    ]
+    ] do
+      [
+        begin
+          # SourceMapMark:5
+          TestFramework::H[:p, "Lorem ipsum"]
+        end
+      ]
+    end
   end
 end
 Default = ComponentImport

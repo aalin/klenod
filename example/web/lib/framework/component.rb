@@ -5,17 +5,15 @@ module Example
     attr_reader :__slots
 
     def self.instantiate(**props)
-      slots = props.delete(:slots) || {}
-      if (props.key?(:children) || !slots.empty?) && !props[:children].is_a?(H::Children)
-        slots = {nil => Array(props[:children])}.merge(slots) do |_name, existing, added|
-          existing + added
-        end
-        props[:children] = H::Children.new(slots)
-      end
+      slots = props.delete(:slots)
+      children = props[:children]
+      slots = children.slots if children.is_a?(H::Children)
+      slots = H::Slots.new(slots, children: children) unless slots.is_a?(H::Slots)
+      props[:children] = H::Children.new(slots) unless children.is_a?(H::Children)
 
       instance = allocate
       instance.instance_variable_set(:@__props, props.freeze)
-      instance.instance_variable_set(:@__slots, slots.freeze)
+      instance.instance_variable_set(:@__slots, slots)
 
       parameters = instance.method(:initialize).parameters
       if parameters.empty?
@@ -39,8 +37,12 @@ module Example
       Context.current
     end
 
+    def provide_context(**values, &producer)
+      H.context(**values, &producer)
+    end
+
     def request
-      context&.request
+      context.fetch(:request)
     end
 
     def self.i18n
@@ -74,7 +76,7 @@ module Example
 
     def initialize(**props)
       @__props = (@__props || {}).merge(props).freeze
-      @__slots = (@__slots || {}).freeze
+      @__slots ||= H::Slots.new
     end
 
     private

@@ -19,6 +19,7 @@
         component_base_class: "Example::Component",
         factory: "Example::H",
         global_variables: "@__props",
+        context_variables: "context",
         i18n_class: "Example::I18n"
       )
       ```
@@ -37,6 +38,18 @@
       With `global_variables: "@__props"`, the generated Ruby reads `@__props[:title]` and `@__props[:summary]`. The example framework sets `@__props` before component initialization, so templates and initializers can read props consistently.
 
       Built-in Ruby globals are preserved. `$!`, `$1`, `$LOAD_PATH`, and other special globals keep their normal Ruby meaning.
+
+  %DocsSection{ title: "Context Variables" }
+    :markdown
+      `context_variables` is also optional. It configures the Ruby expression used for context reads written as `@@name` in Haml.
+
+      ```haml
+      = @@request.representation?(:html)
+      ```
+
+      With `context_variables: "context"`, this compiles to `context.fetch(:request).representation?(:html)`. Context storage and provider behavior belong to the application framework; Klenod only rewrites the template expression. Without this option, Ruby class variables keep their normal behavior.
+
+      Child content for component tags is passed to the configured factory as a block. A framework can therefore resolve component children and named slots lazily, after installing inherited context values.
 
   %DocsSection{ title: "Ruby Blocks And Filters" }
     :markdown

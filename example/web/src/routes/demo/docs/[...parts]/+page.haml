@@ -2,7 +2,7 @@
   PageHeader = import("/components/PageHeader.haml")
 
 :ruby
-  parts = request.params.fetch(:parts)
+  parts = @@request.params.fetch(:parts)
 
 %article
   %PageHeader{

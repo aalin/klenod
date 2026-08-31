@@ -40,6 +40,7 @@
         Klenod::Build::Plugins::HamlPlugin.new(
           component_base_class: "Example::Component",
           factory: "Example::H",
+          context_variables: "context",
           i18n_class: "Example::I18n"
         )
       ]
@@ -55,6 +56,7 @@
       Klenod::Build::Plugins::HamlPlugin.new(
         component_base_class: "Example::Component",
         factory: "Example::H",
+        context_variables: "context",
         i18n_class: "Example::I18n"
       )
 
@@ -64,10 +66,10 @@
       )
       ```
 
-      A compatible factory accepts a tag or component class, children, and keyword props:
+      A compatible factory accepts a tag or component class, children, keyword props, and an optional child block. Haml uses the block for lazy component children:
 
       ```ruby
-      Example::H[tag, *children, **props]
+      Example::H[tag, *children, **props, &children_block]
       ```
 
   %DocsSection{ title: "Asset Options" }

@@ -59,6 +59,7 @@ module Klenod
             component_base_class: DEFAULT_COMPONENT_BASE_CLASS,
             factory: DEFAULT_FACTORY,
             global_variables: nil,
+            context_variables: nil,
             i18n_class: nil,
             i18n_constant: nil,
             cache_static_subtrees: false
@@ -66,6 +67,7 @@ module Klenod
             @component_base_class = component_base_class
             @factory = factory
             @global_variables = validate_global_variables(global_variables)
+            @context_variables = validate_context_variables(context_variables)
             @i18n_class, @i18n_constant = validate_i18n_options(i18n_class, i18n_constant)
             @cache_static_subtrees = cache_static_subtrees
             @transformer = Transformer.new
@@ -200,6 +202,7 @@ module Klenod
                 import_rewriter: import_rewriter,
                 markdown_components_source: markdown_components_dependency ? "__klenod_import__(#{markdown_components_dependency.id.inspect})::Default" : "{}",
                 global_variables: @global_variables,
+                context_variables: @context_variables,
                 cache_static_subtrees: @cache_static_subtrees
               )
             import_rewrite =
@@ -267,6 +270,18 @@ module Klenod
             source
           rescue SyntaxTree::Parser::ParseError
             raise ArgumentError, "global_variables must be a Ruby expression"
+          end
+
+          def validate_context_variables(context_variables)
+            return nil if context_variables.nil?
+
+            source = context_variables.to_s
+            parsed = SyntaxTree.parse(source)&.statements&.body
+            raise ArgumentError, "context_variables must be a Ruby expression" unless parsed&.length == 1
+
+            source
+          rescue SyntaxTree::Parser::ParseError
+            raise ArgumentError, "context_variables must be a Ruby expression"
           end
 
           def validate_i18n_options(i18n_class, i18n_constant)

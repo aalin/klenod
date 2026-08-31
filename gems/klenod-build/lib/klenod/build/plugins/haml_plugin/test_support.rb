@@ -199,8 +199,9 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
     end
 
     module H
-      def self.[](tag, *children, **props)
+      def self.[](tag, *children, **props, &lazy_children)
         props = props.compact
+        children = lazy_children.call if lazy_children
         children = normalize_children(children)
 
         if tag.respond_to?(:instantiate)

@@ -140,14 +140,16 @@ module Example
     end
 
     def render_descriptor_tree(match, page, layouts, request, props)
-      body_node =
-        page_instance(page, props)
-          .render
-      layouts
-        .reverse_each
-        .reduce(body_node) do |inner, layout|
-        component_instance(layout, children: [inner], slots: render_slots(match, layout, request)).render
+      renderer = -> { page_instance(page, props).render }
+      layouts.reverse_each do |layout|
+        renderer = layout_renderer(layout, renderer, match, request)
       end
+      renderer.call
+    end
+
+    def layout_renderer(layout, inner_renderer, match, request)
+      slots = render_slots(match, layout, request).merge(nil => inner_renderer)
+      -> { component_instance(layout, slots: slots).render }
     end
 
     def render_html_string(body_node)
@@ -358,14 +360,14 @@ module Example
         .to_h do |name, slot_match|
         [
           name,
-          [
+          lambda do
             Context.with(request: request.with_params(slot_match.params)) do
               slot_match
                 .page
                 .new
                 .render
             end
-          ]
+          end
         ]
       end
     end

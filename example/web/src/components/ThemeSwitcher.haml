@@ -7,9 +7,9 @@
   ].freeze
 
 :ruby
-  current_theme = request.cookies.fetch(Example::THEME_COOKIE, "system")
+  current_theme = @@request.cookies.fetch(Example::THEME_COOKIE, "system")
   current_theme = "system" unless Themes.any? { |theme| theme[:value] == current_theme }
-  return_to = request.path
+  return_to = @@request.path
   current = Themes.find { |theme| theme[:value] == current_theme }
 
 %PopoverButton{

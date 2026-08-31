@@ -29,6 +29,10 @@ module Example
         output << "-->"
       when H::Fragment
         value.children.each { |child| append_rendered(output, child) }
+      when H::ContextBoundary
+        Context.with(**value.values) do
+          value.children.each { |child| append_rendered(output, child) }
+        end
       when H::Children
         value.each { |child| append_rendered(output, child) }
       when Array

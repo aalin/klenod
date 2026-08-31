@@ -27,6 +27,8 @@
 
       When `HamlPlugin` is configured with `global_variables: "@__props"`, app-style global variable reads become prop lookups. In the example above, `$title` compiles to `@__props[:title]`. This keeps templates concise while leaving the props storage object under framework control.
 
+      The example also configures `context_variables: "context"`. Context reads use `@@name`, so `@@request` compiles to `context.fetch(:request)`. Context values inherit through nested providers and through default or named slots.
+
   %DocsSection{ title: "Ruby And Filters" }
     :markdown
       `=` prints a value. `-` runs Ruby silently. Ruby filters define class-level code for imports and methods, while later Ruby script blocks inside the template render method can access request-local helpers.
@@ -67,6 +69,15 @@
       ```
 
       The example framework wraps children in a small object, so components can ask `$children.empty?`, `$children.any?`, `$children.to_a`, or `$children.text_content` without reaching into framework internals.
+
+      Component children are lazy and memoized. This lets a component provide context before its children or named slots render:
+
+      ```haml
+      = provide_context(theme: $theme) do
+        = $children
+      ```
+
+      A descendant can then read `@@theme`. The provider's values shadow matching parent values only within that subtree.
 
   %DocsSection{ title: "Companion Files" }
     :markdown

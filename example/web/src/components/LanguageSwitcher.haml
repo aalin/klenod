@@ -6,8 +6,8 @@
   ]
 
 :ruby
-  current_path = request.canonical_path || request.path
-  current_locale = request.route_locale || "en"
+  current_path = @@request.canonical_path || @@request.path
+  current_locale = @@request.route_locale || "en"
 
 %PopoverButton{
   id: "language-menu",

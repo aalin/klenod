@@ -3,7 +3,7 @@
   Posts = import_glob("../_posts/*.md").values
 
 :ruby
-  slug = request.params.fetch(:slug)
+  slug = @@request.params.fetch(:slug)
   post = Posts.find { it::Frontmatter.fetch(:slug) == slug }
   frontmatter = post && post::Frontmatter
 

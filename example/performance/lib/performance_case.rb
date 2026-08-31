@@ -65,7 +65,8 @@ module KlenodPerformance
               HtmlString = Class.new(String)
               VOID_TAGS = %i[area base br col embed hr img input link meta param source track wbr].freeze
 
-              def self.[](tag, *children, **props)
+              def self.[](tag, *children, **props, &lazy_children)
+                children = lazy_children.call if lazy_children
                 return tag.new(**props).render if tag.is_a?(Class)
 
                 attributes =

@@ -28,9 +28,10 @@ module Klenod
               end
             end
 
-            def initialize(profiler: nil, global_variables: nil)
+            def initialize(profiler: nil, global_variables: nil, context_variables: nil)
               @profiler = profiler
               @global_variables = global_variables
+              @context_variables = context_variables
               @expression_cache = {}
               @statements_cache = {}
               @program_cache = {}
@@ -411,6 +412,12 @@ module Klenod
               source_factory_call(factory: factory, tag: tag, children: children, props: props, mark: mark)
             end
 
+            def component_factory_call(factory:, tag:, children:, props:, mark: nil)
+              call = source_factory_call(factory: factory, tag: tag, children: [], props: props, mark: mark)
+              body = Fragment.new("[#{children.map { |child| argument_source(child) }.join(", ")}]", nil)
+              script_block("#{call.source} do", body)
+            end
+
             def slot_call(name:, fallback:)
               arguments = ["self", name ? argument_source(name) : "nil"]
               arguments << argument_source(fallback) if fallback
@@ -505,7 +512,8 @@ module Klenod
 
             def rewrite_ruby_source(source, line_no)
               source = rewrite_line_constant(source, line_no)
-              rewrite_global_variables(source)
+              source = rewrite_global_variables(source)
+              rewrite_context_variables(source)
             end
 
             def rewrite_line_constant(source, line_no)
@@ -546,6 +554,27 @@ module Klenod
 
             def prop_global_variable?(token)
               token.match?(/\A\$[a-z]\w*\z/)
+            end
+
+            def rewrite_context_variables(source)
+              return source unless @context_variables
+
+              line_offsets = [0]
+              source.each_line(chomp: false) { |line| line_offsets << line_offsets.last + line.length }
+
+              Ripper
+                .lex(source)
+                .select { |(_line, _column), type, token, _state| type == :on_cvar && context_class_variable?(token) }
+                .reverse_each
+                .each_with_object(source.dup) do |((line, column), _type, token, _state), rewritten|
+                  name = token.delete_prefix("@@")
+                  offset = line_offsets.fetch(line - 1) + column
+                  rewritten[offset, token.length] = "(#{@context_variables}).fetch(#{symbol_source(name)})"
+                end
+            end
+
+            def context_class_variable?(token)
+              token.match?(/\A@@[a-z]\w*\z/)
             end
 
             def source_expressions(expressions)

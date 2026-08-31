@@ -20,8 +20,9 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
 
     module H
-      def self.[](tag, *children, **props)
+      def self.[](tag, *children, **props, &lazy_children)
         props = props.compact
+        children = lazy_children.call if lazy_children
         return tag.new(**props, children: children).render if tag.respond_to?(:new)
 
         props.empty? ? [tag, *children] : [tag, *children, props]
@@ -990,8 +991,9 @@ class Klenod::Build::Context::Test < Minitest::Test
         abort "loaded build-only constants: \#{forbidden.inspect}" unless forbidden.empty?
 
         module RuntimeTestH
-          def self.[](tag, *children, **props)
+          def self.[](tag, *children, **props, &lazy_children)
             props = props.compact
+            children = lazy_children.call if lazy_children
             return tag.new(**props, children: children).render if tag.respond_to?(:new)
 
             props.empty? ? [tag, *children] : [tag, *children, props]

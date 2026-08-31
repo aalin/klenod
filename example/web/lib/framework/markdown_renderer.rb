@@ -35,6 +35,8 @@ module Example
         escape_text(value.value)
       when H::Fragment
         render_children(value.children)
+      when H::ContextBoundary
+        Context.with(**value.values) { render_children(value.children) }
       when H::Children
         render_children(value.to_a)
       when Array
