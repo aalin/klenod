@@ -105,6 +105,7 @@ module Example
             <!doctype html>
             <html#{html_theme_attributes(request)}>
               <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
                 <title>Klenod example</title>
                 #{stylesheet_links(css_asset_references)}
                 #{module_script_tags(javascript_asset_references)}

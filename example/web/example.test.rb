@@ -373,6 +373,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(200, status)
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert_includes(html, '<meta name="viewport" content="width=device-width, initial-scale=1">')
     assert_includes(html, "<body")
     assert_includes(html, "Klenod example")
     assert_includes(html, "<main")
