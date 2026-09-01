@@ -124,6 +124,13 @@ configures Fly Proxy to use HTTP/2 cleartext (h2c) between the proxy and the
 container.
 
 The default container build installs the published Klenod gems from RubyGems.
+Before deploying, set `KLENOD_VERSION` in `Dockerfile` to a version that has
+been published. You can also override it for one build:
+
+```sh
+podman build --build-arg KLENOD_VERSION=0.0.2 -t klenod-example-web .
+```
+
 To build the same image from the gems in this repository while developing
 Klenod, use `Dockerfile.dev` instead:
 

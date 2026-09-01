@@ -1,6 +1,10 @@
 # syntax=docker/dockerfile:1
 
+ARG KLENOD_VERSION="0.0.2"
+
 FROM ruby:4.0.6-slim AS build
+
+ARG KLENOD_VERSION
 
 WORKDIR /app
 
@@ -10,7 +14,7 @@ RUN apt-get update \
 
 COPY Gemfile ./
 
-RUN sed -i 's/, path: "[^"]*"//' Gemfile \
+RUN sed -i "s/, path: \"[^\"]*\"/, \"${KLENOD_VERSION}\"/" Gemfile \
   && bundle install
 
 COPY bin ./bin
@@ -23,6 +27,8 @@ RUN bundle exec bin/build
 
 FROM ruby:4.0.6-alpine3.24 AS runtime-gems
 
+ARG KLENOD_VERSION
+
 ENV GEM_HOME=/usr/local/bundle
 ENV PATH="${GEM_HOME}/bin:${PATH}"
 ENV BUNDLE_WITHOUT=development:build
@@ -33,7 +39,7 @@ RUN apk add --no-cache build-base ca-certificates libsodium-dev openssl-dev pkgc
 
 COPY Gemfile ./
 
-RUN sed -i 's/, path: "[^"]*"//' Gemfile \
+RUN sed -i "s/, path: \"[^\"]*\"/, \"${KLENOD_VERSION}\"/" Gemfile \
   && bundle install
 
 FROM ruby:4.0.6-alpine3.24 AS runtime
