@@ -15,6 +15,10 @@ module Example
       output
     end
 
+    def render_document(value)
+      "<!doctype html>\n#{render(value)}"
+    end
+
     def append_rendered(output, value)
       case value
       when nil, false

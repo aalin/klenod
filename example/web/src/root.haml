@@ -1,0 +1,18 @@
+:ruby
+  THEMES = %w[light dark].freeze
+
+  def document_theme
+    theme = request.cookies.fetch(Example::THEME_COOKIE, nil)
+    theme if THEMES.include?(theme)
+  end
+
+%html{ lang: i18n.lang, "data-theme" => document_theme }
+  %head
+    %meta{ name: "viewport", content: "width=device-width, initial-scale=1" }
+    %title= t(:document, :title)
+    = $stylesheet_references.map do |reference|
+      %link{ rel: "stylesheet", href: reference.asset.output_path, "data-index" => reference.index }
+    = $javascript_references.map do |reference|
+      %script{ type: "module", src: reference.asset.output_path, "data-index" => reference.index }
+  %body
+    = $children

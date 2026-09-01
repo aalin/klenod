@@ -67,3 +67,5 @@
   %DocsSection{ title: "Framework Boundary" }
     :markdown
       RouterPlugin does not decide request dispatch or rendering policy. Hybrid directories can contain both a page and `+route.rb`; the router exposes both and the consuming framework decides which one to use for a request.
+
+      The example application keeps its document shell in `/root.haml`, separately from filesystem route layouts. `RouterApp` composes the matched page and layouts, discovers their route-scoped assets, and passes the ordered asset references only to the root component. The root Haml template renders `html`, `head`, `body`, stylesheet links, module scripts, and the composed route content.

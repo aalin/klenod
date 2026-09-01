@@ -2,7 +2,9 @@
 
 module Example
   class RouterApp
-    def initialize(router:, translations:, default_locale:)
+    def initialize(root:, root_module_id:, router:, translations:, default_locale:)
+      @root = root
+      @root_module_id = root_module_id
       @router = router
       @routes =
         LocalizedRoutes.new(
@@ -57,7 +59,7 @@ module Example
 
     private
 
-    attr_reader :router, :routes
+    attr_reader :root, :root_module_id, :router, :routes
 
     def render_page_response(match, request, context, raw_request: nil, status: 200, props: {}, representation: nil)
       representation ||= preferred_page_representation(request)
@@ -95,37 +97,26 @@ module Example
 
       body =
         Context.with(request: request, routes: routes) do
-          body_node = render_descriptor_tree(match, page, layouts, request, props)
-          render_html_string(body_node)
+          route_node = render_descriptor_tree(match, page, layouts, request, props)
+          document_node =
+            component_instance(
+              root,
+              stylesheet_references: css_asset_references,
+              javascript_references: javascript_asset_references,
+              children: route_node
+            ).render
+          render_html_document(document_node)
         end
 
       response = commit_session(
         Response.html(
-          <<~HTML,
-            <!doctype html>
-            <html#{html_theme_attributes(request)}>
-              <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <title>Klenod example</title>
-                #{stylesheet_links(css_asset_references)}
-                #{module_script_tags(javascript_asset_references)}
-              </head>
-              #{body}
-            </html>
-          HTML
+          body,
           status: status,
           headers: html_response_headers(css_asset_references, javascript_asset_references, include_link: !early_hints_sent)
         ),
         request
       )
       response.to_a
-    end
-
-    def html_theme_attributes(request)
-      theme = request.cookies.fetch(THEME_COOKIE, nil)
-      return "" unless %w[light dark].include?(theme)
-
-      %( data-theme="#{theme}")
     end
 
     def page_instance(page, props)
@@ -153,8 +144,8 @@ module Example
       -> { component_instance(layout, slots: slots).render }
     end
 
-    def render_html_string(body_node)
-      H.render(body_node)
+    def render_html_document(document_node)
+      H.render_document(document_node)
     end
 
     def format_render_error(error, context)
@@ -206,18 +197,6 @@ module Example
 
     def resolution_source_root(context)
       context.graph.source_dir if context.respond_to?(:graph)
-    end
-
-    def stylesheet_links(asset_references)
-      asset_references
-        .map { |reference| %(<link rel="stylesheet" href="#{reference.asset.output_path}" data-index="#{reference.index}">) }
-        .join("\n")
-    end
-
-    def module_script_tags(asset_references)
-      asset_references
-        .map { |reference| %(<script type="module" src="#{reference.asset.output_path}" data-index="#{reference.index}"></script>) }
-        .join("\n")
     end
 
     def html_response_headers(css_asset_references, javascript_asset_references, include_link: true)
@@ -383,6 +362,7 @@ module Example
 
     def route_asset_module_ids_for(match)
       [
+        root_module_id,
         *match.route.layout_module_ids,
         match.route.module_id,
         *slot_asset_module_ids_for(match)

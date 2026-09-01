@@ -133,6 +133,10 @@ module Example
       HTMLRenderer.render(value)
     end
 
+    def self.render_document(value)
+      HTMLRenderer.render_document(value)
+    end
+
     def self.text_content(value)
       output = +""
       append_text_content(output, value)

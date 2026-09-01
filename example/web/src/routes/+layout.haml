@@ -11,25 +11,24 @@
     end
   ].compact.freeze
 
-%body
-  %header
-    .header-inner
-      %a{ href: "/" }
-        %img{ src: Logo.src, width: Logo.width, height: Logo.height, alt: "" }
-        %span Klenod
-      .header-actions
-        %nav{ aria: { label: I18n.t(:nav, :label) } }
-          = Links.map do |link|
-            %a{ href: link[:href] }= I18n.t(*link[:label])
-        .switchers
-          %ThemeSwitcher
-          %LanguageSwitcher
-  %main
-    = $children
-  %footer
-    .footer-inner
-      .footer-copy
-        %strong Klenod
-        %span= I18n.t(:footer, :summary)
-      .footer-links
-        %a{ href: Homepage, target: "_blank", rel: "noreferrer" } GitHub
+%header
+  .header-inner
+    %a{ href: "/" }
+      %img{ src: Logo.src, width: Logo.width, height: Logo.height, alt: "" }
+      %span Klenod
+    .header-actions
+      %nav{ aria: { label: I18n.t(:nav, :label) } }
+        = Links.map do |link|
+          %a{ href: link[:href] }= I18n.t(*link[:label])
+      .switchers
+        %ThemeSwitcher
+        %LanguageSwitcher
+%main
+  = $children
+%footer
+  .footer-inner
+    .footer-copy
+      %strong Klenod
+      %span= I18n.t(:footer, :summary)
+    .footer-links
+      %a{ href: Homepage, target: "_blank", rel: "noreferrer" } GitHub

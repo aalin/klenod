@@ -79,12 +79,17 @@ backtraces.
 ## Source layout and routing
 
 `src/` contains the web application. `src/entrypoint.rb` connects the generated
-router to the server. `src/routes/` contains the routes. `src/components/`
-contains reusable components. `lib/` contains the small example web framework.
+router and `src/root.haml` document shell to the server. The root component owns
+the `html`, `head`, and `body` elements and renders the ordered route stylesheet
+and module-script references passed by the router app. Its `root.css` and
+`root.intl.*.toml` companions provide document-wide styles and metadata.
+`src/routes/` contains the routes, `src/components/` contains reusable
+components, and `lib/` contains the small example web framework.
 
 Klenod builds the route tree from `src/routes/`. A `+page.haml` or `+page.rb`
 file defines a page. A `+layout` file wraps pages in its directory and child
-directories. `+error` and `+not-found` files handle errors and missing pages.
+directories inside the root document body. `+error` and `+not-found` files
+handle errors and missing pages.
 Klenod collects companion CSS and translation files with each Haml file.
 
 Directory names define dynamic, catch-all, grouped, parallel, and intercepted

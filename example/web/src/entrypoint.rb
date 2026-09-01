@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
 Router = import("virtual:router")
+Root = import("/root.haml")
 ROUTE_TRANSLATIONS = {
   "en" => import("/routes.intl.en.toml"),
   "sv" => import("/routes.intl.sv.toml")
 }
 App = Example::RouterApp.new(
+  root: Root,
+  root_module_id: "app:/root.haml",
   router: Router::Default,
   translations: ROUTE_TRANSLATIONS,
   default_locale: "en"

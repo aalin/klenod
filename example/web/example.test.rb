@@ -373,7 +373,12 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(200, status)
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert(html.start_with?("<!doctype html>\n<html lang=\"en\">"))
+    assert_equal(1, html.scan(/<html\b/).length)
+    assert_equal(1, html.scan(/<head\b/).length)
+    assert_equal(1, html.scan(/<body\b/).length)
     assert_includes(html, '<meta name="viewport" content="width=device-width, initial-scale=1">')
+    assert_includes(html, "<title>Klenod example</title>")
     assert_includes(html, "<body")
     assert_includes(html, "Klenod example")
     assert_includes(html, "<main")
@@ -386,8 +391,9 @@ class Klenod::ExampleTest < Minitest::Test
     paths = stylesheet_paths(html)
     assert_stylesheet_indexes_present(html)
     assert_stylesheet_paths_unique(paths)
+    paths.each { |path| assert_includes(head_html(html), path) }
     assert_linked_stylesheets_do_not_import_linked_stylesheets(context, paths)
-    assert_stylesheet_order(paths, "routes_root_css", "routes_layout_css", "routes_page_css", "components_Button_css")
+    assert_stylesheet_order(paths, "root_css", "routes_layout_css", "routes_page_css", "components_Button_css")
     refute(paths.any? { |path| path.include?("routes_demo_dashboard") })
     refute(paths.any? { |path| path.include?("routes_demo_assets") })
   end
@@ -398,7 +404,7 @@ class Klenod::ExampleTest < Minitest::Test
     entry = context.entry(config.entrypoints.fetch(0))
     _status, _headers, body = entry.call(request("/"), context)
 
-    assert_includes(body.join, "<html>")
+    assert_includes(body.join, '<html lang="en">')
   end
 
   def test_example_app_renders_explicit_theme_attribute_from_cookie
@@ -410,7 +416,7 @@ class Klenod::ExampleTest < Minitest::Test
       headers = HeaderList.new([["Cookie", "#{Example::THEME_COOKIE}=#{theme}"]])
       _status, _response_headers, body = entry.call(HeaderRequest["GET", "/", headers], context)
 
-      assert_includes(body.join, "<html data-theme=\"#{theme}\">")
+      assert_includes(body.join, "<html lang=\"en\" data-theme=\"#{theme}\">")
     end
   end
 
@@ -421,7 +427,7 @@ class Klenod::ExampleTest < Minitest::Test
     headers = HeaderList.new([["Cookie", "#{Example::THEME_COOKIE}=sepia"]])
     _status, _response_headers, body = entry.call(HeaderRequest["GET", "/", headers], context)
 
-    assert_includes(body.join, "<html>")
+    assert_includes(body.join, '<html lang="en">')
   end
 
   def test_example_app_links_route_scoped_css_assets
@@ -441,7 +447,7 @@ class Klenod::ExampleTest < Minitest::Test
     refute(paths.any? { |path| path.include?("routes_demo_assets_page_css") })
     assert_stylesheet_order(
       paths,
-      "routes_root_css",
+      "root_css",
       "routes_layout_css",
       "routes_demo_layout_css",
       "routes_demo_dashboard_layout_css",
@@ -505,6 +511,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(200, status)
     assert(scripts.any? { |path| path.include?("routes_demo_demo_js") })
+    scripts.each { |path| assert_includes(head_html(html), path) }
     assert_module_script_indexes_present(html)
   end
 
@@ -671,6 +678,8 @@ class Klenod::ExampleTest < Minitest::Test
     html = body.join
 
     assert_equal(200, status)
+    assert_includes(html, '<html lang="sv">')
+    assert_includes(html, "<title>Klenod-exempel</title>")
     assert_includes(html, "Bilder blir genererade browser assets")
     assert_includes(html, "popovertarget=\"language-menu\"")
     assert_includes(html, "popovertargetaction=\"toggle\"")
@@ -1782,6 +1791,10 @@ class Klenod::ExampleTest < Minitest::Test
 
   def navigation_html(html)
     html[/<nav\b.*?<\/nav>/m] || flunk("Expected rendered navigation")
+  end
+
+  def head_html(html)
+    html[/<head\b.*?<\/head>/m] || flunk("Expected rendered document head")
   end
 
   def example_config
