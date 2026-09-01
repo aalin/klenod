@@ -54,6 +54,8 @@
 
       The default export includes the emitted `src`, dimensions when available, and content type. Raster image metadata also includes generated variants.
 
+      These JavaScript metadata modules are emitted only when JavaScript imports the image or SVG. Ruby, Haml, and CSS-only asset imports emit the underlying browser assets without unused `.js` wrappers.
+
   %DocsSection{ title: "Custom Elements" }
     :markdown
       `.jsx` and `.tsx` modules are treated as custom element modules. They should default-export a named class or identifier. The plugin generates a stable custom element tag name, registers the element, and returns a descriptor when imported from Ruby or Haml.

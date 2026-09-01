@@ -283,21 +283,21 @@ module Klenod
           end
 
           def asset_javascript_asset_path(record)
-            record.metadata[:image_javascript_asset_path] || record.metadata[:svg_javascript_asset_path]
+            asset_javascript_metadata_asset(record)&.output_path
           end
 
           def asset_javascript_assets(resolved_dependencies, dependency_records)
             resolved_dependencies.filter_map do |resolved_dependency|
               record = dependency_records.fetch(resolved_dependency.dependency.id)
-              asset = record.assets.find { asset_javascript_metadata?(it) }
+              asset = asset_javascript_metadata_asset(record)
               next unless asset
 
               javascript_asset(asset)
             end
           end
 
-          def asset_javascript_metadata?(asset)
-            asset.metadata[:type] == :image_javascript_metadata || asset.metadata[:type] == :svg_javascript_metadata
+          def asset_javascript_metadata_asset(record)
+            record.metadata[:image_javascript_asset] || record.metadata[:svg_javascript_asset]
           end
 
           def javascript_asset(asset)

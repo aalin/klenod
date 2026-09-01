@@ -71,9 +71,9 @@ module Klenod
               svg_module_source(asset, svg_runtime_dependency),
               [svg_runtime_dependency],
               nil,
-              [asset, javascript_asset],
+              [asset],
               [],
-              {asset_bytes: code, svg_javascript_asset_path: javascript_asset.output_path}
+              {asset_bytes: code, svg_javascript_asset: javascript_asset}
             )
           end
 

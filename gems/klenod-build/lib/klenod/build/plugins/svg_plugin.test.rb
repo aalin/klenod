@@ -41,7 +41,7 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
     end
   end
 
-  def test_svg_import_emits_javascript_metadata_asset
+  def test_non_javascript_svg_import_does_not_emit_javascript_metadata_asset
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")
       File.write("#{dir}/images/logo.svg", svg(width: "24", height: "32"))
@@ -49,15 +49,9 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
 
       context = Klenod::Build::Context.new(source_dir: dir)
       context.evaluate("entry")
-      svg_asset = context.assets_for("images/logo.svg").find { it.metadata[:type] == :svg }
       javascript_asset = context.assets_for("images/logo.svg").find { it.metadata[:type] == :svg_javascript_metadata && it.metadata[:svg_metadata] }
 
-      assert_equal("#{svg_asset.output_path}.js", javascript_asset.output_path)
-      assert_equal("application/javascript", javascript_asset.content_type)
-      assert_includes(javascript_asset.bytes, svg_asset.output_path)
-      assert_includes(javascript_asset.bytes, %("width":24))
-      assert_includes(javascript_asset.bytes, %("height":32))
-      assert_includes(javascript_asset.bytes, %("contentType":"image/svg+xml"))
+      assert_nil(javascript_asset)
     end
   end
 

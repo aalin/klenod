@@ -52,7 +52,7 @@ module Klenod
             asset = default_image_asset(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
             variant_assets = generate_variant_assets(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
             javascript_asset = javascript_image_asset(module_id, asset, variant_assets)
-            assets = [asset, *variant_assets, javascript_asset]
+            assets = [asset, *variant_assets]
             image_runtime_dependency =
               Dependency
                 .create(
@@ -69,7 +69,7 @@ module Klenod
                 nil,
                 assets,
                 [],
-                {image_javascript_asset_path: javascript_asset.output_path}
+                {image_javascript_asset: javascript_asset}
               )
             LoadResult.new(
               image_source(module_id),

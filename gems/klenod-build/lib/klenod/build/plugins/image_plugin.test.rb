@@ -40,7 +40,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     end
   end
 
-  def test_image_import_emits_javascript_metadata_asset
+  def test_non_javascript_image_import_does_not_emit_javascript_metadata_asset
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")
       File.binwrite("#{dir}/images/logo.png", png_bytes(width: 2, height: 3))
@@ -48,16 +48,9 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
 
       context = Klenod::Build::Context.new(source_dir: dir)
       context.evaluate("entry")
-      image_asset = context.assets_for("images/logo.png").find { it.metadata[:type] == :image }
       javascript_asset = context.assets_for("images/logo.png").find { it.metadata[:type] == :image_javascript_metadata && it.metadata[:image_metadata] }
-      metadata_source = javascript_asset.bytes
 
-      assert_equal("#{image_asset.output_path}.js", javascript_asset.output_path)
-      assert_equal("application/javascript", javascript_asset.content_type)
-      assert_includes(metadata_source, image_asset.output_path)
-      assert_includes(metadata_source, %("width":2))
-      assert_includes(metadata_source, %("height":3))
-      assert_includes(metadata_source, %("contentType":"image/png"))
+      assert_nil(javascript_asset)
     end
   end
 
@@ -197,7 +190,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assets = context.assets_for("images/hero.png")
       variant_asset = assets.find { |asset| asset.metadata[:type] == :image_variant }
 
-      assert_equal(3, assets.length)
+      assert_equal(2, assets.length)
       assert_match(%r{\A/assets/hero\.2w\.[a-f0-9]{16}\.png\z}, variant.src)
       assert_equal(2, variant.width)
       assert_equal(1, variant.height)
@@ -232,7 +225,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       default_asset = assets.find { |asset| asset.metadata[:type] == :image }
       variant = image.variants.fetch(0)
 
-      assert_equal(3, assets.length)
+      assert_equal(2, assets.length)
       assert_match(%r{\A/assets/hero\.[a-f0-9]{16}\.webp\z}, image.src)
       assert_equal("image/webp", image.content_type)
       assert_equal(4, image.width)
@@ -273,7 +266,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       default_asset = assets.find { |asset| asset.metadata[:type] == :image }
       variant_asset = assets.find { |asset| asset.metadata[:type] == :image_variant }
 
-      assert_equal(3, assets.length)
+      assert_equal(2, assets.length)
       assert_match(%r{\A/assets/hero\.[a-f0-9]{16}\.png\z}, image.src)
       assert_equal("image/png", image.content_type)
       assert_equal(image.src, default_asset.output_path)
@@ -402,7 +395,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       variants = loaded.load("entry").const_get(:Exports)::VARIANTS
       variant_asset = context.assets_for("images/hero.png").find { |asset| asset.metadata[:type] == :image_variant }
 
-      assert_equal(3, bundle.assets_for("images/hero.png").length)
+      assert_equal(2, bundle.assets_for("images/hero.png").length)
       assert_equal(1, variants.length)
       assert_equal(3, variants.first.width)
       assert_equal(2, variants.first.height)
@@ -435,7 +428,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       refute(exports::Logo.loaded?)
 
       assert_equal([2, 3], exports.image_size)
-      assert_equal(2, context.assets_for("images/logo.png").length)
+      assert_equal(1, context.assets_for("images/logo.png").length)
       assert(exports::Logo.loaded?)
     end
   end

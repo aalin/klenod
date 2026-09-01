@@ -130,6 +130,27 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
     end
   end
 
+  def test_css_asset_imports_do_not_emit_javascript_metadata_assets
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(["#{dir}/styles", "#{dir}/images"])
+      File.binwrite("#{dir}/images/logo.png", PNG_BYTES)
+      File.write("#{dir}/images/icon.svg", %(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32"></svg>\n))
+      File.write(
+        "#{dir}/styles/app.css",
+        <<~CSS
+          .logo { background-image: url("../images/logo.png"); }
+          .icon { mask-image: url("../images/icon.svg"); }
+        CSS
+      )
+
+      context = context_for(dir)
+      context.collect("styles/app.css")
+
+      refute(context.assets_for("images/logo.png").any? { it.content_type == "application/javascript" })
+      refute(context.assets_for("images/icon.svg").any? { it.content_type == "application/javascript" })
+    end
+  end
+
   def test_default_css_import_is_rewritten_to_native_css_module_import
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/styles"])
