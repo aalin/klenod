@@ -1,7 +1,7 @@
 .icon {
   display: grid;
   place-items: center;
-  min-width: 1rem;
+  min-width: 1em;
   line-height: 1;
 }
 

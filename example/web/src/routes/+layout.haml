@@ -21,8 +21,9 @@
         %nav{ aria: { label: I18n.t(:nav, :label) } }
           = Links.map do |link|
             %a{ href: link[:href] }= I18n.t(*link[:label])
-        %ThemeSwitcher
-        %LanguageSwitcher
+        .switchers
+          %ThemeSwitcher
+          %LanguageSwitcher
   %main
     = $children
   %footer

@@ -1,11 +1,11 @@
 .button {
-  min-width: 2.7rem;
+  min-width: 2.7em;
 }
 
 .icon {
   display: block;
-  width: 1rem;
-  height: 1rem;
+  width: 1em;
+  height: 1em;
   background-color: currentColor;
   mask-image: url("./language-solid-full.svg");
   mask-repeat: no-repeat;
@@ -14,7 +14,7 @@
 }
 
 .code {
-  min-width: 1.3rem;
+  min-width: 1.3em;
   text-align: left;
 }
 
