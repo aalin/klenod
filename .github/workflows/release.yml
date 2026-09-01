@@ -41,7 +41,11 @@ jobs:
           test "$GITHUB_REF_TYPE" = "tag"
           test "$GITHUB_REF_NAME" = "v${version}"
           git fetch origin main
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            main_sha="$(git rev-parse origin/main)"
+            echo "::error title=Release tag is not on main::Tag ${GITHUB_REF_NAME} points to ${GITHUB_SHA}, but that commit is not contained in origin/main (${main_sha}). Push or merge the tagged commit to main, then rerun this workflow."
+            exit 1
+          fi
           bundle exec rake version:check
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "ruby-abi=${ruby_abi}" >> "$GITHUB_OUTPUT"
