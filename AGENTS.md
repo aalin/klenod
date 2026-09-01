@@ -192,6 +192,7 @@ Routing is optional and owned by `RouterPlugin`; core Klenod must not assume a w
 - CSS imports from Ruby/Haml return scoped class-name maps; CSS importing CSS receives transformed asset paths.
 - Class selectors use normal symbol keys such as `:button`; tag selectors use `__`-prefixed keys such as `:__figure`.
 - Haml applies scoped tag and explicit class mappings. Centralize class joining in the `clsx`-style helper.
+- Prefer native CSS nesting to group related selectors under their component or layout block. Preserve the intended selector semantics and use `&` when referring to the nesting selector.
 - Route-scoped asset lookup should use `assets_for_module(...)` or `asset_references_for_module(...)`, not every graph asset.
 - Root/layout CSS should precede page/component CSS by graph traversal order.
 - Assets have a stable `logical_name` and a content-hashed `output_path`.
@@ -209,6 +210,13 @@ Framework code lives under `example/web/lib/framework.rb` and `example/web/lib/f
 Keep application policy in the example unless an abstraction is genuinely framework-neutral. In particular, request representation negotiation, hybrid route dispatch, session/form behavior, error rendering, and development asset serving do not belong in Klenod core.
 
 The documentation routes are the durable examples. Prefer extending them over adding dependencies on `/demo` pages.
+
+When changing a Haml component, page, or layout under `example/web/src`, treat
+its companion files as part of the same change:
+
+- Companion files use the same directory and basename as the Haml file: `Component.haml` has `Component.css` and `Component.intl.*.toml`, `+page.haml` has `+page.css` and `+page.intl.*.toml`, and `+layout.haml` has `+layout.css` and `+layout.intl.*.toml`.
+- Always inspect and update the sibling CSS file when markup changes. Check selectors that depend on element type, nesting, sibling position, or pseudo-classes such as `:first-child` and `:last-child`, not only class names.
+- Always inspect every sibling `.intl.*.toml` file when translated content changes. Add, rename, or remove keys consistently across all locales so the Haml and translation companions do not drift.
 
 ## Testing Notes
 
