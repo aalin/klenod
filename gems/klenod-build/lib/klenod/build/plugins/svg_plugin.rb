@@ -94,7 +94,7 @@ module Klenod
 
           def svg_runtime_source
             <<~RUBY
-              Svg = Data.define(:src, :width, :height, :content_type)
+              SvgMetadata = Data.define(:src, :width, :height, :content_type, :aspect_ratio)
             RUBY
           end
 
@@ -102,11 +102,12 @@ module Klenod
             <<~RUBY
               SvgRuntime = __klenod_import__(#{svg_runtime_dependency.id.inspect})
               Default =
-                SvgRuntime::Svg.new(
+                SvgRuntime::SvgMetadata.new(
                   src: #{asset.output_path.inspect},
                   width: #{asset.metadata[:width].inspect},
                   height: #{asset.metadata[:height].inspect},
-                  content_type: #{asset.content_type.inspect}
+                  content_type: #{asset.content_type.inspect},
+                  aspect_ratio: #{AssetJavaScriptMetadata.aspect_ratio(asset.metadata[:width], asset.metadata[:height]).inspect}
                 )
 
             RUBY

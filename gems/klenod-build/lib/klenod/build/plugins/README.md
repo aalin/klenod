@@ -248,7 +248,7 @@ If a Google Font is newer than the vendored snapshot, the plugin warns and keeps
 Handles `.svg` modules.
 
 - Emits the SVG file as a browser asset.
-- Exports metadata with `src`, `width`, and `height`.
+- Exports an immutable `SvgMetadata` value with `src`, `width`, `height`, `content_type`, and `aspect_ratio`.
 - Reads dimensions from `<svg width height>` or derives them from `viewBox`.
 - Rejects query parameters for SVG imports.
 
@@ -272,7 +272,8 @@ Behavior:
 - Reads dimensions from the source path with `image_size`.
 - Emits the original image as a source-path asset unless import query parameters require a generated default asset.
 - Emits resized variants as generated CPU assets using RMagick.
-- Exports an image metadata object with `src`, `width`, `height`, `content_type`, `variants`, `srcset`, and `sizes`.
+- Exports an immutable `ImageMetadata` value with `src`, `width`, `height`, `content_type`, `aspect_ratio`, `variants`, `srcset`, and `sizes`.
+- Represents generated variants as immutable `ImageVariant` values with matching base fields plus `format`, `descriptor`, and `quality`.
 
 Configuration:
 

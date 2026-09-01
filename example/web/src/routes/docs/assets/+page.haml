@@ -38,7 +38,7 @@
     :markdown
       CSS imports from Ruby or Haml return class-name maps. CSS imports from CSS become stylesheet dependencies, and CSS `url(...)` references become asset dependencies.
 
-      SVG imports emit the SVG file as a browser asset and export metadata with `src`, `width`, `height`, and `content_type`.
+      SVG imports emit the SVG file as a browser asset and export an immutable `SvgMetadata` value with `src`, `width`, `height`, `content_type`, and `aspect_ratio`.
 
       Raster image imports support `.avif`, `.gif`, `.jpeg`, `.jpg`, `.png`, and `.webp`. Import query options can request widths, formats, and quality:
 
@@ -46,7 +46,7 @@
       Hero = import("hero.jpg?width=320,640&format=webp,jpeg&quality=82")
       ```
 
-      Image values expose `src`, dimensions, `content_type`, `variants`, `srcset`, and `sizes`. If `format` or `quality` is requested, the default `src` can also be a generated asset. Generated variants are deduplicated by source path, source hash, width, format, and quality.
+      Ruby image imports return an immutable `ImageMetadata` value with `src`, dimensions, `content_type`, `aspect_ratio`, `variants`, `srcset`, and `sizes`. Its immutable `ImageVariant` values expose the same base metadata plus `format`, `descriptor`, and `quality`. If `format` or `quality` is requested, the default `src` can also be a generated asset. Generated variants are deduplicated by source path, source hash, width, format, and quality.
 
   %DocsSection{ title: "Google Fonts" }
     :markdown

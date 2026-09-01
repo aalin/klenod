@@ -22,6 +22,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
           IMAGE_WIDTH = Logo.width
           IMAGE_HEIGHT = Logo.height
           IMAGE_CONTENT_TYPE = Logo.content_type
+          IMAGE_ASPECT_RATIO = Logo.aspect_ratio
+          IMAGE_CLASS_NAME = Logo.class.name
         RUBY
       )
 
@@ -34,6 +36,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal(2, exports::IMAGE_WIDTH)
       assert_equal(3, exports::IMAGE_HEIGHT)
       assert_equal("image/png", exports::IMAGE_CONTENT_TYPE)
+      assert_in_delta(2.0 / 3, exports::IMAGE_ASPECT_RATIO)
+      assert_match(/::ImageMetadata\z/, exports::IMAGE_CLASS_NAME)
       assert_equal(2, asset.metadata[:width])
       assert_equal(3, asset.metadata[:height])
       assert_equal(:png, asset.metadata[:format])
@@ -108,12 +112,15 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       image = loaded.load("entry").const_get(:Exports)::IMAGE
       asset = loaded.assets_for("images/logo.png").fetch(0)
 
-      refute_equal("Klenod::Build::Plugins::ImagePlugin::Image", image.class.name)
+      assert_match(/::ImageMetadata\z/, image.class.name)
       refute_match(/::Exports\z/, image.inspect)
       assert(loaded.modules.key?("virtual:/klenod/image.rb"))
       assert_equal(4, image.width)
       assert_equal(5, image.height)
       assert_equal("image/png", image.content_type)
+      assert_equal(0.8, image.aspect_ratio)
+      assert(image.frozen?)
+      assert(image.variants.frozen?)
       assert_equal(4, asset.metadata[:width])
       assert_equal(5, asset.metadata[:height])
       assert_equal(bundle.assets.keys, loaded.assets.keys)
@@ -151,8 +158,11 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal(2, variant.width)
       assert_equal(1, variant.height)
       assert_equal("image/png", variant.content_type)
+      assert_equal(2.0, variant.aspect_ratio)
       assert_equal(:png, variant.format)
       assert_equal("2w", variant.descriptor)
+      assert_nil(variant.quality)
+      assert(variant.frozen?)
       assert_equal("#{variant.src} 2w", srcset)
       assert_equal("(max-width: 2px) 100vw, 2px", sizes)
       assert_equal(variant.src, variant_asset.output_path)
@@ -272,6 +282,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal(image.src, default_asset.output_path)
       assert_equal(75, default_asset.metadata[:quality])
       assert_equal(75, variant_asset.metadata[:quality])
+      assert_equal(75, image.variants.fetch(0).quality)
       assert_equal(:cpu, default_asset.queue_kind)
       refute(default_asset.ready?)
     end
@@ -400,6 +411,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal(3, variants.first.width)
       assert_equal(2, variants.first.height)
       assert_equal("image/png", variants.first.content_type)
+      assert_equal(1.5, variants.first.aspect_ratio)
+      assert_nil(variants.first.quality)
       assert(variant_asset.ready?)
     end
   end

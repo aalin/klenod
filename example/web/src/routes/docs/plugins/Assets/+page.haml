@@ -26,7 +26,7 @@
       Photo = import("./photo.jpg?width=320,640&format=webp&quality=82")
       ```
 
-      Runtime metadata includes `src`, dimensions, `variants`, `srcset`, and `sizes`. Generated image work is queued as CPU-bound asset generation.
+      Ruby imports return immutable `ImageMetadata` and `ImageVariant` values with `src`, dimensions, `content_type`, `aspect_ratio`, and variant-specific metadata. `ImageMetadata` also provides `variants`, `srcset`, and `sizes`. SVG imports return the corresponding immutable `SvgMetadata` value. Generated image work is queued as CPU-bound asset generation.
 
   %DocsSection{ title: "Cache Behavior" }
     :markdown

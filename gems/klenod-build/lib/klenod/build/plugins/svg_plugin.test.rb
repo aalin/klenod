@@ -22,6 +22,8 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
           SVG_WIDTH = Logo.width
           SVG_HEIGHT = Logo.height
           SVG_CONTENT_TYPE = Logo.content_type
+          SVG_ASPECT_RATIO = Logo.aspect_ratio
+          SVG_CLASS_NAME = Logo.class.name
         RUBY
       )
 
@@ -34,6 +36,8 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
       assert_equal(24, exports::SVG_WIDTH)
       assert_equal(32, exports::SVG_HEIGHT)
       assert_equal("image/svg+xml", exports::SVG_CONTENT_TYPE)
+      assert_equal(0.75, exports::SVG_ASPECT_RATIO)
+      assert_match(/::SvgMetadata\z/, exports::SVG_CLASS_NAME)
       assert_equal("image/svg+xml", asset.content_type)
       assert_equal(:svg, asset.metadata[:type])
       assert_equal(24, asset.metadata[:width])
@@ -99,12 +103,14 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
       svg = loaded.load("entry").const_get(:Exports)::SVG
       asset = loaded.assets_for("images/logo.svg").fetch(0)
 
-      refute_equal("Klenod::Build::Plugins::SvgPlugin::Svg", svg.class.name)
+      assert_match(/::SvgMetadata\z/, svg.class.name)
       refute_match(/::Exports\z/, svg.inspect)
       assert(loaded.modules.key?("virtual:/klenod/svg.rb"))
       assert_equal(48, svg.width)
       assert_equal(64, svg.height)
       assert_equal("image/svg+xml", svg.content_type)
+      assert_equal(0.75, svg.aspect_ratio)
+      assert(svg.frozen?)
       assert_equal(48, asset.metadata[:width])
       assert_equal(64, asset.metadata[:height])
       assert_equal(bundle.assets.keys, loaded.assets.keys)

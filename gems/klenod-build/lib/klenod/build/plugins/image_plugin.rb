@@ -185,8 +185,12 @@ module Klenod
 
           def image_runtime_source
             <<~RUBY
-              Image =
-                Data.define(:src, :width, :height, :content_type, :variants) do
+              ImageMetadata =
+                Data.define(:src, :width, :height, :content_type, :aspect_ratio, :variants) do
+                  def initialize(src:, width:, height:, content_type:, aspect_ratio:, variants:)
+                    super(src:, width:, height:, content_type:, aspect_ratio:, variants: variants.dup.freeze)
+                  end
+
                   def srcset
                     return nil if variants.empty?
 
@@ -201,7 +205,7 @@ module Klenod
                   end
                 end
 
-              ImageVariant = Data.define(:src, :width, :height, :content_type, :format, :descriptor, :metadata)
+              ImageVariant = Data.define(:src, :width, :height, :content_type, :aspect_ratio, :format, :descriptor, :quality)
             RUBY
           end
 
@@ -216,11 +220,12 @@ module Klenod
             <<~RUBY
               ImageRuntime = __klenod_import__(#{image_runtime_dependency.id.inspect})
               Default =
-                ImageRuntime::Image.new(
+                ImageRuntime::ImageMetadata.new(
                   src: #{asset.output_path.inspect},
                   width: #{asset.metadata[:width].inspect},
                   height: #{asset.metadata[:height].inspect},
                   content_type: #{asset.content_type.inspect},
+                  aspect_ratio: #{AssetJavaScriptMetadata.aspect_ratio(asset.metadata[:width], asset.metadata[:height]).inspect},
                   variants: [
                     #{variants.join(",\n    ")}
                   ]
@@ -236,9 +241,10 @@ module Klenod
                 width: #{asset.metadata[:width].inspect},
                 height: #{asset.metadata[:height].inspect},
                 content_type: #{asset.content_type.inspect},
+                aspect_ratio: #{AssetJavaScriptMetadata.aspect_ratio(asset.metadata[:width], asset.metadata[:height]).inspect},
                 format: #{asset.metadata[:format].inspect},
                 descriptor: #{asset.metadata[:descriptor].inspect},
-                metadata: #{asset.metadata.inspect}
+                quality: #{asset.metadata[:quality].inspect}
               )
             RUBY
           end
