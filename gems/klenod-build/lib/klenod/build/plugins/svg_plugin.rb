@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "json"
-
 require_relative "../asset"
 require_relative "../dependency"
 require_relative "../errors"
@@ -9,6 +7,7 @@ require_relative "../hashing"
 require_relative "../module_id"
 require_relative "../plugin"
 require_relative "../transform_result"
+require_relative "asset_javascript_metadata"
 
 module Klenod
   module Build
@@ -119,7 +118,7 @@ module Klenod
             Asset.new(
               module_id.path,
               hash,
-              "#{asset.output_path}.js",
+              "/assets/#{asset_name(module_id)}.#{hash}#{module_id.extname}.js",
               nil,
               code,
               "application/javascript",
@@ -132,10 +131,14 @@ module Klenod
               src: asset.output_path,
               width: asset.metadata[:width],
               height: asset.metadata[:height],
-              contentType: asset.content_type
+              contentType: asset.content_type,
+              aspectRatio: AssetJavaScriptMetadata.aspect_ratio(asset.metadata[:width], asset.metadata[:height])
             }
 
-            "export default #{JSON.generate(metadata)};\n"
+            <<~JAVASCRIPT
+              import { SvgMetadata } from #{AssetJavaScriptMetadata::OUTPUT_PATH.inspect};
+              export default new SvgMetadata(#{AssetJavaScriptMetadata.object_literal(metadata)});
+            JAVASCRIPT
           end
 
           def svg_dimensions(code)

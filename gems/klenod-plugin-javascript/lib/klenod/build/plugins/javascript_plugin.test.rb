@@ -74,7 +74,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/images"])
       File.binwrite("#{dir}/images/logo.png", PNG_BYTES)
-      File.write("#{dir}/scripts/app.js", "import logo from '../images/logo.png';\nconsole.log(logo.src, logo.width);\n")
+      File.write("#{dir}/scripts/app.js", "import logo from '../images/logo.png?width=1';\nconsole.log(logo.src, logo.width);\n")
       File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.js\")\n")
 
       context = context_for(dir)
@@ -82,12 +82,25 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       app_asset = javascript_asset(context, "scripts/app.js")
       image_asset = context.assets_for("images/logo.png").find { it.metadata[:type] == :image }
       image_module_asset = context.assets_for("images/logo.png").find { it.metadata[:type] == :javascript && it.metadata[:image_metadata] }
+      metadata_runtime_asset = javascript_asset(context, Klenod::Build::Plugins::AssetJavaScriptMetadata::LOGICAL_NAME)
 
-      assert_equal("#{image_asset.output_path}.js", image_module_asset.output_path)
+      assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.png\.js\z}, image_module_asset.output_path)
       assert_import_from(app_asset.bytes, image_module_asset.output_path)
-      assert_includes(image_module_asset.bytes, %("src":"#{image_asset.output_path}"))
-      assert_includes(image_module_asset.bytes, %("width":2))
-      assert_includes(image_module_asset.bytes, %("height":3))
+      assert_import_from(image_module_asset.bytes, metadata_runtime_asset.output_path)
+      assert_includes(image_module_asset.bytes, %(src:"#{image_asset.output_path}"))
+      assert_includes(image_module_asset.bytes, "width:2")
+      assert_includes(image_module_asset.bytes, "height:3")
+      assert_includes(image_module_asset.bytes, "aspectRatio:0.6666666666666666")
+      assert_includes(image_module_asset.bytes, "new ImageMetadata(")
+      assert_includes(image_module_asset.bytes, "new ImageVariant(")
+      refute_includes(image_module_asset.bytes, "sourceWidth")
+      assert_includes(metadata_runtime_asset.bytes, "export class ImageBase")
+      assert_includes(metadata_runtime_asset.bytes, "this.aspectRatio = aspectRatio")
+      refute_includes(metadata_runtime_asset.bytes, "get aspectRatio()")
+      assert_includes(metadata_runtime_asset.bytes, "export class ImageVariant")
+      assert_includes(metadata_runtime_asset.bytes, "export default class ImageMetadata")
+      assert_includes(metadata_runtime_asset.bytes, "this.variants = Object.freeze([...variants])")
+      assert_equal(3, metadata_runtime_asset.bytes.scan("Object.freeze(this)").length)
       assert_includes(context.assets_for_module("scripts/app.js", type: :javascript, recursive: false).map(&:output_path), image_module_asset.output_path)
     end
   end
@@ -120,13 +133,18 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       app_asset = javascript_asset(context, "scripts/app.js")
       svg_asset = context.assets_for("images/logo.svg").find { it.metadata[:type] == :svg }
       svg_module_asset = context.assets_for("images/logo.svg").find { it.metadata[:type] == :javascript && it.metadata[:svg_metadata] }
+      metadata_runtime_asset = javascript_asset(context, Klenod::Build::Plugins::AssetJavaScriptMetadata::LOGICAL_NAME)
 
-      assert_equal("#{svg_asset.output_path}.js", svg_module_asset.output_path)
+      assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.svg\.js\z}, svg_module_asset.output_path)
       assert_import_from(app_asset.bytes, svg_module_asset.output_path)
-      assert_includes(svg_module_asset.bytes, %("src":"#{svg_asset.output_path}"))
-      assert_includes(svg_module_asset.bytes, %("width":24))
-      assert_includes(svg_module_asset.bytes, %("height":32))
-      assert_includes(svg_module_asset.bytes, %("contentType":"image/svg+xml"))
+      assert_import_from(svg_module_asset.bytes, metadata_runtime_asset.output_path)
+      assert_includes(svg_module_asset.bytes, %(src:"#{svg_asset.output_path}"))
+      assert_includes(svg_module_asset.bytes, "width:24")
+      assert_includes(svg_module_asset.bytes, "height:32")
+      assert_includes(svg_module_asset.bytes, %(contentType:"image/svg+xml"))
+      assert_includes(svg_module_asset.bytes, "aspectRatio:0.75")
+      assert_includes(svg_module_asset.bytes, "new SvgMetadata(")
+      assert_includes(metadata_runtime_asset.bytes, "export class SvgMetadata")
     end
   end
 
@@ -282,9 +300,10 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       image_module_asset = bundle.assets.values.find { it.metadata[:type] == :javascript && it.metadata[:image_metadata] }
 
       assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.png\z}, image_asset.output_path)
-      assert_equal("#{image_asset.output_path}.js", image_module_asset.output_path)
+      assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.png\.js\z}, image_module_asset.output_path)
       assert(loaded.assets.key?(image_asset.output_path))
       assert(loaded.assets.key?(image_module_asset.output_path))
+      assert(loaded.assets.values.any? { it.metadata[:javascript_runtime] == :asset_metadata })
     end
   end
 

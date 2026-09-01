@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "image_size"
-require "json"
 require "rmagick"
 require "uri"
 
@@ -11,6 +10,7 @@ require_relative "../hashing"
 require_relative "../load_result"
 require_relative "../plugin"
 require_relative "../transform_result"
+require_relative "asset_javascript_metadata"
 
 module Klenod
   module Build
@@ -249,7 +249,7 @@ module Klenod
             Asset.new(
               module_id.path,
               hash,
-              "#{asset.output_path}.js",
+              "/assets/#{asset_name(module_id)}.#{hash}#{module_id.extname}.js",
               nil,
               code,
               "application/javascript",
@@ -258,21 +258,20 @@ module Klenod
           end
 
           def javascript_image_module_source(asset, variant_assets)
-            variants = variant_assets.map { |variant_asset| javascript_image_variant(variant_asset) }
-            srcset = variant_assets.empty? ? nil : variant_assets.map { "#{it.output_path} #{it.metadata[:descriptor]}" }.join(", ")
-            display_width = variant_assets.filter_map { it.metadata[:width] }.max || asset.metadata[:width]
-            sizes = display_width ? "(max-width: #{display_width}px) 100vw, #{display_width}px" : nil
-            metadata = {
+            variants = variant_assets.map { "new ImageVariant(#{AssetJavaScriptMetadata.object_literal(javascript_image_variant(it))})" }
+            properties = {
               src: asset.output_path,
               width: asset.metadata[:width],
               height: asset.metadata[:height],
               contentType: asset.content_type,
-              variants: variants,
-              srcset: srcset,
-              sizes: sizes
-            }
+              aspectRatio: AssetJavaScriptMetadata.aspect_ratio(asset.metadata[:width], asset.metadata[:height])
+            }.map { |key, value| AssetJavaScriptMetadata.property(key, value) }
+            properties << %(variants:[#{variants.join(",")}])
 
-            "export default #{JSON.generate(metadata)};\n"
+            <<~JAVASCRIPT
+              import ImageMetadata, { ImageVariant } from #{AssetJavaScriptMetadata::OUTPUT_PATH.inspect};
+              export default new ImageMetadata({#{properties.join(",")}});
+            JAVASCRIPT
           end
 
           def javascript_image_variant(asset)
@@ -281,10 +280,11 @@ module Klenod
               width: asset.metadata[:width],
               height: asset.metadata[:height],
               contentType: asset.content_type,
+              aspectRatio: AssetJavaScriptMetadata.aspect_ratio(asset.metadata[:width], asset.metadata[:height]),
               format: asset.metadata[:format],
               descriptor: asset.metadata[:descriptor],
-              metadata: asset.metadata
-            }
+              quality: asset.metadata[:quality]
+            }.compact
           end
 
           def image_asset(assets)
@@ -334,8 +334,7 @@ module Klenod
               width: width,
               height: scaled_height(dimensions, width),
               format: format.to_sym,
-              descriptor: descriptor,
-              source_width: width
+              descriptor: descriptor
             }
             metadata[:quality] = quality if quality
 

@@ -52,7 +52,24 @@
       import logo from "./logo.svg";
       ```
 
-      The default export includes the emitted `src`, dimensions when available, and content type. Raster image metadata also includes generated variants.
+      Wrappers import a shared asset metadata module. `ImageMetadata` and `ImageVariant` extend `ImageBase`, which exposes `src`, `width`, `height`, `contentType`, and a build-time `aspectRatio`. The generated metadata objects and raster variants array are frozen. SVG imports default-export an `SvgMetadata` instance whose dimensions come from numeric `width` and `height` attributes or fall back to `viewBox`; dimensions and `aspectRatio` are `null` when the SVG has no intrinsic size. Raster `srcset` and `sizes` are computed by `ImageMetadata`.
+
+      ```js
+      import ImageMetadata, { ImageVariant } from "/assets/klenod_asset_metadata.<hash>.js";
+
+      export default new ImageMetadata({
+        src: "/assets/photo.<hash>.jpg",
+        width: 1448,
+        height: 1086,
+        contentType: "image/jpeg",
+        aspectRatio: 1.3333333333333333,
+        variants: [new ImageVariant({
+          width: 640,
+          height: 480,
+          aspectRatio: 1.3333333333333333
+        })]
+      });
+      ```
 
       These JavaScript metadata modules are emitted only when JavaScript imports the image or SVG. Ruby, Haml, and CSS-only asset imports emit the underlying browser assets without unused `.js` wrappers.
 

@@ -4,6 +4,7 @@ require "klenod/build/asset"
 require "klenod/build/dependency"
 require "klenod/build/errors"
 require "klenod/build/hashing"
+require "klenod/build/plugins/asset_javascript_metadata"
 require "klenod/build/load_result"
 require "klenod/build/module_id"
 require "klenod/build/plugin"
@@ -287,13 +288,16 @@ module Klenod
           end
 
           def asset_javascript_assets(resolved_dependencies, dependency_records)
-            resolved_dependencies.filter_map do |resolved_dependency|
+            assets = resolved_dependencies.filter_map do |resolved_dependency|
               record = dependency_records.fetch(resolved_dependency.dependency.id)
               asset = asset_javascript_metadata_asset(record)
               next unless asset
 
               javascript_asset(asset)
             end
+            return assets if assets.empty?
+
+            [*assets, AssetJavaScriptMetadata.asset]
           end
 
           def asset_javascript_metadata_asset(record)

@@ -8,7 +8,7 @@ It:
 - collects static imports, re-exports, and string-literal dynamic imports
 - transforms JavaScript, TypeScript, JSX, and TSX
 - rewrites local imports to content-hashed asset paths
-- emits image and SVG metadata modules only for assets imported from JavaScript
+- emits image and SVG wrappers backed by shared `ImageBase`, `ImageMetadata`, `ImageVariant`, and `SvgMetadata` classes, with frozen concrete metadata values, only for assets imported from JavaScript
 - preserves external URL imports
 
 Bare package imports and npm resolution are not currently supported.
