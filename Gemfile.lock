@@ -1,12 +1,12 @@
 PATH
   remote: gems/klenod-build
   specs:
-    klenod-build (0.0.1)
+    klenod-build (0.0.2)
       async (~> 2.42)
       async-http (~> 0.95.1)
       brotli (~> 0.8)
       image_size (~> 3.6)
-      klenod-runtime (= 0.0.1)
+      klenod-runtime (= 0.0.2)
       kramdown (~> 2.5)
       kramdown-parser-gfm (~> 1.1)
       listen (~> 3.10)
@@ -21,36 +21,36 @@ PATH
 PATH
   remote: gems/klenod-plugin-css
   specs:
-    klenod-plugin-css (0.0.1)
-      klenod-build (= 0.0.1)
+    klenod-plugin-css (0.0.2)
+      klenod-build (= 0.0.2)
       rb_sys (~> 0.9.124)
 
 PATH
   remote: gems/klenod-plugin-javascript
   specs:
-    klenod-plugin-javascript (0.0.1)
-      klenod-build (= 0.0.1)
+    klenod-plugin-javascript (0.0.2)
+      klenod-build (= 0.0.2)
       rb_sys (~> 0.9.124)
 
 PATH
   remote: gems/klenod-rack
   specs:
-    klenod-rack (0.0.1)
+    klenod-rack (0.0.2)
       http-accept (~> 2.2)
-      klenod-runtime (= 0.0.1)
+      klenod-runtime (= 0.0.2)
 
 PATH
   remote: gems/klenod-runtime
   specs:
-    klenod-runtime (0.0.1)
+    klenod-runtime (0.0.2)
 
 PATH
   remote: gems/klenod
   specs:
-    klenod (0.0.1)
-      klenod-build (= 0.0.1)
-      klenod-rack (= 0.0.1)
-      klenod-runtime (= 0.0.1)
+    klenod (0.0.2)
+      klenod-build (= 0.0.2)
+      klenod-rack (= 0.0.2)
+      klenod-runtime (= 0.0.2)
 
 GEM
   remote: https://rubygems.org/
@@ -248,12 +248,12 @@ CHECKSUMS
   io-event (1.19.1) sha256=851aa9a318889cbfdaa9a982b5cd266750f893748752a17f52f880d93ceb6ee6
   io-stream (0.13.1) sha256=570d7c4dfb0fbd767480b4a222048a2be6d9b78febc1ec68258d0e0a4cde20de
   json (2.21.2) sha256=1f1d3b7cf2b3ba1a69beca0bb6db13d5438b80bff3cd54cdaaa620b9b07c1c6a
-  klenod (0.0.1)
-  klenod-build (0.0.1)
-  klenod-plugin-css (0.0.1)
-  klenod-plugin-javascript (0.0.1)
-  klenod-rack (0.0.1)
-  klenod-runtime (0.0.1)
+  klenod (0.0.2)
+  klenod-build (0.0.2)
+  klenod-plugin-css (0.0.2)
+  klenod-plugin-javascript (0.0.2)
+  klenod-rack (0.0.2)
+  klenod-runtime (0.0.2)
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
   kramdown-parser-gfm (1.1.0) sha256=fb39745516427d2988543bf01fc4cf0ab1149476382393e0e9c48592f6581729
   language_server-protocol (3.17.0.6) sha256=5ef2c0c138f8267e1bc631d3328347d354f96724b0af22f2c79516120443b7f0
