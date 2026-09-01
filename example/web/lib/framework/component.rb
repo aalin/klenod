@@ -45,18 +45,6 @@ module Example
       context.fetch(:request)
     end
 
-    def self.i18n
-      @i18n ||= I18n.new(self)
-    end
-
-    def i18n
-      self.class.i18n
-    end
-
-    def t(*key, default: nil)
-      i18n.t(*key, default: default)
-    end
-
     def localized_path(...)
       context.routes.localized_path(...)
     end

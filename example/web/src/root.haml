@@ -6,10 +6,10 @@
     theme if THEMES.include?(theme)
   end
 
-%html{ lang: i18n.lang, "data-theme" => document_theme }
+%html{ lang: I18n.lang, "data-theme" => document_theme }
   %head
     %meta{ name: "viewport", content: "width=device-width, initial-scale=1" }
-    %title= t(:document, :title)
+    %title= I18n.t(:document, :title)
     = $stylesheet_references.map do |reference|
       %link{ rel: "stylesheet", href: reference.asset.output_path, "data-index" => reference.index }
     = $javascript_references.map do |reference|

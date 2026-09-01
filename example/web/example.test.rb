@@ -17,6 +17,7 @@ class Klenod::ExampleTest < Minitest::Test
   Request = Data.define(:method, :path)
   HeaderRequest = Data.define(:method, :path, :headers)
   BodyRequest = Data.define(:method, :path, :headers, :body)
+  TranslationOwner = Data.define(:module_path)
 
   class EarlyHintsRequest
     attr_reader :method, :path, :headers, :interim_responses
@@ -362,6 +363,18 @@ class Klenod::ExampleTest < Minitest::Test
     instance = component.instantiate(enabled: false)
 
     assert_equal([true, false, false, "fallback"], instance.values)
+  end
+
+  def test_example_haml_component_exposes_component_local_translator
+    config = example_config
+    context = config.context
+    record = context.evaluate("root.haml")
+    component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default
+
+    assert_instance_of(Example::Translator, component::I18n)
+    refute_respond_to(component, :i18n)
+    refute_respond_to(component.new, :i18n)
+    refute_respond_to(component.new, :t)
   end
 
   def test_example_app_loads_renders_and_emits_assets
@@ -1361,41 +1374,39 @@ class Klenod::ExampleTest < Minitest::Test
     )
   end
 
-  def test_example_i18n_uses_fiber_local_request_context
+  def test_example_translator_uses_fiber_local_request_context
     translations = {
       "en-US" => {"title" => "Hello"},
       "sv-SE" => {"title" => "Hej"}
     }
+    translator = translator(translations)
     english = localized_request(locale: "en")
     swedish = localized_request(locale: "sv")
 
     Example::Context.with(request: english) do
       other = Fiber.new do
         Example::Context.with(request: swedish) do
-          Example::I18n.t(translations, :title)
+          translator.t(:title)
         end
       end
 
       assert_equal("Hej", other.resume)
-      assert_equal("Hello", Example::I18n.t(translations, :title))
+      assert_equal("Hello", translator.t(:title))
     end
   end
 
-  def test_example_i18n_supports_configurable_default_locale
+  def test_example_translator_supports_an_explicit_default_locale
     translations = {
       "en-US" => {"title" => "Hello"},
       "sv-SE" => {"title" => "Hej"}
     }
-    previous = Example::I18n.default_locale
-    Example::I18n.default_locale = "sv-SE"
+    translator = translator(translations, default_locale: "sv-SE")
 
-    assert_equal("sv-SE", Example::I18n.resolve_locale(translations, request: nil))
-    assert_equal("Hej", Example::I18n.t(translations, :title, locale: nil))
-  ensure
-    Example::I18n.default_locale = previous
+    assert_equal("sv-SE", translator.lang)
+    assert_equal("Hej", translator.t(:title))
   end
 
-  def test_example_i18n_interpolates_values_and_pluralizes_counts
+  def test_example_translator_interpolates_values_and_pluralizes_counts
     translations = {
       "en-US" => {
         "greeting" => "Hello %{name}",
@@ -1406,25 +1417,27 @@ class Klenod::ExampleTest < Minitest::Test
         }
       }
     }
+    translator = translator(translations)
 
-    assert_equal("Hello Andreas", Example::I18n.t(translations, :greeting, name: "Andreas"))
-    assert_equal("No items", Example::I18n.t(translations, :items, count: 0))
-    assert_equal("One item", Example::I18n.t(translations, :items, count: 1))
-    assert_equal("3 items", Example::I18n.t(translations, :items, count: 3))
+    assert_equal("Hello Andreas", translator.t(:greeting, name: "Andreas"))
+    assert_equal("No items", translator.t(:items, count: 0))
+    assert_equal("One item", translator.t(:items, count: 1))
+    assert_equal("3 items", translator.t(:items, count: 3))
   end
 
-  def test_example_i18n_warns_once_for_missing_interpolation_values
+  def test_example_translator_warns_once_for_missing_interpolation_values
     translations = {
       "en-US" => {
         "greeting" => "Hello %{name}"
       }
     }
+    translator = translator(translations, source: "components/Greeting.haml")
 
     previous_no_color = ENV.delete("NO_COLOR")
     begin
       _stdout, stderr = capture_io do
-        assert_equal("Hello %{name}", Example::I18n.t(translations, :greeting, source: "components/Greeting.haml"))
-        assert_equal("Hello %{name}", Example::I18n.t(translations, :greeting, source: "components/Greeting.haml"))
+        assert_equal("Hello %{name}", translator.t(:greeting))
+        assert_equal("Hello %{name}", translator.t(:greeting))
       end
     ensure
       ENV["NO_COLOR"] = previous_no_color if previous_no_color
@@ -1435,9 +1448,14 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(stderr, "\e[1;30;43m WARNING \e[0m")
   end
 
-  def test_example_i18n_warning_format_respects_no_color
+  def test_example_translator_warning_format_respects_no_color
+    translator = translator({"en-US" => {}}, source: "components/Greeting.haml")
+
     with_env("NO_COLOR" => "1") do
-      assert_equal("WARNING Missing interpolation :name", Example::I18n.format_warning("Missing interpolation :name"))
+      _stdout, stderr = capture_io { translator.t(:title) }
+
+      assert_includes(stderr, "WARNING Missing translation \"title\"")
+      refute_includes(stderr, "\e[")
     end
   end
 
@@ -1553,21 +1571,24 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("en", localized.route_locale)
   end
 
-  def test_example_i18n_warns_once_for_missing_translations
+  def test_example_translator_warning_history_is_local_to_each_translator
     translations = {
       "en-US" => {"title" => "Hello"},
       "sv-SE" => {}
     }
     request = localized_request(locale: "sv")
+    first = translator(translations, source: "components/Greeting.haml")
+    second = translator(translations, source: "components/Greeting.haml")
 
     _stdout, stderr = capture_io do
       Example::Context.with(request: request) do
-        assert_equal("Hello", Example::I18n.t(translations, :title, source: "components/Greeting.haml"))
-        assert_equal("Hello", Example::I18n.t(translations, :title, source: "components/Greeting.haml"))
+        assert_equal("Hello", first.t(:title))
+        assert_equal("Hello", first.t(:title))
+        assert_equal("Hello", second.t(:title))
       end
     end
 
-    assert_equal(1, stderr.scan("Missing translation").length)
+    assert_equal(2, stderr.scan("Missing translation").length)
     assert_includes(stderr, "Missing translation \"title\" for sv-SE in components/Greeting.haml; falling back to en-US")
   end
 
@@ -1795,6 +1816,11 @@ class Klenod::ExampleTest < Minitest::Test
 
   def head_html(html)
     html[/<head\b.*?<\/head>/m] || flunk("Expected rendered document head")
+  end
+
+  def translator(translations, source: nil, default_locale: Example::Translator::DEFAULT_LOCALE)
+    owner = TranslationOwner.new(source) if source
+    Example::Translator.new(owner, translations:, default_locale:)
   end
 
   def example_config

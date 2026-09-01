@@ -23,7 +23,7 @@
           global: "@__props",
           class: "Example::Context.current"
         },
-        i18n_class: "Example::I18n"
+        i18n_class: "Example::Translator"
       )
       ```
 
@@ -107,8 +107,10 @@
       `i18n_class` is optional. When configured, every generated component gets an `I18n` constant initialized with the component class:
 
       ```ruby
-      I18n = Example::I18n.new(self)
+      I18n = Example::Translator.new(self)
       ```
+
+      The example translator exposes `I18n.t(...)` and `I18n.lang` directly on that component-local helper. Missing-key warning history also belongs to the helper, so the component base class does not need separate translation methods or shared warning state.
 
       `i18n_constant` can override the constant name. If omitted, it defaults to `I18n`.
 
