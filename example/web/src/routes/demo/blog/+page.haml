@@ -17,3 +17,5 @@
           %time{ datetime: frontmatter.fetch(:date) }= frontmatter.fetch(:date)
         %p= frontmatter.fetch(:summary)
         %a{ href: "/demo/blog/#{frontmatter.fetch(:slug)}" } Read post
+
+%title= "Blog posts loaded from Markdown files"

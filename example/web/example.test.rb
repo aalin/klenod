@@ -633,7 +633,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(200, status)
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
     assert_includes(html, "<body")
-    assert_includes(html, "Klenod example")
+    assert_includes(html, "<title>Building a lazy module graph</title>")
     assert_includes(html, "Building a lazy module graph")
     assert_includes(html, "Klenod can collect dependencies without evaluating every module immediately")
     assert_includes(html, "Blog posts")
@@ -787,7 +787,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(200, status)
     assert_includes(html, '<html lang="sv">')
-    assert_includes(html, "<title>Klenod-exempel</title>")
+    assert_includes(html, "<title>Bilder blir genererade browser assets</title>")
     assert_includes(html, "Bilder blir genererade browser assets")
     assert_includes(html, "popovertarget=\"language-menu\"")
     assert_includes(html, "popovertargetaction=\"toggle\"")

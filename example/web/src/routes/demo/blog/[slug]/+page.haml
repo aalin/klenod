@@ -26,3 +26,5 @@
       title: "Blog post: #{slug}",
       summary: "No Markdown post exists for this slug, but the dynamic route still rendered."
     }
+
+%title= post ? frontmatter.fetch(:title) : "Blog post: #{slug}"

@@ -73,3 +73,5 @@
       Route content remains lazy until the document is prepared, so a `provide_context` boundary in the root can wrap route components. Preparation evaluates every component and lazy child once under the active request and rendering contexts. A route can render `%title` to replace the root template's default document title; preparation collects all title declarations before output starts, and the last declaration wins.
 
       After preparation, HTML serialization can stream the normalized document without JavaScript, string-range replacement, or component rerendering. The final title is emitted at the root title's location, while later declarations are omitted from their original locations.
+
+%title= "Router Plugin"
