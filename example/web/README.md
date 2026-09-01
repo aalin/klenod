@@ -33,6 +33,9 @@ bin/build
 bin/server
 ```
 
+`bin/server` defaults `RACK_ENV` to `production`. In production, the main
+navigation omits the exploratory `/demo` link; the demo routes remain available.
+
 Page routes also provide a content-negotiated Markdown representation:
 
 ```sh

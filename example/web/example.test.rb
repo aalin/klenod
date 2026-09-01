@@ -379,6 +379,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Build Ruby modules like a modern frontend graph")
     assert_includes(html, "Transform source files")
     assert_includes(html, "Explore demos")
+    assert_includes(html, "href=\"/demo\"")
     assert_includes(html, "/assets/routes_layout_css")
     assert_includes(html, "/assets/routes_page_css")
     paths = stylesheet_paths(html)
@@ -1761,10 +1762,11 @@ class Klenod::ExampleTest < Minitest::Test
       bundle = context.build(entrypoints: config.entrypoints, output: output, assets_dir: assets_dir)
       loaded = Klenod::Runtime.load_bundle(output, source_root: "/app/src")
       page = loaded.exports(config.entrypoints.fetch(0))
-      status, _headers, body = page.call(nil, loaded)
+      status, _headers, body = with_env("RACK_ENV" => "production") { page.call(nil, loaded) }
 
       assert_equal(200, status)
       assert_includes(body.join, "<main")
+      refute_includes(body.join, "href=\"/demo\"")
       assert_equal("/app/src/entrypoint.rb", page.module_path)
       assert_equal(bundle.assets.keys.sort, loaded.assets.keys.sort)
       loaded.each_asset do |asset|

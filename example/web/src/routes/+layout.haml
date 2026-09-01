@@ -6,8 +6,10 @@
   Links = [
     { href: "/", label: [:nav, :overview] },
     { href: "/docs", label: [:nav, :docs] },
-    { href: "/demo", label: [:nav, :demo] }
-  ]
+    unless ENV["RACK_ENV"] == "production"
+      { href: "/demo", label: [:nav, :demo] }
+    end
+  ].compact.freeze
 
 %body
   %header
@@ -15,7 +17,6 @@
       %a{ href: "/" }
         %img{ src: Logo.src, width: Logo.width, height: Logo.height, alt: "" }
         %span Klenod
-        %span= I18n.t(:brand, :label)
       .header-actions
         %nav{ aria: { label: I18n.t(:nav, :label) } }
           = Links.map do |link|

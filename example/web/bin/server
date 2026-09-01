@@ -1,6 +1,8 @@
 #!/usr/bin/env -S ruby --jit
 # frozen_string_literal: true
 
+ENV["RACK_ENV"] ||= "production"
+
 require "bundler/setup" if File.exist?(File.expand_path("../Gemfile", __dir__))
 require_relative "../lib/server/production_server"
 

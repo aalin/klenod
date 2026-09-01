@@ -39,23 +39,13 @@ header {
   font-weight: 850;
   text-decoration: none;
   white-space: nowrap;
+  font-size: 1.5em;
 }
 
 .header-inner > a img {
   display: block;
   width: 2rem;
   height: auto;
-}
-
-.header-inner > a span:first-of-type {
-  font-size: 1.5em;
-}
-
-.header-inner > a span:last-child {
-  color: var(--color-muted);
-  font-size: var(--font-size-small);
-  font-weight: 750;
-  text-transform: uppercase;
 }
 
 .header-actions {
