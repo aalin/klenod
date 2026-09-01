@@ -195,14 +195,16 @@ Haml semantics:
 - Object references like `%div[@user, :greeting]` are treated as a key-style prop rather than HTML id/class generation.
 - Whitespace handling should use Haml parser node flags such as `nuke_inner_whitespace` and `nuke_outer_whitespace`; avoid source-line based marker detection in later transform phases.
 
-The factory API currently expects:
+Factories receive the component tag, props, and children. `component_children` controls the child calling convention. The default, `:eager`, passes children as positional arguments. `:lazy` passes a child-producing block instead, so a component can decide whether and when to construct its descendants.
+
+The example framework opts into lazy children and accepts both forms:
 
 ```ruby
-def self.[](tag, *children, **props, &children_block)
+def self.[](tag, *children, **props, &lazy_children)
 end
 ```
 
-For component tags, Haml passes child descriptors through `children_block` so the framework can evaluate them lazily. The example framework uses that boundary for slots and nested context: a provider returns a context boundary, and slotted descendants are only rendered after the boundary installs its values. Context frames are fiber-local, inherit from their parent frame, and are restored with `ensure` after rendering.
+It uses the lazy boundary for slots and nested context: a provider returns a context boundary, and slotted descendants are only rendered after the boundary installs its values. The child result is memoized so repeated slot access does not evaluate the block again. Context frames are fiber-local, inherit from their parent frame, and are restored with `ensure` after rendering.
 
 `variables` maps Ruby variable kinds to framework-owned receiver expressions. Configured global, class, and instance variables compile to indexed access: `$title` can read props, `@@request` can read context, and `@count` can read or assign state. Each mapping is opt-in, so unconfigured variable kinds retain normal Ruby behavior. Klenod does not own the backing stores or their update semantics.
 
