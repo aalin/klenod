@@ -97,13 +97,18 @@ module Example
 
       body =
         Context.with(request: request, routes: routes) do
-          route_node = render_descriptor_tree(match, page, layouts, request, props)
+          route_children =
+            H::Children.new(
+              H::Slots.new do
+                render_descriptor_tree(match, page, layouts, request, props)
+              end
+            )
           document_node =
             component_instance(
               root,
               stylesheet_references: css_asset_references,
               javascript_references: javascript_asset_references,
-              children: route_node
+              children: route_children
             ).render
           render_html_document(document_node)
         end

@@ -4,6 +4,9 @@ require "json"
 require "uri"
 
 module Example
+  module ResponseBody
+  end
+
   Response = Data.define(:status, :headers, :body) do
     def self.json(value, status: 200, headers: {})
       self[
@@ -25,7 +28,7 @@ module Example
       self[
         status,
         {"content-type" => "text/html; charset=utf-8"}.merge(headers),
-        [value.to_s]
+        (value.is_a?(ResponseBody) || value.is_a?(Array)) ? value : [value.to_s]
       ]
     end
 

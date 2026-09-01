@@ -6,11 +6,39 @@ require "async/http/protocol/http"
 require "async/http/protocol/https"
 require "localhost"
 require "protocol/http/response"
+require "protocol/http/body/readable"
 
 require_relative "formatting"
 
 module Example
   class ServerRunner
+    class EnumerableResponseBody < Protocol::HTTP::Body::Readable
+      def initialize(body)
+        @body = body
+        @closed = false
+      end
+
+      def read
+        return if @closed
+
+        @enumerator ||= @body.each
+        @enumerator.next
+      rescue StopIteration
+        close
+        nil
+      end
+
+      def ready?
+        true
+      end
+
+      def close(_error = nil)
+        @closed = true
+        @enumerator = nil
+        @body = nil
+      end
+    end
+
     def initialize(port:, asset_app:, app:, error_handler:, host: "localhost", tls: true)
       @host = host
       @port = port
@@ -86,6 +114,7 @@ module Example
 
     def protocol_response(status, headers, body)
       headers = headers.reject { |name, _value| name.to_s.downcase == "content-length" }
+      body = EnumerableResponseBody.new(body) if body.is_a?(ResponseBody)
       Protocol::HTTP::Response[status, headers, body]
     end
 

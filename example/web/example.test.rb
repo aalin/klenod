@@ -71,6 +71,101 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(Example::H.render(node), Example::HTMLRenderer.render(node))
   end
 
+  def test_example_document_renderer_captures_the_last_title_within_context
+    producer_calls = 0
+    component_calls = 0
+    route_component =
+      Class.new(Example::Component) do
+        define_method(:render) do
+          component_calls += 1
+          Example::H[:main, "Content"]
+        end
+      end
+    route_children =
+      Example::H::Children.new(
+        Example::H::Slots.new do
+          producer_calls += 1
+          Example::H.fragment(
+            Example::H[:title, Example::Context.current.fetch(:title)],
+            Example::H[route_component]
+          )
+        end
+      )
+    node =
+      Example::H[:html,
+        Example::H[:head, Example::H[:title, "Fallback"]],
+        Example::H[:body,
+          Example::H.context(title: "Contextual title") do
+            route_children
+          end]]
+
+    assert_equal(0, producer_calls)
+    assert_equal(0, component_calls)
+    document = Example::H.render_document(node)
+    html = document.join
+
+    assert_equal(1, producer_calls)
+    assert_equal(1, component_calls)
+    assert_instance_of(Example::HTMLRenderer::PreparedDocument, document)
+    assert_same(document, Example::Response.html(document).body)
+    assert(document.each.all? { it.is_a?(String) && it.frozen? })
+    assert_includes(html, "<head><title>Contextual title</title></head>")
+    assert_includes(html, "<body><main>Content</main></body>")
+    assert_equal(1, html.scan("<title>").length)
+    assert_equal(html, document.each.to_a.join)
+    assert_equal(html, document.join)
+    assert_equal(1, producer_calls)
+    assert_equal(1, component_calls)
+  end
+
+  def test_example_document_renderer_uses_last_html_title_and_preserves_svg_title
+    node =
+      Example::H[:html,
+        Example::H[:head, Example::H[:title, "Fallback", lang: "en"]],
+        Example::H[:body,
+          Example::H[:title, "Earlier"],
+          Example::H[:title, "Final & title", "lang" => "sv", "data-kind" => "route"],
+          Example::H[:svg, Example::H[:title, "Accessible icon"]]]]
+
+    html = Example::H.render_document(node).join
+
+    assert_includes(html, '<head><title lang="sv" data-kind="route">Final &amp; title</title></head>')
+    assert_includes(html, "<svg><title>Accessible icon</title></svg>")
+    refute_includes(html, "Fallback")
+    refute_includes(html, "Earlier")
+    assert_equal(2, html.scan(/<title(?: |>)/).length)
+  end
+
+  def test_example_document_renderer_keeps_fallback_and_does_not_invent_title
+    fallback = Example::H[:html, Example::H[:head, Example::H[:title, "Fallback"]], Example::H[:body, "Content"]]
+    untitled = Example::H[:html, Example::H[:head], Example::H[:body, "Content"]]
+
+    assert_includes(Example::H.render_document(fallback).join, "<head><title>Fallback</title></head>")
+    refute_includes(Example::H.render_document(untitled).join, "<title")
+  end
+
+  def test_example_document_renderer_prepares_localized_anchors_before_context_is_restored
+    request = localized_request(locale: "sv")
+    document = nil
+
+    Example::Context.with(request: request, routes: localized_routes) do
+      document = Example::H.render_document(Example::H[:html, Example::H[:a, "Assets", href: "/demo/assets"]])
+    end
+
+    assert_nil(Example::Context.current)
+    assert_includes(document.join, 'href="/sv/demo/assets"')
+  end
+
+  def test_example_document_renderer_buffers_streamed_chunks
+    content = "a" * (Example::HTMLRenderer::PreparedDocument::CHUNK_SIZE * 2)
+    document = Example::H.render_document(Example::H[:main, content])
+    chunks = document.each.to_a
+
+    assert_operator(chunks.length, :>, 1)
+    assert(chunks.all? { it.bytesize <= Example::HTMLRenderer::PreparedDocument::CHUNK_SIZE })
+    assert_equal("<!doctype html>\n<main>#{content}</main>", chunks.join)
+  end
+
   def test_example_context_inherits_shadows_and_restores_values
     outer_request = Object.new
     inner_request = Object.new
@@ -391,9 +486,9 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(1, html.scan(/<head\b/).length)
     assert_equal(1, html.scan(/<body\b/).length)
     assert_includes(html, '<meta name="viewport" content="width=device-width, initial-scale=1">')
-    assert_includes(html, "<title>Klenod example</title>")
+    assert_includes(html, "<title>Build Ruby modules like a modern frontend graph</title>")
+    assert_equal(1, html.scan("<title>").length)
     assert_includes(html, "<body")
-    assert_includes(html, "Klenod example")
     assert_includes(html, "<main")
     assert_includes(html, "Build Ruby modules like a modern frontend graph")
     assert_includes(html, "Transform source files")
@@ -851,6 +946,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(500, status)
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
+    assert_instance_of(Example::HTMLRenderer::PreparedDocument, body)
     assert_includes(html, "Something went wrong")
     assert_includes(html, "Rendering /demo/error raised NameError.")
     assert_includes(html, "undefined local variable or method")
@@ -1052,6 +1148,45 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(201, response.status)
     assert_equal("text/plain", response.headers["content-type"])
+  end
+
+  def test_server_runner_streams_prepared_documents_without_consuming_them_eagerly
+    reads = 0
+    body_class = Class.new do
+      include Example::ResponseBody
+      include Enumerable
+
+      define_method(:each) do |&block|
+        return enum_for(__method__) unless block
+
+        reads += 1
+        block.call("first")
+        block.call("second")
+      end
+    end
+    prepared_body = body_class.new
+    runner = Example::ServerRunner.new(port: 9292, asset_app: nil, app: nil, error_handler: nil)
+
+    response = runner.send(:protocol_response, 200, {"content-type" => "text/html"}, prepared_body)
+
+    assert_instance_of(Example::ServerRunner::EnumerableResponseBody, response.body)
+    assert_predicate(response.body, :ready?)
+    assert_equal(0, reads)
+    assert_equal("first", response.body.read)
+    assert_equal(1, reads)
+    assert_equal("second", response.body.read)
+    assert_nil(response.body.read)
+    assert_nil(response.body.read)
+  end
+
+  def test_server_runner_leaves_array_bodies_buffered
+    runner = Example::ServerRunner.new(port: 9292, asset_app: nil, app: nil, error_handler: nil)
+    body = ["first", "second"]
+
+    response = runner.send(:protocol_response, 200, {"content-type" => "text/plain"}, body)
+
+    assert_instance_of(Protocol::HTTP::Body::Buffered, response.body)
+    assert_equal("firstsecond", response.body.join)
   end
 
   def test_server_runner_leaves_content_length_to_protocol_http
