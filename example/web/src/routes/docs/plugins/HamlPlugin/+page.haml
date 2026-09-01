@@ -18,38 +18,47 @@
       Klenod::Build::Plugins::HamlPlugin.new(
         component_base_class: "Example::Component",
         factory: "Example::H",
-        global_variables: "@__props",
-        context_variables: "context",
+        variables: {
+          global: "@__props",
+          class: "Example::Context.current"
+        },
         i18n_class: "Example::I18n"
       )
       ```
 
       Imported component constants can be used directly as Haml tags. `%Button` compiles to a factory call using the imported component class as the tag. Imported TSX custom element descriptors from `JavaScriptPlugin` can also be used as tags, letting Haml render browser custom elements without repeating their generated tag names.
 
-  %DocsSection{ title: "Prop Globals" }
+  %DocsSection{ title: "Configured Variables" }
     :markdown
-      `global_variables` is optional. When configured, Haml Ruby code rewrites application-style global variable reads to lookups on that Ruby expression.
+      `variables` optionally maps Ruby variable kinds to framework-owned receiver expressions. Each configured variable becomes indexed access on its receiver.
 
       ```haml
       %h1= $title
-      %p= $summary
+      = if @@request.representation?(:html)
+        %p= $summary
       ```
 
-      With `global_variables: "@__props"`, the generated Ruby reads `@__props[:title]` and `@__props[:summary]`. The example framework sets `@__props` before component initialization, so templates and initializers can read props consistently.
+      With the configuration above, these read `(@__props)[:title]`, `(Example::Context.current)[:request]`, and `(@__props)[:summary]`. The example framework sets `@__props` before component initialization and installs request context around rendering.
 
-      Built-in Ruby globals are preserved. `$!`, `$1`, `$LOAD_PATH`, and other special globals keep their normal Ruby meaning.
+      The available keys are `global`, `class`, and `instance`, corresponding to `$name`, `@@name`, and `@name`. Unconfigured kinds retain their normal Ruby behavior. Built-in globals such as `$!`, `$1`, and `$LOAD_PATH`, along with underscore-prefixed framework variables such as `@__state`, are preserved.
 
-  %DocsSection{ title: "Context Variables" }
+  %DocsSection{ title: "State Stores" }
     :markdown
-      `context_variables` is also optional. It configures the Ruby expression used for context reads written as `@@name` in Haml.
+      Frameworks can map instance variables to a state object without making Klenod responsible for state behavior:
 
-      ```haml
-      = @@request.representation?(:html)
+      ```ruby
+      variables: {
+        instance: "@__state"
+      }
       ```
 
-      With `context_variables: "context"`, this compiles to `context.fetch(:request).representation?(:html)`. Context storage and provider behavior belong to the application framework; Klenod only rewrites the template expression. Without this option, Ruby class variables keep their normal behavior.
+      `@count`, `@count = 1`, and `@count += 1` then operate on `(@__state)[:count]`. The state object decides whether an assignment changed, how to schedule updates, and how state is serialized.
 
-      Child content for component tags is passed to the configured factory as a block. A framework can therefore resolve component children and named slots lazily, after installing inherited context values.
+      Mutable values must be reassigned to notify an indexed state store. Use `@items = [*@items, item]` instead of `@items << item`; the latter mutates the returned array without invoking the store's assignment method.
+
+  %DocsSection{ title: "Context And Lazy Children" }
+    :markdown
+      Context storage and provider behavior belong to the application framework; Klenod only rewrites the configured variable expression. Child content for component tags is passed to the configured factory as a block, so a framework can resolve component children and named slots lazily after installing inherited context values.
 
   %DocsSection{ title: "Ruby Blocks And Filters" }
     :markdown

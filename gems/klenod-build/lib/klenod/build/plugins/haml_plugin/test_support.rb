@@ -13,6 +13,24 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
   HAML_FIXTURE_DIR = File.join(TEST_FIXTURE_DIR, "haml")
 
   module FakeFramework
+    class State
+      attr_reader :writes
+
+      def initialize
+        @values = {}
+        @writes = []
+      end
+
+      def [](name)
+        @values[name]
+      end
+
+      def []=(name, value)
+        @writes << [name, value]
+        @values[name] = value
+      end
+    end
+
     class Children
       include Enumerable
 

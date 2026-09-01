@@ -20,11 +20,20 @@ module Klenod
             HamlPlugin.new(
               component_base_class: "Object",
               factory: "Object",
-              global_variables: "@__props",
+              variables: {global: "@__props"},
               cache_static_subtrees: true
             )
 
           assert_instance_of HamlPlugin::Plugin, plugin
+        end
+
+        def test_haml_plugin_validates_variable_configuration
+          assert_raises(ArgumentError) { HamlPlugin.new(variables: "@__props") }
+          assert_raises(ArgumentError) { HamlPlugin.new(variables: {property: "@__props"}) }
+          assert_raises(ArgumentError) { HamlPlugin.new(variables: {"global" => "@__props"}) }
+          assert_raises(ArgumentError) { HamlPlugin.new(variables: {global: :props}) }
+          assert_raises(ArgumentError) { HamlPlugin.new(variables: {global: "first\nsecond"}) }
+          assert_raises(ArgumentError) { HamlPlugin.new(variables: {global: "("}) }
         end
       end
     end

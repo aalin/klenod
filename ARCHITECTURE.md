@@ -204,7 +204,7 @@ end
 
 For component tags, Haml passes child descriptors through `children_block` so the framework can evaluate them lazily. The example framework uses that boundary for slots and nested context: a provider returns a context boundary, and slotted descendants are only rendered after the boundary installs its values. Context frames are fiber-local, inherit from their parent frame, and are restored with `ensure` after rendering.
 
-`global_variables` configures `$name` prop reads. Separately, `context_variables` configures `@@name` context reads; for example, `context_variables: "context"` compiles `@@request` to `context.fetch(:request)`. This is opt-in so ordinary Ruby class variables retain their normal meaning when no context expression is configured.
+`variables` maps Ruby variable kinds to framework-owned receiver expressions. Configured global, class, and instance variables compile to indexed access: `$title` can read props, `@@request` can read context, and `@count` can read or assign state. Each mapping is opt-in, so unconfigured variable kinds retain normal Ruby behavior. Klenod does not own the backing stores or their update semantics.
 
 ## Router Plugin
 

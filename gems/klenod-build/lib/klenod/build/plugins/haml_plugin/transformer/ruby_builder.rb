@@ -28,10 +28,9 @@ module Klenod
               end
             end
 
-            def initialize(profiler: nil, global_variables: nil, context_variables: nil)
+            def initialize(profiler: nil, variables: nil)
               @profiler = profiler
-              @global_variables = global_variables
-              @context_variables = context_variables
+              @variables = variables || {}
               @expression_cache = {}
               @statements_cache = {}
               @program_cache = {}
@@ -512,8 +511,7 @@ module Klenod
 
             def rewrite_ruby_source(source, line_no)
               source = rewrite_line_constant(source, line_no)
-              source = rewrite_global_variables(source)
-              rewrite_context_variables(source)
+              rewrite_variables(source)
             end
 
             def rewrite_line_constant(source, line_no)
@@ -535,46 +533,33 @@ module Klenod
                 end
             end
 
-            def rewrite_global_variables(source)
-              return source unless @global_variables
+            VARIABLE_TOKEN_KINDS = {
+              on_gvar: [:global, "$", /\A\$[a-z]\w*\z/],
+              on_cvar: [:class, "@@", /\A@@[a-z]\w*\z/],
+              on_ivar: [:instance, "@", /\A@[a-z]\w*\z/]
+            }.freeze
+
+            def rewrite_variables(source)
+              return source if @variables.empty?
 
               line_offsets = [0]
               source.each_line(chomp: false) { |line| line_offsets << line_offsets.last + line.length }
 
               Ripper
                 .lex(source)
-                .select { |(_line, _column), type, token, _state| type == :on_gvar && prop_global_variable?(token) }
-                .reverse_each
-                .each_with_object(source.dup) do |((line, column), _type, token, _state), rewritten|
-                  name = token.delete_prefix("$")
+                .filter_map do |(line, column), type, token, _state|
+                  kind, prefix, pattern = VARIABLE_TOKEN_KINDS[type]
+                  receiver = @variables[kind]
+                  next unless receiver && token.match?(pattern)
+
+                  name = token.delete_prefix(prefix)
                   offset = line_offsets.fetch(line - 1) + column
-                  rewritten[offset, token.length] = "#{@global_variables}[#{symbol_source(name)}]"
+                  [offset, token.length, "(#{receiver})[#{symbol_source(name)}]"]
                 end
-            end
-
-            def prop_global_variable?(token)
-              token.match?(/\A\$[a-z]\w*\z/)
-            end
-
-            def rewrite_context_variables(source)
-              return source unless @context_variables
-
-              line_offsets = [0]
-              source.each_line(chomp: false) { |line| line_offsets << line_offsets.last + line.length }
-
-              Ripper
-                .lex(source)
-                .select { |(_line, _column), type, token, _state| type == :on_cvar && context_class_variable?(token) }
                 .reverse_each
-                .each_with_object(source.dup) do |((line, column), _type, token, _state), rewritten|
-                  name = token.delete_prefix("@@")
-                  offset = line_offsets.fetch(line - 1) + column
-                  rewritten[offset, token.length] = "(#{@context_variables}).fetch(#{symbol_source(name)})"
+                .each_with_object(source.dup) do |(offset, length, replacement), rewritten|
+                  rewritten[offset, length] = replacement
                 end
-            end
-
-            def context_class_variable?(token)
-              token.match?(/\A@@[a-z]\w*\z/)
             end
 
             def source_expressions(expressions)

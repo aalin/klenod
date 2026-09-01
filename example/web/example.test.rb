@@ -331,7 +331,7 @@ class Klenod::ExampleTest < Minitest::Test
             Klenod::Build::Plugins::HamlPlugin.new(
               component_base_class: "Example::Component",
               factory: "Example::H",
-              global_variables: "@__props"
+              variables: {global: "@__props"}
             ),
             Klenod::Build::Plugins::CSSPlugin.new
           ]

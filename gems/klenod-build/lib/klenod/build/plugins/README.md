@@ -100,14 +100,17 @@ Configuration:
 Klenod::Build::Plugins::HamlPlugin.new(
   component_base_class: "Example::Component",
   factory: "Example::H",
-  global_variables: "@__props",
+  variables: {
+    global: "@__props",
+    class: "Example::Context.current"
+  },
   cache_static_subtrees: false
 )
 ```
 
 - `component_base_class`: Ruby constant path used as the generated component superclass. Defaults to `"Object"`.
 - `factory`: Ruby constant path used for generated HTML/component calls. Defaults to `"Object"`.
-- `global_variables`: optional Ruby expression used to rewrite app-style global variable reads in Haml Ruby code. For example, `global_variables: "@__props"` compiles `$title` to `@__props[:title]`. Built-in Ruby globals such as `$!`, `$1`, and `$LOAD_PATH` are left untouched.
+- `variables`: optional receiver expressions for app-style global, class, and instance variables in Haml Ruby code. For example, `global: "@__props"` compiles `$title` to `(@__props)[:title]`, while `instance: "@__state"` makes `@count` read and assign `(@__state)[:count]`. Built-in Ruby globals and underscore-prefixed framework variables are left untouched.
 - `cache_static_subtrees`: optional experimental optimization. When enabled, fully static Haml tag subtrees are compiled once into frozen constants and reused across renders. Defaults to `false`.
 
 `:markdown` filters use `MarkdownPlugin`'s source-root component map convention when `markdown-components.rb` exists.

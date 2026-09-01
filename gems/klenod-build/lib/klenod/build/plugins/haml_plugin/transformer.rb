@@ -41,14 +41,13 @@ module Klenod
             profiler: nil,
             import_rewriter: nil,
             markdown_components_source: "{}",
-            global_variables: nil,
-            context_variables: nil,
+            variables: nil,
             haml_helper_source: nil,
             cache_static_subtrees: false
           )
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
-            builder = RubyBuilder.new(profiler: profiler, global_variables: global_variables, context_variables: context_variables)
+            builder = RubyBuilder.new(profiler: profiler, variables: variables)
             haml_helper_source ||= builder.constant_assignment("HamlHelper", "Object") if styleable || cache_static_subtrees
             previous_profiler = @profiler
             previous_module_id = @module_id

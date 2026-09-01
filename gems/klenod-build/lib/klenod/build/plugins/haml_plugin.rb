@@ -58,16 +58,14 @@ module Klenod
           def initialize(
             component_base_class: DEFAULT_COMPONENT_BASE_CLASS,
             factory: DEFAULT_FACTORY,
-            global_variables: nil,
-            context_variables: nil,
+            variables: nil,
             i18n_class: nil,
             i18n_constant: nil,
             cache_static_subtrees: false
           )
             @component_base_class = component_base_class
             @factory = factory
-            @global_variables = validate_global_variables(global_variables)
-            @context_variables = validate_context_variables(context_variables)
+            @variables = validate_variables(variables)
             @i18n_class, @i18n_constant = validate_i18n_options(i18n_class, i18n_constant)
             @cache_static_subtrees = cache_static_subtrees
             @transformer = Transformer.new
@@ -201,8 +199,7 @@ module Klenod
                 profiler: context.profiler,
                 import_rewriter: import_rewriter,
                 markdown_components_source: markdown_components_dependency ? "__klenod_import__(#{markdown_components_dependency.id.inspect})::Default" : "{}",
-                global_variables: @global_variables,
-                context_variables: @context_variables,
+                variables: @variables,
                 cache_static_subtrees: @cache_static_subtrees
               )
             import_rewrite =
@@ -260,28 +257,30 @@ module Klenod
 
           InlineCssSource = Data.define(:text, :line_offset, :column_offset)
 
-          def validate_global_variables(global_variables)
-            return nil if global_variables.nil?
+          VARIABLE_KINDS = %i[global class instance].freeze
 
-            source = global_variables.to_s
-            parsed = SyntaxTree.parse(source)&.statements&.body
-            raise ArgumentError, "global_variables must be a Ruby expression" unless parsed&.length == 1
+          def validate_variables(variables)
+            return {}.freeze if variables.nil?
+            raise ArgumentError, "variables must be a Hash" unless variables.is_a?(Hash)
 
-            source
-          rescue SyntaxTree::Parser::ParseError
-            raise ArgumentError, "global_variables must be a Ruby expression"
+            unknown_kinds = variables.keys - VARIABLE_KINDS
+            unless unknown_kinds.empty?
+              raise ArgumentError, "variables contains unknown kinds: #{unknown_kinds.map(&:inspect).join(", ")}"
+            end
+
+            variables.to_h { |kind, source| [kind, validate_variable_receiver(kind, source)] }.freeze
           end
 
-          def validate_context_variables(context_variables)
-            return nil if context_variables.nil?
+          def validate_variable_receiver(kind, source)
+            raise ArgumentError, "variables[#{kind.inspect}] must be a Ruby expression String" unless source.is_a?(String)
 
-            source = context_variables.to_s
             parsed = SyntaxTree.parse(source)&.statements&.body
-            raise ArgumentError, "context_variables must be a Ruby expression" unless parsed&.length == 1
+            raise ArgumentError, "variables[#{kind.inspect}] must be a Ruby expression" unless parsed&.length == 1
+            SyntaxTree.parse("(#{source})[:__klenod_variable__]")
 
             source
           rescue SyntaxTree::Parser::ParseError
-            raise ArgumentError, "context_variables must be a Ruby expression"
+            raise ArgumentError, "variables[#{kind.inspect}] must be a Ruby expression"
           end
 
           def validate_i18n_options(i18n_class, i18n_constant)

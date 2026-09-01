@@ -186,7 +186,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
   end
 
   def test_haml_transformer_rewrites_configured_global_variables_to_props
-    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
 
     evaluate_haml(
       {
@@ -197,14 +197,14 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       plugin: plugin
     ) do |_dir, _context, record, exports|
       assert_equal([:h1, "Hello"], exports::Default.new(title: "Hello").render)
-      assert_includes(record.transformed_source, "@__props[:title]")
+      assert_includes(record.transformed_source, "(@__props)[:title]")
     end
   end
 
-  def test_haml_transformer_rewrites_configured_context_variables
+  def test_haml_transformer_rewrites_configured_class_variables_to_context
     plugin = haml_plugin(
       component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
-      context_variables: "context"
+      variables: {class: "context"}
     )
 
     evaluate_haml(
@@ -215,7 +215,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       },
       plugin: plugin
     ) do |_dir, _context, record, _exports|
-      assert_includes(record.transformed_source, "(context).fetch(:request).path")
+      assert_includes(record.transformed_source, "(context)[:request].path")
     end
   end
 
@@ -232,6 +232,91 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     ) do |_dir, _context, record, exports|
       assert_equal([:h1, "ordinary class variable"], exports::Default.new.render)
       assert_includes(record.transformed_source, "@@value")
+    end
+  end
+
+  def test_haml_transformer_rewrites_instance_variable_reads_and_assignments_to_state
+    plugin = haml_plugin(
+      component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
+      variables: {instance: "@__state"}
+    )
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def initialize
+              @__state = #{self.class.name}::FakeFramework::State.new
+              @count = 1
+              @count += 2
+              @label ||= "ready"
+              @left, @right = "L", "R"
+            end
+
+            def state_writes
+              @__state.writes
+            end
+
+          %p= [@count, @label, @left, @right].join(":")
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      component = exports::Default.new
+      assert_equal([:p, "3:ready:L:R"], component.render)
+      assert_equal(
+        [[:count, 1], [:count, 3], [:label, "ready"], [:left, "L"], [:right, "R"]],
+        component.state_writes
+      )
+      assert_includes(record.transformed_source, "(@__state)[:count] = 1")
+      assert_includes(record.transformed_source, "(@__state)[:count] += 2")
+      assert_includes(record.transformed_source, "(@__state)[:label] ||= \"ready\"")
+      assert_includes(record.transformed_source, "(@__state)[:left], (@__state)[:right] =")
+    end
+  end
+
+  def test_haml_transformer_does_not_rewrite_generated_variable_receivers
+    plugin = haml_plugin(
+      component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
+      variables: {global: "@state", instance: "@__state"}
+    )
+
+    evaluate_haml(
+      {"pages/page.haml" => "%p= $title\n"},
+      plugin: plugin
+    ) do |_dir, _context, record, _exports|
+      assert_includes(record.transformed_source, "(@state)[:title]")
+      refute_includes(record.transformed_source, "(@__state)[:state]")
+    end
+  end
+
+  def test_haml_transformer_preserves_internal_instance_variables_and_variable_text
+    plugin = haml_plugin(
+      component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
+      variables: {global: "@__props", class: "context", instance: "@__state"}
+    )
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def initialize
+              # @ignored @@ignored $ignored
+              @__state = {name: "internal"}
+            end
+
+          %p= ["@name", "@@request", "$title", @__state[:name], $LOAD_PATH.class.name].join(":")
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      assert_equal([:p, "@name:@@request:$title:internal:Array"], exports::Default.new.render)
+      assert_includes(record.transformed_source, '"@name"')
+      assert_includes(record.transformed_source, '"@@request"')
+      assert_includes(record.transformed_source, '"$title"')
+      assert_includes(record.transformed_source, "# @ignored @@ignored $ignored")
+      assert_includes(record.transformed_source, "@__state[:name]")
+      assert_includes(record.transformed_source, "$LOAD_PATH")
     end
   end
 
@@ -254,7 +339,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
   end
 
   def test_haml_transformer_rewrites_configured_global_variables_in_dynamic_attributes
-    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
 
     evaluate_haml(
       {
@@ -269,7 +354,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
   end
 
   def test_haml_transformer_rewrites_configured_global_variables_in_ruby_filters
-    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
 
     evaluate_haml(
       {
@@ -285,12 +370,12 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       plugin: plugin
     ) do |_dir, _context, record, exports|
       assert_equal([:h1, "HELLO"], exports::Default.new(title: "hello").render)
-      assert_includes(record.transformed_source, "@__props[:title].upcase")
+      assert_includes(record.transformed_source, "(@__props)[:title].upcase")
     end
   end
 
   def test_haml_transformer_global_variable_props_are_available_before_custom_initialize
-    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
 
     evaluate_haml(
       {
@@ -317,7 +402,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
   end
 
   def test_haml_transformer_does_not_rewrite_global_variables_in_strings_or_special_globals
-    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", global_variables: "@__props")
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
 
     evaluate_haml(
       {
