@@ -20,11 +20,18 @@ module Klenod
             HamlPlugin.new(
               component_base_class: "Object",
               factory: "Object",
+              component_children: :lazy,
               variables: {global: "@__props"},
               cache_static_subtrees: true
             )
 
           assert_instance_of HamlPlugin::Plugin, plugin
+        end
+
+        def test_haml_plugin_validates_component_children_configuration
+          error = assert_raises(ArgumentError) { HamlPlugin.new(component_children: :deferred) }
+
+          assert_equal("component_children must be one of: eager, lazy", error.message)
         end
 
         def test_haml_plugin_validates_variable_configuration

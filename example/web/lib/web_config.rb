@@ -34,6 +34,7 @@ module Example
         Klenod::Build::Plugins::HamlPlugin.new(
           component_base_class: "Example::Component",
           factory: "Example::H",
+          component_children: :lazy,
           variables: {
             global: "@__props",
             class: "Example::Context.current"

@@ -18,6 +18,7 @@
       Klenod::Build::Plugins::HamlPlugin.new(
         component_base_class: "Example::Component",
         factory: "Example::H",
+        component_children: :lazy,
         variables: {
           global: "@__props",
           class: "Example::Context.current"
@@ -56,9 +57,25 @@
 
       Mutable values must be reassigned to notify an indexed state store. Use `@items = [*@items, item]` instead of `@items << item`; the latter mutates the returned array without invoking the store's assignment method.
 
-  %DocsSection{ title: "Context And Lazy Children" }
+  %DocsSection{ title: "Eager And Lazy Component Children" }
     :markdown
-      Context storage and provider behavior belong to the application framework; Klenod only rewrites the configured variable expression. Child content for component tags is passed to the configured factory as a block, so a framework can resolve component children and named slots lazily after installing inherited context values.
+      `component_children` controls when component child expressions are evaluated. The default, `:eager`, builds the children before calling the component factory and passes them as positional arguments:
+
+      ```ruby
+      Example::H[Card, Example::H[:p, "Body"], title: "Hello"]
+      ```
+
+      Choose eager children for straightforward renderers where components always consume their children immediately. The factory contract stays simple, and evaluation order follows an ordinary Ruby method call.
+
+      Set `component_children: :lazy` to pass a child-producing block instead:
+
+      ```ruby
+      Example::H[Card, title: "Hello"] do
+        [Example::H[:p, "Body"]]
+      end
+      ```
+
+      Choose lazy children when a component needs to decide whether or when to build them. This is useful for conditional children, named slots, context providers that must install values before rendering descendants, and components that can avoid constructing unused child trees. A lazy factory should normally memoize the block result so reading children or slots more than once does not evaluate them repeatedly. The example renderer uses this mode for its context and slot features.
 
   %DocsSection{ title: "Ruby Blocks And Filters" }
     :markdown

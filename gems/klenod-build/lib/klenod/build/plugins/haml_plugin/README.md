@@ -16,4 +16,6 @@ Internal responsibilities are split by phase:
 
 The Haml plugin should stay framework-neutral. It generates component classes
 and calls the configured factory, but rendering semantics belong to the
-framework using Klenod.
+framework using Klenod. Component children are positional factory arguments by
+default. Frameworks that defer child or slot evaluation can configure
+`component_children: :lazy`, which emits component children in a block instead.

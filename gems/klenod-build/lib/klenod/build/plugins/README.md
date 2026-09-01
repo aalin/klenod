@@ -100,6 +100,7 @@ Configuration:
 Klenod::Build::Plugins::HamlPlugin.new(
   component_base_class: "Example::Component",
   factory: "Example::H",
+  component_children: :lazy,
   variables: {
     global: "@__props",
     class: "Example::Context.current"
@@ -110,10 +111,27 @@ Klenod::Build::Plugins::HamlPlugin.new(
 
 - `component_base_class`: Ruby constant path used as the generated component superclass. Defaults to `"Object"`.
 - `factory`: Ruby constant path used for generated HTML/component calls. Defaults to `"Object"`.
+- `component_children`: controls how children of constant-named component tags such as `%Card` are passed to the factory. `:eager` generates positional children and is the default; `:lazy` generates a block whose result is an array of children. Lazy mode lets a framework defer and memoize child or slot evaluation.
 - `variables`: optional receiver expressions for app-style global, class, and instance variables in Haml Ruby code. For example, `global: "@__props"` compiles `$title` to `(@__props)[:title]`, while `instance: "@__state"` makes `@count` read and assign `(@__state)[:count]`. Built-in Ruby globals and underscore-prefixed framework variables are left untouched.
 - `cache_static_subtrees`: optional experimental optimization. When enabled, fully static Haml tag subtrees are compiled once into frozen constants and reused across renders. Defaults to `false`.
 
 `:markdown` filters use `MarkdownPlugin`'s source-root component map convention when `markdown-components.rb` exists.
+
+With the default `component_children: :eager`, component children are generated as positional factory arguments:
+
+```ruby
+Example::H[Card, Example::H[:p, "Body"], title: "Hello"]
+```
+
+With `component_children: :lazy`, the same component call is generated with a block:
+
+```ruby
+Example::H[Card, title: "Hello"] do
+  [Example::H[:p, "Body"]]
+end
+```
+
+The configured factory decides when to call the block and whether to memoize its result.
 
 ## GemImportPlugin
 

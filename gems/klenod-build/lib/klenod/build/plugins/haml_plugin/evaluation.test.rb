@@ -1116,7 +1116,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       )
       plugin =
         Klenod::Build::Plugins::HamlPlugin.new(
-          factory: "#{self.class.name}::FakeFramework::H"
+          factory: "#{self.class.name}::FakeFramework::H",
+          component_children: :lazy
         )
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin])
       record = context.evaluate("page.haml")
@@ -1125,6 +1126,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
 
       refute_includes(record.transformed_source, "import(\"components/details.haml\")")
       assert_includes(record.transformed_source, "__klenod_import__(\"app:/page.haml:dependency:0\")")
+      assert_includes(record.transformed_source, "] do")
       haml_dependency = record.dependencies.find { |dependency| dependency.kind == :haml_import }
       assert_equal("app:/page.haml:dependency:0", haml_dependency.id)
       assert_equal(Klenod::Build::SourceLocation.new("app:/page.haml", 2, 13), haml_dependency.loc)

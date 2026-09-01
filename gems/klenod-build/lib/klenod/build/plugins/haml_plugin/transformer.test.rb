@@ -45,6 +45,22 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_nil(template.render.node)
   end
 
+  def test_haml_transformer_passes_component_children_eagerly_by_default
+    result = transform_component_children
+
+    assert_includes(result.code, "FakeFramework::H[Card, begin")
+    assert_includes(result.code, "FakeFramework::H[:p, \"Body\"]")
+    refute_includes(result.code, "FakeFramework::H[Card] do")
+  end
+
+  def test_haml_transformer_can_pass_component_children_lazily
+    result = transform_component_children(component_children: :lazy)
+
+    assert_includes(result.code, "FakeFramework::H[Card] do")
+    assert_includes(result.code, "[begin")
+    assert_includes(result.code, "FakeFramework::H[:p, \"Body\"]")
+  end
+
   def test_haml_transformer_wraps_parse_errors_with_source_context
     transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     source = <<~HAML
@@ -137,5 +153,20 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     refute_includes(fragment.source, "SourceMapMark:5")
     refute_includes(fragment.source, "SourceMapMark:6")
     refute_includes(fragment.source, "SourceMapMark:7")
+  end
+
+  private
+
+  def transform_component_children(component_children: :eager)
+    Klenod::Build::Plugins::HamlPlugin::Transformer.new.call(
+      source: "%Card\n  %p Body\n",
+      module_id: ModuleId.new("pages/page.haml", nil),
+      component_class_name: "Page",
+      component_base_class: "Object",
+      factory: "FakeFramework::H",
+      component_children: component_children,
+      styles_source: "{}.freeze",
+      translations_source: "{}.freeze"
+    )
   end
 end

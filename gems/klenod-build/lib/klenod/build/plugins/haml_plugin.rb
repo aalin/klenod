@@ -28,6 +28,8 @@ module Klenod
 
         DEFAULT_COMPONENT_BASE_CLASS = ComponentDefaults::DEFAULT_COMPONENT_BASE_CLASS
         DEFAULT_FACTORY = ComponentDefaults::DEFAULT_FACTORY
+        DEFAULT_COMPONENT_CHILDREN = :eager
+        COMPONENT_CHILDREN_MODES = %i[eager lazy].freeze
         HAML_HELPER_SPECIFIER = "virtual:klenod/haml_helper"
         HAML_HELPER_MODULE_ID = ModuleId.new("#{HAML_HELPER_SPECIFIER}.rb", nil)
         STATIC_CLASS_SOURCE_PATTERN = /^[ \t]*(?:%[-:\w]+)?(?:#[\w-]+)?\.[\w-]|[({][^)}\n]*\bclass\s*=/m
@@ -43,6 +45,8 @@ module Klenod
 
           DEFAULT_COMPONENT_BASE_CLASS = HamlPlugin::DEFAULT_COMPONENT_BASE_CLASS
           DEFAULT_FACTORY = HamlPlugin::DEFAULT_FACTORY
+          DEFAULT_COMPONENT_CHILDREN = HamlPlugin::DEFAULT_COMPONENT_CHILDREN
+          COMPONENT_CHILDREN_MODES = HamlPlugin::COMPONENT_CHILDREN_MODES
           HAML_HELPER_SPECIFIER = HamlPlugin::HAML_HELPER_SPECIFIER
           HAML_HELPER_MODULE_ID = HamlPlugin::HAML_HELPER_MODULE_ID
           STATIC_CLASS_SOURCE_PATTERN = HamlPlugin::STATIC_CLASS_SOURCE_PATTERN
@@ -58,6 +62,7 @@ module Klenod
           def initialize(
             component_base_class: DEFAULT_COMPONENT_BASE_CLASS,
             factory: DEFAULT_FACTORY,
+            component_children: DEFAULT_COMPONENT_CHILDREN,
             variables: nil,
             i18n_class: nil,
             i18n_constant: nil,
@@ -65,6 +70,7 @@ module Klenod
           )
             @component_base_class = component_base_class
             @factory = factory
+            @component_children = validate_component_children(component_children)
             @variables = validate_variables(variables)
             @i18n_class, @i18n_constant = validate_i18n_options(i18n_class, i18n_constant)
             @cache_static_subtrees = cache_static_subtrees
@@ -191,6 +197,7 @@ module Klenod
                 component_class_name: component_class_name,
                 component_base_class: @component_base_class,
                 factory: @factory,
+                component_children: @component_children,
                 styles_source: styles_source,
                 translations_source: translations_source,
                 i18n_source: i18n_source_for(builder),
@@ -258,6 +265,12 @@ module Klenod
           InlineCssSource = Data.define(:text, :line_offset, :column_offset)
 
           VARIABLE_KINDS = %i[global class instance].freeze
+
+          def validate_component_children(value)
+            return value if COMPONENT_CHILDREN_MODES.include?(value)
+
+            raise ArgumentError, "component_children must be one of: #{COMPONENT_CHILDREN_MODES.join(", ")}"
+          end
 
           def validate_variables(variables)
             return {}.freeze if variables.nil?

@@ -36,6 +36,7 @@ module Klenod
             factory:,
             styles_source:,
             translations_source:,
+            component_children: :eager,
             i18n_source: nil,
             styleable: false,
             profiler: nil,
@@ -47,16 +48,19 @@ module Klenod
           )
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
+            validate_component_children(component_children)
             builder = RubyBuilder.new(profiler: profiler, variables: variables)
             haml_helper_source ||= builder.constant_assignment("HamlHelper", "Object") if styleable || cache_static_subtrees
             previous_profiler = @profiler
             previous_module_id = @module_id
             previous_static_constants = @static_constants
             previous_cache_static_subtrees = @cache_static_subtrees
+            previous_component_children = @component_children
             @profiler = profiler
             @module_id = module_id
             @static_constants = []
             @cache_static_subtrees = cache_static_subtrees
+            @component_children = component_children
             template =
               if profiler
                 profiler.measure(:haml_compile_template, module_id: module_id.to_s) do
@@ -131,11 +135,18 @@ module Klenod
             @module_id = previous_module_id
             @static_constants = previous_static_constants
             @cache_static_subtrees = previous_cache_static_subtrees
+            @component_children = previous_component_children
           end
 
           private
 
           Template = Data.define(:ruby, :render, :static_constants)
+
+          def validate_component_children(value)
+            return if HamlPlugin::COMPONENT_CHILDREN_MODES.include?(value)
+
+            raise ArgumentError, "component_children must be one of: #{HamlPlugin::COMPONENT_CHILDREN_MODES.join(", ")}"
+          end
 
           def measure_compile(name)
             return yield unless @profiler
@@ -456,7 +467,7 @@ module Klenod
             tag = measure_compile_detail(:haml_compile_tag_name) { compile_tag_name(node, builder: builder) }
             props = measure_compile_detail(:haml_compile_tag_attributes) { attributes(node, styleable: styleable, builder: builder) }
 
-            if constant_tag_name?(node.value.fetch(:name)) && !children.empty?
+            if @component_children == :lazy && constant_tag_name?(node.value.fetch(:name)) && !children.empty?
               builder.component_factory_call(factory: factory, tag: tag, children: children, props: props, mark: mark)
             else
               builder.factory_call(
