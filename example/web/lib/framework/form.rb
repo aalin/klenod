@@ -14,7 +14,7 @@ module Example
         :form,
         csrf_field,
         *@children,
-        **@props.merge(action: @action, method: @method)
+        **@props.merge(action: H.localize_href(@action), method: @method)
       ]
     end
 

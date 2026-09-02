@@ -191,13 +191,19 @@ module Example
       href = props[:href]
       return props unless localizable_href?(href)
 
+      props[:href] = localize_href(href, locale: props[:hreflang])
+      props
+    end
+
+    def self.localize_href(href, locale: nil)
+      return href unless localizable_href?(href)
+
       path, suffix = href.to_s.match(/\A([^?#]*)(.*)\z/).captures
       routes = Context.current&.routes
-      return props unless routes
+      return href unless routes
 
-      locale = props[:hreflang] || Context.current&.request&.locale
-      props[:href] = "#{routes.localized_href(path, locale: locale)}#{suffix}"
-      props
+      locale ||= Context.current&.request&.locale
+      "#{routes.localized_href(path, locale: locale)}#{suffix}"
     end
 
     def self.localizable_href?(href)

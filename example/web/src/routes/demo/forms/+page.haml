@@ -19,12 +19,12 @@
       %p= "Welcome back, #{name}."
     = else
       %p Submit the form to store your name in an encrypted session cookie.
-    %Form{ method: "post", action: @@routes.localized_path("/demo/forms/submit") }
+    %Form{ method: "post", action: "/demo/forms/submit" }
       %label(for="name") Name
       %input(id="name" name="name" type="text" value=name required)
       %Button(type="submit") Save name
     = if name
-      %Form{ method: "post", action: @@routes.localized_path("/demo/forms/clear") }
+      %Form{ method: "post", action: "/demo/forms/clear" }
         %Button(type="submit") Clear session
 
 %title= "Session-backed form"
