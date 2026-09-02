@@ -39,7 +39,10 @@ module Example
             global: "@__props",
             class: "Example::Context.current"
           },
-          i18n_class: "Example::Translator",
+          i18n: {
+            class: "Example::Translator",
+            constant: "I18n"
+          },
           cache_static_subtrees: false
         ),
         Klenod::Build::Plugins::MarkdownPlugin.new(

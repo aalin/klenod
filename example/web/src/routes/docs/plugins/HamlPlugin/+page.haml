@@ -24,8 +24,10 @@
           class: "Example::Context.current",
           instance: "@__state"
         },
-        i18n_class: "Example::Translator",
-        i18n_constant: "I18n",
+        i18n: {
+          class: "Example::Translator",
+          constant: "I18n"
+        },
         cache_static_subtrees: false
       )
       ```
@@ -36,8 +38,7 @@
       - `factory` receives every HTML tag and component call.
       - `component_children` controls how component children are passed. Use `:eager` for positional arguments or `:lazy` for a block.
       - `variables` maps Haml variables to framework-owned objects. It accepts `global`, `class`, and `instance`.
-      - `i18n_class` creates a translation helper for each component.
-      - `i18n_constant` names that helper constant. It requires `i18n_class`.
+      - `i18n` configures translations. `class` creates the helper. `constant` names it.
       - `cache_static_subtrees` reuses frozen element trees that contain no dynamic values. This is an experimental optimization.
 
   %DocsSection{ title: "Variables" }
@@ -100,7 +101,7 @@
       components/Card.intl.sv.toml
       ```
 
-      With `i18n_class`, the plugin creates the configured helper constant:
+      With `i18n`, the plugin creates the configured helper constant:
 
       ```ruby
       I18n = Example::Translator.new(self)

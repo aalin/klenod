@@ -30,6 +30,7 @@ module Klenod
         DEFAULT_FACTORY = ComponentDefaults::DEFAULT_FACTORY
         DEFAULT_COMPONENT_CHILDREN = :eager
         COMPONENT_CHILDREN_MODES = %i[eager lazy].freeze
+        I18N_OPTIONS = %i[class constant].freeze
         HAML_HELPER_SPECIFIER = "virtual:klenod/haml_helper"
         HAML_HELPER_MODULE_ID = ModuleId.new("#{HAML_HELPER_SPECIFIER}.rb", nil)
         STATIC_CLASS_SOURCE_PATTERN = /^[ \t]*(?:%[-:\w]+)?(?:#[\w-]+)?\.[\w-]|[({][^)}\n]*\bclass\s*=/m
@@ -47,6 +48,7 @@ module Klenod
           DEFAULT_FACTORY = HamlPlugin::DEFAULT_FACTORY
           DEFAULT_COMPONENT_CHILDREN = HamlPlugin::DEFAULT_COMPONENT_CHILDREN
           COMPONENT_CHILDREN_MODES = HamlPlugin::COMPONENT_CHILDREN_MODES
+          I18N_OPTIONS = HamlPlugin::I18N_OPTIONS
           HAML_HELPER_SPECIFIER = HamlPlugin::HAML_HELPER_SPECIFIER
           HAML_HELPER_MODULE_ID = HamlPlugin::HAML_HELPER_MODULE_ID
           STATIC_CLASS_SOURCE_PATTERN = HamlPlugin::STATIC_CLASS_SOURCE_PATTERN
@@ -64,15 +66,14 @@ module Klenod
             factory: DEFAULT_FACTORY,
             component_children: DEFAULT_COMPONENT_CHILDREN,
             variables: nil,
-            i18n_class: nil,
-            i18n_constant: nil,
+            i18n: nil,
             cache_static_subtrees: false
           )
             @component_base_class = component_base_class
             @factory = factory
             @component_children = validate_component_children(component_children)
             @variables = validate_variables(variables)
-            @i18n_class, @i18n_constant = validate_i18n_options(i18n_class, i18n_constant)
+            @i18n_class, @i18n_constant = validate_i18n_options(i18n)
             @cache_static_subtrees = cache_static_subtrees
             @transformer = Transformer.new
           end
@@ -296,15 +297,23 @@ module Klenod
             raise ArgumentError, "variables[#{kind.inspect}] must be a Ruby expression"
           end
 
-          def validate_i18n_options(i18n_class, i18n_constant)
-            return [nil, nil] if i18n_class.nil? && i18n_constant.nil?
-            raise ArgumentError, "i18n_class must be configured when i18n_constant is configured" if i18n_class.nil?
+          def validate_i18n_options(i18n)
+            return [nil, nil] if i18n.nil?
+            raise ArgumentError, "i18n must be a Hash" unless i18n.is_a?(Hash)
 
-            i18n_constant = (i18n_constant || "I18n").to_s
-            raise ArgumentError, "i18n_constant must be a Ruby constant name" unless i18n_constant.match?(/\A[A-Z]\w*\z/)
+            unknown_options = i18n.keys - I18N_OPTIONS
+            unless unknown_options.empty?
+              raise ArgumentError, "i18n contains unknown options: #{unknown_options.map(&:inspect).join(", ")}"
+            end
+
+            i18n_class = i18n[:class]
+            raise ArgumentError, "i18n[:class] must be configured" if i18n_class.nil?
+
+            i18n_constant = (i18n[:constant] || "I18n").to_s
+            raise ArgumentError, "i18n[:constant] must be a Ruby constant name" unless i18n_constant.match?(/\A[A-Z]\w*\z/)
 
             [
-              Transformer::ConstPath.parse(i18n_class, name: "i18n_class").to_s,
+              Transformer::ConstPath.parse(i18n_class, name: "i18n[:class]").to_s,
               i18n_constant
             ]
           end

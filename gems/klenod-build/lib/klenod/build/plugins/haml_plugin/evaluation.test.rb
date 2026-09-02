@@ -25,7 +25,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
   end
 
   def test_haml_generates_configured_i18n_constant
-    plugin = haml_plugin(i18n_class: "#{self.class.name}::FakeFramework::I18n")
+    plugin = haml_plugin(i18n: {class: "#{self.class.name}::FakeFramework::I18n"})
 
     evaluate_haml(
       {
@@ -43,7 +43,13 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
   end
 
   def test_haml_uses_configured_i18n_constant_name
-    plugin = haml_plugin(i18n_class: "#{self.class.name}::FakeFramework::I18n", i18n_constant: "TranslationsHelper")
+    plugin =
+      haml_plugin(
+        i18n: {
+          class: "#{self.class.name}::FakeFramework::I18n",
+          constant: "TranslationsHelper"
+        }
+      )
 
     evaluate_haml(
       {
@@ -58,20 +64,25 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
-  def test_haml_requires_i18n_class_when_i18n_constant_is_configured
+  def test_haml_requires_i18n_class
     error = assert_raises(ArgumentError) do
-      haml_plugin(i18n_constant: "I18n")
+      haml_plugin(i18n: {constant: "I18n"})
     end
 
-    assert_equal("i18n_class must be configured when i18n_constant is configured", error.message)
+    assert_equal("i18n[:class] must be configured", error.message)
   end
 
   def test_haml_requires_i18n_constant_to_be_simple_constant_name
     error = assert_raises(ArgumentError) do
-      haml_plugin(i18n_class: "#{self.class.name}::FakeFramework::I18n", i18n_constant: "Helpers::I18n")
+      haml_plugin(
+        i18n: {
+          class: "#{self.class.name}::FakeFramework::I18n",
+          constant: "Helpers::I18n"
+        }
+      )
     end
 
-    assert_equal("i18n_constant must be a Ruby constant name", error.message)
+    assert_equal("i18n[:constant] must be a Ruby constant name", error.message)
   end
 
   def test_haml_transformer_renders_with_configured_factory

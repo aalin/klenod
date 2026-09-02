@@ -22,6 +22,7 @@ module Klenod
               factory: "Object",
               component_children: :lazy,
               variables: {global: "@__props"},
+              i18n: {class: "Object", constant: "I18n"},
               cache_static_subtrees: true
             )
 
@@ -41,6 +42,13 @@ module Klenod
           assert_raises(ArgumentError) { HamlPlugin.new(variables: {global: :props}) }
           assert_raises(ArgumentError) { HamlPlugin.new(variables: {global: "first\nsecond"}) }
           assert_raises(ArgumentError) { HamlPlugin.new(variables: {global: "("}) }
+        end
+
+        def test_haml_plugin_validates_i18n_configuration
+          assert_raises(ArgumentError) { HamlPlugin.new(i18n: "Object") }
+          assert_raises(ArgumentError) { HamlPlugin.new(i18n: {}) }
+          assert_raises(ArgumentError) { HamlPlugin.new(i18n: {helper: "Object"}) }
+          assert_raises(ArgumentError) { HamlPlugin.new(i18n: {"class" => "Object"}) }
         end
       end
     end

@@ -103,7 +103,12 @@ Klenod::Build::Plugins::HamlPlugin.new(
   component_children: :lazy,
   variables: {
     global: "@__props",
-    class: "Example::Context.current"
+    class: "Example::Context.current",
+    instance: "@__state"
+  },
+  i18n: {
+    class: "Example::Translator",
+    constant: "I18n"
   },
   cache_static_subtrees: false
 )
@@ -113,6 +118,7 @@ Klenod::Build::Plugins::HamlPlugin.new(
 - `factory`: Ruby constant path used for generated HTML/component calls. Defaults to `"Object"`.
 - `component_children`: controls how children of constant-named component tags such as `%Card` are passed to the factory. `:eager` generates positional children and is the default; `:lazy` generates a block whose result is an array of children. Lazy mode lets a framework defer and memoize child or slot evaluation.
 - `variables`: optional receiver expressions for app-style global, class, and instance variables in Haml Ruby code. For example, `global: "@__props"` compiles `$title` to `(@__props)[:title]`, while `instance: "@__state"` makes `@count` read and assign `(@__state)[:count]`. Built-in Ruby globals and underscore-prefixed framework variables are left untouched.
+- `i18n`: optional translation helper configuration. `class` is the helper's Ruby constant path. `constant` names the generated component constant and defaults to `I18n`.
 - `cache_static_subtrees`: optional experimental optimization. When enabled, fully static Haml tag subtrees are compiled once into frozen constants and reused across renders. Defaults to `false`.
 
 `:markdown` filters use `MarkdownPlugin`'s source-root component map convention when `markdown-components.rb` exists.

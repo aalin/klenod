@@ -44,7 +44,10 @@
             global: "@__props",
             class: "Example::Context.current"
           },
-          i18n_class: "Example::Translator"
+          i18n: {
+            class: "Example::Translator",
+            constant: "I18n"
+          }
         )
       ]
       ```
@@ -63,7 +66,10 @@
           global: "@__props",
           class: "Example::Context.current"
         },
-        i18n_class: "Example::Translator"
+        i18n: {
+          class: "Example::Translator",
+          constant: "I18n"
+        }
       )
 
       Klenod::Build::Plugins::MarkdownPlugin.new(
