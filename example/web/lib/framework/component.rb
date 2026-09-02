@@ -33,20 +33,8 @@ module Example
       props.slice(*accepted)
     end
 
-    def context
-      Context.current
-    end
-
     def provide_context(**values, &producer)
       H.context(**values, &producer)
-    end
-
-    def request
-      context.fetch(:request)
-    end
-
-    def localized_path(...)
-      context.routes.localized_path(...)
     end
 
     def prop?(name)
@@ -58,13 +46,7 @@ module Example
       key ? @__props.fetch(key) : default
     end
 
-    def children
-      @__props[:children]
-    end
-
-    def initialize(**props)
-      @__props = (@__props || {}).merge(props).freeze
-      @__slots ||= H::Slots.new
+    def initialize(**)
     end
 
     private

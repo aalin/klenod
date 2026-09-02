@@ -2,7 +2,7 @@
   THEMES = %w[light dark].freeze
 
   def document_theme
-    theme = request.cookies.fetch(Example::THEME_COOKIE, nil)
+    theme = @@request.cookies.fetch(Example::THEME_COOKIE, nil)
     theme if THEMES.include?(theme)
   end
 

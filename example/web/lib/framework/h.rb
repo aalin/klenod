@@ -38,6 +38,10 @@ module Example
         default
       end
 
+      def [](name)
+        fetch(name)
+      end
+
       private
 
       def explicit_children(name)

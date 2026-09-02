@@ -195,13 +195,14 @@ class Klenod::ExampleTest < Minitest::Test
     child =
       Class.new(Example::Component) do
         def render
-          Example::H[:span, context.fetch(:theme)]
+          Example::H[:span, Example::Context.current.fetch(:theme)]
         end
       end
     provider =
       Class.new(Example::Component) do
         def render
           provide_context(theme: prop(:theme)) do
+            children = prop(:children)
             Example::H.fragment(children[:label], children[:label], children, children)
           end
         end
@@ -396,7 +397,7 @@ class Klenod::ExampleTest < Minitest::Test
 
           Example::H[
             :section,
-            Example::H[:button, *children[:button]],
+            Example::H[:button, *prop(:children)[:button]],
             Example::H[:div, *@__props[:children]]
           ]
         end
