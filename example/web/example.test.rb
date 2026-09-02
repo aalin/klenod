@@ -491,8 +491,11 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "<body")
     assert_includes(html, "<main")
     assert_includes(html, "Build Ruby modules like a modern frontend graph")
-    assert_includes(html, "Transform source files")
-    assert_includes(html, "Explore demos")
+    assert_includes(html, "Ruby imports build the graph")
+    assert_includes(html, "Reload as files change")
+    assert_includes(html, "Ship the bundle, not the build")
+    assert_includes(html, "Card = import(&quot;./Card.haml&quot;)")
+    assert_includes(html, "Get started")
     assert_includes(navigation_html(html), "href=\"/demo\"")
     assert_includes(html, "/assets/routes_layout_css")
     assert_includes(html, "/assets/routes_page_css")
@@ -830,7 +833,8 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(200, status)
     assert_includes(html, "Bygg Ruby-moduler som en modern frontendgraf")
-    assert_includes(html, "Utforska demos")
+    assert_includes(html, "Ruby-importer bygger grafen")
+    assert_includes(html, 'href="/sv/dokumentation/kom-igang"')
 
     status, _headers, body = entry.call(request("/sv/demo"), context)
     html = body.join

@@ -1,23 +1,45 @@
 :ruby
   Button = import("../components/Button.haml")
   PageHeader = import("../components/PageHeader.haml")
-  Panel = import("../components/Panel.haml")
+  ImportExample = [
+    'Card = import("./Card.haml")',
+    'Styles = import("./Card.css")',
+    'Logo = import("./logo.svg")',
+    'Config = import("./config.toml")'
+  ].join("\n").freeze
 
 %title= I18n.t(:header, :title)
 
 %article
-  %PageHeader{
-    kicker: I18n.t(:header, :kicker),
-    title: I18n.t(:header, :title),
-    summary: I18n.t(:header, :summary)
-  }
-  %section
-    %Panel{ title: I18n.t(:features, :transform, :title) }
-      %p= I18n.t(:features, :transform, :body)
-    %Panel{ title: I18n.t(:features, :assets, :title) }
-      %p= I18n.t(:features, :assets, :body)
-    %Panel{ title: I18n.t(:features, :bundle, :title) }
-      %p= I18n.t(:features, :bundle, :body)
-  %footer
-    %Button{ href: "/demo" }= I18n.t(:actions, :demo)
-    %Button{ href: "/demo/assets" }= I18n.t(:actions, :assets)
+  .hero
+    %PageHeader{
+      kicker: I18n.t(:header, :kicker),
+      title: I18n.t(:header, :title),
+      summary: I18n.t(:header, :summary)
+    }
+    .actions
+      %Button{ href: "/docs/getting-started" }= I18n.t(:actions, :get_started)
+      %a.secondary-action{ href: "/docs" }= I18n.t(:actions, :docs)
+
+  %section.story
+    .graph-intro
+      .section-copy
+        %h2= I18n.t(:graph, :title)
+        %p= I18n.t(:graph, :first)
+        %p= I18n.t(:graph, :second)
+      :markdown
+        ```ruby
+        Card = import("./Card.haml")
+        Styles = import("./Card.css")
+        Logo = import("./logo.svg")
+        Config = import("./config.toml"
+        ```
+    .modes
+      .mode
+        %p.label= I18n.t(:development, :label)
+        %h3= I18n.t(:development, :title)
+        %p= I18n.t(:development, :body)
+      .mode
+        %p.label= I18n.t(:production, :label)
+        %h3= I18n.t(:production, :title)
+        %p= I18n.t(:production, :body)

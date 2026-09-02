@@ -14,7 +14,7 @@
   --color-page: light-dark(oklch(97% 0.012 248), oklch(17% 0.018 252));
   --color-surface: light-dark(oklch(100% 0 0), oklch(22% 0.022 252));
   --color-raised: light-dark(oklch(99% 0.006 248), oklch(25% 0.024 252));
-  --color-border: light-dark(oklch(88% 0.018 248), oklch(36% 0.026 252));
+  --color-border: light-dark(oklch(88% 0.018 248), oklch(100% 0 0 / 0.1));
   --color-accent: light-dark(oklch(47% 0.14 254), oklch(72% 0.13 254));
   --color-accent-hover: light-dark(oklch(41% 0.14 254), oklch(78% 0.13 254));
   --color-accent-soft: light-dark(oklch(94% 0.035 254), oklch(29% 0.065 254));

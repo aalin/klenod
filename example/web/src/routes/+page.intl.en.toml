@@ -1,20 +1,23 @@
 [header]
-kicker = "Overview"
+kicker = "Ruby module bundler"
 title = "Build Ruby modules like a modern frontend graph"
-summary = "Klenod loads Ruby, Haml, CSS, data files, and assets through one dependency graph with development reloading and production bundles."
+summary = "Klenod brings an ES Module-inspired import system to Ruby. Those imports create a dependency graph for plugins, development reloading, and production bundles."
 
-[features.transform]
-title = "Transform source files"
-body = "Haml components become Ruby classes, CSS selectors are scoped, and imports become dependency records."
+[graph]
+title = "Ruby imports build the graph"
+first = "Klenod adds import to every module. Like an ES Module import, it resolves relative to the file that uses it. Each call records a dependency instead of relying on Ruby's global load path."
+second = "Imports are not limited to Ruby. Plugins teach Klenod how to resolve and transform Haml, CSS, JavaScript, images, data, or any other file type."
 
-[features.assets]
-title = "Emit browser assets"
-body = "Images and stylesheets are generated from imports while Ruby modules receive stable runtime values."
+[development]
+label = "Development"
+title = "Reload as files change"
+body = "Klenod watches the source graph. When a module changes, it updates that part of the graph and invalidates its dependents. The application keeps running, and modules evaluate again when they are needed."
 
-[features.bundle]
-title = "Bundle for runtime"
-body = "The collected graph can be serialized and loaded later without build plugins."
+[production]
+label = "Production"
+title = "Ship the bundle, not the build"
+body = "Klenod serializes the collected modules and runtime values into a bundle. The finished application loads it with klenod-runtime, without klenod-build or transform plugins."
 
 [actions]
-demo = "Explore demos"
-assets = "View assets"
+get_started = "Get started"
+docs = "Read the docs"
