@@ -1,6 +1,7 @@
+- variant = ($variant || :primary).to_sym
 = if $href
-  %a{ href: $href }
+  %a{ href: $href, target: $target, rel: $rel, class: ClassNames[variant] }
     = $children
 = else
-  %button{ type: $type || "button", command: $command, commandfor: $commandfor }
+  %button{ type: $type || "button", command: $command, commandfor: $commandfor, class: ClassNames[variant] }
     = $children

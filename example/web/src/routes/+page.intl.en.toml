@@ -1,23 +1,60 @@
-[header]
+[hero]
 kicker = "Ruby module bundler"
 title = "Build Ruby modules like a modern frontend graph"
-summary = "Klenod brings an ES Module-inspired import system to Ruby. Those imports create a dependency graph for plugins, development reloading, and production bundles."
-
-[graph]
-title = "Ruby imports build the graph"
-first = "Klenod adds import to every module. Like an ES Module import, it resolves relative to the file that uses it. Each call records a dependency instead of relying on Ruby's global load path."
-second = "Imports are not limited to Ruby. Plugins teach Klenod how to resolve and transform Haml, CSS, JavaScript, images, data, or any other file type."
-
-[development]
-label = "Development"
-title = "Reload as files change"
-body = "Klenod watches the source graph. When a module changes, it updates that part of the graph and invalidates its dependents. The application keeps running, and modules evaluate again when they are needed."
-
-[production]
-label = "Production"
-title = "Ship the bundle, not the build"
-body = "Klenod serializes the collected modules and runtime values into a bundle. The finished application loads it with klenod-runtime, without klenod-build or transform plugins."
+line_one = "Build Ruby modules"
+line_accent = "like a modern"
+line_two = "frontend graph."
+summary = "Klenod brings an ES Module-inspired import system to Ruby. Those imports create a dependency graph for development updates, production bundles, and every file type your plugins understand."
 
 [actions]
-get_started = "Get started"
-docs = "Read the docs"
+get_started = "Get started →"
+github = "View on GitHub"
+docs = "Read the docs →"
+plugins = "Explore plugins"
+
+[commands]
+install = "Install"
+build = "Build"
+inspect = "Inspect"
+learn_more = "Getting started →"
+
+[features.imports]
+title = "Imports define the graph"
+body = "Ruby modules use import calls inspired by ES Modules. Each resolved import becomes an explicit dependency in the application graph."
+
+[features.updates]
+title = "Development stays live"
+body = "When a source file changes, Klenod updates that part of the graph and invalidates its dependents. Modules evaluate again only when the application needs them."
+
+[features.runtime]
+title = "Build dependencies stay behind"
+body = "Production loads the serialized graph with klenod-runtime. Build plugins, compilers, and their dependencies do not need to ship with the application."
+
+[features.plugins]
+title = "Any file can be a module"
+body = "Plugins define how files resolve, transform, and appear at runtime. Ruby can import Haml, CSS, JavaScript, images, data, virtual modules, or your own formats."
+
+[architecture]
+kicker = "Architecture"
+title = "One graph. Clear phases."
+
+[architecture.collection]
+title = "Collect before evaluation"
+body = "Klenod can read imports, transform sources, and emit assets without running application top-level code."
+
+[architecture.relative]
+title = "Relative by default"
+body = "Imports resolve from the module that declares them. Canonical module IDs keep every dependency unambiguous."
+
+[architecture.framework]
+title = "Framework-neutral"
+body = "Plugins adapt source files to components and runtime values. Rendering and application policy stay with the framework."
+
+[architecture.inspectable]
+title = "Inspectable output"
+body = "Export the graph, follow source maps, and see which modules and assets are reachable from an entrypoint."
+
+[cta]
+kicker = "Ready to build"
+title = "Build your first graph."
+body = "Start with one Ruby entrypoint, import a dependency, and add plugins as the application grows."

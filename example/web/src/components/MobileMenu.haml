@@ -1,0 +1,25 @@
+- id = $id || "mobile-menu"
+- anchor_name = "--#{id}-trigger"
+
+%button.button{
+  type: "button",
+  popovertarget: id,
+  popovertargetaction: "show",
+  "aria-label" => $label,
+  style: "anchor-name: #{anchor_name};"
+}
+  %span.menu-label(aria-hidden="true")
+
+.panel{
+  id: id,
+  popover: "auto",
+  style: "position-anchor: #{anchor_name};"
+}
+  %button.close{
+    type: "button",
+    popovertarget: id,
+    popovertargetaction: "hide",
+    "aria-label" => $close_label
+  }
+    %span.close-label(aria-hidden="true")
+  %slot

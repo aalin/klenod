@@ -20,7 +20,7 @@ header {
 }
 
 time {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 700;
 }
 

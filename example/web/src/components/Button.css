@@ -5,19 +5,38 @@ button {
   align-items: center;
   justify-content: center;
   width: fit-content;
-  min-height: 2.45rem;
-  padding: 0.62rem 0.9rem;
-  color: var(--color-surface);
-  background: var(--color-accent);
-  border: 1px solid var(--color-accent);
+  min-height: 2.65rem;
+  padding: 0.72rem 1.15rem;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  font: inherit;
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
   line-height: 1;
   text-decoration: none;
+  cursor: pointer;
+  transition: 150ms ease;
+  transition-property: color, background-color, border-color;
 }
 
-a:hover,
-button:hover {
-  background: var(--color-accent-hover);
+.primary {
+  color: #f0eff5;
+  background: var(--color-accent-solid);
+  border-color: var(--color-accent-solid);
+}
+
+.primary:hover {
+  background: var(--color-accent-solid-hover);
+  border-color: var(--color-accent-solid-hover);
+}
+
+.secondary {
+  color: var(--color-muted);
+  background: transparent;
+  border-color: var(--color-border);
+}
+
+.secondary:hover {
+  color: var(--color-ink);
+  border-color: var(--color-border-strong);
 }

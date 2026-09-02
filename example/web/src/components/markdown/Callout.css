@@ -8,6 +8,8 @@ aside {
 
 strong {
   color: var(--color-accent);
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }

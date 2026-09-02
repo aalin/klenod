@@ -1,0 +1,133 @@
+.button {
+  display: none;
+  width: 1.5rem;
+  padding: 0;
+  aspect-ratio: 1;
+  place-items: center;
+  color: var(--color-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.menu-icon {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  background: currentcolor;
+  aspect-ratio: 1;
+  font-size: 0;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  white-space: nowrap;
+}
+
+.menu-label {
+  composes: menu-icon;
+  mask-image: url("./bars-solid-full.svg");
+}
+
+.close-label {
+  composes: menu-icon;
+  mask-image: url("./xmark-solid-full.svg");
+}
+
+.panel {
+  --mobile-menu-border-width: 1px;
+  --mobile-menu-transition-duration: 220ms;
+
+  position: absolute;
+  top: calc(anchor(top) - var(--mobile-menu-border-width) - 0.5rem);
+  left: auto;
+  right: calc(anchor(right) - var(--mobile-menu-border-width) - 0.5rem);
+  display: none;
+  gap: var(--space-5);
+  min-width: min(18rem, calc(100vw - 2rem));
+  margin: 0;
+  padding: var(--space-5);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: var(--mobile-menu-border-width) solid var(--color-border);
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-0.25rem);
+  transition:
+    display var(--mobile-menu-transition-duration) ease allow-discrete,
+    overlay var(--mobile-menu-transition-duration) ease allow-discrete,
+    opacity var(--mobile-menu-transition-duration) ease,
+    transform var(--mobile-menu-transition-duration) ease;
+}
+
+.panel:popover-open {
+  display: grid;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+@starting-style {
+  .panel:popover-open {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}
+
+.panel::backdrop {
+  background-color: oklch(from var(--color-backdrop) l c h / 0%);
+  backdrop-filter: blur(5px);
+  opacity: 0;
+  transition:
+    display var(--mobile-menu-transition-duration) ease allow-discrete,
+    overlay var(--mobile-menu-transition-duration) ease allow-discrete,
+    background-color var(--mobile-menu-transition-duration) ease,
+    opacity var(--mobile-menu-transition-duration) ease;
+}
+
+.panel:popover-open::backdrop {
+  background-color: var(--color-backdrop);
+  opacity: 1;
+}
+
+@starting-style {
+  .panel:popover-open::backdrop {
+    background-color: oklch(from var(--color-backdrop) l c h / 0%);
+  }
+}
+
+.close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: grid;
+  width: 1.5rem;
+  padding: 0;
+  aspect-ratio: 1;
+  place-items: center;
+  color: var(--color-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+@media (width >= 58rem) {
+  .panel:popover-open,
+  .panel:popover-open::backdrop {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
+
+  .panel:popover-open::backdrop {
+    backdrop-filter: none;
+  }
+}
+
+@media (width < 58rem) {
+  .button {
+    display: grid;
+  }
+}

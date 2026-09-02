@@ -7,12 +7,13 @@ section {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px oklch(28% 0.03 252 / 6%);
 }
 
 h2 {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 1.05rem;
+  letter-spacing: -0.01em;
 }
 
 .content {

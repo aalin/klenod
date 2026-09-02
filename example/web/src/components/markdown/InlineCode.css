@@ -1,21 +1,22 @@
 code {
-  --syntax-text: light-dark(#5c6773, #bfbdb6);
-  --syntax-comment: light-dark(#abb0b6, #626a73);
-  --syntax-keyword: light-dark(#fa8d3e, #ff8f40);
-  --syntax-name: light-dark(#a37acc, #d2a6ff);
-  --syntax-tag: light-dark(#55b4d4, #39bae6);
-  --syntax-string: light-dark(#86b300, #aad94c);
-  --syntax-number: light-dark(#a37acc, #d2a6ff);
-  --syntax-operator: light-dark(#ed9366, #f29668);
-  --syntax-error: light-dark(#f07171, #f07178);
-  --syntax-error-background: light-dark(#fce4e4, #3d1518);
+  --syntax-text: light-dark(#4f4d58, #d2d0da);
+  --syntax-comment: light-dark(#777481, #858391);
+  --syntax-keyword: light-dark(#a82020, #f05a5a);
+  --syntax-name: light-dark(#6f46a3, #c49af1);
+  --syntax-tag: light-dark(#176b78, #67c1ca);
+  --syntax-string: light-dark(#39711d, #9ecb7d);
+  --syntax-number: light-dark(#7b3e91, #d49ae6);
+  --syntax-operator: light-dark(#9b4f21, #e99b68);
+  --syntax-error: light-dark(#a82020, #ff7c82);
+  --syntax-error-background: light-dark(#f8e5e5, #351619);
 
   padding: var(--markdown-code-padding, 0.08rem 0.25rem);
   background: var(--markdown-code-background, var(--color-accent-soft));
   border-radius: var(--markdown-code-radius, var(--radius-sm));
   color: var(--syntax-text);
   font-family: var(--font-mono);
-  font-size: .9em;
+  font-size: .85rem;
+  font-weight: 300;
 }
 
 .c,

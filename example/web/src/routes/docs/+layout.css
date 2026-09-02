@@ -2,7 +2,7 @@
   interpolate-size: allow-keywords;
   display: grid;
   grid-template-columns: 10rem minmax(0, 1fr);
-  gap: var(--space-6);
+  gap: var(--space-8);
   align-items: start;
 }
 
@@ -47,8 +47,9 @@ summary {
   padding: 0.35rem 0.6rem;
   color: var(--color-muted);
   cursor: pointer;
-  font-size: 0.82rem;
-  font-weight: 900;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1.25;
   text-transform: uppercase;
@@ -87,7 +88,8 @@ nav a {
   padding-block: 0.42rem;
   color: var(--color-muted);
   border-radius: var(--radius-sm);
-  font-weight: 400;
+  font-size: 0.86rem;
+  font-weight: 500;
   line-height: 1.25;
   text-decoration: none;
 

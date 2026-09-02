@@ -1,23 +1,60 @@
-[header]
+[hero]
 kicker = "Ruby-modulbundlare"
 title = "Bygg Ruby-moduler som en modern frontendgraf"
-summary = "Klenod ger Ruby ett importsystem inspirerat av ES Modules. Importerna skapar en dependency graph för plugins, reload i utveckling och produktionsbundles."
-
-[graph]
-title = "Ruby-importer bygger grafen"
-first = "Klenod lägger till import i varje modul. Precis som en import i ES Modules löses den relativt filen som använder den. Varje anrop registrerar ett beroende i stället för att förlita sig på Rubys globala load path."
-second = "Importer är inte begränsade till Ruby. Plugins lär Klenod att lösa upp och transformera Haml, CSS, JavaScript, bilder, data eller vilken annan filtyp som helst."
-
-[development]
-label = "Utveckling"
-title = "Ladda om när filer ändras"
-body = "Klenod bevakar källgrafen. När en modul ändras uppdateras den delen av grafen och dess beroenden invalidateras. Applikationen fortsätter köra och moduler evalueras igen när de behövs."
-
-[production]
-label = "Produktion"
-title = "Leverera bundlen, inte byggmiljön"
-body = "Klenod serialiserar de insamlade modulerna och runtime-värdena till en bundle. Den färdiga applikationen laddar den med klenod-runtime, utan klenod-build eller transform-plugins."
+line_one = "Bygg Ruby-moduler"
+line_accent = "som en modern"
+line_two = "frontendgraf."
+summary = "Klenod ger Ruby ett importsystem inspirerat av ES Modules. Importerna skapar en dependency graph för uppdateringar i utveckling, produktionsbundles och alla filtyper som dina plugins förstår."
 
 [actions]
-get_started = "Kom igång"
-docs = "Läs dokumentationen"
+get_started = "Kom igång →"
+github = "Visa på GitHub"
+docs = "Läs dokumentationen →"
+plugins = "Utforska plugins"
+
+[commands]
+install = "Installera"
+build = "Bygg"
+inspect = "Inspektera"
+learn_more = "Kom igång →"
+
+[features.imports]
+title = "Importer definierar grafen"
+body = "Ruby-moduler använder import-anrop inspirerade av ES Modules. Varje importerad modul blir ett explicit beroende i applikationens graf."
+
+[features.updates]
+title = "Utvecklingen förblir aktiv"
+body = "När en källfil ändras uppdaterar Klenod den delen av grafen och invalidaterar dess beroenden. Moduler evalueras igen först när applikationen behöver dem."
+
+[features.runtime]
+title = "Build-beroenden stannar kvar"
+body = "Produktionen laddar den serialiserade grafen med klenod-runtime. Build-plugins, kompilatorer och deras beroenden behöver inte följa med applikationen."
+
+[features.plugins]
+title = "Alla filer kan vara moduler"
+body = "Plugins bestämmer hur filer löses upp, transformeras och ser ut vid runtime. Ruby kan importera Haml, CSS, JavaScript, bilder, data, virtuella moduler eller egna format."
+
+[architecture]
+kicker = "Arkitektur"
+title = "En graf. Tydliga faser."
+
+[architecture.collection]
+title = "Samla före evaluering"
+body = "Klenod kan läsa importer, transformera källor och generera assets utan att köra applikationens top-level-kod."
+
+[architecture.relative]
+title = "Relativt som standard"
+body = "Importer löses från modulen som deklarerar dem. Kanoniska modul-ID:n gör varje beroende entydigt."
+
+[architecture.framework]
+title = "Ramverksneutralt"
+body = "Plugins anpassar källfiler till komponenter och runtime-värden. Rendering och applikationspolicy stannar i ramverket."
+
+[architecture.inspectable]
+title = "Inspekterbart resultat"
+body = "Exportera grafen, följ source maps och se vilka moduler och assets som kan nås från en entrypoint."
+
+[cta]
+kicker = "Redo att bygga"
+title = "Bygg din första graf."
+body = "Börja med en Ruby-entrypoint, importera ett beroende och lägg till plugins när applikationen växer."

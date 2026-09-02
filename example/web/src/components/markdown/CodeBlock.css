@@ -1,6 +1,6 @@
 pre {
-  --markdown-code-block-background: light-dark(#f8f9fa, #11141c);
-  --markdown-code-block-foreground: light-dark(#5c6773, #bfbdb6);
+  --markdown-code-block-background: var(--color-surface);
+  --markdown-code-block-foreground: var(--color-ink);
   --markdown-code-background: transparent;
   --markdown-code-padding: 0;
   --markdown-code-radius: 0;
@@ -11,6 +11,6 @@ pre {
   border-radius: var(--radius);
   background: var(--markdown-code-block-background);
   color: var(--markdown-code-block-foreground);
-  padding: var(--space-4);
+  padding: var(--space-5);
   white-space: pre-wrap;
 }

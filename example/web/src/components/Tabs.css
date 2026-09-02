@@ -34,6 +34,8 @@ summary {
   background: color-mix(in oklch, var(--color-surface), var(--color-page) 75%);
   color: var(--color-muted);
   cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
   font-weight: 700;
   text-align: center;
   text-wrap: balance;

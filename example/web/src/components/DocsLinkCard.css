@@ -12,11 +12,12 @@ a {
 
 a:hover {
   border-color: var(--color-accent);
-  box-shadow: var(--shadow-soft);
+  background: var(--color-raised);
 }
 
 strong {
   color: var(--color-accent);
+  font-family: var(--font-display);
 }
 
 span {

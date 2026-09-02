@@ -2,7 +2,13 @@
 label = "Primär"
 overview = "Översikt"
 docs = "Dokumentation"
+plugins = "Plugins"
 demo = "Demo"
+get_started = "Kom igång →"
+menu = "meny"
+close = "stäng"
 
 [footer]
-summary = "En experimentell Ruby-modulbundlare och lekplats för webbramverk."
+label = "Sidfot"
+license = "Licens"
+copyright = "MIT-licens"

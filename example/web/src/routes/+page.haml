@@ -1,45 +1,76 @@
 :ruby
-  Button = import("../components/Button.haml")
-  PageHeader = import("../components/PageHeader.haml")
-  ImportExample = [
-    'Card = import("./Card.haml")',
-    'Styles = import("./Card.css")',
-    'Logo = import("./logo.svg")',
-    'Config = import("./config.toml")'
-  ].join("\n").freeze
+  Button = import("/components/Button.haml")
+  Homepage = Gem::Specification.find_by_name("klenod-runtime").homepage
+  COMMANDS = [
+    { code: "gem install klenod", label: [:commands, :install] },
+    { code: "klenod build", label: [:commands, :build] },
+    { code: "klenod graph dist/klenod.bundle", label: [:commands, :inspect] }
+  ].freeze
+  PRINCIPLES = %i[collection relative framework inspectable].freeze
 
-%title= I18n.t(:header, :title)
+%title= I18n.t(:hero, :title)
 
 %article
-  .hero
-    %PageHeader{
-      kicker: I18n.t(:header, :kicker),
-      title: I18n.t(:header, :title),
-      summary: I18n.t(:header, :summary)
-    }
-    .actions
-      %Button{ href: "/docs/getting-started" }= I18n.t(:actions, :get_started)
-      %a.secondary-action{ href: "/docs" }= I18n.t(:actions, :docs)
+  %section.hero
+    .hero-copy
+      %p.kicker= I18n.t(:hero, :kicker)
+      %h1
+        %span= "#{I18n.t(:hero, :line_one)} "
+        %span.accent-line= "#{I18n.t(:hero, :line_accent)} "
+        %span= I18n.t(:hero, :line_two)
+      %p.summary= I18n.t(:hero, :summary)
+      .actions
+        %Button{ href: "/docs/getting-started" }= I18n.t(:actions, :get_started)
+        %Button{ href: Homepage, target: "_blank", rel: "noreferrer", variant: :secondary }= I18n.t(:actions, :github)
 
-  %section.story
-    .graph-intro
-      .section-copy
-        %h2= I18n.t(:graph, :title)
-        %p= I18n.t(:graph, :first)
-        %p= I18n.t(:graph, :second)
+    .code-window
+      .code-header
+        .window-dots(aria-hidden="true")
+          %span
+          %span
+          %span
+        %span module.rb
       :markdown
         ```ruby
         Card = import("./Card.haml")
         Styles = import("./Card.css")
         Logo = import("./logo.svg")
-        Config = import("./config.toml"
+        Config = import("./config.toml")
         ```
-    .modes
-      .mode
-        %p.label= I18n.t(:development, :label)
-        %h3= I18n.t(:development, :title)
-        %p= I18n.t(:development, :body)
-      .mode
-        %p.label= I18n.t(:production, :label)
-        %h3= I18n.t(:production, :title)
-        %p= I18n.t(:production, :body)
+
+  .command-strip
+    .commands
+      = COMMANDS.map.with_index(1) do |command, index|
+        .command
+          %span.command-index= format("%02d", index)
+          %code= command[:code]
+          %span.command-label= "— #{I18n.t(*command[:label])}"
+      %a{ href: "/docs/getting-started" }= I18n.t(:commands, :learn_more)
+
+  %section.features
+    .feature-grid
+      = %i[imports updates runtime plugins].map.with_index(1) do |feature, index|
+        .feature
+          %span.feature-index= format("%02d", index)
+          %h2= I18n.t(:features, feature, :title)
+          %p= I18n.t(:features, feature, :body)
+
+  %section.architecture
+    .architecture-inner
+      .architecture-heading
+        %p.kicker= I18n.t(:architecture, :kicker)
+        %h2= I18n.t(:architecture, :title)
+      .principles
+        = PRINCIPLES.map do |principle|
+          .principle
+            %h3= I18n.t(:architecture, principle, :title)
+            %p= I18n.t(:architecture, principle, :body)
+
+  %section.cta
+    .cta-content
+      %p.kicker= I18n.t(:cta, :kicker)
+      %h2= I18n.t(:cta, :title)
+      %p= I18n.t(:cta, :body)
+      .actions
+        %Button{ href: "/docs/getting-started" }= I18n.t(:actions, :docs)
+        %Button{ href: "/docs/plugins", variant: :secondary }= I18n.t(:actions, :plugins)

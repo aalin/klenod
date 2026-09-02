@@ -1,34 +1,59 @@
 :ruby
-  Logo = import("./logo.svg")
-  Homepage = Gem::Specification.find_by_name("klenod-runtime").homepage
+  Button = import("/components/Button.haml")
   LanguageSwitcher = import("/components/LanguageSwitcher.haml")
+  MobileMenu = import("/components/MobileMenu.haml")
   ThemeSwitcher = import("/components/ThemeSwitcher.haml")
-  Links = [
+
+  HOMEPAGE = Gem::Specification.find_by_name("klenod-runtime").homepage
+  LICENSE = "#{HOMEPAGE}/blob/main/LICENSE.txt"
+
+  LINKS = [
     { href: "/", label: [:nav, :overview] },
     { href: "/docs", label: [:nav, :docs] },
+    { href: "/docs/plugins", label: [:nav, :plugins] },
     unless ENV["RACK_ENV"] == "production"
       { href: "/demo", label: [:nav, :demo] }
     end
   ].compact.freeze
 
-%header
+%header.site-header
   .header-inner
-    %a{ href: "/" }
-      %img{ src: Logo.src, width: Logo.width, height: Logo.height, alt: "" }
-      %span Klenod
+    %a.wordmark(href="/" aria-label="Klenod")
+      %span klenod
+      %span.accent> .
+
+    %nav.desktop-nav{ "aria-label" => I18n.t(:nav, :label) }
+      = LINKS.map do |link|
+        %a{ href: link[:href] }= I18n.t(*link[:label])
+      %a.github-link(href=HOMEPAGE target="_blank" rel="noreferrer") GitHub
+
     .header-actions
-      %nav{ aria: { label: I18n.t(:nav, :label) } }
-        = Links.map do |link|
-          %a{ href: link[:href] }= I18n.t(*link[:label])
       .switchers
         %ThemeSwitcher
         %LanguageSwitcher
+      .desktop-cta
+        %Button{ href: "/docs/getting-started" }= I18n.t(:nav, :get_started)
+      %MobileMenu{
+        id: "mobile-menu",
+        label: I18n.t(:nav, :menu),
+        close_label: I18n.t(:nav, :close)
+      }
+        %nav.mobile-nav{ "aria-label" => I18n.t(:nav, :label) }
+          = LINKS.map do |link|
+            %a{ href: link[:href] }= I18n.t(*link[:label])
+          %a.github-link(href=HOMEPAGE target="_blank" rel="noreferrer") GitHub
+        %Button(href="/docs/getting-started")= I18n.t(:nav, :get_started)
+
 %main
   = $children
-%footer
+
+%footer.site-footer
   .footer-inner
-    .footer-copy
-      %strong Klenod
-      %span= I18n.t(:footer, :summary)
-    .footer-links
-      %a{ href: Homepage, target: "_blank", rel: "noreferrer" } GitHub
+    %a.wordmark(href="/" aria-label="Klenod")
+      %span klenod
+      %span.accent> .
+    %nav{ "aria-label" => I18n.t(:footer, :label) }
+      %a(href="/docs")= I18n.t(:nav, :docs)
+      %a(href="/docs/plugins")= I18n.t(:nav, :plugins)
+      %a.github-link(href=HOMEPAGE target="_blank" rel="noreferrer") GitHub
+    %a.license(href=LICENSE target="_blank" rel="noreferrer")= I18n.t(:footer, :license)

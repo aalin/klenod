@@ -11,13 +11,16 @@ article {
 p:first-child {
   margin: 0;
   color: var(--color-muted);
-  font-size: var(--font-size-small);
-  font-weight: 850;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 strong {
   display: block;
+  font-family: var(--font-display);
   font-size: clamp(2rem, 4vw, 3.4rem);
   line-height: 1;
 }

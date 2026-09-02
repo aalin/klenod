@@ -491,11 +491,13 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "<body")
     assert_includes(html, "<main")
     assert_includes(html, "Build Ruby modules like a modern frontend graph")
-    assert_includes(html, "Ruby imports build the graph")
-    assert_includes(html, "Reload as files change")
-    assert_includes(html, "Ship the bundle, not the build")
-    assert_includes(html, "Card = import(&quot;./Card.haml&quot;)")
+    assert_includes(html, "Imports define the graph")
+    assert_includes(html, "Development stays live")
+    assert_includes(html, "Build dependencies stay behind")
+    assert_includes(html, "./Card.haml")
     assert_includes(html, "Get started")
+    assert_includes(html, "components/Button.secondary")
+    assert_includes(navigation_html(html), "href=\"/docs/plugins\"")
     assert_includes(navigation_html(html), "href=\"/demo\"")
     assert_includes(html, "/assets/routes_layout_css")
     assert_includes(html, "/assets/routes_page_css")
@@ -504,7 +506,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_stylesheet_paths_unique(paths)
     paths.each { |path| assert_includes(head_html(html), path) }
     assert_linked_stylesheets_do_not_import_linked_stylesheets(context, paths)
-    assert_stylesheet_order(paths, "root_css", "routes_layout_css", "routes_page_css", "components_Button_css")
+    assert_stylesheet_order(paths, "root_css", "routes_layout_css", "components_Button_css", "routes_page_css")
     refute(paths.any? { |path| path.include?("routes_demo_dashboard") })
     refute(paths.any? { |path| path.include?("routes_demo_assets") })
   end
@@ -833,7 +835,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(200, status)
     assert_includes(html, "Bygg Ruby-moduler som en modern frontendgraf")
-    assert_includes(html, "Ruby-importer bygger grafen")
+    assert_includes(html, "Importer definierar grafen")
     assert_includes(html, 'href="/sv/dokumentation/kom-igang"')
 
     status, _headers, body = entry.call(request("/sv/demo"), context)
@@ -1377,6 +1379,25 @@ class Klenod::ExampleTest < Minitest::Test
     refute_includes(markdown, "<!doctype html>")
     refute_includes(markdown, "Documentation\nOverview")
     refute_includes(markdown, "ThemeSwitcher")
+  end
+
+  def test_example_app_renders_homepage_as_markdown
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+    headers = HeaderList.new([["Accept", "text/markdown"]])
+
+    status, response_headers, body = entry.call(HeaderRequest["GET", "/", headers], context)
+    markdown = body.join
+
+    assert_equal(200, status)
+    assert_equal("text/markdown; charset=utf-8", response_headers.fetch("content-type"))
+    assert_includes(markdown, "# Build Ruby modules like a modern frontend graph.")
+    assert_includes(markdown, "```ruby")
+    assert_includes(markdown, 'Card = import("./Card.haml")')
+    assert_includes(markdown, "## Imports define the graph")
+    assert_includes(markdown, "## Build your first graph.")
+    refute_includes(markdown, "MIT License")
   end
 
   def test_example_app_can_render_html_after_markdown

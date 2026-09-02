@@ -2,7 +2,12 @@
 label = "Primary"
 overview = "Overview"
 docs = "Docs"
+plugins = "Plugins"
 demo = "Demo"
+get_started = "Get started →"
+menu = "menu"
+close = "close"
 
 [footer]
-summary = "An experimental Ruby module bundler and web framework playground."
+label = "Footer"
+license = "MIT License"
