@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG KLENOD_VERSION="0.0.2"
+ARG KLENOD_VERSION="0.0.3"
 
 FROM ruby:4.0.6-slim AS build
 
