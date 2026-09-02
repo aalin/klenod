@@ -25,6 +25,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "klenod-build", "= #{version}"
-  spec.add_dependency "klenod-rack", "= #{version}"
   spec.add_dependency "klenod-runtime", "= #{version}"
 end

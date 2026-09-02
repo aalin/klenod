@@ -8,5 +8,4 @@ end
 
 require "klenod/runtime"
 require "klenod/build"
-require "klenod/rack"
 require "klenod/build/watcher"

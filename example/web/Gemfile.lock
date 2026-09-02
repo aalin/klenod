@@ -49,7 +49,6 @@ PATH
   specs:
     klenod (0.0.3)
       klenod-build (= 0.0.3)
-      klenod-rack (= 0.0.3)
       klenod-runtime (= 0.0.3)
 
 GEM

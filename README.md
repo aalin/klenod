@@ -13,7 +13,7 @@ The project is still early in development. Contributions are welcome.
 
 The repository contains six gems:
 
-- [`klenod`](gems/klenod): provides a compatibility gem that depends on `klenod-build`.
+- [`klenod`](gems/klenod): provides the build and runtime packages together.
 - [`klenod-runtime`](gems/klenod-runtime): loads bundles, evaluates modules, reads source maps, and rewrites backtraces.
 - [`klenod-build`](gems/klenod-build): builds graphs, runs plugins, watches files, writes bundles, and provides the CLI.
 - [`klenod-rack`](gems/klenod-rack): provides Rack helpers for serving bundled assets.
