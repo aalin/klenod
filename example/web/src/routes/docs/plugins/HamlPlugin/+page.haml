@@ -7,12 +7,12 @@
   %PageHeader{
     kicker: "Plugin Reference",
     title: "HamlPlugin",
-    summary: "HamlPlugin turns `.haml` files into Ruby component classes with imports, source maps, companion styles, and optional translations."
+    summary: "HamlPlugin turns `.haml` files into components for your rendering framework."
   }
 
-  %DocsSection{ title: "Component Output" }
+  %DocsSection{ title: "Configuration" }
     :markdown
-      A Haml module exports a component class as `Default`. The generated class inherits from the configured component base class and renders through the configured factory.
+      Configure the component class, element factory, children, variables, and translations:
 
       ```ruby
       Klenod::Build::Plugins::HamlPlugin.new(
@@ -21,53 +21,50 @@
         component_children: :lazy,
         variables: {
           global: "@__props",
-          class: "Example::Context.current"
+          class: "Example::Context.current",
+          instance: "@__state"
         },
-        i18n_class: "Example::Translator"
+        i18n_class: "Example::Translator",
+        i18n_constant: "I18n",
+        cache_static_subtrees: false
       )
       ```
 
-      Imported component constants can be used directly as Haml tags. `%Button` compiles to a factory call using the imported component class as the tag. Imported TSX custom element descriptors from `JavaScriptPlugin` can also be used as tags, letting Haml render browser custom elements without repeating their generated tag names.
-
-  %DocsSection{ title: "Configured Variables" }
+  %DocsSection{ title: "Options" }
     :markdown
-      `variables` optionally maps Ruby variable kinds to framework-owned receiver expressions. Each configured variable becomes indexed access on its receiver.
+      - `component_base_class` sets the superclass of each generated component.
+      - `factory` receives every HTML tag and component call.
+      - `component_children` controls how component children are passed. Use `:eager` for positional arguments or `:lazy` for a block.
+      - `variables` maps Haml variables to framework-owned objects. It accepts `global`, `class`, and `instance`.
+      - `i18n_class` creates a translation helper for each component.
+      - `i18n_constant` names that helper constant. It requires `i18n_class`.
+      - `cache_static_subtrees` reuses frozen element trees that contain no dynamic values. This is an experimental optimization.
+
+  %DocsSection{ title: "Variables" }
+    :markdown
+      Each variable becomes indexed access on its configured receiver:
 
       ```haml
       %h1= $title
-      = if @@request.representation?(:html)
-        %p= $summary
+      %p= @@request.path
+      %button= @count
       ```
 
-      With the configuration above, these read `(@__props)[:title]`, `(Example::Context.current)[:request]`, and `(@__props)[:summary]`. The example framework sets `@__props` before component initialization and installs request context around rendering.
+      With the configuration above, these read `(@__props)[:title]`, `(Example::Context.current)[:request]`, and `(@__state)[:count]`.
 
-      The available keys are `global`, `class`, and `instance`, corresponding to `$name`, `@@name`, and `@name`. Unconfigured kinds retain their normal Ruby behavior. Built-in globals such as `$!`, `$1`, and `$LOAD_PATH`, along with underscore-prefixed framework variables such as `@__state`, are preserved.
+      The mappings also apply to assignments. For an indexed state store, reassign mutable values to trigger its assignment method. Use `@items = [*@items, item]` instead of `@items << item`.
 
-  %DocsSection{ title: "State Stores" }
+      Unconfigured variable kinds keep their normal Ruby behavior. Ruby special globals and underscore-prefixed instance variables are never remapped.
+
+  %DocsSection{ title: "Component Children" }
     :markdown
-      Frameworks can map instance variables to a state object without making Klenod responsible for state behavior:
-
-      ```ruby
-      variables: {
-        instance: "@__state"
-      }
-      ```
-
-      `@count`, `@count = 1`, and `@count += 1` then operate on `(@__state)[:count]`. The state object decides whether an assignment changed, how to schedule updates, and how state is serialized.
-
-      Mutable values must be reassigned to notify an indexed state store. Use `@items = [*@items, item]` instead of `@items << item`; the latter mutates the returned array without invoking the store's assignment method.
-
-  %DocsSection{ title: "Eager And Lazy Component Children" }
-    :markdown
-      `component_children` controls when component child expressions are evaluated. The default, `:eager`, builds the children before calling the component factory and passes them as positional arguments:
+      Eager children are positional factory arguments:
 
       ```ruby
       Example::H[Card, Example::H[:p, "Body"], title: "Hello"]
       ```
 
-      Choose eager children for straightforward renderers where components always consume their children immediately. The factory contract stays simple, and evaluation order follows an ordinary Ruby method call.
-
-      Set `component_children: :lazy` to pass a child-producing block instead:
+      Lazy children are passed as a block:
 
       ```ruby
       Example::H[Card, title: "Hello"] do
@@ -75,47 +72,44 @@
       end
       ```
 
-      Choose lazy children when a component needs to decide whether or when to build them. This is useful for conditional children, named slots, context providers that must install values before rendering descendants, and components that can avoid constructing unused child trees. A lazy factory should normally memoize the block result so reading children or slots more than once does not evaluate them repeatedly. The example renderer uses this mode for its context and slot features.
+      Lazy children let components defer work, provide context, or collect slots. The factory should memoize the block if it may read the children more than once.
 
-  %DocsSection{ title: "Ruby Blocks And Filters" }
+  %DocsSection{ title: "Components, Ruby, And Filters" }
     :markdown
-      Top-level `:ruby` defines imports, constants, and methods on the generated component class. Later Ruby script blocks compile into the render method, where request-local helpers from the application framework are available.
+      Imported constants can be used as tags. For example, `%Button` passes the imported `Button` class to the factory. Custom elements imported through `JavaScriptPlugin` work the same way.
+
+      Top-level `:ruby` defines imports, constants, and methods. Other Ruby blocks run while the component renders.
 
       `=` prints a value, `-` runs code silently, and printed Ruby blocks such as `= if condition` render their Haml body.
 
-      Haml `:markdown` filters are delegated to `MarkdownPlugin`. Haml `:css` filters become inline CSS sources collected from the template.
+      `:markdown` filters use `MarkdownPlugin`. `:css` filters add inline styles to the module graph.
 
   %DocsSection{ title: "Companions" }
     :markdown
-      Haml automatically watches and imports matching CSS companions as `ClassNames`. The companion CSS uses the normal Ruby/Haml CSS path, so class and tag selectors are scoped through `CSSPlugin`.
+      A matching `.css` file adds scoped class and tag names through `CSSPlugin`:
 
       ```text
       components/Card.haml
       components/Card.css
-
-      routes/docs/+page.haml
-      routes/docs/+page.css
       ```
 
-      Translation companions use `IntlPlugin`. Haml can run without `IntlPlugin`; in that case the generated component receives an empty translation map.
+      Matching translation files are loaded through `IntlPlugin`:
 
       ```text
       components/Card.intl.en.toml
       components/Card.intl.sv.toml
       ```
 
-      `i18n_class` is optional. When configured, every generated component gets an `I18n` constant initialized with the component class:
+      With `i18n_class`, the plugin creates the configured helper constant:
 
       ```ruby
       I18n = Example::Translator.new(self)
       ```
 
-      The example translator exposes `I18n.t(...)` and `I18n.lang` directly on that component-local helper. Missing-key warning history also belongs to the helper, so the component base class does not need separate translation methods or shared warning state.
-
-      `i18n_constant` can override the constant name. If omitted, it defaults to `I18n`.
+      The example translator provides `I18n.t(...)` and `I18n.lang`. Haml also works without `IntlPlugin` or a translation helper.
 
   %DocsSection{ title: "Errors" }
     :markdown
-      Generated Ruby includes source map marks. Runtime backtraces can be rewritten to original Haml files and parse errors show Haml source context without requiring users to inspect generated Ruby. CSS companions and inline CSS filters keep their own source maps, so stylesheet errors and browser source maps point back to the original source where possible.
+      Source maps point runtime errors back to Haml. Parse errors include the original source. Companion and inline CSS keep their own source maps.
 
 %title= "HamlPlugin"
