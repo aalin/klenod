@@ -60,7 +60,7 @@
           %summary= section.label
           = section.links.map do |link|
             %a{
-              href: @@routes.localized_path(link.href),
+              href: link.href,
               "aria-current" => (current_path == link.href) ? "page" : nil
             }= link.label
   .content
