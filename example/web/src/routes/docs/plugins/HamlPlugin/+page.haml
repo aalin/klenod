@@ -55,7 +55,7 @@
 
       The mappings also apply to assignments. For an indexed state store, reassign mutable values to trigger its assignment method. Use `@items = [*@items, item]` instead of `@items << item`.
 
-      Unconfigured variable kinds keep their normal Ruby behavior. Ruby special globals and underscore-prefixed instance variables are never remapped.
+      Unconfigured variable kinds keep their normal Ruby behavior. Special globals such as `$!`, `$1`, and `$LOAD_PATH` are never remapped. Neither are underscore-prefixed instance variables such as `@__state`.
 
   %DocsSection{ title: "Component Children" }
     :markdown
