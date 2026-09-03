@@ -143,6 +143,10 @@ bundle exec klenod graph dist/klenod.bundle > graph.dot
 dot -Tsvg graph.dot > graph.svg
 ```
 
+The graph hides Klenod's internal virtual modules by default. Pass
+`--internal-virtual-modules` to include them. Application-facing virtual modules,
+such as an imported router module, remain visible.
+
 ## Entry Handles
 
 Frameworks usually keep an entry handle:

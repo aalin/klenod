@@ -229,6 +229,50 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
     end
   end
 
+  def test_graph_command_can_include_internal_virtual_modules
+    Dir.mktmpdir do |dir|
+      output = "#{dir}/klenod.bundle"
+      runtime_id = "virtual:/klenod/jsx-runtime.js"
+      bundle =
+        Klenod::Runtime::Bundle.new(
+          {"entry" => "entry.rb"},
+          {
+            "entry.rb" => Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              "",
+              {"runtime" => Klenod::Runtime::ImportSpec.new(runtime_id, nil, true)},
+              nil,
+              0,
+              nil
+            ),
+            runtime_id => Klenod::Runtime::ModuleSpec.new(
+              runtime_id,
+              "virtual:klenod/jsx-runtime.js",
+              "",
+              {},
+              nil,
+              0,
+              nil
+            )
+          },
+          {}
+        )
+      File.binwrite(output, Klenod::Runtime::BundleFormat.dump(bundle))
+
+      stdout = StringIO.new
+      command =
+        Klenod::Build::CLI::Application.new(
+          ["graph", "--internal-virtual-modules", output],
+          output: stdout
+        )
+
+      command.call
+
+      assert_includes(stdout.string, "label=\"virtual:klenod/jsx-runtime.js\\nvirtual\"")
+    end
+  end
+
   def test_version_option_prints_version
     stdout = StringIO.new
     command = Klenod::Build::CLI::Application.new(["--version"], output: stdout)

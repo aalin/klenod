@@ -68,13 +68,19 @@ module Klenod
 
         options do
           option "--no-assets", "Hide generated asset nodes and edges."
+          option "--internal-virtual-modules", "Include Klenod's internal virtual modules."
         end
 
         one :bundle_path, "Path to a Klenod runtime bundle.", required: true
 
         def call
           bundle = Klenod::Runtime.load_bundle(@bundle_path)
-          dot = Klenod::Build::Graphviz.call(bundle, include_assets: !@options[:no_assets])
+          dot =
+            Klenod::Build::Graphviz.call(
+              bundle,
+              include_assets: !@options[:no_assets],
+              include_internal_virtual_modules: @options[:internal_virtual_modules]
+            )
           output.write(dot)
           dot
         end

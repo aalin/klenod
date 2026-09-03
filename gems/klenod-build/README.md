@@ -27,3 +27,6 @@ The CLI can also generate a [Graphviz](https://graphviz.org/) DOT-file from a ge
 ```sh
 bundle exec klenod graph dist/klenod.bundle > graph.dot
 ```
+
+Klenod's internal virtual modules are hidden by default. Pass
+`--internal-virtual-modules` to include them in the graph.

@@ -45,6 +45,29 @@ class Klenod::Build::Graphviz::Test < Minitest::Test
     refute_includes(dot, "label=\"asset\"")
   end
 
+  def test_hides_internal_virtual_modules_by_default
+    bundle, runtime_asset = internal_virtual_bundle
+
+    dot = Klenod::Build::Graphviz.call(bundle)
+
+    assert_includes(dot, "label=\"virtual:router.rb\\nvirtual\"")
+    assert_includes(dot, "#{node_id("entry.rb")} -> #{node_id("virtual:/router.rb")}")
+    refute_includes(dot, "label=\"virtual:klenod/jsx-runtime.js\\nvirtual\"")
+    refute_includes(dot, "#{node_id("entry.rb")} -> #{node_id("virtual:/klenod/jsx-runtime.js")}")
+    assert_includes(dot, "#{node_id("entry.rb")} -> #{asset_node_id(runtime_asset)}")
+  end
+
+  def test_can_include_internal_virtual_modules
+    bundle, runtime_asset = internal_virtual_bundle
+
+    dot = Klenod::Build::Graphviz.call(bundle, include_internal_virtual_modules: true)
+
+    assert_includes(dot, "label=\"virtual:klenod/jsx-runtime.js\\nvirtual\"")
+    assert_includes(dot, "#{node_id("entry.rb")} -> #{node_id("virtual:/klenod/jsx-runtime.js")}")
+    assert_includes(dot, "#{node_id("virtual:/klenod/jsx-runtime.js")} -> #{asset_node_id(runtime_asset)}")
+    refute_includes(dot, "#{node_id("entry.rb")} -> #{asset_node_id(runtime_asset)}")
+  end
+
   def test_relativizes_absolute_source_paths_under_source_root
     modules = {
       "entry.rb" => Klenod::Runtime::ModuleSpec.new(
@@ -268,5 +291,55 @@ class Klenod::Build::Graphviz::Test < Minitest::Test
       )
     }
     Klenod::Runtime::Bundle.new({"entry" => "entry.rb"}, modules, assets, source_root: "/app/src")
+  end
+
+  def internal_virtual_bundle
+    runtime_id = "virtual:/klenod/jsx-runtime.js"
+    modules = {
+      "entry.rb" => Klenod::Runtime::ModuleSpec.new(
+        "entry.rb",
+        "entry.rb",
+        "",
+        {
+          "router" => Klenod::Runtime::ImportSpec.new("virtual:/router.rb", nil, true),
+          "jsx_runtime" => Klenod::Runtime::ImportSpec.new(runtime_id, nil, true)
+        },
+        nil,
+        0,
+        nil
+      ),
+      "virtual:/router.rb" => Klenod::Runtime::ModuleSpec.new(
+        "virtual:/router.rb",
+        "virtual:router.rb",
+        "",
+        {},
+        nil,
+        0,
+        nil
+      ),
+      runtime_id => Klenod::Runtime::ModuleSpec.new(
+        runtime_id,
+        "virtual:klenod/jsx-runtime.js",
+        "",
+        {},
+        nil,
+        0,
+        nil
+      )
+    }
+    runtime_asset = Klenod::Runtime::AssetSpec.new(
+      runtime_id,
+      "abc123",
+      "/assets/klenod_jsx-runtime.abc123.js",
+      "text/javascript",
+      {type: :javascript}
+    )
+    bundle = Klenod::Runtime::Bundle.new(
+      {"entry" => "entry.rb"},
+      modules,
+      {runtime_asset.output_path => runtime_asset}
+    )
+
+    [bundle, runtime_asset]
   end
 end

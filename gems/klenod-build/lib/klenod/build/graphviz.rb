@@ -19,13 +19,18 @@ module Klenod
       ASSET_STYLE = {fillcolor: "#ffe4d6", color: "#e26d39"}.freeze
       DEFAULT_MODULE_STYLE = {fillcolor: "#f7f7f7", color: "#8a8a8a"}.freeze
 
-      def self.call(bundle, include_assets: true)
-        new(bundle, include_assets: include_assets).to_dot
+      def self.call(bundle, include_assets: true, include_internal_virtual_modules: false)
+        new(
+          bundle,
+          include_assets: include_assets,
+          include_internal_virtual_modules: include_internal_virtual_modules
+        ).to_dot
       end
 
-      def initialize(bundle, include_assets: true)
+      def initialize(bundle, include_assets: true, include_internal_virtual_modules: false)
         @bundle = bundle
         @include_assets = include_assets
+        @include_internal_virtual_modules = include_internal_virtual_modules
       end
 
       def to_dot
@@ -46,8 +51,15 @@ module Klenod
 
       private
 
+      def all_module_ids
+        @all_module_ids ||= @bundle.modules.keys.sort
+      end
+
       def module_ids
-        @bundle.modules.keys.sort
+        @module_ids ||=
+          all_module_ids.reject do |id|
+            internal_virtual_module?(id) && !entrypoint?(id) && !@include_internal_virtual_modules
+          end
       end
 
       def module_node(id)
@@ -75,7 +87,7 @@ module Klenod
         module_ids.flat_map do |id|
           @bundle.modules.fetch(id).imports.values.map do |import|
             import = import_spec(import)
-            next unless @bundle.modules.key?(import.target_id)
+            next unless visible_module?(import.target_id)
 
             attributes = {
               id: svg_edge_id(id, import.target_id),
@@ -107,9 +119,38 @@ module Klenod
 
       def asset_owners(asset)
         module_id = module_id_for_asset(asset.logical_name)
-        return [[:module, module_id]] if module_id
+        return visible_module_owners(module_id) if module_id
 
         [google_fonts_css_asset_owner(asset), *asset_metadata_owners(asset)].compact
+      end
+
+      def visible_module_owners(module_id)
+        pending = [module_id]
+        seen = Set.new
+        owners = []
+
+        until pending.empty?
+          current_id = pending.shift
+          next unless seen.add?(current_id)
+
+          if visible_module?(current_id)
+            owners << [:module, current_id]
+          else
+            pending.concat(module_importers.fetch(current_id, []))
+          end
+        end
+
+        owners
+      end
+
+      def module_importers
+        @module_importers ||=
+          all_module_ids.each_with_object(Hash.new { |index, id| index[id] = [] }) do |id, index|
+            @bundle.modules.fetch(id).imports.each_value do |import|
+              target_id = import_spec(import).target_id
+              index[target_id] << id if @bundle.modules.key?(target_id)
+            end
+          end
       end
 
       def module_id_for_asset(logical_name)
@@ -120,7 +161,7 @@ module Klenod
 
       def module_ids_by_source_path
         @module_ids_by_source_path ||=
-          module_ids.each_with_object({}) do |id, index|
+          all_module_ids.each_with_object({}) do |id, index|
             source_path = @bundle.modules.fetch(id).source_path
             next unless source_path
 
@@ -155,7 +196,7 @@ module Klenod
 
       def query_module_ids_by_path
         @query_module_ids_by_path ||=
-          module_ids.each_with_object({}) do |id, index|
+          all_module_ids.each_with_object({}) do |id, index|
             path, query = id.split("?", 2)
             next unless query
 
@@ -237,6 +278,15 @@ module Klenod
 
       def edge_classes(import)
         ["edge", import.eager ? "edge-import" : "edge-import edge-lazy"].join(" ")
+      end
+
+      def internal_virtual_module?(id)
+        id.start_with?("virtual:/klenod/", "virtual:klenod/")
+      end
+
+      def visible_module?(id)
+        @visible_module_ids ||= module_ids.to_set
+        @visible_module_ids.include?(id)
       end
 
       def entrypoint?(id)

@@ -37,6 +37,8 @@
       dot -Tsvg graph.dot > graph.svg
       ```
 
+      Klenod's internal virtual modules are hidden by default. Use `--internal-virtual-modules` to show them. Application-facing virtual modules, such as the imported router, remain visible.
+
   %DocsSection{ title: "Runtime Loading" }
     :markdown
       Runtime bundles contain entrypoint mappings, module specs, import specs, runtime import values, asset specs, source maps, and source-root metadata. Runtime loading evaluates modules lazily.
