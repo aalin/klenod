@@ -6,6 +6,8 @@ module Example
   module HTMLRenderer
     VOID_TAGS = %i[area base br col embed hr img input link meta param source track wbr].to_set.freeze
     HTML_ESCAPE_PATTERN = /[&"<>]/
+    SCOPED_CLASS_NAME = /\A.+\.(?<name>[^.?]+)\?[^?]+\z/
+    SCOPED_TAG_NAME = /\A.+_[^?]+\?[^?]+\z/
 
     class PreparedDocument
       include ResponseBody
@@ -51,8 +53,9 @@ module Example
     end
 
     class DocumentPreparer
-      def initialize
+      def initialize(class_names: nil)
         @tokens = []
+        @class_names = class_names
       end
 
       def prepare(value)
@@ -93,11 +96,11 @@ module Example
         tag = element.tag.to_s
         props = element.props
         props = H.localize_anchor_props(props.dup) if !svg && element.tag == :a
-        attributes = HTMLRenderer.rendered_attributes(props)
+        attributes = HTMLRenderer.rendered_attributes(props, class_names: @class_names)
 
         if !svg && element.tag == :title
           title = "<#{tag}#{attributes}>"
-          element.children.each { HTMLRenderer.append_rendered(title, it) }
+          element.children.each { HTMLRenderer.append_rendered(title, it, class_names: @class_names) }
           title << "</#{tag}>"
           @title = title.freeze
           unless @title_outlet
@@ -128,22 +131,22 @@ module Example
 
     module_function
 
-    def render(value)
+    def render(value, class_names: nil)
       output = +""
-      append_rendered(output, value)
+      append_rendered(output, value, class_names: class_names)
       output
     end
 
-    def render_document(value)
-      DocumentPreparer.new.prepare(value)
+    def render_document(value, class_names: nil)
+      DocumentPreparer.new(class_names: class_names).prepare(value)
     end
 
-    def append_rendered(output, value)
+    def append_rendered(output, value, class_names: nil)
       case value
       when nil, false
         nil
       when H::Element
-        append_element(output, value)
+        append_element(output, value, class_names: class_names)
       when H::Text
         output << escape_html(value.value)
       when H::Comment
@@ -151,37 +154,38 @@ module Example
         output << value.value.to_s.gsub("--", "- -")
         output << "-->"
       when H::Fragment
-        value.children.each { |child| append_rendered(output, child) }
+        value.children.each { |child| append_rendered(output, child, class_names: class_names) }
       when H::ContextBoundary
         Context.with(**value.values) do
-          value.children.each { |child| append_rendered(output, child) }
+          value.children.each { |child| append_rendered(output, child, class_names: class_names) }
         end
       when H::Children
-        value.each { |child| append_rendered(output, child) }
+        value.each { |child| append_rendered(output, child, class_names: class_names) }
       when Array
-        value.each { |child| append_rendered(output, child) }
+        value.each { |child| append_rendered(output, child, class_names: class_names) }
       else
         output << escape_html(value)
       end
     end
 
-    def append_element(output, element)
+    def append_element(output, element, class_names: nil)
       props = element.props
       props = H.localize_anchor_props(props.dup) if element.tag == :a
-      attributes = rendered_attributes(props)
+      attributes = rendered_attributes(props, class_names: class_names)
 
       output << "<#{element.tag}#{attributes}>"
       return if VOID_TAGS.include?(element.tag)
 
-      element.children.each { |child| append_rendered(output, child) }
+      element.children.each { |child| append_rendered(output, child, class_names: class_names) }
       output << "</#{element.tag}>"
     end
 
-    def rendered_attributes(props)
+    def rendered_attributes(props, class_names: nil)
       return "" if props.empty?
 
       output = +""
       props.each do |name, value|
+        value = authored_class_names(value) if class_names == :authored && name.to_sym == :class
         next if value.nil? || value == false
 
         output << " "
@@ -193,6 +197,18 @@ module Example
         output << '"'
       end
       output
+    end
+
+    def authored_class_names(value)
+      names = value.to_s.split.filter_map do |class_name|
+        match = class_name.match(SCOPED_CLASS_NAME)
+        next match[:name] if match
+        next if class_name.match?(SCOPED_TAG_NAME)
+
+        class_name
+      end
+      names.uniq!
+      names.join(" ") unless names.empty?
     end
 
     def attribute_value(name, value)

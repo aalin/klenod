@@ -9,7 +9,8 @@ def test_renders_english_as_the_current_language
   english = language_link(html, "en")
   swedish = language_link(html, "sv")
 
-  assert_includes(html, ">EN</span>")
+  assert_includes(html, %(<span class="code">EN</span>))
+  refute_includes(html, "components/")
   assert_includes(english, %(href="/docs/assets"))
   assert_includes(english, %(aria-current="true"))
   assert_includes(swedish, %(href="/sv/dokumentation/tillgangar"))
@@ -21,7 +22,7 @@ def test_renders_swedish_as_the_current_language
   english = language_link(html, "en")
   swedish = language_link(html, "sv")
 
-  assert_includes(html, ">SV</span>")
+  assert_includes(html, %(<span class="code">SV</span>))
   assert_includes(english, %(href="/docs/assets"))
   refute_includes(english, "aria-current")
   assert_includes(swedish, %(href="/sv/dokumentation/tillgangar"))

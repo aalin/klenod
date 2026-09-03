@@ -43,6 +43,6 @@
 
   %DocsSection{ title: "Framework Helpers" }
     :markdown
-      Klenod does not choose a test library or rendering API. The example framework supplies `render`, which renders a component to an HTML string, and `with_context`, which installs scoped rendering context for a test. A DOM query API can be layered over the returned HTML later.
+      Klenod does not choose a test library or rendering API. The example framework supplies `render`, which renders a component to an HTML string, and `with_context`, which installs scoped rendering context for a test. Test rendering keeps authored class names and omits the generated classes used to scope tag selectors, making selectors stable across CSS changes. A DOM query API can be layered over the returned HTML later.
 
 %title= "Testing"

@@ -71,6 +71,17 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(Example::H.render(node), Example::HTMLRenderer.render(node))
   end
 
+  def test_example_h_uses_authored_class_names_for_test_rendering
+    node =
+      Example::H[:section,
+        Example::H[:h1, "Title", class: "components/PageHeader_h1?PwrM9_M3"],
+        Example::H[:p, "Summary", class: "components/PageHeader.summary?PwrM9_M3 literal"]]
+
+    html = Example::H.render(node, class_names: :authored)
+
+    assert_equal(%(<section><h1>Title</h1><p class="summary literal">Summary</p></section>), html)
+  end
+
   def test_example_document_renderer_captures_the_last_title_within_context
     producer_calls = 0
     component_calls = 0

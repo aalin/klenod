@@ -133,12 +133,12 @@ module Example
       ContextBoundary.new(values, &producer)
     end
 
-    def self.render(value)
-      HTMLRenderer.render(value)
+    def self.render(value, **options)
+      HTMLRenderer.render(value, **options)
     end
 
-    def self.render_document(value)
-      HTMLRenderer.render_document(value)
+    def self.render_document(value, **options)
+      HTMLRenderer.render_document(value, **options)
     end
 
     def self.text_content(value)
