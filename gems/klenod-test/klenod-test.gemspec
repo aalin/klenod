@@ -26,4 +26,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "klenod-build", "= #{version}"
+  spec.add_dependency "async-process", "~> 1.4"
 end

@@ -24,17 +24,12 @@ class Klenod::Test::Runner::Test < Minitest::Test
 
     def spawn(*arguments)
       calls << arguments
-      calls.length
-    end
-
-    def wait2(pid)
-      [pid, Status.new(@status)]
+      Status.new(@status)
     end
   end
 
   class InspectableRunner < Klenod::Test::Runner
-    def initialize(*arguments, process: FakeProcess.new, watcher: nil, wait: nil, **options)
-      @process = process
+    def initialize(*arguments, watcher: nil, wait: nil, **options)
       @watcher = watcher
       @wait = wait
       super(*arguments, **options)
@@ -42,13 +37,7 @@ class Klenod::Test::Runner::Test < Minitest::Test
 
     private
 
-    attr_reader :process, :watcher, :wait
-
-    def worker_status(test_paths)
-      pid = process.spawn(*worker_command, WORKER_ARGUMENT, "--", *test_paths)
-      _pid, status = process.wait2(pid)
-      status.success? ? 0 : (status.exitstatus || 1)
-    end
+    attr_reader :watcher, :wait
 
     def build_watcher(context)
       watcher || super
@@ -201,16 +190,17 @@ class Klenod::Test::Runner::Test < Minitest::Test
     assert_includes(spec.files, "lib/klenod/test/config.rb")
     assert_includes(spec.files, "lib/klenod/test/cli.rb")
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })
-    assert_equal(["klenod-build"], spec.runtime_dependencies.map(&:name))
+    assert_equal(["async-process", "klenod-build"], spec.runtime_dependencies.map(&:name).sort)
   end
 
   private
 
-  def runner(context: -> { raise "unused" }, execute: ->(*) { 0 }, **options)
+  def runner(context: -> { raise "unused" }, execute: ->(*) { 0 }, process: FakeProcess.new, **options)
     InspectableRunner.new(
       context:,
       execute:,
       worker_command: [RbConfig.ruby, "/app/test"],
+      process:,
       output: StringIO.new,
       error_output: StringIO.new,
       env: {"NO_COLOR" => "1"},

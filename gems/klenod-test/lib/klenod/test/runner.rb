@@ -2,6 +2,7 @@
 
 require "rbconfig"
 
+require "async/process"
 require "klenod/build"
 
 module Klenod
@@ -15,6 +16,7 @@ module Klenod
         watch: nil,
         worker_paths: nil,
         worker_command: [RbConfig.ruby, $PROGRAM_NAME],
+        process: Async::Process,
         output: $stdout,
         error_output: $stderr,
         env: ENV,
@@ -25,6 +27,7 @@ module Klenod
         @watch = watch.nil? ? !env.key?("CI") : watch
         @worker_paths = worker_paths&.dup
         @worker_command = Array(worker_command)
+        @process = process
         @output = output
         @error_output = error_output
         @env = env
@@ -51,7 +54,7 @@ module Klenod
       private
 
       attr_reader :context_factory, :execute, :watch, :worker_paths, :worker_command,
-        :output, :error_output, :env, :format_error, :last_status
+        :process, :output, :error_output, :env, :format_error, :last_status
 
       def run_watch(context, suite, selection)
         watcher = build_watcher(context)
@@ -85,8 +88,7 @@ module Klenod
       end
 
       def worker_status(test_paths)
-        pid = Process.spawn(*worker_command, WORKER_ARGUMENT, "--", *test_paths)
-        _pid, status = Process.wait2(pid)
+        status = process.spawn(*worker_command, WORKER_ARGUMENT, "--", *test_paths)
         status.success? ? 0 : (status.exitstatus || 1)
       end
 

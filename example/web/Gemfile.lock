@@ -48,6 +48,7 @@ PATH
   remote: ../../gems/klenod-test
   specs:
     klenod-test (0.0.4)
+      async-process (~> 1.4)
       klenod-build (= 0.0.4)
 
 PATH
@@ -80,6 +81,8 @@ GEM
       traces (~> 0.10)
     async-pool (0.11.2)
       async (>= 2.0)
+    async-process (1.4.0)
+      async (~> 2.0)
     bake (0.25.0)
       bigdecimal
       samovar (~> 2.1)
@@ -218,6 +221,7 @@ CHECKSUMS
   async (2.42.0) sha256=536078293b8c95d5b5679fa01bf7d2458bcc65cd46dec2c4cb3580feaeb965c6
   async-http (0.95.1) sha256=0c3dd458c204c06d5c4b20b01bbec4794a1203db627fb2ce536e1799ec14786c
   async-pool (0.11.2) sha256=0a43a17b02b04d9c451b7d12fafa9a50e55dc6dd00d4369aca00433f16a7e3ed
+  async-process (1.4.0) sha256=859c2901b9047b6b8843e9a21ec7f3c626eb04efdcff66185a05ede99257f590
   bake (0.25.0) sha256=a47bdc6a26addc048827debc36fe27bb4d5d71ac2958ad910b5386e9baf49869
   bigdecimal (4.1.2) sha256=53d217666027eab4280346fba98e7d5b66baaae1b9c3c1c0ffe89d48188a3fbd
   brotli (0.8.0) sha256=0c5a42046b3b603fb109656881147fd76064c034b7d19c1b4fcc32a093a4d55d
