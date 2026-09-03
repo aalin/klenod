@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 def GET(request)
-  Example::Framework::Response.json(
+  Response.json(
     {
       slug: request.params.fetch(:slug),
       path: request.path

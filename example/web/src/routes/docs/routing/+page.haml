@@ -68,6 +68,8 @@
     :markdown
       RouterPlugin does not decide request dispatch or rendering policy. Hybrid directories can contain both a page and `+route.rb`; the router exposes both and the consuming framework decides which one to use for a request.
 
+      The example configures `Example::Framework::Route` as the route-handler base class. It makes `Response` and `localized_path` available directly inside `+route.rb` files.
+
       The example application keeps its document shell in `/root.haml`, separately from filesystem route layouts. `RouterApp` composes the matched page and layouts, discovers their route-scoped assets, and passes the ordered asset references only to the root component. The root Haml template renders `html`, `head`, `body`, stylesheet links, module scripts, and the composed route content.
 
       Route content remains lazy until the document is prepared, so a `provide_context` boundary in the root can wrap route components. Preparation evaluates every component and lazy child once under the active request and rendering contexts. A route can render `%title` to replace the root template's default document title; preparation collects all title declarations before output starts, and the last declaration wins.

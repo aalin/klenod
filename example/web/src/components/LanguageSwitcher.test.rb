@@ -33,7 +33,7 @@ private
 
 def render_language_switcher(path)
   localized = localized_routes.canonicalize_path(path)
-  request = Example::Framework::Request.from(RawRequest.new("GET", path), localized: localized)
+  request = Request.from(RawRequest.new("GET", path), localized: localized)
 
   with_context(request: request, routes: localized_routes) do
     render(LanguageSwitcher)

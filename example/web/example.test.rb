@@ -11,6 +11,7 @@ require "klenod"
 require_relative "lib/framework"
 require_relative "lib/server/app"
 require_relative "lib/server/errors"
+require_relative "lib/testing/minitest_adapter"
 require_relative "lib/web_config"
 
 class Klenod::ExampleTest < Minitest::Test
@@ -80,6 +81,23 @@ class Klenod::ExampleTest < Minitest::Test
     html = Example::Framework::H.render(node, class_names: :authored)
 
     assert_equal(%(<section><h1>Title</h1><p class="summary literal">Summary</p></section>), html)
+  end
+
+  def test_example_minitest_adapter_exposes_framework_constants
+    exports = Module.new do
+      module_eval(<<~RUBY, __FILE__, __LINE__ + 1)
+        def framework_constants
+          [Request, Response]
+        end
+      RUBY
+    end
+
+    test_case = Example::Testing::MinitestAdapter.new.register("components/Example.test.rb", exports)
+
+    assert_equal(
+      [Example::Framework::Request, Example::Framework::Response],
+      test_case.new("test_example").framework_constants
+    )
   end
 
   def test_example_document_renderer_captures_the_last_title_within_context

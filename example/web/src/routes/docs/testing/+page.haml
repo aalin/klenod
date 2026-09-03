@@ -54,6 +54,8 @@
 
       `screen.html` returns the rendered string and `screen.fragment` returns the Nokolexbor document fragment. `within(node)` creates a query scope for that node's descendants.
 
+      Component test methods can use `Request` and `Response` directly. The example Minitest adapter installs `Example::Framework::Request` and `Example::Framework::Response` on each test module without replacing constants declared by the test.
+
       Role, text, and CSS queries provide `get_by_*`, `query_by_*`, `get_all_by_*`, and `query_all_by_*` variants. A singular query raises when it finds multiple nodes. `get` queries also raise when nothing matches, while `query` variants return `nil` or an empty array. Errors show the query, candidates, and rendered HTML. `has_role?`, `has_text?`, and `has_css?` provide small matcher-style predicates.
 
       Prefer roles and accessible names. The role implementation models useful static HTML semantics, including labels and ARIA naming, but it is not a complete browser accessibility tree. It cannot test layout, computed styles, focus, events, or JavaScript behavior. The helpers intentionally provide no fake click or focus API; use browser tests for those behaviors.

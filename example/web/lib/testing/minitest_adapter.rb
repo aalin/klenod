@@ -10,6 +10,10 @@ module Example
   module Testing
     class MinitestAdapter
       def register(path, exports)
+        ComponentTestHelpers::FRAMEWORK_CONSTANTS.each do |name, value|
+          exports.const_set(name, value) unless exports.const_defined?(name, false)
+        end
+
         Class.new(Minitest::Test) do
           include ComponentTestHelpers
           include exports

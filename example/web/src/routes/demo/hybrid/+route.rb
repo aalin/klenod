@@ -1,5 +1,5 @@
 def GET(request)
-  Example::Framework::Response.json(
+  Response.json(
     {
       type: "hybrid",
       path: request.path,
@@ -9,7 +9,7 @@ def GET(request)
 end
 
 def PUT(request)
-  Example::Framework::Response.json(
+  Response.json(
     {
       type: "hybrid",
       path: request.path,
@@ -19,7 +19,7 @@ def PUT(request)
 end
 
 def OPTIONS(request)
-  Example::Framework::Response.json(
+  Response.json(
     {
       type: "hybrid",
       path: request.path,

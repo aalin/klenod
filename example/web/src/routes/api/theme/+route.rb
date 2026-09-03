@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 def PUT(request)
-  response = Example::Framework::Response.redirect(return_to(request))
+  response = Response.redirect(return_to(request))
 
   case request.form.fetch("value", "system")
   when "light", "dark"
