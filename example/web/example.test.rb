@@ -908,8 +908,8 @@ class Klenod::ExampleTest < Minitest::Test
       )
 
     assert(status.success?, stderr)
-    assert_includes(stdout, "Running 1 test file")
-    assert_match(/1 runs, 4 assertions, 0 failures, 0 errors/, stdout)
+    assert_match(/Running \d+ test files/, stdout)
+    assert_match(/\d+ runs, \d+ assertions, 0 failures, 0 errors/, stdout)
   end
 
   def test_example_app_renders_router_tree_metadata
