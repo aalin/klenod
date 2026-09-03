@@ -124,6 +124,11 @@ GEM
     minitest (6.0.6)
       drb (~> 2.0)
       prism (~> 1.5)
+    nokolexbor (0.8.0)
+    nokolexbor (0.8.0-aarch64-linux)
+    nokolexbor (0.8.0-arm64-darwin)
+    nokolexbor (0.8.0-x86_64-darwin)
+    nokolexbor (0.8.0-x86_64-linux)
     observer (0.1.2)
     openssl (4.0.2)
     pkg-config (1.6.5)
@@ -196,6 +201,7 @@ DEPENDENCIES
   klenod-runtime!
   localhost (~> 1.8)
   minitest (~> 6.0)
+  nokolexbor
   rbnacl (~> 7.1)
   rouge (~> 5.0)
   vernier
@@ -243,6 +249,11 @@ CHECKSUMS
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
   metrics (0.15.0) sha256=61ded5bac95118e995b1bc9ed4a5f19bc9814928a312a85b200abbdac9039072
   minitest (6.0.6) sha256=153ea36d1d987a62942382b61075745042a2b3123b1cd48f4c3675af9cc7d6f1
+  nokolexbor (0.8.0) sha256=efaba9f5e1d30f464f4c826cc507a2ca2f754daf99bd4a0261ec22ebfddded32
+  nokolexbor (0.8.0-aarch64-linux) sha256=6c514beeed469f0cf6aec92829f98ae7a17aacb977917ee12f76de1c19fd66fc
+  nokolexbor (0.8.0-arm64-darwin) sha256=bf450ff93f8564325f70988c23bca7ddd2d68b1e34543ed2c7806b994a6ab6d5
+  nokolexbor (0.8.0-x86_64-darwin) sha256=38b04e7bf077b41dfd7cc210deaed39a154ce408f7f4c2b41d2190720db3c135
+  nokolexbor (0.8.0-x86_64-linux) sha256=ee6ab8b313a5748101dd6f726d1d3b240243b99beefe2d2b1e122b5fdf61c04c
   observer (0.1.2) sha256=d8a3107131ba661138d748e7be3dbafc0d82e732fffba9fccb3d7829880950ac
   openssl (4.0.2) sha256=1037ad2868ae58df9ad917891c0c0f9815a1172f6846d4bcdd508e4c2ee747c2
   pkg-config (1.6.5) sha256=33f9f81c5322983d22b439b8b672f27777b406fea23bfec74ff14bbeb42ec733

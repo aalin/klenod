@@ -3,8 +3,10 @@
 Button = import("./Button.haml")
 
 def test_renders_button_children
-  html = render(Button, "Save", type: "submit")
+  screen = render(Button, "Save", type: "submit")
+  button = screen.get_by_role(:button, name: "Save")
 
-  assert_includes(html, %(<button type="submit" class="primary">Save</button>))
-  refute_includes(html, "components/Button")
+  assert_equal("submit", button["type"])
+  assert_equal("primary", button["class"])
+  refute_includes(screen.html, "components/Button")
 end

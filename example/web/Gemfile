@@ -12,6 +12,7 @@ gem "rouge", "~> 5.0"
 
 group :development, :build do
   gem "minitest", "~> 6.0"
+  gem "nokolexbor"
   gem "klenod", path: "../../gems/klenod"
   gem "klenod-build", path: "../../gems/klenod-build"
   gem "klenod-plugin-css", path: "../../gems/klenod-plugin-css"

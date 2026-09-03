@@ -18,10 +18,10 @@
       Button = import("./Button.haml")
 
       def test_renders_button_children
-        html = render(Button, "Save", type: "submit")
+        screen = render(Button, "Save", type: "submit")
+        button = screen.get_by_role(:button, name: "Save")
 
-        assert_includes(html, "<button")
-        assert_includes(html, ">Save</button>")
+        assert_equal("submit", button["type"])
       end
       ```
 
@@ -43,6 +43,21 @@
 
   %DocsSection{ title: "Framework Helpers" }
     :markdown
-      Klenod does not choose a test library or rendering API. The example framework supplies `render`, which renders a component to an HTML string, and `with_context`, which installs scoped rendering context for a test. Test rendering keeps authored class names and omits the generated classes used to scope tag selectors, making selectors stable across CSS changes. A DOM query API can be layered over the returned HTML later.
+      Klenod does not choose a test library or rendering API. The example framework renders the component to HTML, parses that HTML with Nokolexbor, and returns a queryable fragment:
+
+      ```ruby
+      screen = render(Button, "Read the docs", href: "/docs/assets")
+      link = screen.get_by_role(:link, name: "Read the docs")
+
+      assert_equal("/docs/assets", link["href"])
+      ```
+
+      `screen.html` returns the rendered string and `screen.fragment` returns the Nokolexbor document fragment. `within(node)` creates a query scope for that node's descendants.
+
+      Role, text, and CSS queries provide `get_by_*`, `query_by_*`, `get_all_by_*`, and `query_all_by_*` variants. A singular query raises when it finds multiple nodes. `get` queries also raise when nothing matches, while `query` variants return `nil` or an empty array. Errors show the query, candidates, and rendered HTML. `has_role?`, `has_text?`, and `has_css?` provide small matcher-style predicates.
+
+      Prefer roles and accessible names. The role implementation models useful static HTML semantics, including labels and ARIA naming, but it is not a complete browser accessibility tree. It cannot test layout, computed styles, focus, events, or JavaScript behavior. The helpers intentionally provide no fake click or focus API; use browser tests for those behaviors.
+
+      Text queries normalize whitespace and return the most specific matching elements rather than every matching ancestor. CSS queries are available as an escape hatch. Test rendering also keeps authored class names and omits generated classes for scoped tag selectors, but class selectors should not be the default way to describe user-visible behavior.
 
 %title= "Testing"

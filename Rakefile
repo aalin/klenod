@@ -99,6 +99,7 @@ namespace :test do
     with_unbundled_env do
       Dir.chdir("example/web") do
         sh(*bundle_command, "check")
+        sh(*bundle_command, "exec", "ruby", "lib/testing/rendered_fragment.test.rb")
         sh(*bundle_command, "exec", "ruby", "example.test.rb")
       end
     end

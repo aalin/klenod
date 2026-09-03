@@ -55,6 +55,17 @@ assets and include `Vary: Accept` for caches.
 
 Use `bin/test --run` for one test run. The command also runs once automatically when `CI` is set. Tests live beside source modules as `*.test.rb`; when watching, changing a test or any eager or lazy dependency reruns only the related tests.
 
+The example framework's `render` test helper serializes a component to HTML and parses it with Nokolexbor. The returned fragment supports strict role, text, and CSS queries, scoped queries with `within`, and direct Nokolexbor attribute access:
+
+```ruby
+screen = render(Button, "Save", type: "submit")
+button = screen.get_by_role(:button, name: "Save")
+
+assert_equal("submit", button["type"])
+```
+
+Role queries implement a deliberately small model of static HTML accessibility semantics. They are not a browser accessibility tree and do not simulate clicks, focus, JavaScript, layout, or computed styles.
+
 By default, development assets stay in memory. They can also be mirrored to
 disk; the initial manifest and subsequent successful asset updates are written
 to the selected directory:
