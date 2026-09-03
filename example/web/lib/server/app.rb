@@ -62,7 +62,7 @@ module Example
 
     def watcher
       @watcher ||= begin
-        watcher = Klenod::Build::Watcher.new(source_dir: source_dir, context: context)
+        watcher = Klenod::Build::Watcher.new(source_dir: source_dir, context: context, ignore: /\.test\.rb\z/)
         install_update_handler
         watcher
       end

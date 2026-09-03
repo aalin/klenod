@@ -53,10 +53,11 @@ module Klenod
         end
       end
 
-      def initialize(source_dir:, context:, debounce_interval: 0.1)
+      def initialize(source_dir:, context:, debounce_interval: 0.1, ignore: nil)
         @source_dir = source_dir
         @context = context
         @debounce_interval = debounce_interval
+        @ignore = ignore
         @graph_version = 0
         @pending_changes = PendingChanges.new
         @pending_mutex = Mutex.new
@@ -68,7 +69,7 @@ module Klenod
       def start
         @worker_thread = Thread.new { process_pending_updates }
         @listener =
-          Listen.to(@source_dir) do |modified, added, removed|
+          Listen.to(@source_dir, ignore: @ignore) do |modified, added, removed|
             enqueue_update(modified + added, removed)
           end
         @listener.start

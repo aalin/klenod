@@ -39,6 +39,8 @@
 
       Klenod collects every test's eager and lazy dependency closure. Editing a test reruns that test. Editing an imported module or any transitive dependency reruns every related test. Added tests run immediately, removed tests leave the suite, and unrelated changes do not trigger a test run.
 
+      The development server ignores `.test.rb` changes. The separate test watcher handles them, so editing a test reruns it without producing an unrelated server update.
+
   %DocsSection{ title: "Framework Helpers" }
     :markdown
       Klenod does not choose a test library or rendering API. The example framework supplies `render`, which renders a component to an HTML string, and `with_context`, which installs scoped rendering context for a test. A DOM query API can be layered over the returned HTML later.

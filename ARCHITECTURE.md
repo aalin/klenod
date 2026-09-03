@@ -269,7 +269,7 @@ Tests use development-mode transforms and invalidation. They are not production 
 
 ## Development Updates
 
-`Klenod::Build::Watcher` watches source files and asks the build graph to invalidate affected modules.
+`Klenod::Build::Watcher` watches source files and asks the build graph to invalidate affected modules. Consumers can pass `ignore:` patterns for files handled by a separate process, such as colocated tests.
 
 Invalidation considers:
 
