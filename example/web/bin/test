@@ -2,7 +2,6 @@
 # frozen_string_literal: true
 
 require "bundler/setup"
-require_relative "../lib/framework"
-require_relative "../lib/testing/test_command"
+require "rbconfig"
 
-exit Example::Testing::TestCommand.new(ARGV).call
+exec RbConfig.ruby, Gem.bin_path("klenod", "klenod"), "test", *ARGV

@@ -1,0 +1,69 @@
+# frozen_string_literal: true
+
+require "rbconfig"
+
+require "klenod/build/cli"
+
+require_relative "command"
+require_relative "config"
+
+module Klenod
+  module Test
+    module CLI
+      class Command < Samovar::Command
+        self.description = "Run and watch application tests."
+
+        options do
+          option "--run", "Run all tests once."
+          option "--watch", "Run all tests, then watch for changes."
+          option "--worker", "Run selected test files in a worker process."
+        end
+
+        split :test_paths, "Test paths passed to the worker."
+
+        def call
+          config_path = ConfigLoader.find
+          unless config_path
+            output.puts "Could not find klenod.test.rb"
+            return 1
+          end
+
+          config = ConfigLoader.load(config_path)
+          Dir.chdir(config.base_dir) do
+            Klenod::Test::Command.new(
+              arguments,
+              context: config.context,
+              execute: config.execute,
+              worker_command: worker_command,
+              output:,
+              format_error: config.format_error
+            ).call
+          end
+        rescue ConfigError => error
+          output.puts error.message
+          1
+        end
+
+        private
+
+        def arguments
+          selected = [@options[:run] && "--run", @options[:watch] && "--watch"].compact
+          raise ConfigError, "Choose either --run or --watch" if selected.length > 1
+
+          paths = Array(@test_paths)
+          if @options[:worker]
+            [Klenod::Test::Command::WORKER_ARGUMENT, "--", *paths]
+          elsif paths.empty?
+            selected
+          else
+            raise ConfigError, "Test paths are only accepted with --worker"
+          end
+        end
+
+        def worker_command
+          [RbConfig.ruby, Gem.bin_path("klenod", "klenod"), "test"]
+        end
+      end
+    end
+  end
+end

@@ -35,8 +35,16 @@ Run the integration tests once, then watch the application tests:
 bundle exec rake test:watch
 ```
 
+Run only the colocated application tests directly through the Klenod CLI:
+
+```sh
+bundle exec klenod test --run
+bundle exec klenod test --watch
+```
+
 Application tests live under `src` as `*.test.rb`. They are independent test
 entrypoints, so they can import application modules but cannot be imported by
 application code. Klenod watches each test's dependency graph and reruns only
 the tests related to a changed module. The tests use Minitest here, but the
 shared runner does not require a particular testing framework.
+The small `klenod.test.rb` file connects the runner to Minitest.

@@ -9,3 +9,4 @@ end
 require "klenod/runtime"
 require "klenod/build"
 require "klenod/build/watcher"
+require "klenod/test"

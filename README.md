@@ -128,6 +128,34 @@ plugins [
 ]
 ```
 
+## Test An Application
+
+The `klenod` meta-gem includes `klenod-test`. Add
+`Klenod::Build::Plugins::TestPlugin` to the application's plugins, then run:
+
+```sh
+bundle exec klenod test --run
+bundle exec klenod test --watch
+```
+
+The command finds the nearest `klenod.test.rb`. This file provides a fresh build
+context and the callback that runs selected test modules with Minitest, RSpec, or
+another testing library:
+
+```ruby
+context do
+  path = File.expand_path("klenod.config.rb", __dir__)
+  Klenod::Build::ConfigLoader.load(path).context
+end
+
+execute do |context, test_paths|
+  # Run the selected test modules and return an integer exit status.
+end
+```
+
+Tests run once in CI and watch by default otherwise. A changed test or one of its
+dependencies reruns only the affected test files in a fresh worker process.
+
 Load a runtime bundle without build plugins:
 
 ```ruby

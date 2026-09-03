@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
-require "klenod/build/cli"
+require "klenod/cli"
 
-Klenod::Build::CLI::Application.call
+result = Klenod::CLI::Application.call
+exit result if result.is_a?(Integer)

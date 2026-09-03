@@ -44,6 +44,6 @@
 
       Both results expose sorted `test_paths` and `removed_test_paths`. A framework decides how to evaluate those paths and which test library reports the results.
 
-      The optional `klenod-test` gem combines these APIs with the Klenod watcher and fresh worker processes. It delegates each selected batch to an application callback, so it does not depend on Minitest or another testing library.
+      The `klenod-test` package combines these APIs with the Klenod watcher and fresh worker processes. The `klenod` meta-gem exposes it as `klenod test`. It delegates each selected batch to callbacks from `klenod.test.rb`, so it does not depend on Minitest or another testing library.
 
 %title= "TestPlugin"

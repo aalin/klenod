@@ -29,9 +29,11 @@ The design goal is close to Vite/Rollup/Parcel for graph and plugin behavior, wi
 
 Runtime must not require build plugins or plugin-only dependencies such as RMagick, `image_size`, Haml parsers, or CSS transformers.
 
-`klenod-build` owns graph construction, plugins, the CLI, and development watching. It depends on `klenod-runtime`.
+`klenod-build` owns graph construction, plugins, the build and graph CLI commands, and development watching. It depends on `klenod-runtime`.
 
 `klenod-test` owns test-process orchestration and related-test watch runs. It depends on `klenod-build`, while test-framework adapters remain application policy.
+
+The `klenod` meta-gem depends on runtime, build, and test packages and composes their commands under the `klenod` executable. Production bundles still require only `klenod-runtime`.
 
 `klenod-rack` owns Rack-compatible asset serving helpers and depends only on `klenod-runtime`.
 
@@ -267,7 +269,7 @@ Application tests are build-time entrypoints. `TestPlugin` discovers `*.test.rb`
 
 `TestSuite` collects each test and its eager and lazy dependency closure without evaluating application code. A watcher can intersect invalidated module ids with those closures to select related tests. Test execution and reporting remain framework policy; a framework can evaluate the selected entries with Minitest, RSpec, or another library in an isolated worker process.
 
-`klenod-test` combines `TestSuite` and `Watcher`, starts a fresh worker process for each selected batch, and delegates execution to an application callback. It does not depend on a test framework. `TestPlugin` and `TestSuite` remain in `klenod-build` because they operate on the build graph.
+`klenod-test` combines `TestSuite` and `Watcher`, starts a fresh worker process for each selected batch, and delegates execution to callbacks loaded from the nearest `klenod.test.rb`. It does not depend on a test framework. `TestPlugin` and `TestSuite` remain in `klenod-build` because they operate on the build graph.
 
 Tests use development-mode transforms and invalidation. They are not production entrypoints, are not serialized into application bundles, and add nothing to `klenod-runtime`.
 

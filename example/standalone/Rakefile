@@ -10,12 +10,12 @@ end
 namespace :test do
   desc "Run colocated application tests once"
   task :application do
-    ruby "test.rb", "--run"
+    ruby Gem.bin_path("klenod", "klenod"), "test", "--run"
   end
 
   desc "Run integration tests, then watch colocated application tests"
   task watch: :integration do
-    ruby "test.rb", "--watch"
+    ruby Gem.bin_path("klenod", "klenod"), "test", "--watch"
   end
 end
 

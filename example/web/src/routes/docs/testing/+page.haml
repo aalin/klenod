@@ -32,12 +32,20 @@
       Run the tests and keep watching:
 
       ```sh
-      bin/test
+      bundle exec klenod test
       ```
 
-      Use `bin/test --run` for one run. `CI` also selects one-run mode automatically. Each batch runs in a fresh worker process, so test state cannot leak into later batches or the development server.
+      Use `bundle exec klenod test --run` for one run. `CI` also selects one-run mode automatically. The example's `bin/test` command is a shortcut for the same CLI. Each batch runs in a fresh worker process, so test state cannot leak into later batches or the development server.
 
-      The framework-independent `klenod-test` runner owns test selection, watching, and worker isolation. This example supplies the Minitest adapter and reporting callback.
+      The framework-independent `klenod-test` runner owns test selection, watching, and worker isolation. The nearest `klenod.test.rb` supplies the application context and callbacks that execute tests and format errors:
+
+      ```ruby
+      context { Example::WebConfig.build_config(mode: :development).context }
+      execute { |context, paths| Example::Testing::TestRunner.execute(context, paths) }
+      format_error { |error, context| Example::Testing::TestRunner.format_error(error, context) }
+      ```
+
+      This example connects those callbacks to its Minitest adapter. Another application can use a different test library.
 
       Klenod collects every test's eager and lazy dependency closure. Editing a test reruns that test. Editing an imported module or any transitive dependency reruns every related test. Added tests run immediately, removed tests leave the suite, and unrelated changes do not trigger a test run.
 

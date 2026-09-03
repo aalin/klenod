@@ -11,26 +11,31 @@ class Klenod::MetaGemTest < Minitest::Test
     assert_equal(Klenod::VERSION, Klenod::Build::VERSION)
     assert(defined?(Klenod::Runtime))
     assert(defined?(Klenod::Build))
+    assert(defined?(Klenod::Test))
     refute(defined?(Klenod::Rack))
     assert(defined?(Klenod::Build::Watcher))
   end
 
   def test_require_klenod_does_not_restore_removed_namespaces
     refute(defined?(Klenod::HTTP))
-    refute(defined?(Klenod::CLI))
     refute(defined?(Klenod::Dev))
   end
 
-  def test_meta_gemspec_depends_on_runtime_and_build_packages
+  def test_meta_gemspec_depends_on_runtime_build_and_test_packages
     spec = Gem::Specification.load(File.expand_path("../klenod.gemspec", __dir__))
     dependency_names = spec.dependencies.map(&:name)
     dependency_requirements = spec.dependencies.to_h { |dependency| [dependency.name, dependency.requirement.to_s] }
 
     assert_includes(dependency_names, "klenod-build")
     assert_includes(dependency_names, "klenod-runtime")
+    assert_includes(dependency_names, "klenod-test")
     refute_includes(dependency_names, "klenod-rack")
     assert_equal("= #{Klenod::VERSION}", dependency_requirements.fetch("klenod-build"))
     assert_equal("= #{Klenod::VERSION}", dependency_requirements.fetch("klenod-runtime"))
+    assert_equal("= #{Klenod::VERSION}", dependency_requirements.fetch("klenod-test"))
+    assert_includes(spec.files, "lib/klenod/cli.rb")
+    assert_includes(spec.files, "lib/klenod/cli/application.rb")
+    assert_includes(spec.files, "exe/klenod")
   end
 
   def test_split_gem_versions_match_root_version
@@ -39,6 +44,7 @@ class Klenod::MetaGemTest < Minitest::Test
     specs = [
       Gem::Specification.load(File.expand_path("../klenod.gemspec", __dir__)),
       Gem::Specification.load(File.expand_path("../../klenod-build/klenod-build.gemspec", __dir__)),
+      Gem::Specification.load(File.expand_path("../../klenod-test/klenod-test.gemspec", __dir__)),
       Gem::Specification.load(File.expand_path("../../klenod-rack/klenod-rack.gemspec", __dir__)),
       Gem::Specification.load(File.expand_path("../../klenod-runtime/klenod-runtime.gemspec", __dir__))
     ]

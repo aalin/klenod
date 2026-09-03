@@ -207,6 +207,8 @@ class Klenod::Test::Command::Test < Minitest::Test
 
     assert_includes(spec.files, "lib/klenod/test.rb")
     assert_includes(spec.files, "lib/klenod/test/command.rb")
+    assert_includes(spec.files, "lib/klenod/test/config.rb")
+    assert_includes(spec.files, "lib/klenod/test/cli.rb")
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })
     assert_equal(["klenod-build"], spec.runtime_dependencies.map(&:name))
   end

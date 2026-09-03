@@ -4,7 +4,8 @@
 [Klenod](https://github.com/aalin/klenod).
 
 It depends on [klenod-build](https://github.com/aalin/klenod/tree/main/gems/klenod-build),
-and [klenod-runtime](https://github.com/aalin/klenod/tree/main/gems/klenod-runtime).
+[klenod-runtime](https://github.com/aalin/klenod/tree/main/gems/klenod-runtime),
+and [klenod-test](https://github.com/aalin/klenod/tree/main/gems/klenod-test).
 
 Use this gem when you want the complete Klenod API and development tooling:
 
@@ -18,4 +19,5 @@ on `klenod-runtime` instead.
 Web applications can add `klenod-rack` separately when they want Rack-compatible
 helpers for serving bundle assets.
 
-The `klenod` executable wrapper also lives here and delegates to the build CLI implementation.
+The `klenod` executable also lives here. It provides the `build`, `graph`, and
+`test` commands without making `klenod-build` depend on the test runner.

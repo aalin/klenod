@@ -26,4 +26,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "klenod-build", "= #{version}"
   spec.add_dependency "klenod-runtime", "= #{version}"
+  spec.add_dependency "klenod-test", "= #{version}"
 end
