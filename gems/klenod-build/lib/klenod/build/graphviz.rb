@@ -91,25 +91,42 @@ module Klenod
       end
 
       def asset_edges
-        @bundle.assets.values.sort_by(&:output_path).filter_map do |asset|
-          owner = asset_owner(asset)
-          next unless owner
-
-          attributes = {
-            id: svg_edge_id(owner_node_name(owner), asset.output_path),
-            class: "edge edge-asset",
-            color: "#e26d39",
-            style: "dotted",
-            label: "asset"
-          }
-          "  #{owner_node_id(owner)} -> #{asset_node_id(asset)} [#{dot_attributes(attributes)}];"
+        @bundle.assets.values.sort_by(&:output_path).flat_map do |asset|
+          asset_owners(asset).map do |owner|
+            attributes = {
+              id: svg_edge_id(owner_node_name(owner), asset.output_path),
+              class: "edge edge-asset",
+              color: "#e26d39",
+              style: "dotted",
+              label: "asset"
+            }
+            "  #{owner_node_id(owner)} -> #{asset_node_id(asset)} [#{dot_attributes(attributes)}];"
+          end
         end
       end
 
-      def asset_owner(asset)
-        return [:module, asset.logical_name] if @bundle.modules.key?(asset.logical_name)
+      def asset_owners(asset)
+        module_id = module_id_for_asset(asset.logical_name)
+        return [[:module, module_id]] if module_id
 
-        google_fonts_css_asset_owner(asset) || query_module_id_for(asset.logical_name)
+        [google_fonts_css_asset_owner(asset), *asset_metadata_owners(asset)].compact
+      end
+
+      def module_id_for_asset(logical_name)
+        return logical_name if @bundle.modules.key?(logical_name)
+
+        module_ids_by_source_path.fetch(logical_name, nil) || query_module_ids_by_path.fetch(logical_name, nil)
+      end
+
+      def module_ids_by_source_path
+        @module_ids_by_source_path ||=
+          module_ids.each_with_object({}) do |id, index|
+            source_path = @bundle.modules.fetch(id).source_path
+            next unless source_path
+
+            index[source_path] ||= id
+            index[display_path(source_path)] ||= id
+          end
       end
 
       def google_fonts_css_asset_owner(asset)
@@ -127,9 +144,13 @@ module Klenod
         asset.metadata[:source_url]
       end
 
-      def query_module_id_for(logical_name)
-        module_id = query_module_ids_by_path.fetch(logical_name, nil)
-        [:module, module_id] if module_id
+      def asset_metadata_owners(asset)
+        return [] unless asset.metadata[:javascript_runtime] == :asset_metadata
+
+        @bundle.assets.values
+          .select { it.metadata[:image_metadata] || it.metadata[:svg_metadata] }
+          .sort_by(&:output_path)
+          .map { [:asset, it] }
       end
 
       def query_module_ids_by_path

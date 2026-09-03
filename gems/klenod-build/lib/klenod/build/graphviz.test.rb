@@ -91,6 +91,34 @@ class Klenod::Build::Graphviz::Test < Minitest::Test
     assert_includes(dot, "#{node_id("pages/assets/vegetables.jpg?width=360,720&format=jpeg")} -> #{asset_node_id(asset)}")
   end
 
+  def test_links_assets_to_canonical_module_with_matching_source_path
+    module_id = "app:/routes/demo/routing/SitemapPanel.css"
+    source_path = "routes/demo/routing/SitemapPanel.css"
+    modules = {
+      module_id => Klenod::Runtime::ModuleSpec.new(
+        module_id,
+        source_path,
+        "",
+        {},
+        nil,
+        0,
+        nil
+      )
+    }
+    asset = Klenod::Runtime::AssetSpec.new(
+      source_path,
+      "abc123",
+      "/assets/routes_demo_routing_SitemapPanel_css.abc123.css",
+      "text/css",
+      {type: :css}
+    )
+    bundle = Klenod::Runtime::Bundle.new({}, modules, {asset.output_path => asset})
+
+    dot = Klenod::Build::Graphviz.call(bundle)
+
+    assert_includes(dot, "#{node_id(module_id)} -> #{asset_node_id(asset)}")
+  end
+
   def test_links_google_font_assets_to_generated_google_fonts_css_asset
     google_fonts_url = "https://fonts.googleapis.com/css2?family=Source+Sans+3&display=swap"
     font_url = "https://fonts.gstatic.com/s/source/v1/font.ttf"
@@ -133,6 +161,35 @@ class Klenod::Build::Graphviz::Test < Minitest::Test
     dot = Klenod::Build::Graphviz.call(bundle)
 
     assert_includes(dot, "#{asset_node_id(css_asset)} -> #{asset_node_id(font_asset)}")
+  end
+
+  def test_links_generated_image_metadata_assets_to_their_shared_runtime
+    metadata_asset = Klenod::Runtime::AssetSpec.new(
+      "images/logo.png",
+      "abc123",
+      "/assets/logo.abc123.png.js",
+      "application/javascript",
+      {type: :javascript, image_metadata: true}
+    )
+    runtime_asset = Klenod::Runtime::AssetSpec.new(
+      "virtual:klenod/asset-metadata.js",
+      "def456",
+      "/assets/klenod_asset_metadata.def456.js",
+      "application/javascript",
+      {type: :javascript, javascript_runtime: :asset_metadata}
+    )
+    bundle = Klenod::Runtime::Bundle.new(
+      {},
+      {},
+      {
+        metadata_asset.output_path => metadata_asset,
+        runtime_asset.output_path => runtime_asset
+      }
+    )
+
+    dot = Klenod::Build::Graphviz.call(bundle)
+
+    assert_includes(dot, "#{asset_node_id(metadata_asset)} -> #{asset_node_id(runtime_asset)}")
   end
 
   private
