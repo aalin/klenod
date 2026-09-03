@@ -7,19 +7,21 @@ require_relative "component_helpers"
 require_relative "minitest_reporter"
 
 module Example
-  class MinitestAdapter
-    def register(path, exports)
-      Class.new(Minitest::Test) do
-        include ComponentTestHelpers
-        include exports
+  module Testing
+    class MinitestAdapter
+      def register(path, exports)
+        Class.new(Minitest::Test) do
+          include ComponentTestHelpers
+          include exports
 
-        define_singleton_method(:name) { path }
+          define_singleton_method(:name) { path }
+        end
       end
-    end
 
-    def run(arguments = [])
-      Minitest.register_plugin(MinitestReporterPlugin) unless Minitest.extensions.include?(MinitestReporterPlugin)
-      Minitest.run(arguments)
+      def run(arguments = [])
+        Minitest.register_plugin(MinitestReporterPlugin) unless Minitest.extensions.include?(MinitestReporterPlugin)
+        Minitest.run(arguments)
+      end
     end
   end
 end

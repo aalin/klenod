@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 def GET(_request)
-  Example::Response.redirect("/")
+  Example::Framework::Response.redirect("/")
 end

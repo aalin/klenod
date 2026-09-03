@@ -3,7 +3,7 @@
   Favicon = import("./favicon.svg")
 
   def document_theme
-    theme = @@request.cookies.fetch(Example::THEME_COOKIE, nil)
+    theme = @@request.cookies.fetch(Example::Framework::THEME_COOKIE, nil)
     theme if THEMES.include?(theme)
   end
 

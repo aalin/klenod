@@ -4,4 +4,4 @@
 require "bundler/setup"
 require_relative "../lib/server/app"
 
-Example::DevServer.new.run
+Example::Server::DevServer.new.run

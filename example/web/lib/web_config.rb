@@ -28,29 +28,29 @@ module Example
         Klenod::Build::Plugins::TestPlugin.new,
         Klenod::Build::Plugins::RouterPlugin.new(
           pages_dir: "routes",
-          route_base_class: "Example::Route"
+          route_base_class: "Example::Framework::Route"
         ),
         Klenod::Build::Plugins::RubyPlugin.new,
         Klenod::Build::Plugins::IntlPlugin.new,
         Klenod::Build::Plugins::HamlPlugin.new(
-          component_base_class: "Example::Component",
-          factory: "Example::H",
+          component_base_class: "Example::Framework::Component",
+          factory: "Example::Framework::H",
           component_children: :lazy,
           variables: {
             global: "@__props",
-            class: "Example::Context.current"
+            class: "Example::Framework::Context.current"
           },
           i18n: {
-            class: "Example::Translator",
+            class: "Example::Framework::Translator",
             constant: "I18n"
           },
-          # i18n_class: "Example::Translator",
+          # i18n_class: "Example::Framework::Translator",
           # i18n_constant: "I18n",
           cache_static_subtrees: false
         ),
         Klenod::Build::Plugins::MarkdownPlugin.new(
-          component_base_class: "Example::Component",
-          factory: "Example::H"
+          component_base_class: "Example::Framework::Component",
+          factory: "Example::Framework::H"
         ),
         Klenod::Build::Plugins::GoogleFontsPlugin.new(
           fetcher: google_fonts_fetcher,

@@ -8,7 +8,7 @@ require "bundler/setup"
 require "klenod"
 require_relative "update_logger"
 
-class Example::UpdateLogger::Test < Minitest::Test
+class Example::Dev::UpdateLogger::Test < Minitest::Test
   FakeUpdate = Data.define(:errors, :asset_write_result) do
     def failed?
       !errors.empty?
@@ -143,7 +143,7 @@ class Example::UpdateLogger::Test < Minitest::Test
   private
 
   def logger(source_dir, out: StringIO.new, err: StringIO.new, env: {})
-    Example::UpdateLogger.new(source_dir: source_dir, output: out, error_output: err, env: env)
+    Example::Dev::UpdateLogger.new(source_dir: source_dir, output: out, error_output: err, env: env)
   end
 
   def event(result:, changed_paths: [], removed_paths: [])

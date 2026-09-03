@@ -9,4 +9,4 @@ require_relative "../lib/server/production_server"
 $stdout.sync = true
 $stderr.sync = true
 
-Example::ProductionServer.new.run
+Example::Server::ProductionServer.new.run

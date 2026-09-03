@@ -16,16 +16,16 @@
 
       ```ruby
       Klenod::Build::Plugins::HamlPlugin.new(
-        component_base_class: "Example::Component",
-        factory: "Example::H",
+        component_base_class: "Example::Framework::Component",
+        factory: "Example::Framework::H",
         component_children: :lazy,
         variables: {
           global: "@__props",
-          class: "Example::Context.current",
+          class: "Example::Framework::Context.current",
           instance: "@__state"
         },
         i18n: {
-          class: "Example::Translator",
+          class: "Example::Framework::Translator",
           constant: "I18n"
         },
         cache_static_subtrees: false
@@ -51,7 +51,7 @@
       %button= @count
       ```
 
-      With the configuration above, these read `(@__props)[:title]`, `(Example::Context.current)[:request]`, and `(@__state)[:count]`.
+      With the configuration above, these read `(@__props)[:title]`, `(Example::Framework::Context.current)[:request]`, and `(@__state)[:count]`.
 
       The mappings also apply to assignments. For an indexed state store, reassign mutable values to trigger its assignment method. Use `@items = [*@items, item]` instead of `@items << item`.
 
@@ -62,14 +62,14 @@
       Eager children are positional factory arguments:
 
       ```ruby
-      Example::H[Card, Example::H[:p, "Body"], title: "Hello"]
+      Example::Framework::H[Card, Example::Framework::H[:p, "Body"], title: "Hello"]
       ```
 
       Lazy children are passed as a block:
 
       ```ruby
-      Example::H[Card, title: "Hello"] do
-        [Example::H[:p, "Body"]]
+      Example::Framework::H[Card, title: "Hello"] do
+        [Example::Framework::H[:p, "Body"]]
       end
       ```
 
@@ -104,7 +104,7 @@
       With `i18n`, the plugin creates the configured helper constant:
 
       ```ruby
-      I18n = Example::Translator.new(self)
+      I18n = Example::Framework::Translator.new(self)
       ```
 
       The example translator provides `I18n.t(...)` and `I18n.lang`. Haml also works without `IntlPlugin` or a translation helper.

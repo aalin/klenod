@@ -4,7 +4,7 @@ require "minitest/autorun"
 
 require_relative "rendered_fragment"
 
-class Example::RenderedFragment::Test < Minitest::Test
+class Example::Testing::RenderedFragment::Test < Minitest::Test
   def test_exposes_html_fragment_and_successful_queries
     screen = render_html(<<~HTML)
       <main>
@@ -33,10 +33,10 @@ class Example::RenderedFragment::Test < Minitest::Test
     assert_empty(screen.query_all_by_role(:alert))
     assert_equal(2, screen.get_all_by_role(:button).length)
     assert_equal(2, screen.query_all_by_role(:button).length)
-    assert_raises(Example::QueryError) { screen.get_by_role(:alert) }
-    assert_raises(Example::QueryError) { screen.get_all_by_role(:alert) }
-    assert_raises(Example::QueryError) { screen.get_by_role(:button) }
-    assert_raises(Example::QueryError) { screen.query_by_role(:button) }
+    assert_raises(Example::Testing::QueryError) { screen.get_by_role(:alert) }
+    assert_raises(Example::Testing::QueryError) { screen.get_all_by_role(:alert) }
+    assert_raises(Example::Testing::QueryError) { screen.get_by_role(:button) }
+    assert_raises(Example::Testing::QueryError) { screen.query_by_role(:button) }
   end
 
   def test_calculates_static_accessible_names
@@ -77,7 +77,7 @@ class Example::RenderedFragment::Test < Minitest::Test
       <section id="second"><button>Close</button></section>
     HTML
 
-    assert_raises(Example::QueryError) { screen.get_by_role(:button, name: "Close") }
+    assert_raises(Example::Testing::QueryError) { screen.get_by_role(:button, name: "Close") }
 
     first = screen.within(screen.get_by_css("#first"))
     assert_equal("Close", first.get_by_role(:button, name: "Close").text)
@@ -106,16 +106,16 @@ class Example::RenderedFragment::Test < Minitest::Test
     assert_equal("button", screen.query_by_css(".close").name)
     assert_equal(["button"], screen.get_all_by_css("button").map(&:name))
     assert_empty(screen.query_all_by_css("aside"))
-    assert_raises(Example::QueryError) { screen.get_by_css("aside") }
+    assert_raises(Example::Testing::QueryError) { screen.get_by_css("aside") }
   end
 
   def test_diagnostics_include_query_candidates_and_rendered_html
     screen = render_html("<main><button>Save</button><button>Cancel</button></main>")
 
-    missing = assert_raises(Example::QueryError) do
+    missing = assert_raises(Example::Testing::QueryError) do
       screen.get_by_role(:button, name: "Delete")
     end
-    ambiguous = assert_raises(Example::QueryError) do
+    ambiguous = assert_raises(Example::Testing::QueryError) do
       screen.get_by_role(:button)
     end
 
@@ -132,6 +132,6 @@ class Example::RenderedFragment::Test < Minitest::Test
   private
 
   def render_html(html)
-    Example::RenderedFragment.new(html)
+    Example::Testing::RenderedFragment.new(html)
   end
 end

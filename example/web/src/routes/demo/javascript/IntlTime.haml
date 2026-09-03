@@ -5,7 +5,7 @@
   DEFAULT_TIME_STYLE = "short"
 
 - time = $time || Time.now
-- lang = $lang || Example::Context.current&.request&.locale || "en"
+- lang = $lang || Example::Framework::Context.current&.request&.locale || "en"
 - date_style = prop(:date_style, DEFAULT_DATE_STYLE)
 - time_style = prop(:time_style, DEFAULT_TIME_STYLE)
 %IntlTime{

@@ -19,7 +19,7 @@
         %time{ datetime: frontmatter.fetch(:date) }= frontmatter.fetch(:date)
         %span Markdown post
       .body
-        = Example::H[post]
+        = Example::Framework::H[post]
   = else
     %PageHeader{
       kicker: "Dynamic Markdown route",

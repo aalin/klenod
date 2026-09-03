@@ -33,7 +33,7 @@ private
 
 def render_language_switcher(path)
   localized = localized_routes.canonicalize_path(path)
-  request = Example::Request.from(RawRequest.new("GET", path), localized: localized)
+  request = Example::Framework::Request.from(RawRequest.new("GET", path), localized: localized)
 
   with_context(request: request, routes: localized_routes) do
     render(LanguageSwitcher)
@@ -41,7 +41,7 @@ def render_language_switcher(path)
 end
 
 def localized_routes
-  @localized_routes ||= Example::LocalizedRoutes.new(
+  @localized_routes ||= Example::Framework::LocalizedRoutes.new(
     routes: [
       Struct.new(:match_parts).new([
         [:static, "docs", nil],

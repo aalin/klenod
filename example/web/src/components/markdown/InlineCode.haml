@@ -53,7 +53,7 @@
       token_class = token.shortname&.to_sym
       next value unless token_class && ClassNames.key?(token_class)
 
-      Example::H[:span, value, class: ClassNames[token_class]]
+      Example::Framework::H[:span, value, class: ClassNames[token_class]]
     end.freeze
   end
 

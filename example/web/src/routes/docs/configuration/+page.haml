@@ -33,19 +33,19 @@
       ```ruby
       plugins [
         Klenod::Build::Plugins::RouterPlugin.new(
-          route_base_class: "Example::Route"
+          route_base_class: "Example::Framework::Route"
         ),
         Klenod::Build::Plugins::RubyPlugin.new,
         Klenod::Build::Plugins::IntlPlugin.new,
         Klenod::Build::Plugins::HamlPlugin.new(
-          component_base_class: "Example::Component",
-          factory: "Example::H",
+          component_base_class: "Example::Framework::Component",
+          factory: "Example::Framework::H",
           variables: {
             global: "@__props",
-            class: "Example::Context.current"
+            class: "Example::Framework::Context.current"
           },
           i18n: {
-            class: "Example::Translator",
+            class: "Example::Framework::Translator",
             constant: "I18n"
           }
         )
@@ -60,28 +60,28 @@
 
       ```ruby
       Klenod::Build::Plugins::HamlPlugin.new(
-        component_base_class: "Example::Component",
-        factory: "Example::H",
+        component_base_class: "Example::Framework::Component",
+        factory: "Example::Framework::H",
         variables: {
           global: "@__props",
-          class: "Example::Context.current"
+          class: "Example::Framework::Context.current"
         },
         i18n: {
-          class: "Example::Translator",
+          class: "Example::Framework::Translator",
           constant: "I18n"
         }
       )
 
       Klenod::Build::Plugins::MarkdownPlugin.new(
-        component_base_class: "Example::Component",
-        factory: "Example::H"
+        component_base_class: "Example::Framework::Component",
+        factory: "Example::Framework::H"
       )
       ```
 
       A compatible factory accepts a tag or component class, children, keyword props, and an optional child block. Haml uses the block for lazy component children:
 
       ```ruby
-      Example::H[tag, *children, **props, &children_block]
+      Example::Framework::H[tag, *children, **props, &children_block]
       ```
 
   %DocsSection{ title: "Asset Options" }

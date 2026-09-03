@@ -6,7 +6,7 @@ ROUTE_TRANSLATIONS = {
   "en" => import("/routes.intl.en.toml"),
   "sv" => import("/routes.intl.sv.toml")
 }
-App = Example::RouterApp.new(
+App = Example::Framework::RouterApp.new(
   root: Root,
   root_module_id: "app:/root.haml",
   router: Router::Default,

@@ -62,22 +62,22 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_h_builds_descriptors_and_escapes_when_rendering
-    node = Example::H[:p, "Fish & chips", title: %("quoted")]
+    node = Example::Framework::H[:p, "Fish & chips", title: %("quoted")]
 
-    assert_instance_of(Example::H::Element, node)
+    assert_instance_of(Example::Framework::H::Element, node)
     assert_equal(:p, node.tag)
-    assert_equal([Example::H::Text["Fish & chips"]], node.children)
-    assert_equal(%(<p title="&quot;quoted&quot;">Fish &amp; chips</p>), Example::H.render(node))
-    assert_equal(Example::H.render(node), Example::HTMLRenderer.render(node))
+    assert_equal([Example::Framework::H::Text["Fish & chips"]], node.children)
+    assert_equal(%(<p title="&quot;quoted&quot;">Fish &amp; chips</p>), Example::Framework::H.render(node))
+    assert_equal(Example::Framework::H.render(node), Example::Framework::HTMLRenderer.render(node))
   end
 
   def test_example_h_uses_authored_class_names_for_test_rendering
     node =
-      Example::H[:section,
-        Example::H[:h1, "Title", class: "components/PageHeader_h1?PwrM9_M3"],
-        Example::H[:p, "Summary", class: "components/PageHeader.summary?PwrM9_M3 literal"]]
+      Example::Framework::H[:section,
+        Example::Framework::H[:h1, "Title", class: "components/PageHeader_h1?PwrM9_M3"],
+        Example::Framework::H[:p, "Summary", class: "components/PageHeader.summary?PwrM9_M3 literal"]]
 
-    html = Example::H.render(node, class_names: :authored)
+    html = Example::Framework::H.render(node, class_names: :authored)
 
     assert_equal(%(<section><h1>Title</h1><p class="summary literal">Summary</p></section>), html)
   end
@@ -86,39 +86,39 @@ class Klenod::ExampleTest < Minitest::Test
     producer_calls = 0
     component_calls = 0
     route_component =
-      Class.new(Example::Component) do
+      Class.new(Example::Framework::Component) do
         define_method(:render) do
           component_calls += 1
-          Example::H[:main, "Content"]
+          Example::Framework::H[:main, "Content"]
         end
       end
     route_children =
-      Example::H::Children.new(
-        Example::H::Slots.new do
+      Example::Framework::H::Children.new(
+        Example::Framework::H::Slots.new do
           producer_calls += 1
-          Example::H.fragment(
-            Example::H[:title, Example::Context.current.fetch(:title)],
-            Example::H[route_component]
+          Example::Framework::H.fragment(
+            Example::Framework::H[:title, Example::Framework::Context.current.fetch(:title)],
+            Example::Framework::H[route_component]
           )
         end
       )
     node =
-      Example::H[:html,
-        Example::H[:head, Example::H[:title, "Fallback"]],
-        Example::H[:body,
-          Example::H.context(title: "Contextual title") do
+      Example::Framework::H[:html,
+        Example::Framework::H[:head, Example::Framework::H[:title, "Fallback"]],
+        Example::Framework::H[:body,
+          Example::Framework::H.context(title: "Contextual title") do
             route_children
           end]]
 
     assert_equal(0, producer_calls)
     assert_equal(0, component_calls)
-    document = Example::H.render_document(node)
+    document = Example::Framework::H.render_document(node)
     html = document.join
 
     assert_equal(1, producer_calls)
     assert_equal(1, component_calls)
-    assert_instance_of(Example::HTMLRenderer::PreparedDocument, document)
-    assert_same(document, Example::Response.html(document).body)
+    assert_instance_of(Example::Framework::HTMLRenderer::PreparedDocument, document)
+    assert_same(document, Example::Framework::Response.html(document).body)
     assert(document.each.all? { it.is_a?(String) && it.frozen? })
     assert_includes(html, "<head><title>Contextual title</title></head>")
     assert_includes(html, "<body><main>Content</main></body>")
@@ -131,14 +131,14 @@ class Klenod::ExampleTest < Minitest::Test
 
   def test_example_document_renderer_uses_last_html_title_and_preserves_svg_title
     node =
-      Example::H[:html,
-        Example::H[:head, Example::H[:title, "Fallback", lang: "en"]],
-        Example::H[:body,
-          Example::H[:title, "Earlier"],
-          Example::H[:title, "Final & title", "lang" => "sv", "data-kind" => "route"],
-          Example::H[:svg, Example::H[:title, "Accessible icon"]]]]
+      Example::Framework::H[:html,
+        Example::Framework::H[:head, Example::Framework::H[:title, "Fallback", lang: "en"]],
+        Example::Framework::H[:body,
+          Example::Framework::H[:title, "Earlier"],
+          Example::Framework::H[:title, "Final & title", "lang" => "sv", "data-kind" => "route"],
+          Example::Framework::H[:svg, Example::Framework::H[:title, "Accessible icon"]]]]
 
-    html = Example::H.render_document(node).join
+    html = Example::Framework::H.render_document(node).join
 
     assert_includes(html, '<head><title lang="sv" data-kind="route">Final &amp; title</title></head>')
     assert_includes(html, "<svg><title>Accessible icon</title></svg>")
@@ -148,32 +148,32 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_document_renderer_keeps_fallback_and_does_not_invent_title
-    fallback = Example::H[:html, Example::H[:head, Example::H[:title, "Fallback"]], Example::H[:body, "Content"]]
-    untitled = Example::H[:html, Example::H[:head], Example::H[:body, "Content"]]
+    fallback = Example::Framework::H[:html, Example::Framework::H[:head, Example::Framework::H[:title, "Fallback"]], Example::Framework::H[:body, "Content"]]
+    untitled = Example::Framework::H[:html, Example::Framework::H[:head], Example::Framework::H[:body, "Content"]]
 
-    assert_includes(Example::H.render_document(fallback).join, "<head><title>Fallback</title></head>")
-    refute_includes(Example::H.render_document(untitled).join, "<title")
+    assert_includes(Example::Framework::H.render_document(fallback).join, "<head><title>Fallback</title></head>")
+    refute_includes(Example::Framework::H.render_document(untitled).join, "<title")
   end
 
   def test_example_document_renderer_prepares_localized_anchors_before_context_is_restored
     request = localized_request(locale: "sv")
     document = nil
 
-    Example::Context.with(request: request, routes: localized_routes) do
-      document = Example::H.render_document(Example::H[:html, Example::H[:a, "Assets", href: "/demo/assets"]])
+    Example::Framework::Context.with(request: request, routes: localized_routes) do
+      document = Example::Framework::H.render_document(Example::Framework::H[:html, Example::Framework::H[:a, "Assets", href: "/demo/assets"]])
     end
 
-    assert_nil(Example::Context.current)
+    assert_nil(Example::Framework::Context.current)
     assert_includes(document.join, 'href="/sv/demo/assets"')
   end
 
   def test_example_document_renderer_buffers_streamed_chunks
-    content = "a" * (Example::HTMLRenderer::PreparedDocument::CHUNK_SIZE * 2)
-    document = Example::H.render_document(Example::H[:main, content])
+    content = "a" * (Example::Framework::HTMLRenderer::PreparedDocument::CHUNK_SIZE * 2)
+    document = Example::Framework::H.render_document(Example::Framework::H[:main, content])
     chunks = document.each.to_a
 
     assert_operator(chunks.length, :>, 1)
-    assert(chunks.all? { it.bytesize <= Example::HTMLRenderer::PreparedDocument::CHUNK_SIZE })
+    assert(chunks.all? { it.bytesize <= Example::Framework::HTMLRenderer::PreparedDocument::CHUNK_SIZE })
     assert_equal("<!doctype html>\n<main>#{content}</main>", chunks.join)
   end
 
@@ -181,85 +181,85 @@ class Klenod::ExampleTest < Minitest::Test
     outer_request = Object.new
     inner_request = Object.new
 
-    Example::Context.with(request: outer_request, optional: nil) do
-      assert_same(outer_request, Example::Context.current.fetch(:request))
-      assert_nil(Example::Context.current.fetch(:optional))
-      assert_raises(KeyError) { Example::Context.current.fetch(:missing) }
+    Example::Framework::Context.with(request: outer_request, optional: nil) do
+      assert_same(outer_request, Example::Framework::Context.current.fetch(:request))
+      assert_nil(Example::Framework::Context.current.fetch(:optional))
+      assert_raises(KeyError) { Example::Framework::Context.current.fetch(:missing) }
 
       assert_raises(RuntimeError) do
-        Example::Context.with(request: inner_request, theme: :dark) do
-          assert_same(inner_request, Example::Context.current.fetch(:request))
-          assert_equal(:dark, Example::Context.current.fetch(:theme))
+        Example::Framework::Context.with(request: inner_request, theme: :dark) do
+          assert_same(inner_request, Example::Framework::Context.current.fetch(:request))
+          assert_equal(:dark, Example::Framework::Context.current.fetch(:theme))
           raise "render failed"
         end
       end
 
-      assert_same(outer_request, Example::Context.current.fetch(:request))
-      assert_raises(KeyError) { Example::Context.current.fetch(:theme) }
+      assert_same(outer_request, Example::Framework::Context.current.fetch(:request))
+      assert_raises(KeyError) { Example::Framework::Context.current.fetch(:theme) }
     end
 
-    assert_nil(Example::Context.current)
+    assert_nil(Example::Framework::Context.current)
   end
 
   def test_example_context_boundaries_lazily_render_slotted_components_once
     renders = 0
     child =
-      Class.new(Example::Component) do
+      Class.new(Example::Framework::Component) do
         def render
-          Example::H[:span, Example::Context.current.fetch(:theme)]
+          Example::Framework::H[:span, Example::Framework::Context.current.fetch(:theme)]
         end
       end
     provider =
-      Class.new(Example::Component) do
+      Class.new(Example::Framework::Component) do
         def render
           provide_context(theme: prop(:theme)) do
             children = prop(:children)
-            Example::H.fragment(children[:label], children[:label], children, children)
+            Example::Framework::H.fragment(children[:label], children[:label], children, children)
           end
         end
       end
 
     node =
-      Example::H[provider, theme: "dark"] do
+      Example::Framework::H[provider, theme: "dark"] do
         renders += 1
         [
-          Example::H[:strong, Example::Context.current.fetch(:theme), slot: :label],
-          Example::H[child]
+          Example::Framework::H[:strong, Example::Framework::Context.current.fetch(:theme), slot: :label],
+          Example::Framework::H[child]
         ]
       end
 
     assert_equal(0, renders)
-    assert_equal("<strong>dark</strong><strong>dark</strong><span>dark</span><span>dark</span>", Example::H.render(node))
+    assert_equal("<strong>dark</strong><strong>dark</strong><span>dark</span><span>dark</span>", Example::Framework::H.render(node))
     assert_equal(1, renders)
   end
 
   def test_example_markdown_renderer_serializes_semantic_descriptors
     node =
-      Example::H.fragment(
-        Example::H[:h1, "Descriptor *rendering*"],
-        Example::H[
+      Example::Framework::H.fragment(
+        Example::Framework::H[:h1, "Descriptor *rendering*"],
+        Example::Framework::H[
           :p,
           "Read ",
-          Example::H[:strong, "the docs"],
+          Example::Framework::H[:strong, "the docs"],
           " or ",
-          Example::H[:a, "visit Klenod", href: "https://klenod.dev/docs", title: "Documentation"],
+          Example::Framework::H[:a, "visit Klenod", href: "https://klenod.dev/docs", title: "Documentation"],
           "."
         ],
-        Example::H[
+        Example::Framework::H[
           :ul,
-          Example::H[:li, "First"],
-          Example::H[:li, "Second", Example::H[:ul, Example::H[:li, "Nested"]]]
+          Example::Framework::H[:li, "First"],
+          Example::Framework::H[:li, "Second", Example::Framework::H[:ul, Example::Framework::H[:li, "Nested"]]]
         ],
-        Example::H[:pre, Example::H.fragment(Example::H[:code, "puts `ok`\n", class: "language-ruby"])],
-        Example::H[
+        Example::Framework::H[:pre, Example::Framework::H.fragment(Example::Framework::H[:code, "puts `ok`\n", class: "language-ruby"])],
+        Example::Framework::H[
           :table,
-          Example::H[:thead, Example::H[:tr, Example::H[:th, "Name"], Example::H[:th, "Value"]]],
-          Example::H[:tbody, Example::H[:tr, Example::H[:td, "Klenod"], Example::H[:td, "Ruby | modules"]]]
+          Example::Framework::H[:thead, Example::Framework::H[:tr, Example::Framework::H[:th, "Name"], Example::Framework::H[:th, "Value"]]],
+          Example::Framework::H[:tbody, Example::Framework::H[:tr, Example::Framework::H[:td, "Klenod"], Example::Framework::H[:td, "Ruby | modules"]]]
         ],
-        Example::H[:img, src: "/logo.svg", alt: "Klenod logo"],
-        Example::H::Comment["not rendered"]
+        Example::Framework::H[:img, src: "/logo.svg", alt: "Klenod logo"],
+        Example::Framework::H::Comment["not rendered"]
       )
-    markdown = Example::MarkdownRenderer.render(node)
+    markdown = Example::Framework::MarkdownRenderer.render(node)
 
     assert_includes(markdown, "# Descriptor \\*rendering\\*")
     assert_includes(markdown, "Read **the docs** or [visit Klenod](https://klenod.dev/docs \"Documentation\").")
@@ -274,29 +274,29 @@ class Klenod::ExampleTest < Minitest::Test
 
   def test_example_markdown_renderer_separates_adjacent_elements_in_block_containers
     node =
-      Example::H[
+      Example::Framework::H[
         :footer,
-        Example::H[:a, "Explore demos", href: "/demo"],
-        Example::H[:a, "View assets", href: "/demo/assets"]
+        Example::Framework::H[:a, "Explore demos", href: "/demo"],
+        Example::Framework::H[:a, "View assets", href: "/demo/assets"]
       ]
 
-    assert_equal("[Explore demos](/demo)\n[View assets](/demo/assets)\n", Example::MarkdownRenderer.render(node))
+    assert_equal("[Explore demos](/demo)\n[View assets](/demo/assets)\n", Example::Framework::MarkdownRenderer.render(node))
 
-    paragraph = Example::H[:p, Example::H[:a, "One", href: "/one"], " and ", Example::H[:a, "two", href: "/two"]]
-    assert_equal("[One](/one) and [two](/two)\n", Example::MarkdownRenderer.render(paragraph))
+    paragraph = Example::Framework::H[:p, Example::Framework::H[:a, "One", href: "/one"], " and ", Example::Framework::H[:a, "two", href: "/two"]]
+    assert_equal("[One](/one) and [two](/two)\n", Example::Framework::MarkdownRenderer.render(paragraph))
   end
 
   def test_example_markdown_renderer_serializes_definition_lists
     node =
-      Example::H[
+      Example::Framework::H[
         :dl,
-        Example::H[:dt, "First Term"],
-        Example::H[:dd, "This is the definition of the first term."],
-        Example::H[:dt, "Second Term"],
-        Example::H[:dd, "This is one definition of the second term."],
-        Example::H[:dd, "This is another definition of the second term."],
-        Example::H[:dt, "Source"],
-        Example::H[:dd, Example::H[:code, "/assets/example.avif"]]
+        Example::Framework::H[:dt, "First Term"],
+        Example::Framework::H[:dd, "This is the definition of the first term."],
+        Example::Framework::H[:dt, "Second Term"],
+        Example::Framework::H[:dd, "This is one definition of the second term."],
+        Example::Framework::H[:dd, "This is another definition of the second term."],
+        Example::Framework::H[:dt, "Source"],
+        Example::Framework::H[:dd, Example::Framework::H[:code, "/assets/example.avif"]]
       ]
 
     assert_equal(
@@ -311,21 +311,21 @@ class Klenod::ExampleTest < Minitest::Test
         Source
         : `/assets/example.avif`
       MARKDOWN
-      Example::MarkdownRenderer.render(node)
+      Example::Framework::MarkdownRenderer.render(node)
     )
   end
 
   def test_example_markdown_renderer_uses_document_heading_level_for_details_summaries
     node =
-      Example::H.fragment(
-        Example::H[:h2, "Asset patterns"],
-        Example::H[
+      Example::Framework::H.fragment(
+        Example::Framework::H[:h2, "Asset patterns"],
+        Example::Framework::H[
           :div,
-          Example::H[:details, Example::H[:summary, "CSS url()"], Example::H[:p, "CSS assets"]],
-          Example::H[:details, Example::H[:summary, "picture"], Example::H[:h4, "Sources"]]
+          Example::Framework::H[:details, Example::Framework::H[:summary, "CSS url()"], Example::Framework::H[:p, "CSS assets"]],
+          Example::Framework::H[:details, Example::Framework::H[:summary, "picture"], Example::Framework::H[:h4, "Sources"]]
         ],
-        Example::H[:h3, "Metadata"],
-        Example::H[:details, Example::H[:summary, "Variants"], Example::H[:p, "Generated variants"]]
+        Example::Framework::H[:h3, "Metadata"],
+        Example::Framework::H[:details, Example::Framework::H[:summary, "Variants"], Example::Framework::H[:p, "Generated variants"]]
       )
 
     assert_equal(
@@ -346,12 +346,12 @@ class Klenod::ExampleTest < Minitest::Test
 
         Generated variants
       MARKDOWN
-      Example::MarkdownRenderer.render(node)
+      Example::Framework::MarkdownRenderer.render(node)
     )
   end
 
   def test_example_representation_negotiator_honors_accept_precedence
-    negotiator = Example::RepresentationNegotiator::PAGE
+    negotiator = Example::Framework::RepresentationNegotiator::PAGE
 
     assert_equal(:html, negotiator.preferred(nil, default: :html))
     assert_equal(:html, negotiator.preferred("*/*", default: :html))
@@ -373,16 +373,16 @@ class Klenod::ExampleTest < Minitest::Test
       tag: "klenod-clock-a1b2c3d4",
       asset_path: "/assets/clock.js"
     }
-    node = Example::H[descriptor, "12:00", time: "2026-08-16 12:00:00 -0500"]
+    node = Example::Framework::H[descriptor, "12:00", time: "2026-08-16 12:00:00 -0500"]
 
-    assert_instance_of(Example::H::Element, node)
+    assert_instance_of(Example::Framework::H::Element, node)
     assert_equal("klenod-clock-a1b2c3d4", node.tag)
-    assert_equal(%(<klenod-clock-a1b2c3d4 time="2026-08-16 12:00:00 -0500">12:00</klenod-clock-a1b2c3d4>), Example::H.render(node))
+    assert_equal(%(<klenod-clock-a1b2c3d4 time="2026-08-16 12:00:00 -0500">12:00</klenod-clock-a1b2c3d4>), Example::Framework::H.render(node))
   end
 
   def test_example_h_serializes_style_hashes
     node =
-      Example::H[
+      Example::Framework::H[
         :div,
         "Foo",
         style: {
@@ -396,31 +396,31 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(
       %(<div style="--background-image: linear-gradient(#f0f, #fc0); font-size: 2em; color: &quot;red&quot;">Foo</div>),
-      Example::H.render(node)
+      Example::Framework::H.render(node)
     )
   end
 
   def test_example_h_partitions_component_slots
     component =
-      Class.new(Example::Component) do
+      Class.new(Example::Framework::Component) do
         def render
           raise "slots leaked into props" if @__props.key?(:slots)
 
-          Example::H[
+          Example::Framework::H[
             :section,
-            Example::H[:button, *prop(:children)[:button]],
-            Example::H[:div, *@__props[:children]]
+            Example::Framework::H[:button, *prop(:children)[:button]],
+            Example::Framework::H[:div, *@__props[:children]]
           ]
         end
       end
 
     node =
-      Example::H[
+      Example::Framework::H[
         component,
-        Example::H[:span, "Button", slot: "button"],
-        Example::H[:p, "Default"]
+        Example::Framework::H[:span, "Button", slot: "button"],
+        Example::Framework::H[:p, "Default"]
       ]
-    html = Example::H.render(node)
+    html = Example::Framework::H.render(node)
 
     assert_includes(html, "<button><span>Button</span></button>")
     assert_includes(html, "<div><p>Default</p></div>")
@@ -437,8 +437,8 @@ class Klenod::ExampleTest < Minitest::Test
           source_dir: dir,
           plugins: [
             Klenod::Build::Plugins::HamlPlugin.new(
-              component_base_class: "Example::Component",
-              factory: "Example::H",
+              component_base_class: "Example::Framework::Component",
+              factory: "Example::Framework::H",
               variables: {global: "@__props"}
             ),
             Klenod::Build::Plugins::CSSPlugin.new
@@ -446,7 +446,7 @@ class Klenod::ExampleTest < Minitest::Test
         )
       record = context.evaluate("component.haml")
       component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default
-      rendered = Example::H.render(component.instantiate(button_class: "external").render)
+      rendered = Example::Framework::H.render(component.instantiate(button_class: "external").render)
 
       assert_match(/class="[^"]*\bexternal\b[^"]*"/, rendered)
       assert_match(/class="[^"]*\bcomponent_button\?/, rendered)
@@ -456,7 +456,7 @@ class Klenod::ExampleTest < Minitest::Test
 
   def test_example_component_reads_props_without_exposing_storage
     component =
-      Class.new(Example::Component) do
+      Class.new(Example::Framework::Component) do
         def values
           [
             prop?(:enabled),
@@ -478,7 +478,7 @@ class Klenod::ExampleTest < Minitest::Test
     record = context.evaluate("root.haml")
     component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default
 
-    assert_instance_of(Example::Translator, component::I18n)
+    assert_instance_of(Example::Framework::Translator, component::I18n)
     refute_respond_to(component, :i18n)
     refute_respond_to(component.new, :i18n)
     refute_respond_to(component.new, :t)
@@ -538,7 +538,7 @@ class Klenod::ExampleTest < Minitest::Test
     entry = context.entry(config.entrypoints.fetch(0))
 
     %w[light dark].each do |theme|
-      headers = HeaderList.new([["Cookie", "#{Example::THEME_COOKIE}=#{theme}"]])
+      headers = HeaderList.new([["Cookie", "#{Example::Framework::THEME_COOKIE}=#{theme}"]])
       _status, _response_headers, body = entry.call(HeaderRequest["GET", "/", headers], context)
 
       assert_includes(body.join, "<html lang=\"en\" data-theme=\"#{theme}\">")
@@ -549,7 +549,7 @@ class Klenod::ExampleTest < Minitest::Test
     config = example_config
     context = config.context
     entry = context.entry(config.entrypoints.fetch(0))
-    headers = HeaderList.new([["Cookie", "#{Example::THEME_COOKIE}=sepia"]])
+    headers = HeaderList.new([["Cookie", "#{Example::Framework::THEME_COOKIE}=sepia"]])
     _status, _response_headers, body = entry.call(HeaderRequest["GET", "/", headers], context)
 
     assert_includes(body.join, '<html lang="en">')
@@ -987,7 +987,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(500, status)
     assert_equal("text/html; charset=utf-8", headers.fetch("content-type"))
-    assert_instance_of(Example::HTMLRenderer::PreparedDocument, body)
+    assert_instance_of(Example::Framework::HTMLRenderer::PreparedDocument, body)
     assert_includes(html, "Something went wrong")
     assert_includes(html, "Rendering /demo/error raised NameError.")
     assert_includes(html, "undefined local variable or method")
@@ -1005,7 +1005,7 @@ class Klenod::ExampleTest < Minitest::Test
       source: "%table\n  = @columns.map { |column| )\n    %th= column\n",
       module_id: Klenod::Build::ModuleId.new("components/DataTable.haml", nil)
     )
-    formatted = Example::ServerErrors.format_exception(error, nil)
+    formatted = Example::Server::ServerErrors.format_exception(error, nil)
 
     assert_includes(formatted, "components/DataTable.haml:2: Haml parse error")
     assert_includes(formatted, "> 2 |   = @columns.map { |column| )")
@@ -1013,7 +1013,7 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_server_returns_pretty_html_error_response_for_html_requests
-    error_page = Example::DevelopmentErrorPage.new(config: nil, context: nil)
+    error_page = Example::Server::DevelopmentErrorPage.new(config: nil, context: nil)
     error = RuntimeError.new("<broken>")
     status, headers, body =
       error_page.response_for(
@@ -1051,10 +1051,10 @@ class Klenod::ExampleTest < Minitest::Test
         )
         .with_resolution_context(dependency: dependency, importer_id: dependency.importer_id)
     error.set_backtrace([])
-    formatted = Example::ServerErrors.format_exception(error, config.context)
-    update_formatted = Example::ServerErrors.format_update_error(dependency.importer_id, error, config.context)
+    formatted = Example::Server::ServerErrors.format_exception(error, config.context)
+    update_formatted = Example::Server::ServerErrors.format_update_error(dependency.importer_id, error, config.context)
     source_root = config.context.graph.source_dir.to_s
-    error_page = Example::DevelopmentErrorPage.new(config: config, context: config.context)
+    error_page = Example::Server::DevelopmentErrorPage.new(config: config, context: config.context)
     status, _headers, body =
       error_page.response_for(
         HeaderRequest["GET", "/docs/assets", HeaderList.new([["Accept", "text/html"]])],
@@ -1064,11 +1064,11 @@ class Klenod::ExampleTest < Minitest::Test
     html = body.join
 
     assert_equal(500, status)
-    assert_includes(Example::ServerFormatting.strip_ansi(formatted), "Import:      /components/Docssection.haml")
+    assert_includes(Example::Server::ServerFormatting.strip_ansi(formatted), "Import:      /components/Docssection.haml")
     refute_includes(formatted, "Backtrace:")
     assert_includes(update_formatted, "Imported by: entrypoint.rb:1")
     assert_includes(update_formatted, "Source root: #{source_root}")
-    assert_includes(Example::ServerFormatting.strip_ansi(update_formatted), "Source:\n> 1 | # frozen_string_literal: true")
+    assert_includes(Example::Server::ServerFormatting.strip_ansi(update_formatted), "Source:\n> 1 | # frozen_string_literal: true")
     refute_includes(update_formatted, "haml_import")
     assert_includes(html, "Incorrect import path casing")
     assert_includes(html, "<dt>Import</dt><dd><code>/components/Docssection.haml</code></dd>")
@@ -1086,10 +1086,10 @@ class Klenod::ExampleTest < Minitest::Test
     routed_formatted = entry.exports::App.send(:format_render_error, error, context)
     refute_includes(routed_formatted, "Backtrace:")
     error_component = context.exports("virtual:router.rb")::Default.error("/docs/assets").page
-    request = Example::Request.from(Request["GET", "/docs/assets"]).with(representation: :html)
+    request = Example::Framework::Request.from(Request["GET", "/docs/assets"]).with(representation: :html)
     rendered =
-      Example::Context.with(request: request) do
-        Example::H.render(
+      Example::Framework::Context.with(request: request) do
+        Example::Framework::H.render(
           error_component
             .instantiate(
               path: "/docs/assets",
@@ -1113,7 +1113,7 @@ class Klenod::ExampleTest < Minitest::Test
 
   def test_example_server_formats_haml_parse_error_html_as_sections
     config = example_config
-    error_page = Example::DevelopmentErrorPage.new(config: config, context: config.context)
+    error_page = Example::Server::DevelopmentErrorPage.new(config: config, context: config.context)
     error = Klenod::Build::Plugins::HamlPlugin::ParseError.new(
       Klenod::Build::Plugins::HamlPlugin::RubyParseError.new(
         "Could not build Ruby block from Haml script: \"@columns.map do |column| }\"\n\nErrors:\n  Unmatched `}', missing `{' ?\n  Unmatched keyword, missing `end' ?",
@@ -1126,7 +1126,7 @@ class Klenod::ExampleTest < Minitest::Test
       error_page.response_for(
         HeaderRequest["GET", "/demo/data", HeaderList.new([["Accept", "text/html"]])],
         error,
-        Example::ServerErrors.format_exception(error, nil)
+        Example::Server::ServerErrors.format_exception(error, nil)
       )
     html = body.join
 
@@ -1141,7 +1141,7 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_server_keeps_plain_error_response_for_non_html_requests
-    error_page = Example::DevelopmentErrorPage.new(config: nil, context: nil)
+    error_page = Example::Server::DevelopmentErrorPage.new(config: nil, context: nil)
     status, headers, body =
       error_page.response_for(
         HeaderRequest["GET", "/demo/data", HeaderList.new([["Accept", "application/json"]])],
@@ -1163,7 +1163,7 @@ class Klenod::ExampleTest < Minitest::Test
       end
     end.new(asset_response, {})
     app = ->(_request) { raise "app should not be called" }
-    runner = Example::ServerRunner.new(port: 9292, asset_app: asset_app, app: app, error_handler: ->(_request, error) { raise error })
+    runner = Example::Server::ServerRunner.new(port: 9292, asset_app: asset_app, app: app, error_handler: ->(_request, error) { raise error })
 
     response = nil
     capture_io do
@@ -1180,7 +1180,7 @@ class Klenod::ExampleTest < Minitest::Test
       def response_for(_path, _env = {}) = response
     end.new(nil)
     app = ->(_request) { [201, {"content-type" => "text/plain"}, ["ok"]] }
-    runner = Example::ServerRunner.new(port: 9292, asset_app: asset_app, app: app, error_handler: ->(_request, error) { raise error })
+    runner = Example::Server::ServerRunner.new(port: 9292, asset_app: asset_app, app: app, error_handler: ->(_request, error) { raise error })
 
     response = nil
     capture_io do
@@ -1194,7 +1194,7 @@ class Klenod::ExampleTest < Minitest::Test
   def test_server_runner_streams_prepared_documents_without_consuming_them_eagerly
     reads = 0
     body_class = Class.new do
-      include Example::ResponseBody
+      include Example::Framework::ResponseBody
       include Enumerable
 
       define_method(:each) do |&block|
@@ -1206,11 +1206,11 @@ class Klenod::ExampleTest < Minitest::Test
       end
     end
     prepared_body = body_class.new
-    runner = Example::ServerRunner.new(port: 9292, asset_app: nil, app: nil, error_handler: nil)
+    runner = Example::Server::ServerRunner.new(port: 9292, asset_app: nil, app: nil, error_handler: nil)
 
     response = runner.send(:protocol_response, 200, {"content-type" => "text/html"}, prepared_body)
 
-    assert_instance_of(Example::ServerRunner::EnumerableResponseBody, response.body)
+    assert_instance_of(Example::Server::ServerRunner::EnumerableResponseBody, response.body)
     assert_predicate(response.body, :ready?)
     assert_equal(0, reads)
     assert_equal("first", response.body.read)
@@ -1221,7 +1221,7 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_server_runner_leaves_array_bodies_buffered
-    runner = Example::ServerRunner.new(port: 9292, asset_app: nil, app: nil, error_handler: nil)
+    runner = Example::Server::ServerRunner.new(port: 9292, asset_app: nil, app: nil, error_handler: nil)
     body = ["first", "second"]
 
     response = runner.send(:protocol_response, 200, {"content-type" => "text/plain"}, body)
@@ -1235,7 +1235,7 @@ class Klenod::ExampleTest < Minitest::Test
     asset_app = Data.define(:response) do
       def response_for(_path, _env = {}) = response
     end.new(asset_response)
-    runner = Example::ServerRunner.new(port: 9292, asset_app: asset_app, app: ->(_request) { raise "unused" }, error_handler: ->(_request, error) { raise error })
+    runner = Example::Server::ServerRunner.new(port: 9292, asset_app: asset_app, app: ->(_request) { raise "unused" }, error_handler: ->(_request, error) { raise error })
 
     response = nil
     capture_io do
@@ -1246,7 +1246,7 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_server_runner_supports_plaintext_http2
-    runner = Example::ServerRunner.new(
+    runner = Example::Server::ServerRunner.new(
       port: 9292,
       tls: false,
       asset_app: nil,
@@ -1260,7 +1260,7 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_server_runner_uses_https_by_default
-    runner = Example::ServerRunner.new(
+    runner = Example::Server::ServerRunner.new(
       port: 9292,
       asset_app: nil,
       app: nil,
@@ -1274,7 +1274,7 @@ class Klenod::ExampleTest < Minitest::Test
 
   def test_dev_server_handles_chrome_devtools_probe
     source_dir = "/tmp/klenod_example/src"
-    probe = Example::ChromeDevtoolsProbe.new(source_dir: source_dir, uuid: "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b")
+    probe = Example::Server::ChromeDevtoolsProbe.new(source_dir: source_dir, uuid: "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b")
     status, headers, body =
       probe.response_for(HeaderRequest["GET", "/.well-known/appspecific/com.chrome.devtools.json", HeaderList.new([])])
     payload = JSON.parse(body.join)
@@ -1287,7 +1287,7 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_production_server_returns_generic_error_response
-    server = Example::ProductionServer.allocate
+    server = Example::Server::ProductionServer.allocate
     status, headers, body = nil
     _stdout, stderr = capture_io do
       status, headers, body = server.send(:error_response_for, RuntimeError.new("secret failure"))
@@ -1302,7 +1302,7 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_server_tracks_logged_update_errors
-    recent_errors = Example::RecentErrorLog.new
+    recent_errors = Example::Server::RecentErrorLog.new
     error = RuntimeError.new("broken module")
 
     refute(recent_errors.include?(error))
@@ -1313,7 +1313,7 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_server_suppresses_recent_logged_update_errors
-    recent_errors = Example::RecentErrorLog.new
+    recent_errors = Example::Server::RecentErrorLog.new
     error = RuntimeError.new("broken module")
 
     recent_errors.remember(error, logged_at: 10.0)
@@ -1323,10 +1323,10 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_server_logs_repeated_errors_after_interval
-    recent_errors = Example::RecentErrorLog.new
+    recent_errors = Example::Server::RecentErrorLog.new
     error = RuntimeError.new("broken module")
 
-    recent_errors.remember(error, logged_at: -Example::RecentErrorLog::DEFAULT_REPEAT_INTERVAL)
+    recent_errors.remember(error, logged_at: -Example::Server::RecentErrorLog::DEFAULT_REPEAT_INTERVAL)
 
     _stdout, stderr = capture_io { recent_errors.warn_unless_recent(RuntimeError.new("broken module"), "formatted error") }
 
@@ -1334,7 +1334,7 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_server_does_not_suppress_repeated_module_resolution_errors
-    recent_errors = Example::RecentErrorLog.new
+    recent_errors = Example::Server::RecentErrorLog.new
     error =
       Klenod::Build::ResolveError.new(
         nil,
@@ -1519,13 +1519,13 @@ class Klenod::ExampleTest < Minitest::Test
 
   def test_example_request_copies_protocol_style_headers
     headers = HeaderList.new([["Accept", "application/json"]])
-    request = Example::Request.from(HeaderRequest["GET", "/api/status", headers])
+    request = Example::Framework::Request.from(HeaderRequest["GET", "/api/status", headers])
 
     assert_equal({"accept" => "application/json"}, request.headers)
   end
 
   def test_example_request_queries_the_selected_representation
-    request = Example::Request.from(Request["GET", "/docs"]).with(representation: :markdown)
+    request = Example::Framework::Request.from(Request["GET", "/docs"]).with(representation: :markdown)
 
     assert(request.representation?(:markdown))
     refute(request.representation?(:html))
@@ -1533,7 +1533,7 @@ class Klenod::ExampleTest < Minitest::Test
 
   def test_example_request_parses_nested_query_params
     request =
-      Example::Request.from(
+      Example::Framework::Request.from(
         Request[
           "GET",
           "/demo/forms?tag=ruby&tag=klenod&user[name]=Andreas&filters[]=fresh&filters[]=smoked&items[][name]=Coffee&items[][name]=Tea"
@@ -1556,7 +1556,7 @@ class Klenod::ExampleTest < Minitest::Test
 
   def test_example_request_parses_nested_form_params
     body = "order[customer][name]=Andreas&order[items][]=coffee&order[items][]=tea"
-    request = Example::Request.from(BodyRequest["POST", "/demo/forms/submit", HeaderList.new([]), body])
+    request = Example::Framework::Request.from(BodyRequest["POST", "/demo/forms/submit", HeaderList.new([]), body])
 
     assert_equal(
       {
@@ -1578,9 +1578,9 @@ class Klenod::ExampleTest < Minitest::Test
     english = localized_request(locale: "en")
     swedish = localized_request(locale: "sv")
 
-    Example::Context.with(request: english) do
+    Example::Framework::Context.with(request: english) do
       other = Fiber.new do
-        Example::Context.with(request: swedish) do
+        Example::Framework::Context.with(request: swedish) do
           translator.t(:title)
         end
       end
@@ -1671,8 +1671,8 @@ class Klenod::ExampleTest < Minitest::Test
   def test_example_h_localizes_local_anchor_hrefs
     request = localized_request(locale: "sv")
 
-    Example::Context.with(request: request, routes: localized_routes) do
-      html = Example::H.render(Example::H[:a, "Assets", href: "/demo/assets"])
+    Example::Framework::Context.with(request: request, routes: localized_routes) do
+      html = Example::Framework::H.render(Example::Framework::H[:a, "Assets", href: "/demo/assets"])
 
       assert_includes(html, %(href="/sv/demo/assets"))
     end
@@ -1681,8 +1681,8 @@ class Klenod::ExampleTest < Minitest::Test
   def test_example_h_uses_hreflang_for_local_anchor_hrefs
     request = localized_request(locale: "en")
 
-    Example::Context.with(request: request, routes: localized_routes) do
-      html = Example::H.render(Example::H[:a, "Assets", href: "/demo/assets?from=docs#top", hreflang: "sv"])
+    Example::Framework::Context.with(request: request, routes: localized_routes) do
+      html = Example::Framework::H.render(Example::Framework::H[:a, "Assets", href: "/demo/assets?from=docs#top", hreflang: "sv"])
 
       assert_includes(html, %(href="/sv/demo/assets?from=docs#top"))
       assert_includes(html, %(hreflang="sv"))
@@ -1692,8 +1692,8 @@ class Klenod::ExampleTest < Minitest::Test
   def test_example_h_canonicalizes_already_localized_anchor_hrefs
     request = localized_request(locale: "sv")
 
-    Example::Context.with(request: request, routes: localized_routes) do
-      html = Example::H.render(Example::H[:a, "Assets", href: "/sv/demo/assets"])
+    Example::Framework::Context.with(request: request, routes: localized_routes) do
+      html = Example::Framework::H.render(Example::Framework::H[:a, "Assets", href: "/sv/demo/assets"])
 
       assert_includes(html, %(href="/sv/demo/assets"))
       refute_includes(html, "/sv/sv/")
@@ -1703,8 +1703,8 @@ class Klenod::ExampleTest < Minitest::Test
   def test_example_h_keeps_dynamic_anchor_segments_when_localizing
     request = localized_request(locale: "sv")
 
-    Example::Context.with(request: request, routes: localized_routes) do
-      html = Example::H.render(Example::H[:a, "Blog post", href: "/demo/blog/shop"])
+    Example::Framework::Context.with(request: request, routes: localized_routes) do
+      html = Example::Framework::H.render(Example::Framework::H[:a, "Blog post", href: "/demo/blog/shop"])
 
       assert_includes(html, %(href="/sv/demo/blogg/shop"))
       refute_includes(html, "/sv/demo/blogg/butik")
@@ -1714,12 +1714,12 @@ class Klenod::ExampleTest < Minitest::Test
   def test_example_h_leaves_non_app_anchor_hrefs_unchanged
     request = localized_request(locale: "sv")
 
-    Example::Context.with(request: request, routes: localized_routes) do
-      assert_includes(Example::H.render(Example::H[:a, "External", href: "https://example.com/demo/assets"]), %(href="https://example.com/demo/assets"))
-      assert_includes(Example::H.render(Example::H[:a, "Protocol relative", href: "//example.com/demo/assets"]), %(href="//example.com/demo/assets"))
-      assert_includes(Example::H.render(Example::H[:a, "Mail", href: "mailto:hello@example.com"]), %(href="mailto:hello@example.com"))
-      assert_includes(Example::H.render(Example::H[:a, "Fragment", href: "#intro"]), %(href="#intro"))
-      assert_includes(Example::H.render(Example::H[:a, "Asset", href: "/assets/app.css"]), %(href="/assets/app.css"))
+    Example::Framework::Context.with(request: request, routes: localized_routes) do
+      assert_includes(Example::Framework::H.render(Example::Framework::H[:a, "External", href: "https://example.com/demo/assets"]), %(href="https://example.com/demo/assets"))
+      assert_includes(Example::Framework::H.render(Example::Framework::H[:a, "Protocol relative", href: "//example.com/demo/assets"]), %(href="//example.com/demo/assets"))
+      assert_includes(Example::Framework::H.render(Example::Framework::H[:a, "Mail", href: "mailto:hello@example.com"]), %(href="mailto:hello@example.com"))
+      assert_includes(Example::Framework::H.render(Example::Framework::H[:a, "Fragment", href: "#intro"]), %(href="#intro"))
+      assert_includes(Example::Framework::H.render(Example::Framework::H[:a, "Asset", href: "/assets/app.css"]), %(href="/assets/app.css"))
     end
   end
 
@@ -1776,7 +1776,7 @@ class Klenod::ExampleTest < Minitest::Test
     second = translator(translations, source: "components/Greeting.haml")
 
     _stdout, stderr = capture_io do
-      Example::Context.with(request: request) do
+      Example::Framework::Context.with(request: request) do
         assert_equal("Hello", first.t(:title))
         assert_equal("Hello", first.t(:title))
         assert_equal("Hello", second.t(:title))
@@ -1831,7 +1831,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(302, status)
     assert_equal("/demo/forms", response_headers.fetch("location"))
-    assert_includes(response_headers.fetch("set-cookie"), "#{Example::SESSION_COOKIE}=")
+    assert_includes(response_headers.fetch("set-cookie"), "#{Example::Framework::SESSION_COOKIE}=")
     assert_includes(response_headers.fetch("set-cookie"), "Max-Age=0")
     assert_empty(body)
 
@@ -1889,7 +1889,7 @@ class Klenod::ExampleTest < Minitest::Test
 
   def test_example_request_closes_readable_bodies_after_parsing_forms
     body = ReadableBody.new("name=And", "reas")
-    request = Example::Request.from(BodyRequest["POST", "/demo/forms/submit", HeaderList.new([]), body])
+    request = Example::Framework::Request.from(BodyRequest["POST", "/demo/forms/submit", HeaderList.new([]), body])
 
     assert_equal({"name" => "Andreas"}, request.form)
     assert_equal(true, body.closed)
@@ -1915,7 +1915,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(302, status)
     assert_equal("/docs", headers.fetch("location"))
-    assert_includes(headers.fetch("set-cookie"), "#{Example::THEME_COOKIE}=dark")
+    assert_includes(headers.fetch("set-cookie"), "#{Example::Framework::THEME_COOKIE}=dark")
     assert_includes(headers.fetch("set-cookie"), "SameSite=Lax")
     refute_includes(headers.fetch("set-cookie"), "HttpOnly")
     assert_empty(body)
@@ -1930,7 +1930,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     assert_equal(302, status)
     assert_equal("/demo", headers.fetch("location"))
-    assert_includes(headers.fetch("set-cookie"), "#{Example::THEME_COOKIE}=")
+    assert_includes(headers.fetch("set-cookie"), "#{Example::Framework::THEME_COOKIE}=")
     assert_includes(headers.fetch("set-cookie"), "Max-Age=0")
     refute_includes(headers.fetch("set-cookie"), "HttpOnly")
     assert_empty(body)
@@ -2013,9 +2013,9 @@ class Klenod::ExampleTest < Minitest::Test
     html[/<head\b.*?<\/head>/m] || flunk("Expected rendered document head")
   end
 
-  def translator(translations, source: nil, default_locale: Example::Translator::DEFAULT_LOCALE)
+  def translator(translations, source: nil, default_locale: Example::Framework::Translator::DEFAULT_LOCALE)
     owner = TranslationOwner.new(source) if source
-    Example::Translator.new(owner, translations:, default_locale:)
+    Example::Framework::Translator.new(owner, translations:, default_locale:)
   end
 
   def example_config
@@ -2043,13 +2043,13 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def localized_request(locale:, path: "/")
-    localized = Example::LocalizedRoutes::LocalizedPath.new(path, path, locale, locale)
-    Example::Request.from(Request["GET", path], localized: localized)
+    localized = Example::Framework::LocalizedRoutes::LocalizedPath.new(path, path, locale, locale)
+    Example::Framework::Request.from(Request["GET", path], localized: localized)
   end
 
   def localized_routes(translations: nil)
     route = Data.define(:match_parts)
-    Example::LocalizedRoutes.new(
+    Example::Framework::LocalizedRoutes.new(
       routes: [
         route.new([[:static, "demo", nil], [:static, "assets", nil]]),
         route.new([[:static, "demo", nil], [:static, "blog", nil], [:dynamic, nil, "slug"]]),

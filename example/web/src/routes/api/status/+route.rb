@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 def GET(request)
-  Example::Response.json(
+  Example::Framework::Response.json(
     {
       status: "ok",
       service: "klenod",

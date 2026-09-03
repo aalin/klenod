@@ -5,4 +5,4 @@ require "bundler/setup"
 require_relative "../lib/framework"
 require_relative "../lib/testing/test_command"
 
-exit Example::TestCommand.new(ARGV).call
+exit Example::Testing::TestCommand.new(ARGV).call

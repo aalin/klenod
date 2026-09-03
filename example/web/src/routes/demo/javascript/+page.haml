@@ -30,7 +30,7 @@
             %td= time_style.inspect
             %td
               %IntlTime{
-                lang: Example::Context.current&.request&.locale || "en",
+                lang: Example::Framework::Context.current&.request&.locale || "en",
                 time: Time.now,
                 "date-style": date_style || DEFAULT_DATE_STYLE,
                 "time-style": time_style || DEFAULT_TIME_STYLE

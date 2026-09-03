@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
 def PUT(request)
-  response = Example::Response.redirect(return_to(request))
+  response = Example::Framework::Response.redirect(return_to(request))
 
   case request.form.fetch("value", "system")
   when "light", "dark"
-    response.with_cookie(Example::THEME_COOKIE, request.form.fetch("value"), http_only: false)
+    response.with_cookie(Example::Framework::THEME_COOKIE, request.form.fetch("value"), http_only: false)
   else
-    response.delete_cookie(Example::THEME_COOKIE, http_only: false)
+    response.delete_cookie(Example::Framework::THEME_COOKIE, http_only: false)
   end
 end
 

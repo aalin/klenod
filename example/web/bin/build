@@ -11,7 +11,7 @@ require_relative "../lib/web_config"
 config = Example::WebConfig.build_config
 output = config.output_path
 assets_dir = config.assets_path
-logger = Example::BuildLogger.new
+logger = Example::Tools::BuildLogger.new
 build_start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
 FileUtils.mkdir_p(File.dirname(output))
@@ -23,17 +23,17 @@ bundle = context.graph.bundle(entrypoints: config.entrypoints)
 logger.detail("entrypoints: #{config.entrypoints.join(", ")}")
 logger.detail("modules: #{bundle.modules.length}")
 logger.detail("assets: #{context.assets.length}")
-Example::BuildLogging.log_asset_counts(context, logger)
+Example::Tools::BuildLogging.log_asset_counts(context, logger)
 
 if ENV["VERBOSE_ASSETS"]
   logger.step("Asset manifest")
-  Example::BuildLogging.log_assets(context, logger)
+  Example::Tools::BuildLogging.log_assets(context, logger)
 end
 
 if assets_dir
   logger.step("Materializing assets")
   context.write_assets(assets_dir) do |event, asset, path|
-    Example::BuildLogging.log_asset_write_event(logger, event, asset, path)
+    Example::Tools::BuildLogging.log_asset_write_event(logger, event, asset, path)
   end
 end
 
