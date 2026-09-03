@@ -191,6 +191,8 @@ module Klenod
                     super(src:, width:, height:, content_type:, aspect_ratio:, variants: variants.dup.freeze)
                   end
 
+                  alias to_s src
+
                   def srcset
                     return nil if variants.empty?
 
@@ -205,7 +207,9 @@ module Klenod
                   end
                 end
 
-              ImageVariant = Data.define(:src, :width, :height, :content_type, :aspect_ratio, :format, :descriptor, :quality)
+              ImageVariant = Data.define(:src, :width, :height, :content_type, :aspect_ratio, :format, :descriptor, :quality) do
+                alias to_s src
+              end
             RUBY
           end
 

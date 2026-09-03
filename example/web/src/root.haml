@@ -1,5 +1,6 @@
 :ruby
   THEMES = %w[light dark].freeze
+  Favicon = import("./favicon.svg")
 
   def document_theme
     theme = @@request.cookies.fetch(Example::THEME_COOKIE, nil)
@@ -14,5 +15,6 @@
       %link{ rel: "stylesheet", href: reference.asset.output_path, "data-index" => reference.index }
     = $javascript_references.map do |reference|
       %script{ type: "module", src: reference.asset.output_path, "data-index" => reference.index }
+    %link(rel="icon" type="image/svg" href=Favicon)
   %body
     = $children

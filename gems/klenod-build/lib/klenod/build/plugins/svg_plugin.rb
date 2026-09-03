@@ -94,7 +94,9 @@ module Klenod
 
           def svg_runtime_source
             <<~RUBY
-              SvgMetadata = Data.define(:src, :width, :height, :content_type, :aspect_ratio)
+              SvgMetadata = Data.define(:src, :width, :height, :content_type, :aspect_ratio) do
+                alias to_s src
+              end
             RUBY
           end
 
