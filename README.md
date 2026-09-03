@@ -238,6 +238,7 @@ These built-in plugins are optional:
 
 - [`GoogleFontsPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#googlefontsplugin): downloads Google Fonts and emits local assets.
 - [`RouterPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#routerplugin): generates a virtual router from a route tree.
+- [`TestPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#testplugin): discovers test entrypoints and keeps test files out of application imports.
 
 CSS and JavaScript support are separate plugin gems:
 

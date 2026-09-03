@@ -895,6 +895,23 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(stdout, "└─ layout routes/+layout.haml\n   └─ layout routes/demo/+layout.haml\n      └─ layout routes/demo/dashboard/+layout.haml\n         page routes/demo/dashboard/settings/+page.haml")
   end
 
+  def test_example_test_command_runs_colocated_component_tests
+    stdout, stderr, status =
+      Open3.capture3(
+        {
+          "CI" => "1",
+          "KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1"
+        },
+        RbConfig.ruby,
+        "bin/test",
+        chdir: __dir__
+      )
+
+    assert(status.success?, stderr)
+    assert_includes(stdout, "Running 1 test file")
+    assert_match(/1 runs, 4 assertions, 0 failures, 0 errors/, stdout)
+  end
+
   def test_example_app_renders_router_tree_metadata
     config = example_config
     context = config.context

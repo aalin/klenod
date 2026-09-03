@@ -259,6 +259,14 @@ The example server follows SvelteKit-style dispatch:
 
 The router should stay request-agnostic. Request dispatch belongs in the framework/server layer.
 
+## Application Tests
+
+Application tests are build-time entrypoints. `TestPlugin` discovers `*.test.rb` files and prevents application modules from importing them. Test files can import normal application modules through the same resolver and plugin graph used by development and production builds.
+
+`TestSuite` collects each test and its eager and lazy dependency closure without evaluating application code. A watcher can intersect invalidated module ids with those closures to select related tests. Test execution and reporting remain framework policy; a framework can evaluate the selected entries with Minitest, RSpec, or another library in an isolated worker process.
+
+Tests use development-mode transforms and invalidation. They are not production entrypoints, are not serialized into application bundles, and add nothing to `klenod-runtime`.
+
 ## Development Updates
 
 `Klenod::Build::Watcher` watches source files and asks the build graph to invalidate affected modules.

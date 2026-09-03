@@ -9,6 +9,8 @@ module Klenod
 
   module Build
     autoload :Graphviz, "klenod/build/graphviz"
+    autoload :TestSelection, "klenod/build/test_suite"
+    autoload :TestSuite, "klenod/build/test_suite"
     autoload :UpdateEvent, "klenod/build/watcher"
     autoload :Watcher, "klenod/build/watcher"
   end

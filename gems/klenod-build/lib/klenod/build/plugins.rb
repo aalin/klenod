@@ -17,6 +17,7 @@ module Klenod
       autoload :TomlPlugin, File.expand_path("plugins/data_plugin", __dir__)
       autoload :TextPlugin, File.expand_path("plugins/data_plugin", __dir__)
       autoload :RouterPlugin, File.expand_path("plugins/router_plugin", __dir__)
+      autoload :TestPlugin, File.expand_path("plugins/test_plugin", __dir__)
     end
   end
 end

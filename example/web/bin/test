@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require_relative "../lib/framework"
+require_relative "../lib/testing/test_command"
+
+exit Example::TestCommand.new(ARGV).call

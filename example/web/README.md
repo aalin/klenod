@@ -51,6 +51,9 @@ assets and include `Vary: Accept` for caches.
 - `bin/build` builds a production bundle and writes its assets.
 - `bin/server` loads and serves the production bundle.
 - `bin/routes` prints the discovered routes.
+- `bin/test` runs colocated application tests, then watches their dependency graph.
+
+Use `bin/test --run` for one test run. The command also runs once automatically when `CI` is set. Tests live beside source modules as `*.test.rb`; when watching, changing a test or any eager or lazy dependency reruns only the related tests.
 
 By default, development assets stay in memory. They can also be mirrored to
 disk; the initial manifest and subsequent successful asset updates are written

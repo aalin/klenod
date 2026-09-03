@@ -19,6 +19,7 @@ module Klenod
           assert_operator ImagePlugin.new, :is_a?, Klenod::Build::Plugin
           assert_operator DataPlugin.new, :is_a?, Klenod::Build::Plugin
           assert_operator RouterPlugin.new, :is_a?, Klenod::Build::Plugin
+          assert_operator TestPlugin.new, :is_a?, Klenod::Build::Plugin
         end
 
         def test_data_format_namespaces_expose_plugin_classes

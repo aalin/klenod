@@ -25,6 +25,7 @@ module Example
 
     def plugins
       [
+        Klenod::Build::Plugins::TestPlugin.new,
         Klenod::Build::Plugins::RouterPlugin.new(
           pages_dir: "routes",
           route_base_class: "Example::Route"
@@ -43,6 +44,8 @@ module Example
             class: "Example::Translator",
             constant: "I18n"
           },
+          # i18n_class: "Example::Translator",
+          # i18n_constant: "I18n",
           cache_static_subtrees: false
         ),
         Klenod::Build::Plugins::MarkdownPlugin.new(

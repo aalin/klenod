@@ -1,0 +1,46 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Guides",
+    title: "Testing",
+    summary: "Write tests beside application modules and rerun only the tests related to a change."
+  }
+
+  %DocsSection{ title: "Colocated Tests" }
+    :markdown
+      Test files live anywhere under `src` and end in `.test.rb`. They are test entrypoints, not application dependencies. A test can import the component or module beside it:
+
+      ```ruby
+      Button = import("./Button.haml")
+
+      def test_renders_button_children
+        html = render(Button, "Save", type: "submit")
+
+        assert_includes(html, "<button")
+        assert_includes(html, ">Save</button>")
+      end
+      ```
+
+      The example adapter turns each test module into a Minitest test case. Top-level `test_*`, `setup`, `teardown`, and helper methods become instance methods on that case. Assertions come from Minitest, so test files do not need a class or a Minitest require.
+
+  %DocsSection{ title: "Run And Watch" }
+    :markdown
+      Run the tests and keep watching:
+
+      ```sh
+      bin/test
+      ```
+
+      Use `bin/test --run` for one run. `CI` also selects one-run mode automatically. Each batch runs in a fresh worker process, so test state cannot leak into later batches or the development server.
+
+      Klenod collects every test's eager and lazy dependency closure. Editing a test reruns that test. Editing an imported module or any transitive dependency reruns every related test. Added tests run immediately, removed tests leave the suite, and unrelated changes do not trigger a test run.
+
+  %DocsSection{ title: "Framework Helpers" }
+    :markdown
+      Klenod does not choose a test library or rendering API. The example framework supplies `render`, which renders a component to an HTML string, and `with_context`, which installs scoped rendering context for a test. A DOM query API can be layered over the returned HTML later.
+
+%title= "Testing"

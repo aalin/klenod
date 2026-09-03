@@ -9,14 +9,14 @@
   %PageHeader{
     kicker: "Docs",
     title: "Plugin Reference",
-    summary: "Built-in plugins cover Ruby, Haml, Markdown, CSS, JavaScript, assets, data imports, routing, and Google Fonts."
+    summary: "Built-in plugins cover Ruby, Haml, Markdown, CSS, JavaScript, assets, data imports, routing, testing, and Google Fonts."
   }
 
   %DocsSection{ title: "Default Plugin Set" }
     :markdown
       `Klenod::Build::Context.default_plugins` includes `RubyPlugin`, `IntlPlugin`, `HamlPlugin`, `MarkdownPlugin`, `CSSPlugin`, `JavaScriptPlugin`, `SvgPlugin`, `ImagePlugin`, `JsonPlugin`, `YamlPlugin`, `TomlPlugin`, and `TextPlugin`.
 
-      `RouterPlugin` and `GoogleFontsPlugin` are built in but opt-in. Applications can configure either one explicitly when they need routing or Google Fonts imports.
+      `RouterPlugin`, `TestPlugin`, and `GoogleFontsPlugin` are built in but opt-in. Applications configure them explicitly when they need routing, application tests, or Google Fonts imports.
 
   %DocsSection{ title: "Hook Phases" }
     :markdown
@@ -85,6 +85,11 @@
         href: "/docs/plugins/GoogleFontsPlugin",
         title: "GoogleFontsPlugin",
         summary: "Google Fonts CSS imports rewritten to local generated font assets."
+      }
+      %DocsLinkCard{
+        href: "/docs/plugins/TestPlugin",
+        title: "TestPlugin",
+        summary: "Colocated test discovery, import isolation, and dependency-aware test selection."
       }
 
 %title= "Plugin Reference"

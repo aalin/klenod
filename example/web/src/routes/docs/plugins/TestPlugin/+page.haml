@@ -1,0 +1,47 @@
+:ruby
+  PageHeader = import("/components/PageHeader.haml")
+  DocsPage = import("/components/DocsPage.haml")
+  DocsSection = import("/components/DocsSection.haml")
+
+%DocsPage
+  %PageHeader{
+    kicker: "Plugin Reference",
+    title: "TestPlugin",
+    summary: "TestPlugin discovers test entrypoints and keeps them outside the application import graph."
+  }
+
+  %DocsSection{ title: "Configuration" }
+    :markdown
+      Add the plugin to the same development configuration as the application plugins:
+
+      ```ruby
+      Klenod::Build::Plugins::TestPlugin.new(
+        pattern: "**/*.test.rb"
+      )
+      ```
+
+      `pattern` is a source-relative glob. It defaults to `**/*.test.rb`.
+
+  %DocsSection{ title: "Test Boundaries" }
+    :markdown
+      Test files are independent entrypoints. They can import Ruby, Haml, CSS, data, assets, and other application modules through the normal plugin graph. Application modules and tests cannot import a file matched by the test pattern. Shared test helpers should therefore use ordinary `.rb` filenames.
+
+      Normal builds do not discover test entrypoints, so tests are absent from production bundles. The plugin has no runtime behavior and does not add a testing-library dependency.
+
+  %DocsSection{ title: "Selecting Related Tests" }
+    :markdown
+      `Klenod::Build::TestSuite` discovers tests through the plugin and collects their complete static dependency closures without evaluating them:
+
+      ```ruby
+      suite = Klenod::Build::TestSuite.new(
+        context: context,
+        plugin: test_plugin
+      )
+
+      initial = suite.collect
+      related = suite.update(event)
+      ```
+
+      Both results expose sorted `test_paths` and `removed_test_paths`. A framework decides how to evaluate those paths and which test library reports the results.
+
+%title= "TestPlugin"
