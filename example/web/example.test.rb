@@ -900,6 +900,7 @@ class Klenod::ExampleTest < Minitest::Test
       Open3.capture3(
         {
           "CI" => "1",
+          "NO_COLOR" => "1",
           "KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1"
         },
         RbConfig.ruby,
@@ -908,8 +909,12 @@ class Klenod::ExampleTest < Minitest::Test
       )
 
     assert(status.success?, stderr)
-    assert_match(/Running \d+ test files/, stdout)
-    assert_match(/\d+ runs, \d+ assertions, 0 failures, 0 errors/, stdout)
+    assert_match(/RUN\s+\d+ test files/, stdout)
+    assert_includes(stdout, "components/Button.test.rb")
+    assert_includes(stdout, "components/LanguageSwitcher.test.rb")
+    assert_match(/Test Files\s+\d+ passed \(\d+\)/, stdout)
+    assert_match(/Tests\s+\d+ passed \(\d+\)/, stdout)
+    assert_match(/Assertions\s+\d+/, stdout)
   end
 
   def test_example_app_renders_router_tree_metadata

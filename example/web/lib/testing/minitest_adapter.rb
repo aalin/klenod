@@ -4,6 +4,7 @@ require "minitest"
 require "minitest/test"
 
 require_relative "component_helpers"
+require_relative "minitest_reporter"
 
 module Example
   class MinitestAdapter
@@ -17,6 +18,7 @@ module Example
     end
 
     def run(arguments = [])
+      Minitest.register_plugin(MinitestReporterPlugin) unless Minitest.extensions.include?(MinitestReporterPlugin)
       Minitest.run(arguments)
     end
   end

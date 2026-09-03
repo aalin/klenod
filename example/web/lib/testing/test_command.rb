@@ -24,6 +24,7 @@ module Example
       return run_worker(worker_paths) if arguments.first == "--worker"
 
       watch = watch?
+      @watch = watch
       config = test_config
       context = config.context
       plugin = context.graph.plugins.find { |candidate| candidate.is_a?(Klenod::Build::Plugins::TestPlugin::Plugin) }
@@ -44,7 +45,6 @@ module Example
       begin
         watcher.start
         run_in_worker(selection.test_paths)
-        output.puts "Watching #{config.source_path}"
         loop { sleep }
       rescue Interrupt
         output.puts
@@ -83,10 +83,12 @@ module Example
 
     def run_in_worker(test_paths)
       @worker_mutex.synchronize do
-        output.puts "Running #{test_paths.length} test #{(test_paths.length == 1) ? "file" : "files"}"
+        clear_screen
+        report_test_paths(test_paths)
         pid = Process.spawn(RbConfig.ruby, executable, "--worker", "--", *test_paths)
         _pid, status = Process.wait2(pid)
         @last_status = status.success? ? 0 : (status.exitstatus || 1)
+        report_watch_status if @watch
       end
     end
 
@@ -118,6 +120,36 @@ module Example
 
     def log_removed(paths)
       paths.each { |path| output.puts "Removed #{path}" }
+    end
+
+    def clear_screen
+      return unless @watch && output.respond_to?(:tty?) && output.tty?
+
+      output.print "\e[2J\e[H"
+    end
+
+    def report_test_paths(test_paths)
+      count = test_paths.length
+      output.puts "#{color(:run, " RUN ")} #{count} test #{(count == 1) ? "file" : "files"}"
+      output.puts
+      test_paths.each { |path| output.puts "  #{path}" }
+      output.puts
+      output.flush
+    end
+
+    def report_watch_status
+      status = last_status.zero? ? :success : :failure
+      label = last_status.zero? ? " PASS " : " FAIL "
+      output.puts
+      output.puts "#{color(status, label)} Watching for file changes..."
+      output.flush
+    end
+
+    def color(name, value)
+      return value if env.key?("NO_COLOR")
+
+      codes = {run: "\e[1;34m", success: "\e[1;32m", failure: "\e[1;31m"}
+      "#{codes.fetch(name)}#{value}\e[0m"
     end
   end
 end
