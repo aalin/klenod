@@ -26,7 +26,7 @@
     :markdown
       Test files are independent entrypoints. They can import Ruby, Haml, CSS, data, assets, and other application modules through the normal plugin graph. Application modules and tests cannot import a file matched by the test pattern. Shared test helpers should therefore use ordinary `.rb` filenames.
 
-      Normal builds do not discover test entrypoints, so tests are absent from production bundles. The plugin has no runtime behavior and does not add a testing-library dependency.
+      Normal builds do not discover test entrypoints, so tests are absent from production bundles.
 
   %DocsSection{ title: "Selecting Related Tests" }
     :markdown

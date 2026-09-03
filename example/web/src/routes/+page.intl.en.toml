@@ -27,12 +27,12 @@ title = "Development stays live"
 body = "When a source file changes, Klenod updates that part of the graph and invalidates its dependents. Modules evaluate again only when the application needs them."
 
 [features.runtime]
-title = "Build dependencies stay behind"
-body = "Production loads the serialized graph with klenod-runtime. Build plugins, compilers, and their dependencies do not need to ship with the application."
+title = "Build-time dependencies stay behind"
+body = "Production mode loads the serialized graph with klenod-runtime. Build plugins, compilers, and their dependencies do not need to ship with the application."
 
 [features.plugins]
 title = "Any file can be a module"
-body = "Plugins define how files resolve, transform, and appear at runtime. Ruby can import Haml, CSS, JavaScript, images, data, virtual modules, or your own formats."
+body = "Plugins define how files resolve, transform, and appear at runtime. Plugins make it possible to import Haml, CSS, JavaScript, images, data, or your own formats."
 
 [architecture]
 kicker = "Architecture"
@@ -40,7 +40,7 @@ title = "One graph. Clear phases."
 
 [architecture.collection]
 title = "Collect before evaluation"
-body = "Klenod can read imports, transform sources, and emit assets without running application top-level code."
+body = "Klenod can read imports, transform sources, and emit assets without running application code."
 
 [architecture.relative]
 title = "Relative by default"
@@ -56,5 +56,5 @@ body = "Export the graph, follow source maps, and see which modules and assets a
 
 [cta]
 kicker = "Ready to build"
-title = "Build your first graph."
+title = "Build your first Klenod-app."
 body = "Start with one Ruby entrypoint, import a dependency, and add plugins as the application grows."
