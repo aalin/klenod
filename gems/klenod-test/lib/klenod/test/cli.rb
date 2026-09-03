@@ -4,8 +4,8 @@ require "rbconfig"
 
 require "klenod/build/cli"
 
-require_relative "command"
 require_relative "config"
+require_relative "runner"
 
 module Klenod
   module Test
@@ -30,10 +30,10 @@ module Klenod
 
           config = ConfigLoader.load(config_path)
           Dir.chdir(config.base_dir) do
-            Klenod::Test::Command.new(
-              arguments,
+            Klenod::Test::Runner.new(
               context: config.context,
               execute: config.execute,
+              **runner_options,
               worker_command: worker_command,
               output:,
               format_error: config.format_error
@@ -46,15 +46,17 @@ module Klenod
 
         private
 
-        def arguments
-          selected = [@options[:run] && "--run", @options[:watch] && "--watch"].compact
+        def runner_options
+          selected = [@options[:run] && false, @options[:watch] && true].compact
           raise ConfigError, "Choose either --run or --watch" if selected.length > 1
 
           paths = Array(@test_paths)
           if @options[:worker]
-            [Klenod::Test::Command::WORKER_ARGUMENT, "--", *paths]
+            raise ConfigError, "--worker cannot be combined with --run or --watch" unless selected.empty?
+
+            {worker_paths: paths}
           elsif paths.empty?
-            selected
+            selected.empty? ? {} : {watch: selected.first}
           else
             raise ConfigError, "Test paths are only accepted with --worker"
           end

@@ -35,13 +35,13 @@ factory and an execution callback. The same runner is also available as a Ruby
 API:
 
 ```ruby
-command = Klenod::Test::Command.new(
-  ARGV,
+runner = Klenod::Test::Runner.new(
   context: -> { build_config.context },
-  execute: ->(context, test_paths) { run_tests(context, test_paths) }
+  execute: ->(context, test_paths) { run_tests(context, test_paths) },
+  watch: true
 )
 
-exit command.call
+exit runner.call
 ```
 
 Each batch runs in a fresh worker process. The execution callback receives that

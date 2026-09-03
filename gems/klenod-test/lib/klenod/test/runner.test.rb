@@ -5,9 +5,9 @@ require "fileutils"
 require "stringio"
 require "tmpdir"
 
-require_relative "command"
+require_relative "runner"
 
-class Klenod::Test::Command::Test < Minitest::Test
+class Klenod::Test::Runner::Test < Minitest::Test
   Status = Data.define(:exitstatus) do
     def success?
       exitstatus.zero?
@@ -32,7 +32,7 @@ class Klenod::Test::Command::Test < Minitest::Test
     end
   end
 
-  class TestCommand < Klenod::Test::Command
+  class InspectableRunner < Klenod::Test::Runner
     def initialize(*arguments, process: FakeProcess.new, watcher: nil, wait: nil, **options)
       @process = process
       @watcher = watcher
@@ -62,8 +62,8 @@ class Klenod::Test::Command::Test < Minitest::Test
   def test_worker_executes_selected_paths_with_a_fresh_context
     context = Object.new
     received = nil
-    command = command(
-      ["--worker", "--", "a.test.rb", "b.test.rb"],
+    runner = runner(
+      worker_paths: ["a.test.rb", "b.test.rb"],
       context: -> { context },
       execute: lambda do |*arguments|
         received = arguments
@@ -71,7 +71,7 @@ class Klenod::Test::Command::Test < Minitest::Test
       end
     )
 
-    status = command.call
+    status = runner.call
 
     assert_equal(3, status)
     assert_equal([context, ["a.test.rb", "b.test.rb"]], received)
@@ -84,9 +84,9 @@ class Klenod::Test::Command::Test < Minitest::Test
     ) do |context|
       process = FakeProcess.new
       output = StringIO.new
-      command = command(["--run"], context: -> { context }, output:, process:)
+      runner = runner(watch: false, context: -> { context }, output:, process:)
 
-      status = command.call
+      status = runner.call
 
       assert_equal(0, status)
       assert_equal(
@@ -102,9 +102,9 @@ class Klenod::Test::Command::Test < Minitest::Test
   def test_ci_runs_once_by_default
     with_context("value.test.rb" => "def test_value; end\n") do |context|
       process = FakeProcess.new
-      command = command([], context: -> { context }, env: {"CI" => "1", "NO_COLOR" => "1"}, process:)
+      runner = runner(context: -> { context }, env: {"CI" => "1", "NO_COLOR" => "1"}, process:)
 
-      status = command.call
+      status = runner.call
 
       assert_equal(0, status)
       assert_equal(1, process.calls.length)
@@ -114,18 +114,18 @@ class Klenod::Test::Command::Test < Minitest::Test
   def test_run_returns_the_worker_exit_status
     with_context("value.test.rb" => "def test_value; end\n") do |context|
       process = FakeProcess.new(status: 7)
-      command = command(["--run"], context: -> { context }, process:)
+      runner = runner(watch: false, context: -> { context }, process:)
 
-      assert_equal(7, command.call)
+      assert_equal(7, runner.call)
     end
   end
 
   def test_run_succeeds_without_spawning_when_no_tests_exist
     with_context do |context|
       process = FakeProcess.new
-      command = command(["--run"], context: -> { context }, process:)
+      runner = runner(watch: false, context: -> { context }, process:)
 
-      assert_equal(0, command.call)
+      assert_equal(0, runner.call)
       assert_empty(process.calls)
     end
   end
@@ -136,23 +136,23 @@ class Klenod::Test::Command::Test < Minitest::Test
       plugins: [Klenod::Build::Plugins::RubyPlugin.new]
     )
     error_output = StringIO.new
-    command = command(["--run"], context: -> { context }, error_output:)
+    runner = runner(watch: false, context: -> { context }, error_output:)
 
-    assert_equal(1, command.call)
+    assert_equal(1, runner.call)
     assert_includes(error_output.string, "must include TestPlugin")
   end
 
   def test_worker_reports_errors_with_the_configured_formatter
     error_output = StringIO.new
-    command = command(
-      ["--worker", "--", "broken.test.rb"],
+    runner = runner(
+      worker_paths: ["broken.test.rb"],
       context: -> { :context },
       execute: ->(*) { raise "broken" },
       error_output:,
       format_error: ->(error, context) { "#{context}: #{error.message}" }
     )
 
-    assert_equal(1, command.call)
+    assert_equal(1, runner.call)
     assert_equal("context: broken\n", error_output.string)
   end
 
@@ -172,15 +172,15 @@ class Klenod::Test::Command::Test < Minitest::Test
         context.emit_update(Klenod::Build::UpdateEvent.new([changed_path], [], 1, result))
         raise Interrupt
       end
-      command = command(
-        ["--watch"],
+      runner = runner(
+        watch: true,
         context: -> { context },
         process:,
         watcher:,
         wait: update
       )
 
-      assert_equal(0, command.call)
+      assert_equal(0, runner.call)
 
       assert_equal(
         [
@@ -193,20 +193,11 @@ class Klenod::Test::Command::Test < Minitest::Test
     end
   end
 
-  def test_rejects_unknown_options
-    error_output = StringIO.new
-    command = command(["--unknown"], error_output:)
-
-    assert_equal(1, command.call)
-    assert_includes(error_output.string, "invalid option")
-    assert_includes(error_output.string, "Usage: test")
-  end
-
   def test_gemspec_packages_the_runner_without_a_test_framework_dependency
     spec = Gem::Specification.load(File.expand_path("../../../klenod-test.gemspec", __dir__))
 
     assert_includes(spec.files, "lib/klenod/test.rb")
-    assert_includes(spec.files, "lib/klenod/test/command.rb")
+    assert_includes(spec.files, "lib/klenod/test/runner.rb")
     assert_includes(spec.files, "lib/klenod/test/config.rb")
     assert_includes(spec.files, "lib/klenod/test/cli.rb")
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })
@@ -215,9 +206,8 @@ class Klenod::Test::Command::Test < Minitest::Test
 
   private
 
-  def command(arguments, context: -> { raise "unused" }, execute: ->(*) { 0 }, **options)
-    TestCommand.new(
-      arguments,
+  def runner(context: -> { raise "unused" }, execute: ->(*) { 0 }, **options)
+    InspectableRunner.new(
       context:,
       execute:,
       worker_command: [RbConfig.ruby, "/app/test"],

@@ -1,28 +1,29 @@
 # frozen_string_literal: true
 
-require "optparse"
 require "rbconfig"
 
 require "klenod/build"
 
 module Klenod
   module Test
-    class Command
+    class Runner
       WORKER_ARGUMENT = "--worker"
 
       def initialize(
-        arguments,
         context:,
         execute:,
+        watch: nil,
+        worker_paths: nil,
         worker_command: [RbConfig.ruby, $PROGRAM_NAME],
         output: $stdout,
         error_output: $stderr,
         env: ENV,
         format_error: nil
       )
-        @arguments = arguments.dup
         @context_factory = context
         @execute = execute
+        @watch = watch.nil? ? !env.key?("CI") : watch
+        @worker_paths = worker_paths&.dup
         @worker_command = Array(worker_command)
         @output = output
         @error_output = error_output
@@ -33,9 +34,8 @@ module Klenod
       end
 
       def call
-        return run_worker(worker_paths) if arguments.first == WORKER_ARGUMENT
+        return run_worker(worker_paths) if worker_paths
 
-        @watch = watch?
         context = context_factory.call
         plugin = test_plugin(context)
         suite = Klenod::Build::TestSuite.new(context:, plugin:)
@@ -43,16 +43,15 @@ module Klenod
         return run_in_worker(selection.test_paths) unless watch
 
         run_watch(context, suite, selection)
-      rescue OptionParser::ParseError, ArgumentError => error
+      rescue ArgumentError => error
         error_output.puts error.message
-        error_output.puts option_parser unless error.is_a?(ArgumentError)
         1
       end
 
       private
 
-      attr_reader :arguments, :context_factory, :execute, :worker_command, :output,
-        :error_output, :env, :format_error, :last_status, :watch
+      attr_reader :context_factory, :execute, :watch, :worker_paths, :worker_command,
+        :output, :error_output, :env, :format_error, :last_status
 
       def run_watch(context, suite, selection)
         watcher = build_watcher(context)
@@ -99,33 +98,10 @@ module Klenod
         1
       end
 
-      def worker_paths
-        arguments.shift
-        arguments.shift if arguments.first == "--"
-        arguments
-      end
-
       def test_plugin(context)
         context.graph.plugins.find do |candidate|
           candidate.is_a?(Klenod::Build::Plugins::TestPlugin::Plugin)
         end || raise(ArgumentError, "The Klenod context must include TestPlugin")
-      end
-
-      def watch?
-        selected = !env.key?("CI")
-        option_parser.parse!(arguments)
-        raise OptionParser::InvalidArgument, arguments.join(" ") unless arguments.empty?
-
-        @selected_watch.nil? ? selected : @selected_watch
-      end
-
-      def option_parser
-        @option_parser ||=
-          OptionParser.new do |options|
-            options.banner = "Usage: test [--run | --watch]"
-            options.on("--run", "Run all tests once") { @selected_watch = false }
-            options.on("--watch", "Run all tests, then watch for changes") { @selected_watch = true }
-          end
       end
 
       def build_watcher(context)
