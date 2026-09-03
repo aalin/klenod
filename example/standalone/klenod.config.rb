@@ -7,6 +7,7 @@ entrypoint "main"
 output "dist/release_report"
 
 plugins [
+  Klenod::Build::Plugins::TestPlugin.new,
   Klenod::Build::Plugins::RubyPlugin.new,
   Klenod::Build::Plugins::JsonPlugin.new,
   Klenod::Build::Plugins::YamlPlugin.new,

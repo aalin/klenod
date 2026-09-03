@@ -11,11 +11,12 @@ The project is still early in development. Contributions are welcome.
 
 ## Packages
 
-The repository contains six gems:
+The repository contains seven gems:
 
 - [`klenod`](gems/klenod): provides the build and runtime packages together.
 - [`klenod-runtime`](gems/klenod-runtime): loads bundles, evaluates modules, reads source maps, and rewrites backtraces.
 - [`klenod-build`](gems/klenod-build): builds graphs, runs plugins, watches files, writes bundles, and provides the CLI.
+- [`klenod-test`](gems/klenod-test): runs application tests and watches their dependency graph without choosing a test framework.
 - [`klenod-rack`](gems/klenod-rack): provides Rack helpers for serving bundled assets.
 - [`klenod-plugin-css`](gems/klenod-plugin-css): adds CSS assets and CSS Modules support.
 - [`klenod-plugin-javascript`](gems/klenod-plugin-javascript): adds JavaScript and TypeScript assets.

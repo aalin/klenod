@@ -19,3 +19,24 @@ ruby -I../../lib dist/release_report
 Once `klenod` is installed as a gem, the generated executable can be run directly with `./dist/release_report`.
 
 The entrypoint writes to `ENV["REPORT_OUTPUT"]` when it is set. Otherwise it prints the report to stdout.
+
+## Tests
+
+Run the integration tests and colocated application tests once:
+
+```sh
+cd example/standalone
+bundle exec rake test
+```
+
+Run the integration tests once, then watch the application tests:
+
+```sh
+bundle exec rake test:watch
+```
+
+Application tests live under `src` as `*.test.rb`. They are independent test
+entrypoints, so they can import application modules but cannot be imported by
+application code. Klenod watches each test's dependency graph and reruns only
+the tests related to a changed module. The tests use Minitest here, but the
+shared runner does not require a particular testing framework.

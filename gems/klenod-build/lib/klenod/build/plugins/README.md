@@ -160,6 +160,8 @@ Klenod::Build::Plugins::TestPlugin.new(
 
 Use the plugin with `Klenod::Build::TestSuite` to collect tests and select the tests affected by a watcher update. `TestSuite#collect` returns every discovered test. `TestSuite#update(event)` returns tests whose eager or lazy dependency closure intersects the update, along with removed test paths. Neither API evaluates application code.
 
+The optional `klenod-test` gem uses these APIs to provide one-run and watch commands with isolated workers. Applications provide the callback that evaluates selected test entries with Minitest, RSpec, or another testing library.
+
 ## GemImportPlugin
 
 Handles `gem://...` module ids.

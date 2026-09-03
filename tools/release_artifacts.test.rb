@@ -23,7 +23,7 @@ class ReleaseArtifactsTest < Minitest::Test
       ReleaseArtifacts::NATIVE_GEMS.length * ReleaseArtifacts::NATIVE_PLATFORMS.length,
       ReleaseArtifacts.native_matrix.length
     )
-    assert_equal 14, ReleaseArtifacts.expected_identities(VERSION).length
+    assert_equal 15, ReleaseArtifacts.expected_identities(VERSION).length
   end
 
   def test_verify_accepts_a_complete_release_and_writes_checksums
@@ -33,8 +33,8 @@ class ReleaseArtifactsTest < Minitest::Test
 
       artifacts = ReleaseArtifacts.verify(directory, version: VERSION, manifest:)
 
-      assert_equal 14, artifacts.length
-      assert_equal 14, File.readlines(manifest).length
+      assert_equal 15, artifacts.length
+      assert_equal 15, File.readlines(manifest).length
     end
   end
 
@@ -100,7 +100,9 @@ class ReleaseArtifactsTest < Minitest::Test
       gem.authors = ["Klenod"]
       gem.files = ["lib/#{name}.rb"]
       gem.platform = platform
-      gem.add_dependency("klenod-build", "= #{version}") if name.start_with?("klenod-plugin-")
+      if name == "klenod-test" || name.start_with?("klenod-plugin-")
+        gem.add_dependency("klenod-build", "= #{version}")
+      end
     end
 
     Dir.mktmpdir do |build_directory|

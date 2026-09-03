@@ -55,6 +55,8 @@ assets and include `Vary: Accept` for caches.
 
 Use `bin/test --run` for one test run. The command also runs once automatically when `CI` is set. Tests live beside source modules as `*.test.rb`; when watching, changing a test or any eager or lazy dependency reruns only the related tests.
 
+The command uses `klenod-test` for dependency-aware watching and fresh worker processes. The example keeps its Minitest adapter, component helpers, and reporter under `lib/testing`.
+
 The example framework's `render` test helper serializes a component to HTML and parses it with Nokolexbor. The returned fragment supports strict role, text, and CSS queries, scoped queries with `within`, and direct Nokolexbor attribute access:
 
 ```ruby

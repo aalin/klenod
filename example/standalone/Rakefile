@@ -1,0 +1,24 @@
+# frozen_string_literal: true
+
+require "minitest/test_task"
+require "rbconfig"
+
+Minitest::TestTask.create("test:integration") do |test|
+  test.test_globs = ["example.test.rb"]
+end
+
+namespace :test do
+  desc "Run colocated application tests once"
+  task :application do
+    ruby "test.rb", "--run"
+  end
+
+  desc "Run integration tests, then watch colocated application tests"
+  task watch: :integration do
+    ruby "test.rb", "--watch"
+  end
+end
+
+desc "Run all standalone example tests once"
+task test: ["test:integration", "test:application"]
+task default: :test

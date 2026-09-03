@@ -54,6 +54,21 @@ class Klenod::StandaloneExampleTest < Minitest::Test
     end
   end
 
+  def test_report_test_tracks_each_imported_data_file
+    %w[tasks.json owners.yaml release.toml notes.txt].each do |name|
+      config = example_config
+      context = config.context
+      plugin = context.graph.plugins.find { it.is_a?(Klenod::Build::Plugins::TestPlugin::Plugin) }
+      suite = Klenod::Build::TestSuite.new(context:, plugin:)
+      suite.collect
+      path = File.join(config.source_path, "data", name)
+      result = context.invalidate_paths([path])
+      event = Klenod::Build::UpdateEvent.new([path], [], 1, result)
+
+      assert_equal(["report.test.rb"], suite.update(event).test_paths, name)
+    end
+  end
+
   private
 
   def example_config

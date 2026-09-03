@@ -10,6 +10,7 @@ module ReleaseArtifacts
   SOURCE_GEMS = %w[
     klenod-runtime
     klenod-build
+    klenod-test
     klenod-rack
     klenod-plugin-css
     klenod-plugin-javascript

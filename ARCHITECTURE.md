@@ -31,6 +31,8 @@ Runtime must not require build plugins or plugin-only dependencies such as RMagi
 
 `klenod-build` owns graph construction, plugins, the CLI, and development watching. It depends on `klenod-runtime`.
 
+`klenod-test` owns test-process orchestration and related-test watch runs. It depends on `klenod-build`, while test-framework adapters remain application policy.
+
 `klenod-rack` owns Rack-compatible asset serving helpers and depends only on `klenod-runtime`.
 
 Optional integrations live outside the core graph/runtime boundary.
@@ -264,6 +266,8 @@ The router should stay request-agnostic. Request dispatch belongs in the framewo
 Application tests are build-time entrypoints. `TestPlugin` discovers `*.test.rb` files and prevents application modules from importing them. Test files can import normal application modules through the same resolver and plugin graph used by development and production builds.
 
 `TestSuite` collects each test and its eager and lazy dependency closure without evaluating application code. A watcher can intersect invalidated module ids with those closures to select related tests. Test execution and reporting remain framework policy; a framework can evaluate the selected entries with Minitest, RSpec, or another library in an isolated worker process.
+
+`klenod-test` combines `TestSuite` and `Watcher`, starts a fresh worker process for each selected batch, and delegates execution to an application callback. It does not depend on a test framework. `TestPlugin` and `TestSuite` remain in `klenod-build` because they operate on the build graph.
 
 Tests use development-mode transforms and invalidation. They are not production entrypoints, are not serialized into application bundles, and add nothing to `klenod-runtime`.
 

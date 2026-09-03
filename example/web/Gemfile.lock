@@ -45,6 +45,12 @@ PATH
     klenod-runtime (0.0.4)
 
 PATH
+  remote: ../../gems/klenod-test
+  specs:
+    klenod-test (0.0.4)
+      klenod-build (= 0.0.4)
+
+PATH
   remote: ../../gems/klenod
   specs:
     klenod (0.0.4)
@@ -199,6 +205,7 @@ DEPENDENCIES
   klenod-plugin-javascript!
   klenod-rack!
   klenod-runtime!
+  klenod-test!
   localhost (~> 1.8)
   minitest (~> 6.0)
   nokolexbor
@@ -242,6 +249,7 @@ CHECKSUMS
   klenod-plugin-javascript (0.0.4)
   klenod-rack (0.0.4)
   klenod-runtime (0.0.4)
+  klenod-test (0.0.4)
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
   kramdown-parser-gfm (1.1.0) sha256=fb39745516427d2988543bf01fc4cf0ab1149476382393e0e9c48592f6581729
   listen (3.10.0) sha256=c6e182db62143aeccc2e1960033bebe7445309c7272061979bb098d03760c9d2

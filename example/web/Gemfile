@@ -15,6 +15,7 @@ group :development, :build do
   gem "nokolexbor"
   gem "klenod", path: "../../gems/klenod"
   gem "klenod-build", path: "../../gems/klenod-build"
+  gem "klenod-test", path: "../../gems/klenod-test"
   gem "klenod-plugin-css", path: "../../gems/klenod-plugin-css"
   gem "klenod-plugin-javascript", path: "../../gems/klenod-plugin-javascript"
   gem "vernier"
