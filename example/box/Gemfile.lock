@@ -1,12 +1,12 @@
 PATH
   remote: ../../gems/klenod-build
   specs:
-    klenod-build (0.0.3)
+    klenod-build (0.0.4)
       async (~> 2.42)
       async-http (~> 0.95.1)
       brotli (~> 0.8)
       image_size (~> 3.6)
-      klenod-runtime (= 0.0.3)
+      klenod-runtime (= 0.0.4)
       kramdown (~> 2.5)
       kramdown-parser-gfm (~> 1.1)
       listen (~> 3.10)
@@ -21,7 +21,7 @@ PATH
 PATH
   remote: ../../gems/klenod-runtime
   specs:
-    klenod-runtime (0.0.3)
+    klenod-runtime (0.0.4)
 
 GEM
   remote: https://rubygems.org/
@@ -141,8 +141,8 @@ CHECKSUMS
   io-event (1.19.2) sha256=c9ac4f0c3153b453727ab15c03cc762b29a207979c703b2bb15c8be6209d4b4c
   io-stream (0.13.2) sha256=8c7ac4efbb0d91d951726bbc88dbf28a56f792ff388e82bb18aa5abc48f2fe36
   json (2.21.1) sha256=13a43df75d95641443f5702dff350f237164a9d811ff0f2c2800d4d980220583
-  klenod-build (0.0.3)
-  klenod-runtime (0.0.3)
+  klenod-build (0.0.4)
+  klenod-runtime (0.0.4)
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
   kramdown-parser-gfm (1.1.0) sha256=fb39745516427d2988543bf01fc4cf0ab1149476382393e0e9c48592f6581729
   listen (3.10.0) sha256=c6e182db62143aeccc2e1960033bebe7445309c7272061979bb098d03760c9d2
