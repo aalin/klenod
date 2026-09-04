@@ -26,10 +26,37 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-      - name: Compile native extensions
+
+      - name: Read native build dependency versions
+        id: native-build-dependencies
         run: |
-          bundle exec rake -C gems/klenod-plugin-javascript compile
-          bundle exec rake -C gems/klenod-plugin-css compile
+          bundle exec ruby -e '
+            versions = %w[rake-compiler rb_sys].map { "#{it}-#{Gem::Specification.find_by_name(it).version}" }
+            puts "versions=#{versions.join("-")}"
+          ' >> "$GITHUB_OUTPUT"
+
+      - name: Restore JavaScript native extension
+        id: javascript-native-cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: gems/klenod-plugin-javascript/lib/klenod/plugin/javascript/native.*
+          key: native-javascript-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-build-dependencies.outputs.versions }}-${{ hashFiles('.ruby-version', 'gems/klenod-plugin-javascript/Rakefile', 'gems/klenod-plugin-javascript/*.gemspec', 'gems/klenod-plugin-javascript/ext/native/Cargo.toml', 'gems/klenod-plugin-javascript/ext/native/Cargo.lock', 'gems/klenod-plugin-javascript/ext/native/extconf.rb', 'gems/klenod-plugin-javascript/ext/native/src/**/*.rs') }}
+
+      - name: Compile JavaScript native extension
+        if: steps.javascript-native-cache.outputs.cache-hit != 'true'
+        run: bundle exec rake -C gems/klenod-plugin-javascript compile
+
+      - name: Restore CSS native extension
+        id: css-native-cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: gems/klenod-plugin-css/lib/klenod/plugin/css/native.*
+          key: native-css-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-build-dependencies.outputs.versions }}-${{ hashFiles('.ruby-version', 'gems/klenod-plugin-css/Rakefile', 'gems/klenod-plugin-css/*.gemspec', 'gems/klenod-plugin-css/ext/native/Cargo.toml', 'gems/klenod-plugin-css/ext/native/Cargo.lock', 'gems/klenod-plugin-css/ext/native/extconf.rb', 'gems/klenod-plugin-css/ext/native/src/**/*.rs') }}
+
+      - name: Compile CSS native extension
+        if: steps.css-native-cache.outputs.cache-hit != 'true'
+        run: bundle exec rake -C gems/klenod-plugin-css compile
+
       - name: Install example web bundle
         working-directory: example/web
         run: bundle install
