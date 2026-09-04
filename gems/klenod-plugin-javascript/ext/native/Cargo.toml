@@ -9,4 +9,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 magnus = "0.8.2"
-swc_core = { version = "73.0.0", features = ["common", "ecma_ast", "ecma_codegen", "ecma_parser", "ecma_parser_typescript", "ecma_transforms_react", "ecma_transforms_typescript", "ecma_visit"] }
+swc_core = { version = "77.1.2", features = ["common", "ecma_ast", "ecma_codegen", "ecma_parser", "ecma_parser_typescript", "ecma_transforms_react", "ecma_transforms_typescript", "ecma_visit"] }
