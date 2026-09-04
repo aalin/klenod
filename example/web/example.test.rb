@@ -523,7 +523,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Build Ruby modules like a modern frontend graph")
     assert_includes(html, "Imports define the graph")
     assert_includes(html, "Development stays live")
-    assert_includes(html, "Build dependencies stay behind")
+    assert_includes(html, "Build-time dependencies stay behind")
     assert_includes(html, "./Card.haml")
     assert_includes(html, "Get started")
     assert_includes(html, "components/Button.secondary")
@@ -1467,7 +1467,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(markdown, "```ruby")
     assert_includes(markdown, 'Card = import("./Card.haml")')
     assert_includes(markdown, "## Imports define the graph")
-    assert_includes(markdown, "## Build your first graph.")
+    assert_includes(markdown, "## Build your first Klenod-app.")
     refute_includes(markdown, "MIT License")
   end
 
