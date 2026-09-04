@@ -64,12 +64,10 @@ GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.3)
-    async (2.42.0)
+    async (2.45.1)
       console (~> 1.29)
       fiber-annotation
-      io-event (~> 1.11)
-      metrics (~> 0.12)
-      traces (~> 0.18)
+      io-event (~> 1.21)
     async-http (0.95.1)
       async (>= 2.10.2)
       async-pool (~> 0.11)
@@ -88,7 +86,7 @@ GEM
     brotli (0.8.0)
     citrus (3.0.2)
     coderay (1.1.3)
-    console (1.36.0)
+    console (1.37.0)
       fiber-annotation
       fiber-local (~> 1.1)
       json
@@ -111,7 +109,7 @@ GEM
     image_size (3.6.0)
     io-console (0.8.2)
     io-endpoint (0.17.2)
-    io-event (1.19.1)
+    io-event (1.21.1)
     io-stream (0.13.1)
     json (2.21.2)
     kramdown (2.5.2)
@@ -244,14 +242,14 @@ DEPENDENCIES
 
 CHECKSUMS
   ast (2.4.3) sha256=954615157c1d6a382bc27d690d973195e79db7f55e9765ac7c481c60bdb4d383
-  async (2.42.0) sha256=536078293b8c95d5b5679fa01bf7d2458bcc65cd46dec2c4cb3580feaeb965c6
+  async (2.45.1) sha256=95849f7432eca535146c69f3078dab3c7228d0075ed71f48733f3e585dd7c267
   async-http (0.95.1) sha256=0c3dd458c204c06d5c4b20b01bbec4794a1203db627fb2ce536e1799ec14786c
   async-pool (0.11.2) sha256=0a43a17b02b04d9c451b7d12fafa9a50e55dc6dd00d4369aca00433f16a7e3ed
   async-process (1.4.0) sha256=859c2901b9047b6b8843e9a21ec7f3c626eb04efdcff66185a05ede99257f590
   brotli (0.8.0) sha256=0c5a42046b3b603fb109656881147fd76064c034b7d19c1b4fcc32a093a4d55d
   citrus (3.0.2) sha256=4ec2412fc389ad186735f4baee1460f7900a8e130ffe3f216b30d4f9c684f650
   coderay (1.1.3) sha256=dc530018a4684512f8f38143cd2a096c9f02a1fc2459edcfe534787a7fc77d4b
-  console (1.36.0) sha256=45599ea906cf80a73d8941f03abf873fe66a6a954e0bac5bc1c01e2cdc406f07
+  console (1.37.0) sha256=8093b286c2595a063849c098594fee5155ecc7967d36f3aa8cbe7569c8f3efd7
   covered (0.30.0) sha256=93b1bf881812dd4f52e1c3330bf7fe0dcb6bc9bb72a200cbe5d282e902e947c5
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
   ffi (1.17.4-arm64-darwin) sha256=19071aaf1419251b0a46852abf960e77330a3b334d13a4ab51d58b31a937001b
@@ -264,7 +262,7 @@ CHECKSUMS
   image_size (3.6.0) sha256=1b9c4196cb658bf503a887920543a3991e927a4b767a5c770fb9665bce0dcb28
   io-console (0.8.2) sha256=d6e3ae7a7cc7574f4b8893b4fca2162e57a825b223a177b7afa236c5ef9814cc
   io-endpoint (0.17.2) sha256=3feaf766c116b35839c11fac68b6aaadc47887bb488902a57bf8e1d288fb3338
-  io-event (1.19.1) sha256=851aa9a318889cbfdaa9a982b5cd266750f893748752a17f52f880d93ceb6ee6
+  io-event (1.21.1) sha256=b3088f89ad67edf9be9fc2f48a5fae0790e92862487551eeb337b49098eb99e6
   io-stream (0.13.1) sha256=570d7c4dfb0fbd767480b4a222048a2be6d9b78febc1ec68258d0e0a4cde20de
   json (2.21.2) sha256=1f1d3b7cf2b3ba1a69beca0bb6db13d5438b80bff3cd54cdaaa620b9b07c1c6a
   klenod (0.0.5)
