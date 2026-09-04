@@ -955,7 +955,7 @@ class Klenod::ExampleTest < Minitest::Test
           "KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1"
         },
         RbConfig.ruby,
-        "bin/coverage.rb",
+        "bin/coverage",
         chdir: __dir__
       )
 
