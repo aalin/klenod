@@ -38,7 +38,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "klenod-runtime", "= #{version}"
   spec.add_dependency "async", "~> 2.42"
-  spec.add_dependency "async-http", ">= 0.95.1", "< 0.103.0"
+  spec.add_dependency "async-http", ">= 0.95.1", "< 0.104.0"
   spec.add_dependency "brotli", "~> 0.8"
   spec.add_dependency "image_size", "~> 3.6"
   spec.add_dependency "kramdown", "~> 2.5"
