@@ -88,7 +88,7 @@ GEM
     protocol-http2 (0.26.0)
       protocol-hpack (~> 1.4)
       protocol-http (~> 0.62)
-    protocol-url (0.4.0)
+    protocol-url (0.18.0)
     racc (1.8.1)
     rb-fsevent (0.11.2)
     rb-inotify (0.11.1)
@@ -156,7 +156,7 @@ CHECKSUMS
   protocol-http (0.63.0) sha256=7e94958cbdc20e9d9b4ecb1959e1e7824a35f36e082d3d2cd5bd844da643a8e4
   protocol-http1 (0.39.0) sha256=e49b3f4cda6f5d94c76a323d2b7f6977cba3ebd082d2da437039594da77ad8eb
   protocol-http2 (0.26.0) sha256=bac89cd78082b241ccd0cf7246f5160e4bb0c9c975fb4bf7deef5f88cc317486
-  protocol-url (0.4.0) sha256=64d4c03b6b51ad815ac6fdaf77a1d91e5baf9220d26becb846c5459dacdea9e1
+  protocol-url (0.18.0) sha256=b16f55983094b46d18e04b709333b260e4ab5962a32696728e33a6c396150ed6
   racc (1.8.1) sha256=4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f
   rb-fsevent (0.11.2) sha256=43900b972e7301d6570f64b850a5aa67833ee7d87b458ee92805d56b7318aefe
   rb-inotify (0.11.1) sha256=a0a700441239b0ff18eb65e3866236cd78613d6b9f78fea1f9ac47a85e47be6e
