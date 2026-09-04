@@ -15,12 +15,6 @@ updates:
       interval: weekly
     versioning-strategy: increase-if-necessary
 
-  - package-ecosystem: bundler
-    directory: /example/box
-    schedule:
-      interval: weekly
-    versioning-strategy: increase-if-necessary
-
   - package-ecosystem: cargo
     directory: /gems/klenod-plugin-css/ext/native
     schedule:
