@@ -1,4 +1,4 @@
-# Klenod
+# <img src="./example/web/src/logo.svg" alt="Klenod" width="200" />
 
 Klenod is an experimental module bundler for Ruby, inspired by JavaScript bundlers.
 
