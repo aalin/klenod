@@ -156,6 +156,7 @@ module Klenod
 
       def color(name, value)
         return value if env.key?("NO_COLOR")
+        return value unless output.respond_to?(:tty?) && output.tty?
 
         codes = {run: "\e[1;34m", success: "\e[1;32m", failure: "\e[1;31m"}
         "#{codes.fetch(name)}#{value}\e[0m"

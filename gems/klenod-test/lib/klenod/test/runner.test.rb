@@ -130,6 +130,22 @@ class Klenod::Test::Runner::Test < Minitest::Test
     end
   end
 
+  def test_non_tty_output_does_not_include_color
+    with_context("value.test.rb" => "def test_value; end\n") do |context|
+      output = StringIO.new
+      runner = runner(
+        watch: false,
+        context: -> { context },
+        env: {},
+        output:
+      )
+
+      assert_equal(0, runner.call)
+      assert_includes(output.string, "RUN  1 test file")
+      refute_includes(output.string, "\e[")
+    end
+  end
+
   def test_run_returns_the_worker_exit_status
     with_context("value.test.rb" => "def test_value; end\n") do |context|
       process = FakeProcess.new(status: 7)
