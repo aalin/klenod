@@ -25,13 +25,13 @@ updates:
     directory: /gems/klenod-plugin-css/ext/native
     schedule:
       interval: weekly
-    versioning-strategy: increase-if-necessary
+    versioning-strategy: auto
 
   - package-ecosystem: cargo
     directory: /gems/klenod-plugin-javascript/ext/native
     schedule:
       interval: weekly
-    versioning-strategy: increase-if-necessary
+    versioning-strategy: auto
 
   - package-ecosystem: github-actions
     directory: /
