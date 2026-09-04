@@ -61,7 +61,11 @@ exit runner.call
 
 Each batch runs in a fresh worker process. The execution callback receives that
 worker's context and sorted source-relative test paths, then returns an integer
-exit status.
+exit status. By default, the runner starts the current Ruby program with
+`--worker -- <test paths>`. A runner created by that program recognizes those
+arguments automatically and executes the callback instead of starting another
+worker. Pass `worker_command` and `worker_paths` explicitly when embedding the
+runner in a command with its own argument handling.
 
 ## Coverage
 

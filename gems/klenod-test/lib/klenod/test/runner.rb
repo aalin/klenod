@@ -13,11 +13,19 @@ module Klenod
     class Runner
       WORKER_ARGUMENT = "--worker"
 
+      def self.worker_paths_from(arguments)
+        arguments = Array(arguments)
+        return unless arguments.first == WORKER_ARGUMENT
+        raise ArgumentError, "Expected -- after #{WORKER_ARGUMENT}" unless arguments[1] == "--"
+
+        arguments.drop(2)
+      end
+
       def initialize(
         context:,
         execute:,
         watch: nil,
-        worker_paths: nil,
+        worker_paths: Runner.worker_paths_from(ARGV),
         spawn_empty: false,
         worker_command: [RbConfig.ruby, $PROGRAM_NAME],
         process: Async::Process,

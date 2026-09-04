@@ -66,6 +66,36 @@ class Klenod::Test::Runner::Test < Minitest::Test
     assert_equal([context, ["a.test.rb", "b.test.rb"]], received)
   end
 
+  def test_default_worker_command_arguments_execute_without_spawning_again
+    original_arguments = ARGV.dup
+    ARGV.replace(["--worker", "--", "a.test.rb", "b.test.rb"])
+    context = Object.new
+    process = FakeProcess.new
+    received = nil
+    runner = runner(
+      context: -> { context },
+      execute: lambda do |*arguments|
+        received = arguments
+        0
+      end,
+      process:
+    )
+
+    assert_equal(0, runner.call)
+    assert_equal([context, ["a.test.rb", "b.test.rb"]], received)
+    assert_empty(process.calls)
+  ensure
+    ARGV.replace(original_arguments)
+  end
+
+  def test_worker_arguments_require_a_separator
+    error = assert_raises(ArgumentError) do
+      Klenod::Test::Runner.worker_paths_from(["--worker", "a.test.rb"])
+    end
+
+    assert_equal("Expected -- after --worker", error.message)
+  end
+
   def test_run_discovers_tests_in_stable_order_and_spawns_a_worker
     with_context(
       "z.test.rb" => "def test_z; end\n",
