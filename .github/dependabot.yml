@@ -1,0 +1,39 @@
+version: 2
+
+updates:
+  # The root Gemfile loads every gems/klenod-*/*.gemspec, so this entry keeps
+  # the published dependency requirements and the development lockfile current.
+  - package-ecosystem: bundler
+    directory: /
+    schedule:
+      interval: weekly
+    versioning-strategy: increase-if-necessary
+
+  - package-ecosystem: bundler
+    directory: /example/web
+    schedule:
+      interval: weekly
+    versioning-strategy: increase-if-necessary
+
+  - package-ecosystem: bundler
+    directory: /example/box
+    schedule:
+      interval: weekly
+    versioning-strategy: increase-if-necessary
+
+  - package-ecosystem: cargo
+    directory: /gems/klenod-plugin-css/ext/native
+    schedule:
+      interval: weekly
+    versioning-strategy: increase-if-necessary
+
+  - package-ecosystem: cargo
+    directory: /gems/klenod-plugin-javascript/ext/native
+    schedule:
+      interval: weekly
+    versioning-strategy: increase-if-necessary
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
