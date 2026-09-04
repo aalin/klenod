@@ -4,7 +4,33 @@ module Klenod
   module Test
     class ConfigError < ArgumentError; end
 
-    Config = Data.define(:base_dir, :context, :execute, :format_error)
+    COVERAGE_REPORTS = %i[brief partial full markdown quiet].freeze
+
+    CoverageConfig = Data.define(:report, :minimum) do
+      def self.build(report: :brief, minimum: nil)
+        report = report.to_s.downcase.to_sym
+        unless COVERAGE_REPORTS.include?(report)
+          raise ConfigError, "Unknown coverage report #{report.inspect}; choose one of: #{COVERAGE_REPORTS.join(", ")}"
+        end
+
+        new(report, normalize_minimum(minimum))
+      end
+
+      def self.normalize_minimum(minimum)
+        return unless minimum
+
+        value = begin
+          Float(minimum)
+        rescue ArgumentError, TypeError
+          raise ConfigError, "Coverage minimum must be a number between 0 and 100"
+        end
+        return value if value.between?(0, 100)
+
+        raise ConfigError, "Coverage minimum must be between 0 and 100"
+      end
+    end
+
+    Config = Data.define(:base_dir, :context, :execute, :format_error, :coverage)
 
     class ConfigBuilder
       def initialize(path)
@@ -23,6 +49,10 @@ module Klenod
         @format_error = block
       end
 
+      def coverage(report: :brief, minimum: nil)
+        @coverage = CoverageConfig.build(report:, minimum:)
+      end
+
       def config
         missing = []
         missing << "context" unless @context
@@ -33,7 +63,8 @@ module Klenod
           base_dir: File.dirname(@path),
           context: @context,
           execute: @execute,
-          format_error: @format_error
+          format_error: @format_error,
+          coverage: @coverage || CoverageConfig.build
         )
       end
     end

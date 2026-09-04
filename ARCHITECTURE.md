@@ -31,7 +31,7 @@ Runtime must not require build plugins or plugin-only dependencies such as RMagi
 
 `klenod-build` owns graph construction, plugins, the build and graph CLI commands, and development watching. It depends on `klenod-runtime`.
 
-`klenod-test` owns test-process orchestration and related-test watch runs. It depends on `klenod-build`, while test-framework adapters remain application policy.
+`klenod-test` owns test processes, related-test watch runs, and source-mapped application coverage. It depends on `klenod-build`, while test-framework adapters remain application policy.
 
 The `klenod` meta-gem depends on runtime, build, and test packages and composes their commands under the `klenod` executable. Production bundles still require only `klenod-runtime`.
 
@@ -269,7 +269,9 @@ Application tests are build-time entrypoints. `Klenod::Test::Plugin` discovers `
 
 `Klenod::Test::Suite` collects each test and its eager and lazy dependency closure without evaluating application code. A watcher can intersect invalidated module ids with those closures to select related tests. Test execution and reporting remain framework policy; a framework can evaluate the selected entries with Minitest, RSpec, or another library in an isolated worker process.
 
-`klenod-test` owns the plugin, suite, runner, and test configuration. It combines `Klenod::Test::Suite` with the build watcher's generic update events, starts a fresh worker process for each selected batch, and delegates execution to callbacks loaded from the nearest `klenod.test.rb`. It does not depend on a test framework.
+`klenod-test` owns the plugin, suite, runner, test configuration, and coverage integration. It combines `Klenod::Test::Suite` with the build watcher's generic update events, starts a fresh worker process for each selected batch, and delegates execution to callbacks loaded from the nearest `klenod.test.rb`. It does not depend on a test framework.
+
+`klenod coverage` runs the complete test suite once under Covered. Coverage is limited to evaluated application modules: ordinary Ruby uses its recorded lines directly, while transformed modules use their runtime source maps to combine generated execution counts onto original source lines. Test modules, virtual and gem modules, and generated wrappers for non-executable data are excluded.
 
 Tests use development-mode transforms and invalidation. They are not production entrypoints, are not serialized into application bundles, and add nothing to `klenod-runtime`.
 

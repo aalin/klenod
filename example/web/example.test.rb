@@ -946,6 +946,25 @@ class Klenod::ExampleTest < Minitest::Test
     assert_match(/Assertions\s+\d+/, stdout)
   end
 
+  def test_example_coverage_command_reports_original_haml_lines
+    stdout, stderr, status =
+      Open3.capture3(
+        {
+          "CI" => "1",
+          "NO_COLOR" => "1",
+          "KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1"
+        },
+        RbConfig.ruby,
+        "bin/coverage.rb",
+        chdir: __dir__
+      )
+
+    assert(status.success?, stderr)
+    assert_includes(stdout, "components/Button.haml")
+    assert_includes(stdout, '%button{ type: $type || "button"')
+    refute_includes(stdout, "SourceMapMark")
+  end
+
   def test_example_app_renders_router_tree_metadata
     config = example_config
     context = config.context

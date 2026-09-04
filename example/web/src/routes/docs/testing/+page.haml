@@ -51,6 +51,26 @@
 
       The development server ignores `.test.rb` changes. The separate test watcher handles them, so editing a test reruns it without producing an unrelated server update.
 
+  %DocsSection{ title: "Coverage" }
+    :markdown
+      Run the complete test suite once with coverage:
+
+      ```sh
+      bin/coverage.rb
+      ```
+
+      Configure the report or a required overall percentage in `klenod.test.rb`:
+
+      ```ruby
+      coverage report: :brief, minimum: 90
+      ```
+
+      Reports may be `brief`, `partial`, `full`, `markdown`, or `quiet`.
+
+      Coverage includes evaluated application Ruby and modules with Klenod source maps. Generated Ruby execution is mapped back to the original Haml or Markdown lines. Test files, gem and virtual modules, and generated data wrappers are excluded. Files that no test evaluates do not appear in the report.
+
+      Coverage wraps the same framework callback used by `klenod test`, so it is not tied to Minitest. A test framework that starts independent subprocesses needs separate subprocess coverage support.
+
   %DocsSection{ title: "Framework Helpers" }
     :markdown
       Klenod does not choose a test library or rendering API. The example framework renders the component to HTML, parses that HTML with Nokolexbor, and returns a queryable fragment:

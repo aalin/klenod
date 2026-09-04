@@ -16,7 +16,7 @@ The repository contains seven gems:
 - [`klenod`](gems/klenod): provides the build and runtime packages together.
 - [`klenod-runtime`](gems/klenod-runtime): loads bundles, evaluates modules, reads source maps, and rewrites backtraces.
 - [`klenod-build`](gems/klenod-build): builds graphs, runs plugins, watches files, writes bundles, and provides the CLI.
-- [`klenod-test`](gems/klenod-test): runs application tests and watches their dependency graph without choosing a test framework.
+- [`klenod-test`](gems/klenod-test): runs application tests, watches their dependency graph, and reports source-mapped coverage without choosing a test framework.
 - [`klenod-rack`](gems/klenod-rack): provides Rack helpers for serving bundled assets.
 - [`klenod-plugin-css`](gems/klenod-plugin-css): adds CSS assets and CSS Modules support.
 - [`klenod-plugin-javascript`](gems/klenod-plugin-javascript): adds JavaScript and TypeScript assets.
@@ -136,6 +136,7 @@ application's plugins, then run:
 ```sh
 bundle exec klenod test --run
 bundle exec klenod test --watch
+bundle exec klenod coverage
 ```
 
 The command finds the nearest `klenod.test.rb`. This file provides a fresh build
@@ -151,10 +152,14 @@ end
 execute do |context, test_paths|
   # Run the selected test modules and return an integer exit status.
 end
+
+coverage report: :brief, minimum: 90
 ```
 
 Tests run once in CI and watch by default otherwise. A changed test or one of its
 dependencies reruns only the affected test files in a fresh worker process.
+The coverage command runs the full suite once. Use `--report` and `--minimum` to
+override the coverage settings for one run.
 
 Load a runtime bundle without build plugins:
 

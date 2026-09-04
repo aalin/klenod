@@ -69,6 +69,25 @@ class Klenod::StandaloneExampleTest < Minitest::Test
     end
   end
 
+  def test_coverage_command_reports_application_source
+    stdout, stderr, status =
+      Open3.capture3(
+        {"NO_COLOR" => "1", "CI" => "1"},
+        RbConfig.ruby,
+        Gem.bin_path("klenod", "klenod"),
+        "coverage",
+        "--report",
+        "brief",
+        chdir: __dir__
+      )
+
+    assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
+    assert_match(/RUN\s+1 test file/, stdout)
+    assert_includes(stdout, "report.test.rb")
+    assert_includes(stdout, "1 files checked")
+    assert_includes(stdout, "100.0% covered")
+  end
+
   private
 
   def example_config

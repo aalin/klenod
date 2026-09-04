@@ -10,7 +10,7 @@ Keep these boundaries intact:
 
 - `gems/klenod-runtime/lib/klenod/runtime/`: production bundle loading, module evaluation, source maps, assets, and backtrace rewriting. It must not require build plugins or heavyweight build dependencies.
 - `gems/klenod-build/lib/klenod/build/`: graph collection, resolving, transforms, plugins, invalidation, asset generation, and bundle writing.
-- `gems/klenod-test/`: framework-independent test discovery, dependency selection, watch runs, and worker isolation. It depends on `klenod-build` but not on a test framework.
+- `gems/klenod-test/`: framework-independent test discovery, dependency selection, watch runs, worker isolation, and source-mapped coverage. It depends on `klenod-build` but not on a test framework.
 - `gems/klenod-rack/lib/klenod/rack/`: Rack-compatible serving helpers, not application or framework policy.
 - `gems/klenod-plugin-css/`: the native CSS plugin and its Ruby integration.
 - `gems/klenod-plugin-javascript/`: the native JavaScript/TypeScript plugin and its Ruby integration.

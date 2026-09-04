@@ -18,6 +18,7 @@ module Klenod
         execute:,
         watch: nil,
         worker_paths: nil,
+        spawn_empty: false,
         worker_command: [RbConfig.ruby, $PROGRAM_NAME],
         process: Async::Process,
         output: $stdout,
@@ -29,6 +30,7 @@ module Klenod
         @execute = execute
         @watch = watch.nil? ? !env.key?("CI") : watch
         @worker_paths = worker_paths&.dup
+        @spawn_empty = spawn_empty
         @worker_command = Array(worker_command)
         @process = process
         @output = output
@@ -57,7 +59,7 @@ module Klenod
       private
 
       attr_reader :context_factory, :execute, :watch, :worker_paths, :worker_command,
-        :process, :output, :error_output, :env, :format_error, :last_status
+        :spawn_empty, :process, :output, :error_output, :env, :format_error, :last_status
 
       def run_watch(context, suite, selection)
         watcher = build_watcher(context)
@@ -84,7 +86,7 @@ module Klenod
         @worker_mutex.synchronize do
           clear_screen
           report_test_paths(test_paths)
-          @last_status = test_paths.empty? ? 0 : worker_status(test_paths)
+          @last_status = (test_paths.empty? && !spawn_empty) ? 0 : worker_status(test_paths)
           report_watch_status if watch
           last_status
         end

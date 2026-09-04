@@ -15,6 +15,7 @@ module Klenod
 
       nested :command, {
         "build" => Klenod::Build::CLI::Build,
+        "coverage" => Klenod::Test::CLI::CoverageCommand,
         "graph" => Klenod::Build::CLI::Graph,
         "test" => Klenod::Test::CLI::Command
       }

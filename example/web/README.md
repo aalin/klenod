@@ -52,10 +52,13 @@ assets and include `Vary: Accept` for caches.
 - `bin/server` loads and serves the production bundle.
 - `bin/routes` prints the discovered routes.
 - `bin/test` delegates to `klenod test`, which runs colocated application tests and watches their dependency graph.
+- `bin/coverage.rb` runs the complete colocated test suite once and reports application coverage.
 
 Use `bin/test --run` or `bundle exec klenod test --run` for one test run. The command also runs once automatically when `CI` is set. Tests live beside source modules as `*.test.rb`; when watching, changing a test or any eager or lazy dependency reruns only the related tests.
 
 The command uses `klenod-test` for dependency-aware watching and fresh worker processes. `klenod.test.rb` connects it to the example's Minitest adapter. The component helpers and reporter remain under `lib/testing`.
+
+The example selects the partial report in `klenod.test.rb`, so `bin/coverage.rb` shows uncovered original Ruby and Haml lines. Applications using the general `klenod coverage` command can override their configured `report` and `minimum` values with command-line options.
 
 The example framework's `render` test helper serializes a component to HTML and parses it with Nokolexbor. The returned fragment supports strict role, text, and CSS queries, scoped queries with `within`, and direct Nokolexbor attribute access:
 

@@ -62,3 +62,33 @@ exit runner.call
 Each batch runs in a fresh worker process. The execution callback receives that
 worker's context and sorted source-relative test paths, then returns an integer
 exit status.
+
+## Coverage
+
+Run the complete test suite once under Covered:
+
+```sh
+bundle exec klenod coverage
+bundle exec klenod coverage --report partial --minimum 90
+```
+
+Coverage defaults to the brief report with no required minimum. Configure both
+defaults in `klenod.test.rb`:
+
+```ruby
+coverage report: :brief, minimum: 90
+```
+
+Command-line values override the configuration. Reports may be `brief`,
+`partial`, `full`, `markdown`, or `quiet`. The minimum is an overall percentage
+from 0 through 100; falling below it returns a failing status.
+
+Coverage includes evaluated application Ruby and source-mapped modules. Klenod
+maps generated execution lines back to the original Haml, Markdown, or other
+plugin source. It excludes test modules, gem and virtual modules, and generated
+wrappers for data files. Source files which no test evaluates are not synthesized
+into the report.
+
+Collection wraps the application's existing `execute` callback, so it does not
+depend on Minitest, RSpec, or another test framework. Frameworks that start
+independent subprocesses need their own subprocess coverage integration.

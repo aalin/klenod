@@ -40,6 +40,7 @@ Run only the colocated application tests directly through the Klenod CLI:
 ```sh
 bundle exec klenod test --run
 bundle exec klenod test --watch
+bundle exec klenod coverage
 ```
 
 Application tests live under `src` as `*.test.rb`. They are independent test
@@ -48,3 +49,5 @@ application code. Klenod watches each test's dependency graph and reruns only
 the tests related to a changed module. The tests use Minitest here, but the
 shared runner does not require a particular testing framework.
 The small `klenod.test.rb` file connects the runner to Minitest.
+The coverage command runs the complete test suite once and reports only the
+evaluated application Ruby modules, excluding tests and imported data wrappers.

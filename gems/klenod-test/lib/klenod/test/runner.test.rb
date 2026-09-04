@@ -119,6 +119,16 @@ class Klenod::Test::Runner::Test < Minitest::Test
     end
   end
 
+  def test_run_can_spawn_a_worker_when_no_tests_exist
+    with_context do |context|
+      process = FakeProcess.new
+      runner = runner(watch: false, spawn_empty: true, context: -> { context }, process:)
+
+      assert_equal(0, runner.call)
+      assert_equal([[RbConfig.ruby, "/app/test", "--worker", "--"]], process.calls)
+    end
+  end
+
   def test_reports_missing_test_plugin
     context = Klenod::Build::Context.new(
       source_dir: Dir.mktmpdir,
@@ -191,8 +201,9 @@ class Klenod::Test::Runner::Test < Minitest::Test
     assert_includes(spec.files, "lib/klenod/test/cli.rb")
     assert_includes(spec.files, "lib/klenod/test/plugin.rb")
     assert_includes(spec.files, "lib/klenod/test/suite.rb")
+    assert_includes(spec.files, "lib/klenod/test/coverage.rb")
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })
-    assert_equal(["async-process", "klenod-build"], spec.runtime_dependencies.map(&:name).sort)
+    assert_equal(["async-process", "covered", "klenod-build"], spec.runtime_dependencies.map(&:name).sort)
   end
 
   private

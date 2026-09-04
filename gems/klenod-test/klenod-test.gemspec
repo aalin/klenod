@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.email = ["andreas.alin@gmail.com"]
 
   spec.summary = "Test runner for Klenod applications."
-  spec.description = "Framework-independent test selection and watch orchestration for Klenod applications."
+  spec.description = "Framework-independent test selection, watch runs, and coverage for Klenod applications."
   spec.homepage = "https://github.com/aalin/klenod"
   spec.license = "MIT"
   spec.required_ruby_version = ">= #{ruby_version}"
@@ -27,4 +27,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "klenod-build", "= #{version}"
   spec.add_dependency "async-process", "~> 1.4"
+  spec.add_dependency "covered", "~> 0.30"
 end
