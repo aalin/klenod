@@ -8,26 +8,81 @@ updates:
     schedule:
       interval: weekly
     versioning-strategy: increase-if-necessary
+    groups:
+      patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+      minor-updates:
+        patterns:
+          - "*"
+        update-types:
+          - minor
 
   - package-ecosystem: bundler
     directory: /example/web
     schedule:
       interval: weekly
     versioning-strategy: increase-if-necessary
+    groups:
+      patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+      minor-updates:
+        patterns:
+          - "*"
+        update-types:
+          - minor
 
   - package-ecosystem: cargo
     directory: /gems/klenod-plugin-css/ext/native
     schedule:
       interval: weekly
     versioning-strategy: auto
+    groups:
+      patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+      minor-updates:
+        patterns:
+          - "*"
+        update-types:
+          - minor
 
   - package-ecosystem: cargo
     directory: /gems/klenod-plugin-javascript/ext/native
     schedule:
       interval: weekly
     versioning-strategy: auto
+    groups:
+      patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+      minor-updates:
+        patterns:
+          - "*"
+        update-types:
+          - minor
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+      minor-updates:
+        patterns:
+          - "*"
+        update-types:
+          - minor
