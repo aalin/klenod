@@ -3,7 +3,7 @@ PATH
   specs:
     klenod-build (0.0.5)
       async (~> 2.42)
-      async-http (~> 0.95.1)
+      async-http (>= 0.95.1, < 0.103.0)
       brotli (~> 0.8)
       image_size (~> 3.6)
       klenod-runtime (= 0.0.5)
