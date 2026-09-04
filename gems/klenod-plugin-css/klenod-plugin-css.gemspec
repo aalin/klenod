@@ -2,7 +2,6 @@
 
 root = File.expand_path(__dir__)
 version = File.read(File.expand_path("../../KLENOD_VERSION", __dir__)).strip
-ruby_version = File.read(File.expand_path("../../.ruby-version", __dir__)).strip
 
 Gem::Specification.new do |spec|
   spec.name = "klenod-plugin-css"
@@ -14,7 +13,7 @@ Gem::Specification.new do |spec|
   spec.description = "CSS asset and CSS Modules plugin for Klenod."
   spec.homepage = "https://github.com/aalin/klenod"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= #{ruby_version}"
+  spec.required_ruby_version = ">= 4.0"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/aalin/klenod/tree/main/gems/klenod-plugin-css"
