@@ -45,7 +45,7 @@ Plugins can also implement `invalidate_module_ids` for custom invalidation.
 - `TomlPlugin`
 - `TextPlugin`
 
-`GoogleFontsPlugin`, `RouterPlugin`, and `TestPlugin` are built in but opt-in. The example web app configures all three explicitly.
+`GoogleFontsPlugin` and `RouterPlugin` are built in but opt-in. Application testing is provided separately by `klenod-test`.
 
 CSS and JavaScript support live in separate plugin gems:
 
@@ -138,29 +138,6 @@ end
 ```
 
 The configured factory decides when to call the block and whether to memoize its result.
-
-## TestPlugin
-
-Discovers application tests without choosing a testing library.
-
-- Finds `*.test.rb` files under the source directory in deterministic order.
-- Allows each test entry to import normal application modules.
-- Rejects eager, lazy, explicit, and extensionless imports that resolve to a test file.
-- Leaves tests out of normal runtime bundles unless they are explicitly configured as entrypoints.
-
-Configuration:
-
-```ruby
-Klenod::Build::Plugins::TestPlugin.new(
-  pattern: "**/*.test.rb"
-)
-```
-
-- `pattern`: source-relative glob used for discovery and import isolation. Defaults to `**/*.test.rb`.
-
-Use the plugin with `Klenod::Build::TestSuite` to collect tests and select the tests affected by a watcher update. `TestSuite#collect` returns every discovered test. `TestSuite#update(event)` returns tests whose eager or lazy dependency closure intersects the update, along with removed test paths. Neither API evaluates application code.
-
-The optional `klenod-test` gem uses these APIs to provide one-run and watch commands with isolated workers. Applications provide the callback that evaluates selected test entries with Minitest, RSpec, or another testing library.
 
 ## GemImportPlugin
 

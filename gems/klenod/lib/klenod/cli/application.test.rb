@@ -26,7 +26,7 @@ class Klenod::CLI::Application::Test < Minitest::Test
           context do
             Klenod::Build::Context.new(
               source_dir: #{source_dir.inspect},
-              plugins: [Klenod::Build::Plugins::TestPlugin.new]
+              plugins: [Klenod::Test::Plugin.new]
             )
           end
           execute { 0 }

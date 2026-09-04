@@ -22,6 +22,8 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
     assert_includes(spec.files, "lib/klenod/build/plugins/google_fonts_plugin/font_metrics.txt")
     assert_includes(spec.files, "lib/klenod/build/cli/application.rb")
     assert_includes(spec.files, "lib/klenod/build/watcher.rb")
+    refute_includes(spec.files, "lib/klenod/build/plugins/test_plugin.rb")
+    refute_includes(spec.files, "lib/klenod/build/test_suite.rb")
     refute_includes(spec.files, "exe/klenod")
     refute_includes(spec.files, "lib/klenod.rb")
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })

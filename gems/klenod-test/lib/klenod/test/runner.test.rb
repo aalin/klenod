@@ -128,7 +128,7 @@ class Klenod::Test::Runner::Test < Minitest::Test
     runner = runner(watch: false, context: -> { context }, error_output:)
 
     assert_equal(1, runner.call)
-    assert_includes(error_output.string, "must include TestPlugin")
+    assert_includes(error_output.string, "must include Klenod::Test::Plugin")
   end
 
   def test_worker_reports_errors_with_the_configured_formatter
@@ -189,6 +189,8 @@ class Klenod::Test::Runner::Test < Minitest::Test
     assert_includes(spec.files, "lib/klenod/test/runner.rb")
     assert_includes(spec.files, "lib/klenod/test/config.rb")
     assert_includes(spec.files, "lib/klenod/test/cli.rb")
+    assert_includes(spec.files, "lib/klenod/test/plugin.rb")
+    assert_includes(spec.files, "lib/klenod/test/suite.rb")
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })
     assert_equal(["async-process", "klenod-build"], spec.runtime_dependencies.map(&:name).sort)
   end
@@ -215,7 +217,7 @@ class Klenod::Test::Runner::Test < Minitest::Test
         FileUtils.mkdir_p(File.dirname(full_path))
         File.write(full_path, source)
       end
-      plugin = Klenod::Build::Plugins::TestPlugin.new
+      plugin = Klenod::Test::Plugin.new
       context = Klenod::Build::Context.new(
         source_dir: directory,
         plugins: [plugin, Klenod::Build::Plugins::RubyPlugin.new]

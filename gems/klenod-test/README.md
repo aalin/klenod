@@ -1,8 +1,23 @@
 # klenod-test
 
-`klenod-test` runs application tests discovered by Klenod's `TestPlugin`. It can
-run the full suite once or watch the module graph and rerun only tests related to
-a change. Install the `klenod` meta-gem and run it from an application directory:
+`klenod-test` discovers and runs application tests without choosing a test
+framework. Add its plugin to the application's build configuration:
+
+```ruby
+plugins [
+  Klenod::Test::Plugin.new,
+  Klenod::Build::Plugins::RubyPlugin.new
+]
+```
+
+The plugin finds `*.test.rb` files in deterministic order and prevents
+application modules and other tests from importing them. Tests can import normal
+application modules. `Klenod::Test::Suite` indexes each test's eager and lazy
+dependency closure without evaluating application code.
+
+The runner can run the full suite once or watch the module graph and rerun only
+tests related to a change. Install the `klenod` meta-gem and run it from an
+application directory:
 
 ```sh
 bundle exec klenod test --run

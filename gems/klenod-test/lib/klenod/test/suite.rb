@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
 module Klenod
-  module Build
-    TestSelection = Data.define(:test_paths, :removed_test_paths) do
+  module Test
+    Selection = Data.define(:test_paths, :removed_test_paths) do
       def empty?
         test_paths.empty? && removed_test_paths.empty?
       end
     end
 
-    class TestSuite
+    class Suite
       def initialize(context:, plugin:)
         @context = context
         @plugin = plugin
@@ -84,7 +84,7 @@ module Klenod
       end
 
       def selection(test_ids, removed_test_ids = [])
-        TestSelection.new(
+        Selection.new(
           test_ids.map(&:relative_path).sort.freeze,
           removed_test_ids.map(&:relative_path).sort.freeze
         )

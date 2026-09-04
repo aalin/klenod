@@ -58,8 +58,8 @@ class Klenod::StandaloneExampleTest < Minitest::Test
     %w[tasks.json owners.yaml release.toml notes.txt].each do |name|
       config = example_config
       context = config.context
-      plugin = context.graph.plugins.find { it.is_a?(Klenod::Build::Plugins::TestPlugin::Plugin) }
-      suite = Klenod::Build::TestSuite.new(context:, plugin:)
+      plugin = context.graph.plugins.find { it.is_a?(Klenod::Test::Plugin) }
+      suite = Klenod::Test::Suite.new(context:, plugin:)
       suite.collect
       path = File.join(config.source_path, "data", name)
       result = context.invalidate_paths([path])

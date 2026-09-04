@@ -161,7 +161,6 @@ module Klenod
     end
 
     class DynamicImportError < Error; end
-    class TestImportError < ResolveError; end
     class UnsupportedFileError < Error; end
 
     class ImportCycleError < Error

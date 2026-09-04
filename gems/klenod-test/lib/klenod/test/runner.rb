@@ -5,6 +5,9 @@ require "rbconfig"
 require "async/process"
 require "klenod/build"
 
+require_relative "plugin"
+require_relative "suite"
+
 module Klenod
   module Test
     class Runner
@@ -41,7 +44,7 @@ module Klenod
 
         context = context_factory.call
         plugin = test_plugin(context)
-        suite = Klenod::Build::TestSuite.new(context:, plugin:)
+        suite = Klenod::Test::Suite.new(context:, plugin:)
         selection = suite.collect
         return run_in_worker(selection.test_paths) unless watch
 
@@ -102,8 +105,8 @@ module Klenod
 
       def test_plugin(context)
         context.graph.plugins.find do |candidate|
-          candidate.is_a?(Klenod::Build::Plugins::TestPlugin::Plugin)
-        end || raise(ArgumentError, "The Klenod context must include TestPlugin")
+          candidate.is_a?(Klenod::Test::Plugin)
+        end || raise(ArgumentError, "The Klenod context must include Klenod::Test::Plugin")
       end
 
       def build_watcher(context)

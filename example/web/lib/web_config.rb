@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "klenod/build"
+require "klenod/test"
 require "klenod/plugin/css"
 require "klenod/plugin/javascript"
 require "uri"
@@ -25,7 +26,7 @@ module Example
 
     def plugins
       [
-        Klenod::Build::Plugins::TestPlugin.new,
+        Klenod::Test::Plugin.new,
         Klenod::Build::Plugins::RouterPlugin.new(
           pages_dir: "routes",
           route_base_class: "Example::Framework::Route"

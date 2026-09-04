@@ -6,8 +6,8 @@
 %DocsPage
   %PageHeader{
     kicker: "Plugin Reference",
-    title: "TestPlugin",
-    summary: "TestPlugin discovers test entrypoints and keeps them outside the application import graph."
+    title: "Test Plugin",
+    summary: "Klenod::Test::Plugin discovers test entrypoints and keeps them outside the application import graph."
   }
 
   %DocsSection{ title: "Configuration" }
@@ -15,7 +15,7 @@
       Add the plugin to the same development configuration as the application plugins:
 
       ```ruby
-      Klenod::Build::Plugins::TestPlugin.new(
+      Klenod::Test::Plugin.new(
         pattern: "**/*.test.rb"
       )
       ```
@@ -30,10 +30,10 @@
 
   %DocsSection{ title: "Selecting Related Tests" }
     :markdown
-      `Klenod::Build::TestSuite` discovers tests through the plugin and collects their complete static dependency closures without evaluating them:
+      `Klenod::Test::Suite` discovers tests through the plugin and collects their complete static dependency closures without evaluating them:
 
       ```ruby
-      suite = Klenod::Build::TestSuite.new(
+      suite = Klenod::Test::Suite.new(
         context: context,
         plugin: test_plugin
       )
@@ -46,4 +46,4 @@
 
       The `klenod-test` package combines these APIs with the Klenod watcher and fresh worker processes. The `klenod` meta-gem exposes it as `klenod test`. It delegates each selected batch to callbacks from `klenod.test.rb`, so it does not depend on Minitest or another testing library.
 
-%title= "TestPlugin"
+%title= "Test Plugin"

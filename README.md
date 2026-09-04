@@ -130,8 +130,8 @@ plugins [
 
 ## Test An Application
 
-The `klenod` meta-gem includes `klenod-test`. Add
-`Klenod::Build::Plugins::TestPlugin` to the application's plugins, then run:
+The `klenod` meta-gem includes `klenod-test`. Add `Klenod::Test::Plugin` to the
+application's plugins, then run:
 
 ```sh
 bundle exec klenod test --run
@@ -271,10 +271,10 @@ These built-in plugins are optional:
 
 - [`GoogleFontsPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#googlefontsplugin): downloads Google Fonts and emits local assets.
 - [`RouterPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#routerplugin): generates a virtual router from a route tree.
-- [`TestPlugin`](gems/klenod-build/lib/klenod/build/plugins/README.md#testplugin): discovers test entrypoints and keeps test files out of application imports.
 
-CSS and JavaScript support are separate plugin gems:
+Testing, CSS, and JavaScript support are separate gems:
 
+- [`Klenod::Test::Plugin`](gems/klenod-test/README.md): discovers test entrypoints and keeps test files out of application imports.
 - [`CSSPlugin`](gems/klenod-plugin-css/README.md): scopes CSS Modules and emits CSS assets.
 - [`JavaScriptPlugin`](gems/klenod-plugin-javascript/README.md): collects JavaScript dependencies and emits JavaScript assets.
 
