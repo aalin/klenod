@@ -44,7 +44,7 @@ module Example
       end
 
       def asset_request?(path)
-        path.start_with?("/assets/")
+        path.start_with?("/.assets/")
       end
 
       def log_request(request, status, start_time)

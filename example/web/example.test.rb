@@ -530,8 +530,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "components/Button.secondary")
     assert_includes(navigation_html(html), "href=\"/docs/plugins\"")
     assert_includes(navigation_html(html), "href=\"/demo\"")
-    assert_includes(html, "/assets/routes_layout_css")
-    assert_includes(html, "/assets/routes_page_css")
+    assert_includes(html, "/.assets/routes_layout_css")
+    assert_includes(html, "/.assets/routes_page_css")
     paths = stylesheet_paths(html)
     assert_stylesheet_indexes_present(html)
     assert_stylesheet_paths_unique(paths)
@@ -1190,7 +1190,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     response = nil
     capture_io do
-      response = runner.response_for(HeaderRequest["GET", "/assets/app.css", HeaderList.new([["Accept-Encoding", "gzip, br"]])])
+      response = runner.response_for(HeaderRequest["GET", "/.assets/app.css", HeaderList.new([["Accept-Encoding", "gzip, br"]])])
     end
 
     assert_equal(200, response.status)
@@ -1262,7 +1262,7 @@ class Klenod::ExampleTest < Minitest::Test
 
     response = nil
     capture_io do
-      response = runner.response_for(HeaderRequest["GET", "/assets/app.css", HeaderList.new([])])
+      response = runner.response_for(HeaderRequest["GET", "/.assets/app.css", HeaderList.new([])])
     end
 
     refute_includes(response.headers, "content-length")
@@ -1742,7 +1742,7 @@ class Klenod::ExampleTest < Minitest::Test
       assert_includes(Example::Framework::H.render(Example::Framework::H[:a, "Protocol relative", href: "//example.com/demo/assets"]), %(href="//example.com/demo/assets"))
       assert_includes(Example::Framework::H.render(Example::Framework::H[:a, "Mail", href: "mailto:hello@example.com"]), %(href="mailto:hello@example.com"))
       assert_includes(Example::Framework::H.render(Example::Framework::H[:a, "Fragment", href: "#intro"]), %(href="#intro"))
-      assert_includes(Example::Framework::H.render(Example::Framework::H[:a, "Asset", href: "/assets/app.css"]), %(href="/assets/app.css"))
+      assert_includes(Example::Framework::H.render(Example::Framework::H[:a, "Asset", href: "/.assets/app.css"]), %(href="/.assets/app.css"))
     end
   end
 

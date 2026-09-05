@@ -29,7 +29,7 @@
       # or: base "https://cdn.example.test"
       ```
 
-      The example web app reads `ASSET_BASE`, defaulting to `/assets/`. Emitted files live directly in `dist/public`; configure the CDN origin or upload mapping to serve that directory at the chosen base. Every emitted asset has a build-time `url` for rendering directly. Generated CSS, JavaScript, image, SVG, and font URLs already use the configured base.
+      The example web app reads `ASSET_BASE`, defaulting to `/.assets/`. Emitted files live directly in `dist/public`; configure the CDN origin or upload mapping to serve that directory at the chosen base. Every emitted asset has a build-time `url` for rendering directly. Generated CSS, JavaScript, image, SVG, and font URLs already use the configured base.
 
   %DocsSection{ title: "Lookup APIs" }
     :markdown
@@ -67,7 +67,7 @@
       )
       ```
 
-      The asset app maps public paths under `/assets/` to root-relative files in `assets_dir`, with immutable cache headers, and delegates every other request to `app`, which calls the bundle entrypoint. That entrypoint should accept a Rack environment and return a Rack response. When matching `.br` files are present in `assets_dir`, the asset app also serves Brotli responses to clients that accept them. Pass `base:` to use an origin-relative public prefix such as `/.assets/`; use `path_prefix:` when an external CDN base needs a local development-serving prefix.
+      The asset app maps public paths under `/.assets/` to root-relative files in `assets_dir`, with immutable cache headers, and delegates every other request to `app`, which calls the bundle entrypoint. That entrypoint should accept a Rack environment and return a Rack response. When matching `.br` files are present in `assets_dir`, the asset app also serves Brotli responses to clients that accept them. Pass `base:` to choose another origin-relative public prefix; use `path_prefix:` when an external CDN base needs a local development-serving prefix.
 
   %DocsSection{ title: "CSS, SVG, And Images" }
     :markdown
