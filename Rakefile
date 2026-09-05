@@ -96,7 +96,7 @@ namespace :test do
   task :box_bundle do
     with_unbundled_env do
       Dir.chdir("example/box") do
-        sh({"BUNDLE_GEMFILE" => File.expand_path("Gemfile")}, *bundle_command, "install")
+        sh(*bundle_command, "install")
       end
     end
   end
