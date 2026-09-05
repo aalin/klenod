@@ -57,7 +57,7 @@ module Example
       end
 
       def asset_app
-        @asset_app ||= Klenod::Rack::AssetApp.new(bundle, assets_dir: assets_dir)
+        @asset_app ||= Klenod::Rack::AssetApp.new(bundle, assets_dir: assets_dir, base: bundle.base)
       end
 
       def server_runner

@@ -20,6 +20,7 @@ module Example
         assets_dir: "dist/public",
         plugins: plugins,
         mode: mode,
+        base: ENV.fetch("ASSET_BASE", "/assets/"),
         base_dir: APP_ROOT
       )
     end

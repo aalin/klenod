@@ -56,13 +56,14 @@ module Klenod
         end
       end
 
-      attr_reader :records, :mods, :asset_generation_queue, :mode, :profiler
+      attr_reader :records, :mods, :asset_generation_queue, :mode, :profiler, :base
       attr_reader :plugins
 
       def initialize(
         source_dir:,
         plugins:,
         mode: :development,
+        base: Runtime::AssetUrl::DEFAULT_BASE,
         asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY,
         asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY,
         profiler: nil
@@ -71,6 +72,7 @@ module Klenod
         @resolver = Resolver.new(source_dir: source_dir, profiler: @profiler)
         @plugins = plugins
         @mode = mode
+        @base = Runtime::AssetUrl.normalize(base)
         @asset_generation_queue =
           AssetGenerationQueue.new(
             concurrency: asset_generation_concurrency,
@@ -112,7 +114,8 @@ module Klenod
             loaded_entrypoints,
             runtime_module_specs,
             runtime_asset_specs,
-            source_root: source_dir.to_s
+            source_root: source_dir.to_s,
+            base: base
           )
         end
       end
@@ -123,6 +126,11 @@ module Klenod
 
       def asset(output_path)
         assets.fetch(output_path)
+      end
+
+      def asset_url(asset_or_output_path)
+        output_path = asset_or_output_path.respond_to?(:output_path) ? asset_or_output_path.output_path : asset_or_output_path
+        Runtime::AssetUrl.join(base, output_path)
       end
 
       def exports(record_or_module_id)

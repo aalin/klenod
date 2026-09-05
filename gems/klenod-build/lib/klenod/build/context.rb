@@ -108,6 +108,7 @@ module Klenod
         source_dir:,
         plugins: DEFAULT_PLUGINS,
         mode: :development,
+        base: Runtime::AssetUrl::DEFAULT_BASE,
         asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY,
         asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY,
         profiler: nil
@@ -116,19 +117,21 @@ module Klenod
         plugins = plugins.to_a if plugins.equal?(DEFAULT_PLUGINS)
         @plugins = plugins
         @mode = mode
+        @base = Runtime::AssetUrl.normalize(base)
         @update_handlers = []
         @graph =
           Graph.new(
             source_dir: source_dir,
             plugins: plugins,
             mode: mode,
+            base: @base,
             asset_generation_concurrency: asset_generation_concurrency,
             asset_download_concurrency: asset_download_concurrency,
             profiler: profiler
           )
       end
 
-      attr_reader :graph, :mode
+      attr_reader :graph, :mode, :base
 
       def evaluate(specifier)
         @graph.load(specifier)
@@ -175,6 +178,10 @@ module Klenod
 
       def asset(output_path)
         @graph.asset(output_path)
+      end
+
+      def asset_url(asset_or_output_path)
+        @graph.asset_url(asset_or_output_path)
       end
 
       def exports(record_or_module_id)

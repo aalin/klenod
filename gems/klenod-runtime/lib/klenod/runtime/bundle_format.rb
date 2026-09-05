@@ -2,6 +2,7 @@
 
 require "json"
 
+require_relative "asset_url"
 require_relative "version"
 require_relative "source_map"
 
@@ -12,7 +13,7 @@ module Klenod
 
     module BundleFormat
       MAGIC = "MODPACK_BUNDLE_V1\n"
-      FORMAT_VERSION = 1
+      FORMAT_VERSION = 2
 
       module_function
 
@@ -39,6 +40,7 @@ module Klenod
           "format_version" => FORMAT_VERSION,
           "runtime_version" => Runtime::VERSION,
           "source_root" => encode_value(bundle.source_root),
+          "base" => bundle.base,
           "entrypoints" => encode_value(bundle.entrypoints),
           "modules" => encode_modules(bundle.modules),
           "assets" => encode_assets(bundle.assets)
@@ -53,7 +55,8 @@ module Klenod
             decode_value(payload.fetch("entrypoints")),
             decode_modules(payload.fetch("modules")),
             decode_assets(payload.fetch("assets")),
-            source_root: decode_value(payload["source_root"])
+            source_root: decode_value(payload["source_root"]),
+            base: payload.key?("base") ? payload.fetch("base") : AssetUrl::DEFAULT_BASE
           )
         bundle.source_root = source_root if source_root
         bundle
@@ -67,7 +70,7 @@ module Klenod
         raise BundleFormatError, "Malformed Klenod bundle payload" unless payload.is_a?(Hash)
 
         version = payload["format_version"]
-        unless version == FORMAT_VERSION
+        unless [1, FORMAT_VERSION].include?(version)
           raise BundleFormatError, "Unsupported Klenod bundle format version: #{version.inspect}"
         end
 

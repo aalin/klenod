@@ -51,7 +51,7 @@ module Klenod
             image_options = image_options_for(module_id)
             asset = default_image_asset(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
             variant_assets = generate_variant_assets(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
-            javascript_asset = javascript_image_asset(module_id, asset, variant_assets)
+            javascript_asset = javascript_image_asset(module_id, asset, variant_assets, context)
             assets = [asset, *variant_assets]
             image_runtime_dependency =
               Dependency
@@ -64,7 +64,7 @@ module Klenod
 
             transform =
               TransformResult.new(
-                image_module_source(module_id, assets, image_runtime_dependency),
+                image_module_source(module_id, assets, image_runtime_dependency, context),
                 [image_runtime_dependency],
                 nil,
                 assets,
@@ -217,15 +217,15 @@ module Klenod
             "# image asset: #{module_id}\n"
           end
 
-          def image_module_source(module_id, assets, image_runtime_dependency)
+          def image_module_source(module_id, assets, image_runtime_dependency, context)
             asset = image_asset(assets)
-            variants = image_variant_assets(assets).map { |variant_asset| image_variant_source(variant_asset) }
+            variants = image_variant_assets(assets).map { |variant_asset| image_variant_source(variant_asset, context) }
 
             <<~RUBY
               ImageRuntime = __klenod_import__(#{image_runtime_dependency.id.inspect})
               Default =
                 ImageRuntime::ImageMetadata.new(
-                  src: #{asset.output_path.inspect},
+                  src: #{context.asset_url(asset).inspect},
                   width: #{asset.metadata[:width].inspect},
                   height: #{asset.metadata[:height].inspect},
                   content_type: #{asset.content_type.inspect},
@@ -238,10 +238,10 @@ module Klenod
             RUBY
           end
 
-          def image_variant_source(asset)
+          def image_variant_source(asset, context)
             <<~RUBY.chomp
               ImageRuntime::ImageVariant.new(
-                src: #{asset.output_path.inspect},
+                src: #{context.asset_url(asset).inspect},
                 width: #{asset.metadata[:width].inspect},
                 height: #{asset.metadata[:height].inspect},
                 content_type: #{asset.content_type.inspect},
@@ -253,8 +253,8 @@ module Klenod
             RUBY
           end
 
-          def javascript_image_asset(module_id, asset, variant_assets)
-            code = javascript_image_module_source(asset, variant_assets)
+          def javascript_image_asset(module_id, asset, variant_assets, context)
+            code = javascript_image_module_source(asset, variant_assets, context)
             hash = Hashing.short(code)
             Asset.new(
               module_id.path,
@@ -267,10 +267,10 @@ module Klenod
             )
           end
 
-          def javascript_image_module_source(asset, variant_assets)
-            variants = variant_assets.map { "new ImageVariant(#{AssetJavaScriptMetadata.object_literal(javascript_image_variant(it))})" }
+          def javascript_image_module_source(asset, variant_assets, context)
+            variants = variant_assets.map { "new ImageVariant(#{AssetJavaScriptMetadata.object_literal(javascript_image_variant(it, context))})" }
             properties = {
-              src: asset.output_path,
+              src: context.asset_url(asset),
               width: asset.metadata[:width],
               height: asset.metadata[:height],
               contentType: asset.content_type,
@@ -284,9 +284,9 @@ module Klenod
             JAVASCRIPT
           end
 
-          def javascript_image_variant(asset)
+          def javascript_image_variant(asset, context)
             {
-              src: asset.output_path,
+              src: context.asset_url(asset),
               width: asset.metadata[:width],
               height: asset.metadata[:height],
               contentType: asset.content_type,

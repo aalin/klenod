@@ -50,6 +50,25 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
     assert_equal("body {}", response.body)
   end
 
+  def test_serves_a_path_base_from_canonical_asset_paths
+    asset =
+      Klenod::Build::Asset.new(
+        "styles/home.css",
+        "abc123",
+        "/assets/home.abc123.css",
+        "styles/home.css",
+        "body {}",
+        "text/css",
+        {type: :css}
+      )
+    app = Klenod::Rack::AssetApp.new(AssetSource.new(asset, "body {}"), base: "/.assets")
+
+    response = app.response_for("/.assets/home.abc123.css")
+
+    assert_equal(200, response.status)
+    assert_equal("body {}", response.body)
+  end
+
   def test_serves_asset_preload_link_headers
     asset =
       Klenod::Build::Asset.new(

@@ -17,6 +17,7 @@ class Klenod::Build::Config::Test < Minitest::Test
           entrypoint "pages/server"
           output "dist/app.bundle"
           assets_dir "public"
+          base "https://cdn.example.test"
           mode :build
           plugins [
             Klenod::Build::Plugins::RubyPlugin.new
@@ -30,6 +31,7 @@ class Klenod::Build::Config::Test < Minitest::Test
       assert_equal(["pages/server"], config.entrypoints)
       assert_equal("dist/app.bundle", config.output)
       assert_equal("public", config.assets_dir)
+      assert_equal("https://cdn.example.test/", config.base)
       assert_equal(:build, config.mode)
       assert_equal([Klenod::Build::Plugins::RubyPlugin::Plugin], config.plugins.map(&:class))
       assert_equal(dir, config.base_dir)

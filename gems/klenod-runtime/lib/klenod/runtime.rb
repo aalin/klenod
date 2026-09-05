@@ -4,6 +4,7 @@ require_relative "runtime/version"
 require_relative "runtime/source_map"
 require_relative "runtime/backtrace_rewriter"
 require_relative "runtime/mod"
+require_relative "runtime/asset_url"
 require_relative "runtime/bundle"
 require_relative "runtime/bundle_format"
 

@@ -224,4 +224,14 @@ class Klenod::RuntimeBoundaryTest
     refute(spec.dependencies.any? { |dependency| dependency.name == "rmagick" })
     refute(spec.dependencies.any? { |dependency| dependency.name == "syntax_tree-haml" })
   end
+
+  def test_bundle_asset_url_joins_a_normalized_base
+    asset = Klenod::Runtime::AssetSpec.new("logo.png", "hash", "/assets/logo.hash.png", "image/png", {})
+    bundle = Klenod::Runtime::Bundle.new({}, {}, {asset.output_path => asset}, base: "https://cdn.example.test/assets")
+    loaded = Klenod::Runtime::BundleFormat.load_bytes(Klenod::Runtime::BundleFormat.dump(bundle))
+
+    assert_equal("https://cdn.example.test/assets/logo.hash.png", bundle.asset_url(asset))
+    assert_equal(bundle.base, loaded.base)
+    assert_equal(bundle.asset_url(asset), loaded.asset_url(asset))
+  end
 end

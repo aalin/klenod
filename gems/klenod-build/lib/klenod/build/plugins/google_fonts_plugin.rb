@@ -172,13 +172,13 @@ module Klenod
                 font_url = Regexp.last_match[:url]
                 asset = font_assets[font_url] ||= font_asset(font_url, font_faces[font_url], context)
 
-                %(url(#{quote}#{asset.output_path}#{quote}))
+                %(url(#{quote}#{context.asset_url(asset)}#{quote}))
               end
             rewritten_css = append_fallback_font_faces(rewritten_css, font_faces.values) if @adjust_font_fallback
 
             css_asset = css_asset(module_id, url, rewritten_css, font_assets.keys)
             @assets_by_module_id[module_id] = [css_asset, *font_assets.values]
-            ruby_module_source(css_asset.output_path)
+            ruby_module_source(context.asset_url(css_asset))
           end
 
           def transform(module_id, code, _context)
