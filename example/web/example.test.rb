@@ -802,14 +802,18 @@ class Klenod::ExampleTest < Minitest::Test
       original_lex.bind_call(self, *args, **kwargs, &block)
     end
 
-    2.times do
-      status, _headers, body = entry.call(request("/docs/getting-started"), context)
+    status, _headers, body = entry.call(request("/docs/getting-started"), context)
 
-      assert_equal(200, status)
-      assert_includes(body.join, "language-ruby")
-    end
+    assert_equal(200, status)
+    assert_includes(body.join, "language-ruby")
+    first_render_lex_count = lex_count
+    assert_operator(first_render_lex_count, :>, 0)
 
-    assert_equal(4, lex_count)
+    status, _headers, body = entry.call(request("/docs/getting-started"), context)
+
+    assert_equal(200, status)
+    assert_includes(body.join, "language-ruby")
+    assert_equal(first_render_lex_count, lex_count)
   ensure
     ruby_lexer&.define_singleton_method(:lex, original_lex) if ruby_lexer && original_lex
   end
