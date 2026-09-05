@@ -10,6 +10,32 @@
     summary: "Create a Klenod build context, collect an entry, import dependencies, build a bundle, and load it with the runtime gem."
   }
 
+  %DocsSection{ title: "Install Klenod" }
+    :markdown
+      Add the runtime gem to your application's `Gemfile`. It is the only Klenod gem required when production only loads a prebuilt bundle:
+
+      ```ruby
+      gem "klenod-runtime"
+      ```
+
+      If the application serves generated assets through Rack, add `klenod-rack` as well:
+
+      ```ruby
+      gem "klenod-rack"
+      ```
+
+      Put the build and development tools in a development/build group. They are needed to collect and write bundles, run tests, and compile optional formats, but they do not need to ship with the production application:
+
+      ```ruby
+      group :development, :build do
+        gem "klenod"
+        gem "klenod-plugin-css"
+        gem "klenod-plugin-javascript"
+      end
+      ```
+
+      Run `bundle install` after updating the `Gemfile`. The `klenod` meta-gem provides the CLI, build tools, and test support; applications can depend on `klenod-build` or `klenod-test` directly when they need only those pieces.
+
   %DocsSection{ title: "Create A Context" }
     :markdown
       A build context starts with a source directory and a plugin list. By default it includes the core file plugins, but framework-style apps usually configure Haml, Markdown, routing, CSS, and assets explicitly.
