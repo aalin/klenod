@@ -148,7 +148,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
         ],
         haml_record.resolved_dependencies.map(&:module_id)
       )
-      assert_match(%r{\A/assets/pages_page_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
+      assert_match(%r{\A/pages_page_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
     end
   end
 
@@ -182,7 +182,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       assert_match(/title/, styles.fetch(:title))
       css_asset = css_record.assets.find { |asset| asset.metadata[:type] == :css }
 
-      assert_match(%r{\A/assets/pages_page_haml_inline_0_css\.[a-f0-9]{16}\.css\z}, css_asset.output_path)
+      assert_match(%r{\A/pages_page_haml_inline_0_css\.[a-f0-9]{16}\.css\z}, css_asset.output_path)
       assert_includes(css_asset.bytes, "color: red")
     end
   end

@@ -836,7 +836,8 @@ class Klenod::ExampleTest < Minitest::Test
     language_switcher_css_path =
       stylesheet_paths(html).find { |path| path.include?("components_LanguageSwitcher_css") }
     flunk("Expected LanguageSwitcher stylesheet") unless language_switcher_css_path
-    assert_includes(context.asset(language_switcher_css_path).bytes, "language_solid_full")
+    language_switcher_css = context.assets.values.find { it.url == language_switcher_css_path }
+    assert_includes(language_switcher_css.bytes, "language_solid_full")
     assert_includes(html, "href=\"/demo/assets\"")
     assert_includes(html, "href=\"/sv/demo/assets\"")
     assert_includes(html, "href=\"/sv/demo/formular\"")
@@ -2140,7 +2141,7 @@ class Klenod::ExampleTest < Minitest::Test
 
   def assert_linked_stylesheets_do_not_import_linked_stylesheets(context, paths)
     paths.each do |path|
-      css = context.asset(path).bytes
+      css = context.assets.values.find { it.url == path }.bytes
       imported_linked_paths = paths.reject { |linked_path| linked_path == path }.select { |linked_path| css.include?(linked_path) }
 
       assert_equal([], imported_linked_paths, "Expected #{path} not to import linked stylesheets")

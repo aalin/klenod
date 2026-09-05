@@ -865,7 +865,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       assert_equal(3, image_props.fetch(:height))
       assert_match(/hero/, image_props.fetch(:class))
       assert_equal(css_asset_paths, loaded.assets_for("pages/page.css").map(&:output_path))
-      assert_equal(image_src, loaded.assets_for("images/logo.png").fetch(0).output_path)
+      assert_equal(image_src, loaded.assets_for("images/logo.png").fetch(0).url)
       loaded.each_asset do |asset|
         disk_path = File.join(assets_dir, asset.output_path.delete_prefix("/"))
 
@@ -924,7 +924,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         abort "bad sizes" unless result.fetch(2) == "(max-width: 2px) 100vw, 2px"
         abort "bad variant width" unless result.fetch(3) == 2
         abort "bad css classes" unless result.fetch(4).include?("title")
-        abort "bad css asset" unless result.fetch(5).include?("/assets/styles_home_css")
+        abort "bad css asset" unless result.fetch(5).include?("/styles_home_css")
       RUBY
 
       stdout, stderr, status =
@@ -1077,7 +1077,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       asset = context.asset(asset_path)
       written_path = File.join(assets_dir, asset_path.delete_prefix("/"))
 
-      assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, asset_path)
+      assert_match(%r{\A/styles_home_css\.[a-f0-9]{16}\.css\z}, asset_path)
       assert_equal(asset.bytes, File.binread(written_path))
       assert_equal("text/css", runtime_asset.content_type)
       assert_equal(context.asset(asset_path), context.assets.fetch(asset_path))
@@ -1506,7 +1506,7 @@ class Klenod::Build::Context::Test < Minitest::Test
         bundle.assets.values.find { |asset| asset.content_type == "image/png" }
       written_path = File.join(assets_dir, image_asset.output_path.delete_prefix("/"))
 
-      assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.png\z}, image_asset.output_path)
+      assert_match(%r{\A/logo\.[a-f0-9]{16}\.png\z}, image_asset.output_path)
       assert_equal("png bytes", File.binread(written_path))
     end
   end

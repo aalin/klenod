@@ -136,7 +136,7 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
       css_asset = context.assets_for("styles/home.css").fetch(0)
       svg_asset = context.assets_for("styles/logo.svg").fetch(0)
 
-      assert_includes(css_asset.bytes, %(url("#{svg_asset.output_path}")))
+      assert_includes(css_asset.bytes, %(url("#{svg_asset.url}")))
       assert_equal("image/svg+xml", svg_asset.content_type)
       assert_equal(16, svg_asset.metadata[:width])
       assert_equal(20, svg_asset.metadata[:height])

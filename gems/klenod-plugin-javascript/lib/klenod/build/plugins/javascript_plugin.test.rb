@@ -32,7 +32,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       asset = context.assets_for_module(record, type: :javascript).fetch(0)
 
       assert_match(%r{\A/assets/scripts_app_js\.[a-f0-9]{16}\.js\z}, exports::Default)
-      assert_equal(exports::Default, asset.output_path)
+      assert_equal(exports::Default, asset.url)
       assert_equal("scripts/app.js", asset.logical_name)
       assert_equal("application/javascript", asset.content_type)
       assert_equal(:javascript, asset.metadata.fetch(:type))
@@ -101,10 +101,10 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       image_module_asset = context.assets_for("images/logo.png").find { it.metadata[:type] == :javascript && it.metadata[:image_metadata] }
       metadata_runtime_asset = javascript_asset(context, Klenod::Build::Plugins::AssetJavaScriptMetadata::LOGICAL_NAME)
 
-      assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.png\.js\z}, image_module_asset.output_path)
+      assert_match(%r{\A/logo\.[a-f0-9]{16}\.png\.js\z}, image_module_asset.output_path)
       assert_import_from(app_asset.bytes, image_module_asset.output_path)
       assert_import_from(image_module_asset.bytes, metadata_runtime_asset.output_path)
-      assert_includes(image_module_asset.bytes, %(src:"#{image_asset.output_path}"))
+      assert_includes(image_module_asset.bytes, %(src:"#{image_asset.url}"))
       assert_includes(image_module_asset.bytes, "width:2")
       assert_includes(image_module_asset.bytes, "height:3")
       assert_includes(image_module_asset.bytes, "aspectRatio:0.6666666666666666")
@@ -152,10 +152,10 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       svg_module_asset = context.assets_for("images/logo.svg").find { it.metadata[:type] == :javascript && it.metadata[:svg_metadata] }
       metadata_runtime_asset = javascript_asset(context, Klenod::Build::Plugins::AssetJavaScriptMetadata::LOGICAL_NAME)
 
-      assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.svg\.js\z}, svg_module_asset.output_path)
+      assert_match(%r{\A/logo\.[a-f0-9]{16}\.svg\.js\z}, svg_module_asset.output_path)
       assert_import_from(app_asset.bytes, svg_module_asset.output_path)
       assert_import_from(svg_module_asset.bytes, metadata_runtime_asset.output_path)
-      assert_includes(svg_module_asset.bytes, %(src:"#{svg_asset.output_path}"))
+      assert_includes(svg_module_asset.bytes, %(src:"#{svg_asset.url}"))
       assert_includes(svg_module_asset.bytes, "width:24")
       assert_includes(svg_module_asset.bytes, "height:32")
       assert_includes(svg_module_asset.bytes, %(contentType:"image/svg+xml"))
@@ -200,7 +200,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
 
       assert_import_from(app_asset.bytes, stylesheet_asset.output_path)
       assert_match(/with\s*\{\s*type\s*:\s*"css"\s*\}/, app_asset.bytes)
-      assert_equal([{path: stylesheet_asset.output_path, as: "style"}], app_asset.metadata[:preload_assets])
+      assert_equal([{path: stylesheet_asset.url, as: "style"}], app_asset.metadata[:preload_assets])
       assert(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/panel.css", "javascript")))
       refute(context.graph.records.key?(Klenod::Build::ModuleId.new("styles/panel.css", nil)))
       assert_nil(context.assets_for("styles/panel.css").find { it.metadata[:type] == :css })
@@ -316,8 +316,8 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       image_asset = bundle.assets.values.find { it.metadata[:type] == :image }
       image_module_asset = bundle.assets.values.find { it.metadata[:type] == :javascript && it.metadata[:image_metadata] }
 
-      assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.png\z}, image_asset.output_path)
-      assert_match(%r{\A/assets/logo\.[a-f0-9]{16}\.png\.js\z}, image_module_asset.output_path)
+      assert_match(%r{\A/logo\.[a-f0-9]{16}\.png\z}, image_asset.output_path)
+      assert_match(%r{\A/logo\.[a-f0-9]{16}\.png\.js\z}, image_module_asset.output_path)
       assert(loaded.assets.key?(image_asset.output_path))
       assert(loaded.assets.key?(image_module_asset.output_path))
       assert(loaded.assets.values.any? { it.metadata[:javascript_runtime] == :asset_metadata })
@@ -449,8 +449,8 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
 
       assert_equal(true, exports::Default.fetch(:__klenod_custom_element))
       assert_match(/\Aklenod-scripts-clock-jsx-[a-f0-9]{8}\z/, exports::Default.fetch(:tag))
-      assert_equal(asset.output_path, exports::Default.fetch(:asset_path))
-      assert_match(/import \* as __klenod_jsx_[a-f0-9]{8} from "#{Regexp.escape(runtime_asset.output_path)}"/, asset.bytes)
+      assert_equal(asset.url, exports::Default.fetch(:asset_path))
+      assert_match(/import \* as __klenod_jsx_[a-f0-9]{8} from "#{Regexp.escape(runtime_asset.url)}"/, asset.bytes)
       assert_match(/__klenod_jsx_[a-f0-9]{8}\.h\("span",\s*\{/, asset.bytes)
       assert_match(/hidden:\s*true/, asset.bytes)
       assert_includes(asset.bytes, "Object.defineProperty(ClockElement, \"__klenodCustomElementTag\"")
@@ -583,7 +583,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       map_asset = record.assets.find { it.metadata.fetch(:type) == :javascript_source_map }
       source_map = JSON.parse(map_asset.bytes)
 
-      assert_match(%r{\A/assets/scripts_app_js\.[a-f0-9]{16}\.js\.map\z}, map_asset.output_path)
+      assert_match(%r{\A/scripts_app_js\.[a-f0-9]{16}\.js\.map\z}, map_asset.output_path)
       assert_includes(js_asset.bytes, "sourceMappingURL=#{File.basename(map_asset.output_path)}")
       assert_equal(3, source_map.fetch("version"))
       assert_equal(["scripts/app.js"], source_map.fetch("sources"))
@@ -672,7 +672,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
 
       assert_equal(true, exports::Default.fetch(:__klenod_custom_element))
       assert_match(/\Aklenod-scripts-clock-tsx-[a-f0-9]{8}\z/, exports::Default.fetch(:tag))
-      assert_equal(asset.output_path, exports::Default.fetch(:asset_path))
+      assert_equal(asset.url, exports::Default.fetch(:asset_path))
       assert_includes(asset.bytes, "customElements.define(#{exports::Default.fetch(:tag).inspect}, ClockElement);")
       assert_match(/__klenod_jsx_[a-f0-9]{8}\.h\(__klenod_jsx_[a-f0-9]{8}\.Fragment,\s*null/, asset.bytes)
       refute_includes(asset.bytes, ": void")
@@ -755,14 +755,24 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   end
 
   def assert_import_from(source, output_path)
+    output_path = public_asset_url(output_path)
     assert_match(/from\s*["']#{Regexp.escape(output_path)}["']/, source)
   end
 
   def assert_side_effect_import(source, output_path)
+    output_path = public_asset_url(output_path)
     assert_match(/import\s*["']#{Regexp.escape(output_path)}["']/, source)
   end
 
   def assert_dynamic_import(source, output_path)
+    output_path = public_asset_url(output_path)
     assert_match(/import\(\s*["']#{Regexp.escape(output_path)}["']\s*\)/, source)
+  end
+
+  def public_asset_url(output_path)
+    return output_path unless output_path.start_with?("/")
+    return output_path if output_path.start_with?("/assets/")
+
+    "/assets#{output_path}"
   end
 end

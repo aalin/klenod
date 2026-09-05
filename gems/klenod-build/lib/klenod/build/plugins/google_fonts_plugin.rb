@@ -243,7 +243,7 @@ module Klenod
 
           def css_asset(module_id, url, css, font_source_urls)
             hash = Hashing.short(css)
-            output_path = "/assets/#{google_fonts_asset_name(url)}.#{hash}.css"
+            output_path = "/#{google_fonts_asset_name(url)}.#{hash}.css"
 
             Asset.new(
               module_id.to_s,
@@ -297,7 +297,7 @@ module Klenod
             hash = Hashing.short(url)
             uri = URI.parse(url)
             extname = File.extname(uri.path)
-            output_path = "/assets/#{font_asset_name(uri, font_face)}.#{hash}#{extname}"
+            output_path = "/#{font_asset_name(uri, font_face)}.#{hash}#{extname}"
 
             Asset.generated(
               url,

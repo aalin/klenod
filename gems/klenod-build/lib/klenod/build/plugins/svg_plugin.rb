@@ -41,7 +41,7 @@ module Klenod
 
             dimensions = svg_dimensions(code)
             hash = Hashing.short(code)
-            output_path = "/assets/#{asset_name(module_id)}.#{hash}.svg"
+            output_path = "/#{asset_name(module_id)}.#{hash}.svg"
             asset =
               Asset.new(
                 module_id.path,
@@ -123,7 +123,7 @@ module Klenod
             Asset.new(
               module_id.path,
               hash,
-              "/assets/#{asset_name(module_id)}.#{hash}#{module_id.extname}.js",
+              "/#{asset_name(module_id)}.#{hash}#{module_id.extname}.js",
               nil,
               code,
               "application/javascript",
@@ -141,7 +141,7 @@ module Klenod
             }
 
             <<~JAVASCRIPT
-              import { SvgMetadata } from #{AssetJavaScriptMetadata::OUTPUT_PATH.inspect};
+              import { SvgMetadata } from #{context.asset_url(AssetJavaScriptMetadata::OUTPUT_PATH).inspect};
               export default new SvgMetadata(#{AssetJavaScriptMetadata.object_literal(metadata)});
             JAVASCRIPT
           end

@@ -59,7 +59,7 @@ module Klenod
           }
         JAVASCRIPT
         CONTENT_HASH = Hashing.short(SOURCE)
-        OUTPUT_PATH = "/assets/klenod_asset_metadata.#{CONTENT_HASH}.js"
+        OUTPUT_PATH = "/klenod_asset_metadata.#{CONTENT_HASH}.js"
 
         module_function
 
