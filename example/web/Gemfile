@@ -4,7 +4,7 @@ source "https://rubygems.org"
 
 gem "klenod-runtime", path: "../../gems/klenod-runtime"
 gem "klenod-rack", path: "../../gems/klenod-rack"
-gem "async-http", "~> 0.95.1"
+gem "async-http", "~> 0.103.0"
 gem "http-accept", "~> 2.2"
 gem "localhost", "~> 1.8"
 gem "rbnacl", "~> 7.1"
