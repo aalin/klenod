@@ -60,6 +60,9 @@ jobs:
       - name: Install example web bundle
         working-directory: example/web
         run: bundle install
+      - name: Install example box bundle
+        working-directory: example/box
+        run: bundle install
       - name: Run the default task
         run: bundle exec rake
       - name: Build source gems

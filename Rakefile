@@ -93,15 +93,7 @@ namespace :test do
   minitest_task(:javascript, "Run klenod-plugin-javascript tests", ["gems/klenod-plugin-javascript/lib/**/*.test.rb"])
   minitest_task(:css, "Run klenod-plugin-css tests", ["gems/klenod-plugin-css/lib/**/*.test.rb"])
   minitest_task(:meta, "Run klenod meta gem tests", ["gems/klenod/lib/**/*.test.rb"])
-  task :box_bundle do
-    with_unbundled_env do
-      Dir.chdir("example/box") do
-        sh(*bundle_command, "install")
-      end
-    end
-  end
   minitest_task(:box, "Run Ruby::Box example tests", ["example/box/**/*.test.rb"])
-  Rake::Task["test:box"].enhance(["test:box_bundle"])
   minitest_task(:performance, "Run performance example tests", ["example/performance/**/*.test.rb"])
   minitest_task(:release, "Run release tooling tests", ["tools/**/*.test.rb"])
 

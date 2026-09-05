@@ -9,7 +9,9 @@ class KlenodBoxExampleTest < Minitest::Test
     build_stdout, build_stderr, build_status =
       Open3.capture3(
         {
-          "BUNDLE_GEMFILE" => File.expand_path("Gemfile", __dir__)
+          "BUNDLE_GEMFILE" => File.expand_path("Gemfile", __dir__),
+          "HOME" => ENV.fetch("HOME", nil),
+          "PATH" => ENV.fetch("PATH", nil)
         },
         RbConfig.ruby,
         "-S",
@@ -17,7 +19,8 @@ class KlenodBoxExampleTest < Minitest::Test
         "exec",
         "ruby",
         "build.rb",
-        chdir: __dir__
+        chdir: __dir__,
+        unsetenv_others: true
       )
 
     assert(build_status.success?, "stdout:\n#{build_stdout}\nstderr:\n#{build_stderr}")
