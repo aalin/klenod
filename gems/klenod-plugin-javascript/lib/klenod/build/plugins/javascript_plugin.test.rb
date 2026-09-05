@@ -53,6 +53,23 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
     end
   end
 
+  def test_javascript_exports_and_imports_use_the_configured_asset_base
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      File.write("#{dir}/scripts/app.js", "import message from './message.js';\nconsole.log(message);\n")
+      File.write("#{dir}/scripts/message.js", "export default 'hello';\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.js\")\n")
+
+      context = context_for(dir, base: "https://cdn.example.test")
+      record = context.evaluate("entry")
+      app_asset = context.assets_for_module(record, type: :javascript).find { it.logical_name == "scripts/app.js" }
+      message_asset = context.assets_for("scripts/message.js").find { it.metadata[:type] == :javascript }
+
+      assert_equal(context.asset_url(app_asset), context.graph.mods.fetch(record.id).const_get(:Exports)::Default)
+      assert_import_from(app_asset.bytes, context.asset_url(message_asset))
+    end
+  end
+
   def test_static_relative_imports_are_rewritten_to_hashed_asset_paths
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -720,10 +737,11 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
 
   private
 
-  def context_for(dir, mode: :development, javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin.new)
+  def context_for(dir, mode: :development, base: "/assets/", javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin.new)
     Klenod::Build::Context.new(
       source_dir: dir,
       mode: mode,
+      base: base,
       plugins: [
         *Klenod::Build::Context.default_plugins,
         Klenod::Build::Plugins::CSSPlugin.new,

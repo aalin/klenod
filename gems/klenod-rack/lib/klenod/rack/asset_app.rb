@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "http/accept"
+require "klenod/runtime/asset_url"
 
 module Klenod
   module Rack
@@ -19,14 +20,15 @@ module Klenod
     class AssetApp
       CACHE_CONTROL = "public, max-age=31536000, immutable"
 
-      def initialize(source, app: nil, assets_dir: nil, path_prefix: "/assets/")
+      def initialize(source, app: nil, assets_dir: nil, path_prefix: "/assets/", base: nil)
         @source = source
         @app = app
         @assets_dir = assets_dir
-        @path_prefix = path_prefix
+        @base = base && Runtime::AssetUrl.normalize(base)
+        @path_prefix = @base ? (Runtime::AssetUrl.path_prefix(@base) || Runtime::AssetUrl::CANONICAL_PREFIX) : path_prefix
       end
 
-      attr_reader :source, :app, :assets_dir, :path_prefix
+      attr_reader :source, :app, :assets_dir, :path_prefix, :base
 
       def call(env)
         response = response_for(env.fetch("PATH_INFO", ""), env)
@@ -39,7 +41,7 @@ module Klenod
       def response_for(path, env = {})
         return nil unless asset_path?(path)
 
-        asset = source.asset(path)
+        asset = source.asset(asset_output_path(path))
         brotli_available = brotli_asset_available?(asset)
         compressed = brotli_available && accepts_brotli?(env.fetch("HTTP_ACCEPT_ENCODING", ""))
         body = compressed ? brotli_asset_bytes(asset) : asset_bytes(asset)
@@ -68,6 +70,12 @@ module Klenod
 
       def asset_path?(path)
         path.start_with?(path_prefix)
+      end
+
+      def asset_output_path(path)
+        return path unless base
+
+        "#{Runtime::AssetUrl::CANONICAL_PREFIX}#{path.delete_prefix(path_prefix)}"
       end
 
       def asset_bytes(asset)

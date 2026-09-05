@@ -3,8 +3,8 @@
 module Klenod
   module Build
     Config =
-      Data.define(:source_dir, :entrypoints, :output, :assets_dir, :plugins, :mode, :base_dir) do
-        def initialize(source_dir: "src", entrypoints: [], output: "dist/klenod.bundle", assets_dir: nil, plugins: Context::DEFAULT_PLUGINS, mode: :development, base_dir: Dir.pwd)
+      Data.define(:source_dir, :entrypoints, :output, :assets_dir, :plugins, :mode, :base_dir, :base) do
+        def initialize(source_dir: "src", entrypoints: [], output: "dist/klenod.bundle", assets_dir: nil, plugins: Context::DEFAULT_PLUGINS, mode: :development, base_dir: Dir.pwd, base: Runtime::AssetUrl::DEFAULT_BASE)
           super(
             source_dir: source_dir,
             entrypoints: Array(entrypoints),
@@ -12,7 +12,8 @@ module Klenod
             assets_dir: assets_dir,
             plugins: plugins,
             mode: mode,
-            base_dir: base_dir
+            base_dir: base_dir,
+            base: Runtime::AssetUrl.normalize(base)
           )
         end
 
@@ -25,6 +26,7 @@ module Klenod
             source_dir: source_path,
             plugins: plugins,
             mode: mode,
+            base: base,
             **overrides
           )
         end
@@ -60,6 +62,7 @@ module Klenod
         @plugins = Context::DEFAULT_PLUGINS
         @mode = :development
         @base_dir = base_dir
+        @base = Runtime::AssetUrl::DEFAULT_BASE
       end
 
       def source_dir(value = nil)
@@ -100,6 +103,12 @@ module Klenod
         @mode = value
       end
 
+      def base(value = nil)
+        return @base unless value
+
+        @base = value
+      end
+
       def config
         Config.new(
           source_dir: @source_dir,
@@ -108,7 +117,8 @@ module Klenod
           assets_dir: @assets_dir,
           plugins: @plugins,
           mode: @mode,
-          base_dir: @base_dir
+          base_dir: @base_dir,
+          base: @base
         )
       end
     end

@@ -147,6 +147,8 @@ Image variants remain generated CPU work. The image plugin passes RMagick an inp
 
 Runtime asset specs keep metadata only. Development servers/frameworks can serve assets from `context.asset(path).bytes` or `context.asset_bytes(path, assets_dir:)`.
 
+`output_path` remains the canonical `/assets/...` graph key and materialized disk path. A build `base` projects it into browser URLs; `context.asset_url(asset)` and `bundle.asset_url(asset)` perform that projection. This keeps CDN URLs out of graph lookup and filesystem operations while generated CSS, JavaScript, SVG, image, and font references use the configured public base.
+
 `assets_for_module(...)` and `asset_references_for_module(...)` accept a module id or an array of route roots. This allows route-scoped CSS inclusion instead of including every graph stylesheet on every page.
 
 `asset_references_for_module(...)` attaches a graph traversal `index` to each returned asset. The example web app writes this as `data-index` on stylesheet links.

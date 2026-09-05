@@ -34,7 +34,7 @@ module Klenod
             svg_runtime_source
           end
 
-          def transform(module_id, code, _context)
+          def transform(module_id, code, context)
             return super unless EXTENSIONS.include?(module_id.extname)
 
             raise UnsupportedFileError, "SVG imports do not support query options: #{module_id}" if module_id.query
@@ -56,7 +56,7 @@ module Klenod
                   height: dimensions.height
                 }
               )
-            javascript_asset = javascript_svg_asset(module_id, asset)
+            javascript_asset = javascript_svg_asset(module_id, asset, context)
             svg_runtime_dependency =
               Dependency
                 .create(
@@ -67,7 +67,7 @@ module Klenod
                 .with(id: "#{module_id}:svg_runtime")
 
             TransformResult.new(
-              svg_module_source(asset, svg_runtime_dependency),
+              svg_module_source(asset, svg_runtime_dependency, context),
               [svg_runtime_dependency],
               nil,
               [asset],
@@ -100,12 +100,12 @@ module Klenod
             RUBY
           end
 
-          def svg_module_source(asset, svg_runtime_dependency)
+          def svg_module_source(asset, svg_runtime_dependency, context)
             <<~RUBY
               SvgRuntime = __klenod_import__(#{svg_runtime_dependency.id.inspect})
               Default =
                 SvgRuntime::SvgMetadata.new(
-                  src: #{asset.output_path.inspect},
+                  src: #{context.asset_url(asset).inspect},
                   width: #{asset.metadata[:width].inspect},
                   height: #{asset.metadata[:height].inspect},
                   content_type: #{asset.content_type.inspect},
@@ -115,8 +115,8 @@ module Klenod
             RUBY
           end
 
-          def javascript_svg_asset(module_id, asset)
-            code = javascript_svg_module_source(asset)
+          def javascript_svg_asset(module_id, asset, context)
+            code = javascript_svg_module_source(asset, context)
             hash = Hashing.short(code)
             Asset.new(
               module_id.path,
@@ -129,9 +129,9 @@ module Klenod
             )
           end
 
-          def javascript_svg_module_source(asset)
+          def javascript_svg_module_source(asset, context)
             metadata = {
-              src: asset.output_path,
+              src: context.asset_url(asset),
               width: asset.metadata[:width],
               height: asset.metadata[:height],
               contentType: asset.content_type,

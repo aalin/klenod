@@ -49,6 +49,22 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
     end
   end
 
+  def test_css_asset_urls_use_the_configured_asset_base
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/logo.svg", '<svg width="1" height="1"/>')
+      File.write("#{dir}/styles/home.css", '.logo { background-image: url("./logo.svg"); }')
+      File.write("#{dir}/entry.rb", "Styles = import(\"styles/home.css\")\n")
+
+      context = context_for(dir, base: "/.assets")
+      context.evaluate("entry")
+      css_asset = context.assets_for("styles/home.css").find { it.metadata[:type] == :css }
+      svg_asset = context.assets_for("styles/logo.svg").find { it.metadata[:type] == :svg }
+
+      assert_includes(css_asset.bytes, "/.assets/#{svg_asset.output_path.delete_prefix("/assets/")}")
+    end
+  end
+
   def test_css_class_map_resolves_local_global_and_dependency_compositions
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
@@ -740,10 +756,11 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
 
   private
 
-  def context_for(dir, mode: :development, css_plugin: Klenod::Build::Plugins::CSSPlugin.new)
+  def context_for(dir, mode: :development, base: "/assets/", css_plugin: Klenod::Build::Plugins::CSSPlugin.new)
     Klenod::Build::Context.new(
       source_dir: dir,
       mode: mode,
+      base: base,
       plugins: [
         *Klenod::Build::Context.default_plugins,
         css_plugin

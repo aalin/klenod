@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "asset_url"
+
 module Klenod
   module Runtime
     ModuleSpec =
@@ -13,7 +15,7 @@ module Klenod
     AssetReference = Data.define(:index, :asset)
 
     class Bundle
-      attr_reader :entrypoints, :modules, :assets, :source_root
+      attr_reader :entrypoints, :modules, :assets, :source_root, :base
 
       def self.load(source, source_root: nil)
         BundleFormat.load(source, source_root: source_root)
@@ -23,11 +25,12 @@ module Klenod
         load(path, source_root: source_root)
       end
 
-      def initialize(entrypoints, modules, assets, source_root: nil)
+      def initialize(entrypoints, modules, assets, source_root: nil, base: AssetUrl::DEFAULT_BASE)
         @entrypoints = entrypoints
         @modules = modules
         @assets = assets
         @source_root = source_root
+        @base = AssetUrl.normalize(base)
         @mods = {}
       end
 
@@ -85,6 +88,11 @@ module Klenod
         @assets.fetch(output_path)
       end
 
+      def asset_url(asset_or_output_path)
+        output_path = asset_or_output_path.respond_to?(:output_path) ? asset_or_output_path.output_path : asset_or_output_path
+        AssetUrl.join(base, output_path)
+      end
+
       def assets_for(logical_name)
         @assets.values.select { |asset| asset.logical_name == logical_name.to_s }
       end
@@ -121,11 +129,12 @@ module Klenod
       end
 
       def marshal_dump
-        [@entrypoints, @modules, @assets, @source_root]
+        [@entrypoints, @modules, @assets, @source_root, @base]
       end
 
       def marshal_load(data)
-        @entrypoints, @modules, @assets, @source_root = data
+        @entrypoints, @modules, @assets, @source_root, base = data
+        @base = AssetUrl.normalize(base)
         @mods = {}
       end
 

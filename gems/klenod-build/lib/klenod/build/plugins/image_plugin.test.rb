@@ -58,6 +58,22 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     end
   end
 
+  def test_image_metadata_uses_the_configured_asset_base
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/logo.png", png_bytes(width: 2, height: 3))
+      File.write("#{dir}/entry.rb", "Logo = import(\"images/logo.png\")\nIMAGE_SRC = Logo.src\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir, base: "https://cdn.example.test")
+      record = context.evaluate("entry")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+      asset = context.assets_for("images/logo.png").fetch(0)
+
+      assert_equal("https://cdn.example.test/#{asset.output_path.delete_prefix("/assets/")}", exports::IMAGE_SRC)
+      assert_equal("https://cdn.example.test/#{asset.output_path.delete_prefix("/assets/")}", context.asset_url(asset))
+    end
+  end
+
   def test_image_import_does_not_read_full_source_with_file_binread
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")

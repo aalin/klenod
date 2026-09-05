@@ -121,6 +121,7 @@ source_dir "src"
 entrypoint "pages/server"
 output "dist/klenod.bundle"
 assets_dir "public"
+base "/assets/"
 mode :development
 
 plugins [
@@ -228,6 +229,15 @@ Example:
 logical_name # "images/hero.png"
 output_path  # "/assets/hero.320w.abc123.png"
 ```
+
+`output_path` is Klenod's canonical asset key and on-disk path. Set `base` to control the browser URL emitted for it. Bases accept origin-relative paths or HTTP(S) URLs and normalize a missing trailing slash:
+
+```ruby
+base "/.assets"                    # "/.assets/hero.320w.abc123.png"
+base "https://cdn.example.test"     # "https://cdn.example.test/hero.320w.abc123.png"
+```
+
+Use `context.asset_url(asset)` or `bundle.asset_url(asset)` when an application renders an asset reference itself. Generated CSS, JavaScript, image, SVG, and font references already use the configured base.
 
 The graph and runtime bundle expose the same lookup shape:
 

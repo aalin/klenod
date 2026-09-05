@@ -114,20 +114,21 @@ module Klenod
                 resolved_dependencies,
                 dependency_records,
                 result.metadata.fetch(:external_dependencies),
+                context,
                 import_asset_type: :css_javascript_stylesheet
               )
               javascript_asset, javascript_source_map_asset = css_asset_pair(module_id, javascript_css_edit, :css_javascript_stylesheet, {}, context)
 
               return result.with(
-                code: "Default = #{javascript_asset.output_path.inspect}\n",
+                code: "Default = #{context.asset_url(javascript_asset).inspect}\n",
                 assets: [javascript_asset, javascript_source_map_asset, *result.assets].compact,
                 metadata: result.metadata.merge(
-                  css_javascript_stylesheet_path: javascript_asset.output_path
+                  css_javascript_stylesheet_path: context.asset_url(javascript_asset)
                 )
               )
             end
 
-            css_edit = finalized_css_edit(css_result, resolved_dependencies, dependency_records, result.metadata.fetch(:external_dependencies))
+            css_edit = finalized_css_edit(css_result, resolved_dependencies, dependency_records, result.metadata.fetch(:external_dependencies), context)
             classes = finalized_css_selectors(css_result, resolved_dependencies, dependency_records)
             asset, source_map_asset = css_asset_pair(
               module_id,
@@ -138,10 +139,10 @@ module Klenod
             )
 
             result.with(
-              code: ruby_module_source(classes, asset.output_path, styles_dependency: result.dependencies.fetch(0)),
+              code: ruby_module_source(classes, context.asset_url(asset), styles_dependency: result.dependencies.fetch(0)),
               assets: [asset, source_map_asset, *result.assets].compact,
               metadata: result.metadata.merge(
-                css_asset_path: asset.output_path,
+                css_asset_path: context.asset_url(asset),
                 css_classes: classes
               )
             )
@@ -293,8 +294,8 @@ module Klenod
             false
           end
 
-          def finalized_css_edit(css_result, resolved_dependencies, dependency_records, external_dependencies, import_asset_type: :css)
-            replace_dependencies(css_result, resolved_dependencies, dependency_records, external_dependencies, import_asset_type:)
+          def finalized_css_edit(css_result, resolved_dependencies, dependency_records, external_dependencies, context, import_asset_type: :css)
+            replace_dependencies(css_result, resolved_dependencies, dependency_records, external_dependencies, context, import_asset_type:)
               .then { replace_variable_references(css_result, it, resolved_dependencies, dependency_records) }
               .then { remove_empty_imports(it) }
           end
@@ -352,7 +353,7 @@ module Klenod
             offsets
           end
 
-          def replace_dependencies(css_result, resolved_dependencies, dependency_records, external_dependencies, import_asset_type:)
+          def replace_dependencies(css_result, resolved_dependencies, dependency_records, external_dependencies, context, import_asset_type:)
             dependencies_by_placeholder =
               resolved_dependencies.filter_map do |resolved_dependency|
                 next unless resolved_dependency.dependency.metadata.key?(:placeholder)
@@ -368,7 +369,7 @@ module Klenod
                   else
                     resolved_dependency = dependencies_by_placeholder.fetch(css_dependency.placeholder)
                     record = dependency_records.fetch(resolved_dependency.dependency.id)
-                    replacement_for_dependency(resolved_dependency, record, import_asset_type:)
+                    replacement_for_dependency(resolved_dependency, record, context, import_asset_type:)
                   end
 
                 [css_dependency.placeholder, replacement]
@@ -481,7 +482,7 @@ module Klenod
             end
           end
 
-          def replacement_for_dependency(resolved_dependency, record, import_asset_type:)
+          def replacement_for_dependency(resolved_dependency, record, context, import_asset_type:)
             case resolved_dependency.dependency.kind
             when :css_import
               css_asset = record.assets.find { |asset| asset.metadata[:type] == import_asset_type }
@@ -489,14 +490,14 @@ module Klenod
               unless css_asset
                 raise UnsupportedFileError, "CSS @import #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to module #{record.id}, which does not emit a CSS asset"
               end
-              return (import_asset_type == :css) ? "" : css_asset.output_path
+              return (import_asset_type == :css) ? "" : context.asset_url(css_asset)
             when :asset_url
               unless record.assets.first
                 raise UnsupportedFileError, "CSS url() #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to module #{record.id}, which does not emit an asset"
               end
             end
 
-            record.assets.first&.output_path || record.id.to_s
+            record.assets.first ? context.asset_url(record.assets.first) : record.id.to_s
           end
 
           def external_url?(value)
