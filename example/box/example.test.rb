@@ -8,6 +8,9 @@ class KlenodBoxExampleTest < Minitest::Test
   def test_box_example_builds_and_loads_two_bundles_in_separate_boxes
     build_stdout, build_stderr, build_status =
       Open3.capture3(
+        {
+          "BUNDLE_GEMFILE" => File.expand_path("Gemfile", __dir__)
+        },
         RbConfig.ruby,
         "-S",
         "bundle",
