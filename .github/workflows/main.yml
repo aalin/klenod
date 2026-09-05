@@ -37,7 +37,7 @@ jobs:
 
       - name: Restore JavaScript native extension
         id: javascript-native-cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: gems/klenod-plugin-javascript/lib/klenod/plugin/javascript/native.*
           key: native-javascript-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-build-dependencies.outputs.versions }}-${{ hashFiles('.ruby-version', 'gems/klenod-plugin-javascript/Rakefile', 'gems/klenod-plugin-javascript/*.gemspec', 'gems/klenod-plugin-javascript/ext/native/Cargo.toml', 'gems/klenod-plugin-javascript/ext/native/Cargo.lock', 'gems/klenod-plugin-javascript/ext/native/extconf.rb', 'gems/klenod-plugin-javascript/ext/native/src/**/*.rs') }}
@@ -48,7 +48,7 @@ jobs:
 
       - name: Restore CSS native extension
         id: css-native-cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: gems/klenod-plugin-css/lib/klenod/plugin/css/native.*
           key: native-css-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-build-dependencies.outputs.versions }}-${{ hashFiles('.ruby-version', 'gems/klenod-plugin-css/Rakefile', 'gems/klenod-plugin-css/*.gemspec', 'gems/klenod-plugin-css/ext/native/Cargo.toml', 'gems/klenod-plugin-css/ext/native/Cargo.lock', 'gems/klenod-plugin-css/ext/native/extconf.rb', 'gems/klenod-plugin-css/ext/native/src/**/*.rs') }}
