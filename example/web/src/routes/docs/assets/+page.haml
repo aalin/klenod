@@ -34,6 +34,28 @@
 
       `assets_for_module` is recursive by default. Pass `recursive: false` for only assets directly emitted by the root module. `asset_references_for_module` also includes a graph traversal index, which is useful for route-scoped CSS ordering.
 
+  %DocsSection{ title: "Serving Assets With Rack" }
+    :markdown
+      Add `klenod-rack` when a Rack application serves assets emitted by a production bundle. `Klenod::Rack::AssetApp` looks up browser paths in the loaded bundle and reads their bytes from the emitted assets directory:
+
+      ```ruby
+      # config.ru
+      require "klenod/runtime"
+      require "klenod/rack"
+
+      bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
+      entrypoint = bundle.exports("entrypoint")
+      application = ->(env) { entrypoint.call(env, bundle) }
+
+      run Klenod::Rack::AssetApp.new(
+        bundle,
+        assets_dir: "dist/public",
+        app: application
+      )
+      ```
+
+      The asset app serves paths under `/assets/` with immutable cache headers and delegates every other request to `app`, which calls the bundle entrypoint. That entrypoint should accept a Rack environment and return a Rack response. When matching `.br` files are present in `assets_dir`, the asset app also serves Brotli responses to clients that accept them. Use a different `path_prefix:` when your deployment exposes assets elsewhere.
+
   %DocsSection{ title: "CSS, SVG, And Images" }
     :markdown
       CSS imports from Ruby or Haml return class-name maps. CSS imports from CSS become stylesheet dependencies, and CSS `url(...)` references become asset dependencies.
