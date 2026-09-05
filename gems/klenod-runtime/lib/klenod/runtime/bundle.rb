@@ -11,7 +11,18 @@ module Klenod
     DefaultImport = Data.define(:name)
 
     AssetSpec =
-      Data.define(:logical_name, :content_hash, :output_path, :content_type, :metadata)
+      Data.define(:logical_name, :content_hash, :output_path, :content_type, :metadata, :url) do
+        def initialize(logical_name = nil, content_hash = nil, output_path = nil, content_type = nil, metadata = nil, url = nil, **keywords)
+          logical_name = keywords.fetch(:logical_name, logical_name)
+          content_hash = keywords.fetch(:content_hash, content_hash)
+          output_path = keywords.fetch(:output_path, output_path)
+          content_type = keywords.fetch(:content_type, content_type)
+          metadata = keywords.fetch(:metadata, metadata)
+          url = keywords.fetch(:url, url)
+          url ||= output_path
+          super(logical_name:, content_hash:, output_path:, content_type:, metadata:, url:)
+        end
+      end
     AssetReference = Data.define(:index, :asset)
 
     class Bundle
@@ -28,9 +39,9 @@ module Klenod
       def initialize(entrypoints, modules, assets, source_root: nil, base: AssetUrl::DEFAULT_BASE)
         @entrypoints = entrypoints
         @modules = modules
-        @assets = assets
         @source_root = source_root
         @base = AssetUrl.normalize(base)
+        @assets = bind_asset_urls(assets)
         @mods = {}
       end
 
@@ -89,8 +100,12 @@ module Klenod
       end
 
       def asset_url(asset_or_output_path)
-        output_path = asset_or_output_path.respond_to?(:output_path) ? asset_or_output_path.output_path : asset_or_output_path
-        AssetUrl.join(base, output_path)
+        if asset_or_output_path.respond_to?(:output_path)
+          asset = @assets.fetch(asset_or_output_path.output_path, asset_or_output_path)
+          return asset.url || AssetUrl.join(base, asset.output_path)
+        end
+
+        AssetUrl.join(base, asset_or_output_path)
       end
 
       def assets_for(logical_name)
@@ -133,8 +148,9 @@ module Klenod
       end
 
       def marshal_load(data)
-        @entrypoints, @modules, @assets, @source_root, base = data
+        @entrypoints, @modules, assets, @source_root, base = data
         @base = AssetUrl.normalize(base)
+        @assets = bind_asset_urls(assets)
         @mods = {}
       end
 
@@ -153,6 +169,13 @@ module Klenod
       end
 
       private
+
+      def bind_asset_urls(assets)
+        assets.to_h do |output_path, asset|
+          legacy_url = asset.url.nil? || (asset.url == asset.output_path && base != AssetUrl::DEFAULT_BASE)
+          [output_path, legacy_url ? asset.with(url: AssetUrl.join(base, asset.output_path)) : asset]
+        end
+      end
 
       def assets_for_runtime_module(module_id)
         module_spec = @modules.fetch(module_id)

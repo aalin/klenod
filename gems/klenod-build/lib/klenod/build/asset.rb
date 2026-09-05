@@ -8,8 +8,9 @@ module Klenod
   module Build
     class Asset
       attr_reader :logical_name, :content_hash, :output_path, :source_path, :content_type, :metadata, :queue_kind, :error
+      attr_accessor :url
 
-      def initialize(logical_name, content_hash, output_path, source_path, bytes, content_type, metadata, generator: nil, writer: nil, queue: nil, queue_kind: :cpu)
+      def initialize(logical_name, content_hash, output_path, source_path, bytes, content_type, metadata, url: nil, generator: nil, writer: nil, queue: nil, queue_kind: :cpu)
         @logical_name = logical_name
         @content_hash = content_hash
         @output_path = output_path
@@ -17,6 +18,7 @@ module Klenod
         @bytes = bytes
         @content_type = content_type
         @metadata = metadata
+        @url = url
         @generator = generator
         @writer = writer
         @queue = queue
@@ -28,8 +30,8 @@ module Klenod
         @error = nil
       end
 
-      def self.generated(logical_name, content_hash, output_path, source_path, content_type, metadata, writer: nil, queue: nil, queue_kind: :cpu, &generator)
-        new(logical_name, content_hash, output_path, source_path, nil, content_type, metadata, generator: generator, writer: writer, queue: queue, queue_kind: queue_kind)
+      def self.generated(logical_name, content_hash, output_path, source_path, content_type, metadata, url: nil, writer: nil, queue: nil, queue_kind: :cpu, &generator)
+        new(logical_name, content_hash, output_path, source_path, nil, content_type, metadata, url:, generator: generator, writer: writer, queue: queue, queue_kind: queue_kind)
       end
 
       def bytes

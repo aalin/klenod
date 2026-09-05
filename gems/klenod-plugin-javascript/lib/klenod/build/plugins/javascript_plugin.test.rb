@@ -65,8 +65,8 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       app_asset = context.assets_for_module(record, type: :javascript).find { it.logical_name == "scripts/app.js" }
       message_asset = context.assets_for("scripts/message.js").find { it.metadata[:type] == :javascript }
 
-      assert_equal(context.asset_url(app_asset), context.graph.mods.fetch(record.id).const_get(:Exports)::Default)
-      assert_import_from(app_asset.bytes, context.asset_url(message_asset))
+      assert_equal(app_asset.url, context.graph.mods.fetch(record.id).const_get(:Exports)::Default)
+      assert_import_from(app_asset.bytes, message_asset.url)
     end
   end
 

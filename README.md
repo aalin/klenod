@@ -218,10 +218,11 @@ end
 
 Plugins emit assets through `Klenod::Build::Asset`.
 
-Assets have two stable names:
+Assets have two stable identifiers and a browser URL:
 
 - `logical_name`: the source-root-relative path without import query parameters.
-- `output_path`: the public content-hashed path for browsers.
+- `output_path`: the canonical content-hashed graph and disk path.
+- `url`: the build-time browser URL.
 
 Example:
 
@@ -237,7 +238,7 @@ base "/.assets"                    # "/.assets/hero.320w.abc123.png"
 base "https://cdn.example.test"     # "https://cdn.example.test/hero.320w.abc123.png"
 ```
 
-Use `context.asset_url(asset)` or `bundle.asset_url(asset)` when an application renders an asset reference itself. Generated CSS, JavaScript, image, SVG, and font references already use the configured base.
+Every emitted asset exposes its build-time browser URL as `asset.url`; use it when an application renders an asset reference itself. Generated CSS, JavaScript, image, SVG, and font references already use the configured base.
 
 The graph and runtime bundle expose the same lookup shape:
 

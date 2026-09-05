@@ -56,7 +56,9 @@ module Klenod
                   height: dimensions.height
                 }
               )
+            asset.url = context.asset_url(asset.output_path)
             javascript_asset = javascript_svg_asset(module_id, asset, context)
+            javascript_asset.url = context.asset_url(javascript_asset.output_path)
             svg_runtime_dependency =
               Dependency
                 .create(
@@ -105,7 +107,7 @@ module Klenod
               SvgRuntime = __klenod_import__(#{svg_runtime_dependency.id.inspect})
               Default =
                 SvgRuntime::SvgMetadata.new(
-                  src: #{context.asset_url(asset).inspect},
+                  src: #{asset.url.inspect},
                   width: #{asset.metadata[:width].inspect},
                   height: #{asset.metadata[:height].inspect},
                   content_type: #{asset.content_type.inspect},
@@ -131,7 +133,7 @@ module Klenod
 
           def javascript_svg_module_source(asset, context)
             metadata = {
-              src: context.asset_url(asset),
+              src: asset.url,
               width: asset.metadata[:width],
               height: asset.metadata[:height],
               contentType: asset.content_type,

@@ -70,7 +70,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       asset = context.assets_for("images/logo.png").fetch(0)
 
       assert_equal("https://cdn.example.test/#{asset.output_path.delete_prefix("/assets/")}", exports::IMAGE_SRC)
-      assert_equal("https://cdn.example.test/#{asset.output_path.delete_prefix("/assets/")}", context.asset_url(asset))
+      assert_equal("https://cdn.example.test/#{asset.output_path.delete_prefix("/assets/")}", asset.url)
     end
   end
 

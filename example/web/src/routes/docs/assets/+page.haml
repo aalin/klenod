@@ -16,6 +16,7 @@
 
       - `logical_name`: the source-root-relative file path without import query parameters, such as `images/hero.png`.
       - `output_path`: the canonical content-hashed asset path, such as `/assets/hero.640w.abcd1234.png`.
+      - `url`: the build-time browser URL, such as `https://cdn.example.test/hero.640w.abcd1234.png`.
 
       Query parameters configure an import without changing the logical name, so overlapping generated variants can be reused. Asset content is content-hashed, so production servers can cache emitted browser paths aggressively.
 
@@ -28,7 +29,7 @@
       # or: base "https://cdn.example.test"
       ```
 
-      The example web app reads `ASSET_BASE`, defaulting to `/assets/`. Its emitted asset files remain in `dist/public/assets`; configure the CDN origin or upload mapping to serve that directory at the chosen base. When rendering asset records directly, use `context.asset_url(asset)` or `bundle.asset_url(asset)`. Generated CSS, JavaScript, image, SVG, and font URLs already use the configured base.
+      The example web app reads `ASSET_BASE`, defaulting to `/assets/`. Its emitted asset files remain in `dist/public/assets`; configure the CDN origin or upload mapping to serve that directory at the chosen base. Every emitted asset has a build-time `url` for rendering directly. Generated CSS, JavaScript, image, SVG, and font URLs already use the configured base.
 
   %DocsSection{ title: "Lookup APIs" }
     :markdown

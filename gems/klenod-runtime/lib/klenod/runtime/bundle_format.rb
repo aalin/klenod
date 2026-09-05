@@ -13,7 +13,7 @@ module Klenod
 
     module BundleFormat
       MAGIC = "MODPACK_BUNDLE_V1\n"
-      FORMAT_VERSION = 2
+      FORMAT_VERSION = 3
 
       module_function
 
@@ -70,7 +70,7 @@ module Klenod
         raise BundleFormatError, "Malformed Klenod bundle payload" unless payload.is_a?(Hash)
 
         version = payload["format_version"]
-        unless [1, FORMAT_VERSION].include?(version)
+        unless [1, 2, FORMAT_VERSION].include?(version)
           raise BundleFormatError, "Unsupported Klenod bundle format version: #{version.inspect}"
         end
 
@@ -160,7 +160,8 @@ module Klenod
               "content_hash" => asset.content_hash,
               "output_path" => asset.output_path,
               "content_type" => asset.content_type,
-              "metadata" => encode_value(asset.metadata)
+              "metadata" => encode_value(asset.metadata),
+              "url" => asset.url
             }
           ]
         end
@@ -176,7 +177,8 @@ module Klenod
               asset_payload.fetch("content_hash"),
               asset_payload.fetch("output_path"),
               asset_payload.fetch("content_type"),
-              decode_value(asset_payload.fetch("metadata"))
+              decode_value(asset_payload.fetch("metadata")),
+              asset_payload["url"]
             )
           ]
         end

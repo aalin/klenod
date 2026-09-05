@@ -151,13 +151,14 @@ module Klenod
                 CONTENT_TYPE,
                 metadata
               )
+            asset.url = context.asset_url(asset.output_path)
 
             result.with(
-              code: module_source(context.asset_url(asset), custom_element_descriptor: custom_element_descriptor&.merge(asset_path: context.asset_url(asset))),
+              code: module_source(asset.url, custom_element_descriptor: custom_element_descriptor&.merge(asset_path: asset.url)),
               assets: [asset, source_map_asset, *asset_javascript_assets].compact,
               metadata: result.metadata.merge(
-                javascript_asset_path: context.asset_url(asset),
-                javascript_custom_element_descriptor: custom_element_descriptor&.merge(asset_path: context.asset_url(asset))
+                javascript_asset_path: asset.url,
+                javascript_custom_element_descriptor: custom_element_descriptor&.merge(asset_path: asset.url)
               )
             )
           end
@@ -268,7 +269,7 @@ module Klenod
           def import_edits(module_id, source, dependency, record, context)
             if (stylesheet_asset = css_javascript_stylesheet_asset(record))
               validate_css_import!(module_id, source, dependency)
-              edits = [SourceMap::Edit.replace(dependency.metadata.fetch(:start_offset), dependency.metadata.fetch(:end_offset), context.asset_url(stylesheet_asset))]
+              edits = [SourceMap::Edit.replace(dependency.metadata.fetch(:start_offset), dependency.metadata.fetch(:end_offset), stylesheet_asset.url)]
               if dependency.metadata.fetch(:attributes)[:type].nil?
                 edits << SourceMap::Edit.replace(dependency.metadata.fetch(:attribute_insert_offset), dependency.metadata.fetch(:attribute_insert_offset), %( with { type: "css" }))
               end
@@ -283,9 +284,9 @@ module Klenod
             [SourceMap::Edit.replace(dependency.metadata.fetch(:start_offset), dependency.metadata.fetch(:end_offset), record.metadata.fetch(:javascript_asset_path))]
           end
 
-          def asset_javascript_asset_path(record, context)
+          def asset_javascript_asset_path(record, _context)
             asset = asset_javascript_metadata_asset(record)
-            context.asset_url(asset) if asset
+            asset&.url
           end
 
           def asset_javascript_assets(resolved_dependencies, dependency_records)
@@ -327,7 +328,7 @@ module Klenod
             resolved_dependencies.filter_map do |resolved_dependency|
               record = dependency_records.fetch(resolved_dependency.dependency.id)
               asset = css_javascript_stylesheet_asset(record)
-              {path: context.asset_url(asset), as: "style"} if asset
+              {path: asset.url, as: "style"} if asset
             end.uniq
           end
 

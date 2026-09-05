@@ -62,6 +62,7 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
       svg_asset = context.assets_for("styles/logo.svg").find { it.metadata[:type] == :svg }
 
       assert_includes(css_asset.bytes, "/.assets/#{svg_asset.output_path.delete_prefix("/assets/")}")
+      assert_equal("/.assets/#{css_asset.output_path.delete_prefix("/assets/")}", css_asset.url)
     end
   end
 
