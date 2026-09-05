@@ -109,7 +109,6 @@ module Example
                 root,
                 stylesheet_references: css_asset_references,
                 javascript_references: javascript_asset_references,
-                asset_url: context.method(:asset_url),
                 children: route_children
               ).render
             render_html_document(document_node)
@@ -235,12 +234,12 @@ module Example
 
       def stylesheet_preload_links(asset_references)
         asset_references
-          .map { |reference| %(<#{context.asset_url(reference.asset)}>; rel=preload; as=style) }
+          .map { |reference| %(<#{reference.asset.url}>; rel=preload; as=style) }
       end
 
       def modulepreload_links(asset_references)
         asset_references
-          .map { |reference| %(<#{context.asset_url(reference.asset)}>; rel=modulepreload) }
+          .map { |reference| %(<#{reference.asset.url}>; rel=modulepreload) }
       end
 
       def asset_preload_links(asset_references)

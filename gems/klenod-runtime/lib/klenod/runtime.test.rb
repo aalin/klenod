@@ -233,5 +233,6 @@ class Klenod::RuntimeBoundaryTest
     assert_equal("https://cdn.example.test/assets/logo.hash.png", bundle.asset_url(asset))
     assert_equal(bundle.base, loaded.base)
     assert_equal(bundle.asset_url(asset), loaded.asset_url(asset))
+    assert_equal(bundle.asset_url(asset), loaded.asset(asset.output_path).url)
   end
 end

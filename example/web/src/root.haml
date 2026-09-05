@@ -12,9 +12,9 @@
     %meta{ name: "viewport", content: "width=device-width, initial-scale=1" }
     %title= I18n.t(:document, :title)
     = $stylesheet_references.map do |reference|
-      %link{ rel: "stylesheet", href: $asset_url.call(reference.asset), "data-index" => reference.index }
+      %link{ rel: "stylesheet", href: reference.asset.url, "data-index" => reference.index }
     = $javascript_references.map do |reference|
-      %script{ type: "module", src: $asset_url.call(reference.asset), "data-index" => reference.index }
+      %script{ type: "module", src: reference.asset.url, "data-index" => reference.index }
     %link(rel="icon" type="image/svg" href=Favicon)
   %body
     = $children

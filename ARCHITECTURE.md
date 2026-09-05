@@ -118,10 +118,11 @@ Ruby and Haml modules generally assign `Default` for the default export. Importi
 
 ## Assets
 
-Plugins emit assets during collection. Assets use two important identifiers:
+Plugins emit assets during collection. Assets use two important identifiers and a browser URL:
 
 - `logical_name`: stable source-root-relative path, without query parameters.
-- `output_path`: public content-hashed browser path.
+- `output_path`: canonical content-hashed graph and disk path.
+- `url`: build-time browser URL.
 
 Example:
 
@@ -145,9 +146,9 @@ Generated assets use `queue_kind` to classify work. `:cpu` is the default and is
 
 Image variants remain generated CPU work. The image plugin passes RMagick an input source path when materializing a variant, so image decoding/resizing happens only when the variant is generated. RMagick still decodes pixel data in memory for resizing, but Klenod no longer stores the original image blob in the graph or closes over it in generated variant assets.
 
-Runtime asset specs keep metadata only. Development servers/frameworks can serve assets from `context.asset(path).bytes` or `context.asset_bytes(path, assets_dir:)`.
+Runtime asset specs keep serializable metadata and their build-time URL only. Development servers/frameworks can serve assets from `context.asset(path).bytes` or `context.asset_bytes(path, assets_dir:)`.
 
-`output_path` remains the canonical `/assets/...` graph key and materialized disk path. A build `base` projects it into browser URLs; `context.asset_url(asset)` and `bundle.asset_url(asset)` perform that projection. This keeps CDN URLs out of graph lookup and filesystem operations while generated CSS, JavaScript, SVG, image, and font references use the configured public base.
+`output_path` remains the canonical `/assets/...` graph key and materialized disk path. A build `base` produces each asset's browser-facing `url` during collection. This keeps CDN URLs out of graph lookup and filesystem operations while generated CSS, JavaScript, SVG, image, and font references use the configured public base.
 
 `assets_for_module(...)` and `asset_references_for_module(...)` accept a module id or an array of route roots. This allows route-scoped CSS inclusion instead of including every graph stylesheet on every page.
 

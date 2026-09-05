@@ -51,7 +51,9 @@ module Klenod
             image_options = image_options_for(module_id)
             asset = default_image_asset(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
             variant_assets = generate_variant_assets(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
+            [asset, *variant_assets].each { |image_asset| image_asset.url = context.asset_url(image_asset.output_path) }
             javascript_asset = javascript_image_asset(module_id, asset, variant_assets, context)
+            javascript_asset.url = context.asset_url(javascript_asset.output_path)
             assets = [asset, *variant_assets]
             image_runtime_dependency =
               Dependency
@@ -225,7 +227,7 @@ module Klenod
               ImageRuntime = __klenod_import__(#{image_runtime_dependency.id.inspect})
               Default =
                 ImageRuntime::ImageMetadata.new(
-                  src: #{context.asset_url(asset).inspect},
+                  src: #{asset.url.inspect},
                   width: #{asset.metadata[:width].inspect},
                   height: #{asset.metadata[:height].inspect},
                   content_type: #{asset.content_type.inspect},
@@ -241,7 +243,7 @@ module Klenod
           def image_variant_source(asset, context)
             <<~RUBY.chomp
               ImageRuntime::ImageVariant.new(
-                src: #{context.asset_url(asset).inspect},
+                src: #{asset.url.inspect},
                 width: #{asset.metadata[:width].inspect},
                 height: #{asset.metadata[:height].inspect},
                 content_type: #{asset.content_type.inspect},
@@ -270,7 +272,7 @@ module Klenod
           def javascript_image_module_source(asset, variant_assets, context)
             variants = variant_assets.map { "new ImageVariant(#{AssetJavaScriptMetadata.object_literal(javascript_image_variant(it, context))})" }
             properties = {
-              src: context.asset_url(asset),
+              src: asset.url,
               width: asset.metadata[:width],
               height: asset.metadata[:height],
               contentType: asset.content_type,
@@ -286,7 +288,7 @@ module Klenod
 
           def javascript_image_variant(asset, context)
             {
-              src: context.asset_url(asset),
+              src: asset.url,
               width: asset.metadata[:width],
               height: asset.metadata[:height],
               contentType: asset.content_type,

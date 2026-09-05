@@ -129,8 +129,12 @@ module Klenod
       end
 
       def asset_url(asset_or_output_path)
-        output_path = asset_or_output_path.respond_to?(:output_path) ? asset_or_output_path.output_path : asset_or_output_path
-        Runtime::AssetUrl.join(base, output_path)
+        if asset_or_output_path.respond_to?(:output_path)
+          asset = assets.fetch(asset_or_output_path.output_path, asset_or_output_path)
+          return asset.url || Runtime::AssetUrl.join(base, asset.output_path)
+        end
+
+        Runtime::AssetUrl.join(base, asset_or_output_path)
       end
 
       def exports(record_or_module_id)
@@ -582,6 +586,7 @@ module Klenod
       end
 
       def build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, cached_or_mod)
+        bind_asset_urls(transform.assets)
         version =
           if cached_or_mod.is_a?(Runtime::Mod)
             cached_or_mod.version
@@ -606,6 +611,10 @@ module Klenod
           version,
           :loaded
         )
+      end
+
+      def bind_asset_urls(assets)
+        assets.each { |asset| asset.url ||= Runtime::AssetUrl.join(base, asset.output_path) }
       end
 
       def load_dependency_records(resolved_dependencies)
@@ -779,7 +788,8 @@ module Klenod
               asset.content_hash,
               asset.output_path,
               asset.content_type,
-              asset.metadata
+              asset.metadata,
+              asset.url
             )
           ]
         end

@@ -118,12 +118,13 @@ module Klenod
                 import_asset_type: :css_javascript_stylesheet
               )
               javascript_asset, javascript_source_map_asset = css_asset_pair(module_id, javascript_css_edit, :css_javascript_stylesheet, {}, context)
+              javascript_asset.url = context.asset_url(javascript_asset.output_path)
 
               return result.with(
-                code: "Default = #{context.asset_url(javascript_asset).inspect}\n",
+                code: "Default = #{javascript_asset.url.inspect}\n",
                 assets: [javascript_asset, javascript_source_map_asset, *result.assets].compact,
                 metadata: result.metadata.merge(
-                  css_javascript_stylesheet_path: context.asset_url(javascript_asset)
+                  css_javascript_stylesheet_path: javascript_asset.url
                 )
               )
             end
@@ -137,12 +138,13 @@ module Klenod
               {classes: classes, variables: css_result.variables},
               context
             )
+            asset.url = context.asset_url(asset.output_path)
 
             result.with(
-              code: ruby_module_source(classes, context.asset_url(asset), styles_dependency: result.dependencies.fetch(0)),
+              code: ruby_module_source(classes, asset.url, styles_dependency: result.dependencies.fetch(0)),
               assets: [asset, source_map_asset, *result.assets].compact,
               metadata: result.metadata.merge(
-                css_asset_path: context.asset_url(asset),
+                css_asset_path: asset.url,
                 css_classes: classes
               )
             )
@@ -490,14 +492,14 @@ module Klenod
               unless css_asset
                 raise UnsupportedFileError, "CSS @import #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to module #{record.id}, which does not emit a CSS asset"
               end
-              return (import_asset_type == :css) ? "" : context.asset_url(css_asset)
+              return (import_asset_type == :css) ? "" : css_asset.url
             when :asset_url
               unless record.assets.first
                 raise UnsupportedFileError, "CSS url() #{resolved_dependency.dependency.specifier.inspect} from #{resolved_dependency.dependency.importer_id} resolved to module #{record.id}, which does not emit an asset"
               end
             end
 
-            record.assets.first ? context.asset_url(record.assets.first) : record.id.to_s
+            record.assets.first ? record.assets.first.url : record.id.to_s
           end
 
           def external_url?(value)
