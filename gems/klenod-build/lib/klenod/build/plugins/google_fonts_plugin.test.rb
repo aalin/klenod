@@ -39,8 +39,8 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       refute_includes(home_css, "@import")
       assert_includes(google_css_asset.bytes, font_asset.output_path)
       refute_includes(google_css_asset.bytes, "fonts.gstatic.com")
-      assert_match(%r{\A/assets/google_fonts_source_sans_3\.[a-f0-9]{16}\.css\z}, google_css_asset.output_path)
-      assert_match(%r{\A/assets/google_font_source_sans_3_normal_400\.[a-f0-9]{16}\.woff2\z}, font_asset.output_path)
+      assert_match(%r{\A/google_fonts_source_sans_3\.[a-f0-9]{16}\.css\z}, google_css_asset.output_path)
+      assert_match(%r{\A/google_font_source_sans_3_normal_400\.[a-f0-9]{16}\.woff2\z}, font_asset.output_path)
       assert_equal([FONT_URL], google_css_asset.metadata[:font_source_urls])
       assert_equal("font/woff2", font_asset.content_type)
       assert_equal("Source Sans 3", font_asset.metadata[:family])
@@ -293,7 +293,7 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
       font_asset = context.assets.values.find { |asset| asset.metadata[:google_fonts] && asset.metadata[:type] == :font }
 
       assert_includes(google_css_asset.bytes, font_asset.output_path)
-      assert_match(%r{\A/assets/google_font_source_sans_3_normal_400\.[a-f0-9]{16}\.woff2\z}, font_asset.output_path)
+      assert_match(%r{\A/google_font_source_sans_3_normal_400\.[a-f0-9]{16}\.woff2\z}, font_asset.output_path)
     end
   end
 

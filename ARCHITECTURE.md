@@ -128,7 +128,7 @@ Example:
 
 ```ruby
 logical_name # "images/hero.png"
-output_path  # "/assets/hero.640w.abcd1234.png"
+output_path  # "/hero.640w.abcd1234.png"
 ```
 
 Import query parameters configure the import without changing the logical name:
@@ -148,7 +148,7 @@ Image variants remain generated CPU work. The image plugin passes RMagick an inp
 
 Runtime asset specs keep serializable metadata and their build-time URL only. Development servers/frameworks can serve assets from `context.asset(path).bytes` or `context.asset_bytes(path, assets_dir:)`.
 
-`output_path` remains the canonical `/assets/...` graph key and materialized disk path. A build `base` produces each asset's browser-facing `url` during collection. This keeps CDN URLs out of graph lookup and filesystem operations while generated CSS, JavaScript, SVG, image, and font references use the configured public base.
+`output_path` remains the canonical root-relative graph key and materialized disk path. An `assets_dir` is its filesystem root, so `/hero.png` materializes as `assets_dir/hero.png`. A build `base` produces each asset's browser-facing `url` during collection. This keeps CDN URLs out of graph lookup and filesystem operations while generated CSS, JavaScript, SVG, image, and font references use the configured public base.
 
 `assets_for_module(...)` and `asset_references_for_module(...)` accept a module id or an array of route roots. This allows route-scoped CSS inclusion instead of including every graph stylesheet on every page.
 

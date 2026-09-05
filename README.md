@@ -228,10 +228,10 @@ Example:
 
 ```ruby
 logical_name # "images/hero.png"
-output_path  # "/assets/hero.320w.abc123.png"
+output_path  # "/hero.320w.abc123.png"
 ```
 
-`output_path` is Klenod's canonical asset key and on-disk path. Set `base` to control the browser URL emitted for it. Bases accept origin-relative paths or HTTP(S) URLs and normalize a missing trailing slash:
+`output_path` is Klenod's root-relative canonical asset key and on-disk path. `assets_dir:` is its filesystem root, so this example is written as `public/hero.320w.abc123.png`. Set `base` to control the browser URL emitted for it. Bases accept origin-relative paths or HTTP(S) URLs and normalize a missing trailing slash:
 
 ```ruby
 base "/.assets"                    # "/.assets/hero.320w.abc123.png"
@@ -243,11 +243,11 @@ Every emitted asset exposes its build-time browser URL as `asset.url`; use it wh
 The graph and runtime bundle expose the same lookup shape:
 
 ```ruby
-context.asset("/assets/home.abc123.css")
+context.asset("/home.abc123.css")
 context.assets_for("styles/home.css")
 context.assets_for_module("pages/server.rb", type: :css)
 
-bundle.asset("/assets/home.abc123.css")
+bundle.asset("/home.abc123.css")
 bundle.assets_for("styles/home.css")
 bundle.assets_for_module("pages/server.rb", type: :css)
 ```

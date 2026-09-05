@@ -29,7 +29,7 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
       assert_match(/title/, mod.const_get(:Exports)::TITLE)
       css_asset = css_record.assets.find { |asset| asset.metadata[:type] == :css }
 
-      assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, css_asset.output_path)
+      assert_match(%r{\A/styles_home_css\.[a-f0-9]{16}\.css\z}, css_asset.output_path)
       assert_includes(css_asset.bytes, "color: red")
     end
   end
@@ -61,8 +61,8 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
       css_asset = context.assets_for("styles/home.css").find { it.metadata[:type] == :css }
       svg_asset = context.assets_for("styles/logo.svg").find { it.metadata[:type] == :svg }
 
-      assert_includes(css_asset.bytes, "/.assets/#{svg_asset.output_path.delete_prefix("/assets/")}")
-      assert_equal("/.assets/#{css_asset.output_path.delete_prefix("/assets/")}", css_asset.url)
+      assert_includes(css_asset.bytes, "/.assets#{svg_asset.output_path}")
+      assert_equal("/.assets#{css_asset.output_path}", css_asset.url)
     end
   end
 
@@ -300,8 +300,8 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
       javascript_css_asset = record.assets.find { it.metadata[:type] == :css_javascript_stylesheet }
 
       assert_nil(css_asset)
-      assert_equal(javascript_css_asset.output_path, record.metadata.fetch(:css_javascript_stylesheet_path))
-      assert_match(%r{\A/assets/styles_home_css\.javascript\.[a-f0-9]{16}\.css\z}, javascript_css_asset.output_path)
+      assert_equal(javascript_css_asset.url, record.metadata.fetch(:css_javascript_stylesheet_path))
+      assert_match(%r{\A/styles_home_css\.javascript\.[a-f0-9]{16}\.css\z}, javascript_css_asset.output_path)
       assert_includes(javascript_css_asset.bytes, ".title")
     end
   end
@@ -443,8 +443,8 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
 
       refute_includes(home_asset.bytes, "@import")
       refute_includes(home_asset.bytes, base_asset.output_path)
-      assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\z}, home_asset.output_path)
-      assert_match(%r{\A/assets/styles_base_css\.[a-f0-9]{16}\.css\z}, base_asset.output_path)
+      assert_match(%r{\A/styles_home_css\.[a-f0-9]{16}\.css\z}, home_asset.output_path)
+      assert_match(%r{\A/styles_base_css\.[a-f0-9]{16}\.css\z}, base_asset.output_path)
       assert_equal(4, bundle.assets.length)
     end
   end
@@ -708,7 +708,7 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
       map_asset = record.assets.find { |asset| asset.metadata[:type] == :css_source_map }
       source_map = JSON.parse(map_asset.bytes)
 
-      assert_match(%r{\A/assets/styles_home_css\.[a-f0-9]{16}\.css\.map\z}, map_asset.output_path)
+      assert_match(%r{\A/styles_home_css\.[a-f0-9]{16}\.css\.map\z}, map_asset.output_path)
       assert_includes(css_asset.bytes, "sourceMappingURL=#{File.basename(map_asset.output_path)}")
       assert_equal(3, source_map.fetch("version"))
       assert_equal(["styles/home.css"], source_map.fetch("sources"))

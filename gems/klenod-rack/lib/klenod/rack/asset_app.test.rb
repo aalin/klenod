@@ -33,7 +33,7 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
       Klenod::Build::Asset.new(
         "styles/home.css",
         "abc123",
-        "/assets/home.abc123.css",
+        "/home.abc123.css",
         "styles/home.css",
         "body {}",
         "text/css",
@@ -55,7 +55,7 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
       Klenod::Build::Asset.new(
         "styles/home.css",
         "abc123",
-        "/assets/home.abc123.css",
+        "/home.abc123.css",
         "styles/home.css",
         "body {}",
         "text/css",
@@ -69,12 +69,31 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
     assert_equal("body {}", response.body)
   end
 
+  def test_serves_legacy_assets_prefixed_in_their_output_path
+    asset =
+      Klenod::Build::Asset.new(
+        "styles/home.css",
+        "abc123",
+        "/assets/home.abc123.css",
+        "styles/home.css",
+        "body {}",
+        "text/css",
+        {type: :css}
+      )
+    app = Klenod::Rack::AssetApp.new(AssetSource.new(asset, "body {}"))
+
+    response = app.response_for("/assets/home.abc123.css")
+
+    assert_equal(200, response.status)
+    assert_equal("body {}", response.body)
+  end
+
   def test_serves_asset_preload_link_headers
     asset =
       Klenod::Build::Asset.new(
         "styles/home.css",
         "abc123",
-        "/assets/home.abc123.css.js",
+        "/home.abc123.css.js",
         nil,
         "export default {};",
         "application/javascript",
@@ -121,13 +140,13 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
   def test_serves_runtime_bundle_assets_from_assets_dir
     Dir.mktmpdir do |dir|
       assets_dir = "#{dir}/public"
-      FileUtils.mkdir_p("#{assets_dir}/assets")
-      File.binwrite("#{assets_dir}/assets/home.abc123.css", "runtime bytes")
+      FileUtils.mkdir_p(assets_dir)
+      File.binwrite("#{assets_dir}/home.abc123.css", "runtime bytes")
       asset =
         Klenod::Runtime::AssetSpec.new(
           "styles/home.css",
           "abc123",
-          "/assets/home.abc123.css",
+          "/home.abc123.css",
           "text/css",
           {type: :css}
         )
@@ -145,14 +164,14 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
   def test_serves_brotli_sidecar_when_accepted
     Dir.mktmpdir do |dir|
       assets_dir = "#{dir}/public"
-      FileUtils.mkdir_p("#{assets_dir}/assets")
-      File.binwrite("#{assets_dir}/assets/home.abc123.css", "runtime bytes")
-      File.binwrite("#{assets_dir}/assets/home.abc123.css.br", "brotli bytes")
+      FileUtils.mkdir_p(assets_dir)
+      File.binwrite("#{assets_dir}/home.abc123.css", "runtime bytes")
+      File.binwrite("#{assets_dir}/home.abc123.css.br", "brotli bytes")
       asset =
         Klenod::Runtime::AssetSpec.new(
           "styles/home.css",
           "abc123",
-          "/assets/home.abc123.css",
+          "/home.abc123.css",
           "text/css",
           {type: :css}
         )
@@ -173,14 +192,14 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
   def test_serves_original_asset_when_brotli_is_not_accepted
     Dir.mktmpdir do |dir|
       assets_dir = "#{dir}/public"
-      FileUtils.mkdir_p("#{assets_dir}/assets")
-      File.binwrite("#{assets_dir}/assets/home.abc123.css", "runtime bytes")
-      File.binwrite("#{assets_dir}/assets/home.abc123.css.br", "brotli bytes")
+      FileUtils.mkdir_p(assets_dir)
+      File.binwrite("#{assets_dir}/home.abc123.css", "runtime bytes")
+      File.binwrite("#{assets_dir}/home.abc123.css.br", "brotli bytes")
       asset =
         Klenod::Runtime::AssetSpec.new(
           "styles/home.css",
           "abc123",
-          "/assets/home.abc123.css",
+          "/home.abc123.css",
           "text/css",
           {type: :css}
         )
@@ -199,14 +218,14 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
   def test_serves_brotli_sidecar_when_wildcard_encoding_is_accepted
     Dir.mktmpdir do |dir|
       assets_dir = "#{dir}/public"
-      FileUtils.mkdir_p("#{assets_dir}/assets")
-      File.binwrite("#{assets_dir}/assets/home.abc123.css", "runtime bytes")
-      File.binwrite("#{assets_dir}/assets/home.abc123.css.br", "brotli bytes")
+      FileUtils.mkdir_p(assets_dir)
+      File.binwrite("#{assets_dir}/home.abc123.css", "runtime bytes")
+      File.binwrite("#{assets_dir}/home.abc123.css.br", "brotli bytes")
       asset =
         Klenod::Runtime::AssetSpec.new(
           "styles/home.css",
           "abc123",
-          "/assets/home.abc123.css",
+          "/home.abc123.css",
           "text/css",
           {type: :css}
         )
@@ -224,14 +243,14 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
   def test_serves_original_asset_for_invalid_accept_encoding
     Dir.mktmpdir do |dir|
       assets_dir = "#{dir}/public"
-      FileUtils.mkdir_p("#{assets_dir}/assets")
-      File.binwrite("#{assets_dir}/assets/home.abc123.css", "runtime bytes")
-      File.binwrite("#{assets_dir}/assets/home.abc123.css.br", "brotli bytes")
+      FileUtils.mkdir_p(assets_dir)
+      File.binwrite("#{assets_dir}/home.abc123.css", "runtime bytes")
+      File.binwrite("#{assets_dir}/home.abc123.css.br", "brotli bytes")
       asset =
         Klenod::Runtime::AssetSpec.new(
           "styles/home.css",
           "abc123",
-          "/assets/home.abc123.css",
+          "/home.abc123.css",
           "text/css",
           {type: :css}
         )

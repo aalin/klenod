@@ -25,7 +25,7 @@ module Klenod
         @app = app
         @assets_dir = assets_dir
         @base = base && Runtime::AssetUrl.normalize(base)
-        @path_prefix = @base ? (Runtime::AssetUrl.path_prefix(@base) || Runtime::AssetUrl::CANONICAL_PREFIX) : path_prefix
+        @path_prefix = @base ? (Runtime::AssetUrl.path_prefix(@base) || path_prefix) : path_prefix
       end
 
       attr_reader :source, :app, :assets_dir, :path_prefix, :base
@@ -41,7 +41,7 @@ module Klenod
       def response_for(path, env = {})
         return nil unless asset_path?(path)
 
-        asset = source.asset(asset_output_path(path))
+        asset = asset_for(asset_output_path(path))
         brotli_available = brotli_asset_available?(asset)
         compressed = brotli_available && accepts_brotli?(env.fetch("HTTP_ACCEPT_ENCODING", ""))
         body = compressed ? brotli_asset_bytes(asset) : asset_bytes(asset)
@@ -73,9 +73,13 @@ module Klenod
       end
 
       def asset_output_path(path)
-        return path unless base
+        "/#{path.delete_prefix(path_prefix)}"
+      end
 
-        "#{Runtime::AssetUrl::CANONICAL_PREFIX}#{path.delete_prefix(path_prefix)}"
+      def asset_for(output_path)
+        source.asset(output_path)
+      rescue KeyError
+        source.asset("#{Runtime::AssetUrl::LEGACY_OUTPUT_PREFIX}#{output_path.delete_prefix("/")}")
       end
 
       def asset_bytes(asset)

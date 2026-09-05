@@ -69,8 +69,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       exports = context.graph.mods.fetch(record.id).const_get(:Exports)
       asset = context.assets_for("images/logo.png").fetch(0)
 
-      assert_equal("https://cdn.example.test/#{asset.output_path.delete_prefix("/assets/")}", exports::IMAGE_SRC)
-      assert_equal("https://cdn.example.test/#{asset.output_path.delete_prefix("/assets/")}", asset.url)
+      assert_equal("https://cdn.example.test#{asset.output_path}", exports::IMAGE_SRC)
+      assert_equal("https://cdn.example.test#{asset.output_path}", asset.url)
     end
   end
 
@@ -181,7 +181,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert(variant.frozen?)
       assert_equal("#{variant.src} 2w", srcset)
       assert_equal("(max-width: 2px) 100vw, 2px", sizes)
-      assert_equal(variant.src, variant_asset.output_path)
+      assert_equal(variant.src, variant_asset.url)
       assert_equal("image/png", variant_asset.content_type)
       assert_equal(:cpu, variant_asset.queue_kind)
       refute(variant_asset.ready?)
@@ -256,7 +256,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal("image/webp", image.content_type)
       assert_equal(4, image.width)
       assert_equal(2, image.height)
-      assert_equal(image.src, default_asset.output_path)
+      assert_equal(image.src, default_asset.url)
       assert_equal("image/webp", default_asset.content_type)
       assert_equal(:webp, default_asset.metadata[:format])
       assert_equal(:cpu, default_asset.queue_kind)
@@ -295,7 +295,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal(2, assets.length)
       assert_match(%r{\A/assets/hero\.[a-f0-9]{16}\.png\z}, image.src)
       assert_equal("image/png", image.content_type)
-      assert_equal(image.src, default_asset.output_path)
+      assert_equal(image.src, default_asset.url)
       assert_equal(75, default_asset.metadata[:quality])
       assert_equal(75, variant_asset.metadata[:quality])
       assert_equal(75, image.variants.fetch(0).quality)
@@ -326,8 +326,8 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
 
       refute_equal(image_a.src, image_b.src)
       refute_equal(variant_a.src, variant_b.src)
-      assert_equal(70, context.asset(image_a.src).metadata[:quality])
-      assert_equal(80, context.asset(image_b.src).metadata[:quality])
+      assert_equal(70, context.assets.values.find { it.url == image_a.src }.metadata[:quality])
+      assert_equal(80, context.assets.values.find { it.url == image_b.src }.metadata[:quality])
     end
   end
 
@@ -369,7 +369,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
 
       assert_equal(shared_variant_a.src, shared_variant_b.src)
       assert_equal(1, generated_3w_assets.length)
-      assert_equal(shared_variant_b.src, generated_3w_assets.fetch(0).output_path)
+      assert_equal(shared_variant_b.src, generated_3w_assets.fetch(0).url)
     end
   end
 
@@ -397,7 +397,7 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
       assert_equal("image/png", image.content_type)
       assert_equal(6, image.width)
       assert_equal(3, image.height)
-      assert_equal(image.src, default_asset.output_path)
+      assert_equal(image.src, default_asset.url)
       assert_equal("image/png", default_asset.content_type)
       assert_equal(:image, default_asset.metadata[:type])
       assert_equal(:png, default_asset.metadata[:format])

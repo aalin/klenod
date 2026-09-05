@@ -105,6 +105,8 @@ module Klenod
           return asset.url || AssetUrl.join(base, asset.output_path)
         end
 
+        @assets.fetch(asset_or_output_path).url
+      rescue KeyError
         AssetUrl.join(base, asset_or_output_path)
       end
 
@@ -173,8 +175,13 @@ module Klenod
       def bind_asset_urls(assets)
         assets.to_h do |output_path, asset|
           legacy_url = asset.url.nil? || (asset.url == asset.output_path && base != AssetUrl::DEFAULT_BASE)
-          [output_path, legacy_url ? asset.with(url: AssetUrl.join(base, asset.output_path)) : asset]
+          url = legacy_output_path?(asset.output_path) ? AssetUrl.legacy_join(base, asset.output_path) : AssetUrl.join(base, asset.output_path)
+          [output_path, legacy_url ? asset.with(url:) : asset]
         end
+      end
+
+      def legacy_output_path?(output_path)
+        output_path.start_with?(AssetUrl::LEGACY_OUTPUT_PREFIX)
       end
 
       def assets_for_runtime_module(module_id)

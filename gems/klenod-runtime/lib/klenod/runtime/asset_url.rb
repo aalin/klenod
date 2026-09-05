@@ -6,7 +6,7 @@ module Klenod
   module Runtime
     module AssetUrl
       DEFAULT_BASE = "/assets/"
-      CANONICAL_PREFIX = "/assets/"
+      LEGACY_OUTPUT_PREFIX = "/assets/"
 
       module_function
 
@@ -29,10 +29,16 @@ module Klenod
       end
 
       def join(base, output_path)
-        filename = output_path.to_s.delete_prefix(CANONICAL_PREFIX)
-        raise ArgumentError, "asset output path must start with #{CANONICAL_PREFIX.inspect}: #{output_path.inspect}" if filename == output_path
+        path = output_path.to_s
+        unless path.start_with?("/") && !path.start_with?("//")
+          raise ArgumentError, "asset output path must be root-relative: #{output_path.inspect}"
+        end
 
-        "#{normalize(base)}#{filename}"
+        "#{normalize(base)}#{path.delete_prefix("/")}"
+      end
+
+      def legacy_join(base, output_path)
+        join(base, output_path.delete_prefix(LEGACY_OUTPUT_PREFIX).prepend("/"))
       end
 
       def path_prefix(base)

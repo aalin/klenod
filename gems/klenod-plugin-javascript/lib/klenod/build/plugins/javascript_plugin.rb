@@ -121,7 +121,7 @@ module Klenod
             if source_maps_enabled?(context)
               source_map_json = edit.source_map.to_json
               source_map_hash = Hashing.short(source_map_json)
-              source_map_output_path = "/assets/#{asset_name(module_id)}.#{source_map_hash}.js.map"
+              source_map_output_path = "/#{asset_name(module_id)}.#{source_map_hash}.js.map"
               source_map_asset =
                 Asset.new(
                   module_id.path,
@@ -136,7 +136,7 @@ module Klenod
             end
 
             hash = Hashing.short(code)
-            output_path = "/assets/#{asset_name(module_id)}.#{hash}.js"
+            output_path = "/#{asset_name(module_id)}.#{hash}.js"
             asset_javascript_assets = asset_javascript_assets(resolved_dependencies, dependency_records)
             metadata = {type: :javascript}
             css_preload_assets = css_preload_assets(resolved_dependencies, dependency_records, context)

@@ -15,7 +15,7 @@
       Klenod assets have two stable identifiers:
 
       - `logical_name`: the source-root-relative file path without import query parameters, such as `images/hero.png`.
-      - `output_path`: the canonical content-hashed asset path, such as `/assets/hero.640w.abcd1234.png`.
+      - `output_path`: the canonical root-relative asset path, such as `/hero.640w.abcd1234.png`.
       - `url`: the build-time browser URL, such as `https://cdn.example.test/hero.640w.abcd1234.png`.
 
       Query parameters configure an import without changing the logical name, so overlapping generated variants can be reused. Asset content is content-hashed, so production servers can cache emitted browser paths aggressively.
@@ -29,18 +29,18 @@
       # or: base "https://cdn.example.test"
       ```
 
-      The example web app reads `ASSET_BASE`, defaulting to `/assets/`. Its emitted asset files remain in `dist/public/assets`; configure the CDN origin or upload mapping to serve that directory at the chosen base. Every emitted asset has a build-time `url` for rendering directly. Generated CSS, JavaScript, image, SVG, and font URLs already use the configured base.
+      The example web app reads `ASSET_BASE`, defaulting to `/assets/`. Emitted files live directly in `dist/public`; configure the CDN origin or upload mapping to serve that directory at the chosen base. Every emitted asset has a build-time `url` for rendering directly. Generated CSS, JavaScript, image, SVG, and font URLs already use the configured base.
 
   %DocsSection{ title: "Lookup APIs" }
     :markdown
       The build graph and runtime bundle expose the same lookup shape.
 
       ```ruby
-      context.asset("/assets/home.abc123.css")
+      context.asset("/home.abc123.css")
       context.assets_for("styles/home.css")
       context.assets_for_module("entrypoint.rb", type: :css)
 
-      bundle.asset("/assets/home.abc123.css")
+      bundle.asset("/home.abc123.css")
       bundle.assets_for_module("entrypoint.rb", type: :css)
       ```
 
@@ -62,11 +62,12 @@
       run Klenod::Rack::AssetApp.new(
         bundle,
         assets_dir: "dist/public",
+        base: bundle.base,
         app: application
       )
       ```
 
-      The asset app serves paths under `/assets/` with immutable cache headers and delegates every other request to `app`, which calls the bundle entrypoint. That entrypoint should accept a Rack environment and return a Rack response. When matching `.br` files are present in `assets_dir`, the asset app also serves Brotli responses to clients that accept them. Use a different `path_prefix:` when your deployment exposes assets elsewhere.
+      The asset app maps public paths under `/assets/` to root-relative files in `assets_dir`, with immutable cache headers, and delegates every other request to `app`, which calls the bundle entrypoint. That entrypoint should accept a Rack environment and return a Rack response. When matching `.br` files are present in `assets_dir`, the asset app also serves Brotli responses to clients that accept them. Pass `base:` to use an origin-relative public prefix such as `/.assets/`; use `path_prefix:` when an external CDN base needs a local development-serving prefix.
 
   %DocsSection{ title: "CSS, SVG, And Images" }
     :markdown

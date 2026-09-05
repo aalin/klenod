@@ -413,7 +413,7 @@ module Klenod
               source_map_json = source_map.to_json
               source_map_hash = Hashing.short(source_map_json)
               suffix = (type == :css) ? "" : ".javascript"
-              source_map_output_path = "/assets/#{asset_name(module_id)}#{suffix}.#{source_map_hash}.css.map"
+              source_map_output_path = "/#{asset_name(module_id)}#{suffix}.#{source_map_hash}.css.map"
               source_map_asset =
                 Asset.new(
                   module_id.path,
@@ -429,7 +429,7 @@ module Klenod
 
             hash = Hashing.short(css)
             suffix = (type == :css) ? "" : ".javascript"
-            output_path = "/assets/#{asset_name(module_id)}#{suffix}.#{hash}.css"
+            output_path = "/#{asset_name(module_id)}#{suffix}.#{hash}.css"
             asset =
               Asset.new(
                 module_id.path,

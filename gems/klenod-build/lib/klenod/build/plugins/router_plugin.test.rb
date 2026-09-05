@@ -672,7 +672,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
 
       assert_equal(["app:/pages/blog/[slug]/+page.haml"], result.reloaded_module_ids.map(&:to_s))
       assert_equal(["virtual:/router.rb"], result.reevaluated_module_ids.map(&:to_s))
-      assert_match(%r{\A/assets/pages_blog_slug_page_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
+      assert_match(%r{\A/pages_blog_slug_page_css\.[a-f0-9]{16}\.css\z}, css_record.assets.first.output_path)
       assert_includes(context.graph.records.fetch(router_record.id).resolved_dependencies.map(&:module_id), Klenod::Build::ModuleId.new("pages/blog/[slug]/+page.haml", nil))
     end
   end

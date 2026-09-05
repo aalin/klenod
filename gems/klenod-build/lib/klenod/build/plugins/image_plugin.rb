@@ -128,7 +128,7 @@ module Klenod
             Asset.new(
               module_id.path,
               hash,
-              "/assets/#{asset_name(module_id)}.#{hash}#{module_id.extname}",
+              "/#{asset_name(module_id)}.#{hash}#{module_id.extname}",
               source_path,
               nil,
               content_type(module_id.extname),
@@ -156,7 +156,7 @@ module Klenod
             Asset.generated(
               module_id.path,
               hash,
-              "/assets/#{asset_name(module_id)}.#{hash}#{extname}",
+              "/#{asset_name(module_id)}.#{hash}#{extname}",
               source_path,
               content_type(extname),
               metadata,
@@ -261,7 +261,7 @@ module Klenod
             Asset.new(
               module_id.path,
               hash,
-              "/assets/#{asset_name(module_id)}.#{hash}#{module_id.extname}.js",
+              "/#{asset_name(module_id)}.#{hash}#{module_id.extname}.js",
               nil,
               code,
               "application/javascript",
@@ -281,7 +281,7 @@ module Klenod
             properties << %(variants:[#{variants.join(",")}])
 
             <<~JAVASCRIPT
-              import ImageMetadata, { ImageVariant } from #{AssetJavaScriptMetadata::OUTPUT_PATH.inspect};
+              import ImageMetadata, { ImageVariant } from #{context.asset_url(AssetJavaScriptMetadata::OUTPUT_PATH).inspect};
               export default new ImageMetadata({#{properties.join(",")}});
             JAVASCRIPT
           end
@@ -340,7 +340,7 @@ module Klenod
             extname = ".#{format}"
             descriptor = "#{width}w"
             hash = Hashing.short("#{source_hash}:#{width}:#{format}:#{quality}")
-            output_path = "/assets/#{asset_name(module_id)}.#{width}w.#{hash}#{extname}"
+            output_path = "/#{asset_name(module_id)}.#{width}w.#{hash}#{extname}"
             metadata = {
               type: :image_variant,
               width: width,
