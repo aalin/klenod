@@ -211,7 +211,7 @@ module Example
         value = href.to_s
         return false unless value.start_with?("/")
         return false if value.start_with?("//")
-        return false if value == "/assets" || value.start_with?("/assets/")
+        return false if value == "/.assets" || value.start_with?("/.assets/")
 
         true
       end
