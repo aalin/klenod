@@ -17,10 +17,17 @@ module Example
 
       def fetch(name)
         key = name.to_sym
-        return values.fetch(key) if values.key?(key)
-        return parent.fetch(key) if parent
+        context = self
+        while context
+          return context.values.fetch(key) if context.values.key?(key)
 
-        raise KeyError, "context variable not found: #{key.inspect}"
+          context = context.parent
+        end
+
+        available = available_keys.map(&:inspect).join(", ")
+        message = "context variable #{key.inspect} is not set."
+        message += " Available context values: #{available}." unless available.empty?
+        raise KeyError, "#{message} Add it with Context.with(#{key}: ...)."
       end
 
       def [](name)
@@ -33,6 +40,12 @@ module Example
 
       def routes
         fetch(:routes)
+      end
+
+      private
+
+      def available_keys
+        values.keys | (parent ? parent.send(:available_keys) : [])
       end
     end
   end

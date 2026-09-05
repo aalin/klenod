@@ -202,7 +202,8 @@ class Klenod::ExampleTest < Minitest::Test
     Example::Framework::Context.with(request: outer_request, optional: nil) do
       assert_same(outer_request, Example::Framework::Context.current.fetch(:request))
       assert_nil(Example::Framework::Context.current.fetch(:optional))
-      assert_raises(KeyError) { Example::Framework::Context.current.fetch(:missing) }
+      error = assert_raises(KeyError) { Example::Framework::Context.current.fetch(:missing) }
+      assert_equal("context variable :missing is not set. Available context values: :request, :optional. Add it with Context.with(missing: ...).", error.message)
 
       assert_raises(RuntimeError) do
         Example::Framework::Context.with(request: inner_request, theme: :dark) do
@@ -929,19 +930,9 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_test_command_runs_colocated_component_tests
-    stdout, stderr, status =
-      Open3.capture3(
-        {
-          "CI" => "1",
-          "NO_COLOR" => "1",
-          "KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1"
-        },
-        RbConfig.ruby,
-        "bin/test",
-        chdir: __dir__
-      )
+    stdout, _stderr, status = example_command("bin/test")
 
-    assert(status.success?, stderr)
+    assert(status.success?, "bin/test exited with #{status.exitstatus}")
     assert_match(/RUN\s+\d+ test files/, stdout)
     assert_includes(stdout, "components/Button.test.rb")
     assert_includes(stdout, "components/LanguageSwitcher.test.rb")
@@ -951,19 +942,9 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_coverage_command_reports_original_haml_lines
-    stdout, stderr, status =
-      Open3.capture3(
-        {
-          "CI" => "1",
-          "NO_COLOR" => "1",
-          "KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1"
-        },
-        RbConfig.ruby,
-        "bin/coverage",
-        chdir: __dir__
-      )
+    stdout, _stderr, status = example_command("bin/coverage")
 
-    assert(status.success?, stderr)
+    assert(status.success?, "bin/coverage exited with #{status.exitstatus}")
     assert_includes(stdout, "components/Button.haml")
     assert_includes(stdout, '%button{ type: $type || "button"')
     refute_includes(stdout, "SourceMapMark")
@@ -2063,6 +2044,19 @@ class Klenod::ExampleTest < Minitest::Test
     with_env("KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1") do
       Example::WebConfig.build_config(mode: :development)
     end
+  end
+
+  def example_command(command)
+    Open3.capture3(
+      {
+        "CI" => "1",
+        "NO_COLOR" => "1",
+        "KLENOD_EXAMPLE_FAKE_GOOGLE_FONTS" => "1"
+      },
+      RbConfig.ruby,
+      command,
+      chdir: __dir__
+    )
   end
 
   def with_env(values)
