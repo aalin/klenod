@@ -95,8 +95,7 @@ module Klenod
                 javascript_source: javascript_source,
                 javascript_original_source: code,
                 javascript_imports: imports,
-                javascript_custom_element: custom_element,
-                javascript_custom_element_tag: custom_element ? custom_element_tag(module_id) : nil
+                javascript_custom_element: custom_element
               }
             )
           end
@@ -113,7 +112,7 @@ module Klenod
             custom_element_descriptor = nil
 
             if result.metadata[:javascript_custom_element]
-              tag = result.metadata.fetch(:javascript_custom_element_tag)
+              tag = custom_element_tag(module_id, code)
               code = register_custom_element(module_id, code, tag)
               custom_element_descriptor = custom_element_descriptor(tag, nil)
             end
@@ -511,9 +510,9 @@ module Klenod
             module_id.path.gsub(/[^A-Za-z0-9]+/, "_").sub(/\A_+/, "").sub(/_+\z/, "")
           end
 
-          def custom_element_tag(module_id)
+          def custom_element_tag(module_id, code)
             name = asset_name(module_id).downcase.gsub(/_+/, "-")
-            hash = Hashing.short(module_id.to_s, length: 8)
+            hash = Hashing.short(code, length: 8)
             "klenod-#{name}-#{hash}"
           end
 

@@ -459,6 +459,27 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
     end
   end
 
+  def test_custom_element_tag_changes_when_the_module_is_invalidated
+    skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
+
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      path = "#{dir}/scripts/clock.jsx"
+      File.write(path, "export default class ClockElement extends HTMLElement {}\n")
+      File.write("#{dir}/entry.rb", "Default = import(\"scripts/clock.jsx\")\n")
+
+      context = context_for(dir)
+      context.evaluate("entry")
+      old_tag = context.graph.mods.fetch(context.entry("entry").id).const_get(:Exports)::Default.fetch(:tag)
+
+      File.write(path, "export default class ClockElement extends HTMLElement { connectedCallback() {} }\n")
+      context.invalidate_paths([path])
+      new_tag = context.graph.mods.fetch(context.entry("entry").id).const_get(:Exports)::Default.fetch(:tag)
+
+      refute_equal(old_tag, new_tag)
+    end
+  end
+
   def test_tsx_custom_element_does_not_collide_with_local_h_or_fragment
     skip "native parser is not compiled" unless Klenod::Build::Plugins::JavaScriptPlugin::Parser.native?
 
