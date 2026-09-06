@@ -442,6 +442,15 @@ module Klenod
               ast_silent_script(source) || raise(ArgumentError, "Could not build Ruby begin block from Haml script: #{source.inspect}")
             end
 
+            def silent_script_with_children(source, body)
+              source = rewrite_ruby_source(source, nil)
+              statements = parse_statements(source)
+              return raise(ArgumentError, "Could not parse Haml silent script: #{source.inspect}") unless statements
+
+              node = ast_begin([*statement_body_for(statements), *statement_body_for(body)])
+              Fragment.new(["begin", indent(source, 2), indent(to_source(body), 2), "end"].join("\n"), node)
+            end
+
             def branches(branches)
               ast_branches(branches) || raise(ArgumentError, "Could not build Ruby branch from Haml scripts: #{branches.map(&:first).inspect}")
             end
@@ -550,16 +559,21 @@ module Klenod
                 .filter_map do |(line, column), type, token, _state|
                   kind, prefix, pattern = VARIABLE_TOKEN_KINDS[type]
                   receiver = @variables[kind]
-                  next unless receiver && token.match?(pattern)
-
-                  name = token.delete_prefix(prefix)
-                  offset = line_offsets.fetch(line - 1) + column
-                  [offset, token.length, "(#{receiver})[#{symbol_source(name)}]"]
+                  if type == :on_gvar && token == "$*" && receiver
+                    [offset_for(line_offsets, line, column), token.length, receiver]
+                  elsif receiver && token.match?(pattern)
+                    name = token.delete_prefix(prefix)
+                    [offset_for(line_offsets, line, column), token.length, "(#{receiver})[#{symbol_source(name)}]"]
+                  end
                 end
                 .reverse_each
                 .each_with_object(source.dup) do |(offset, length, replacement), rewritten|
                   rewritten[offset, length] = replacement
                 end
+            end
+
+            def offset_for(line_offsets, line, column)
+              line_offsets.fetch(line - 1) + column
             end
 
             def source_expressions(expressions)
@@ -579,11 +593,14 @@ module Klenod
               factory = expression_fragment(factory)
               tag = expression_fragment(tag)
               children = children.map { |child| expression_fragment(child) }
+              props = props.dup
+              attribute_splats = props.delete(:__klenod_attribute_splats__) || []
 
               source_parts = [
                 to_source(tag),
                 *children.map { |child| argument_source(child) },
-                *keyword_props_source(props, mark: mark)
+                *keyword_props_source(props, mark: mark),
+                *attribute_splats.map { |value| "**#{argument_source(value)}" }
               ].compact
               Fragment.new("#{to_source(factory)}[#{source_parts.join(", ")}]", nil)
             end
@@ -712,6 +729,7 @@ module Klenod
                 case source
                 when /\Aif\s+(.+)\z/ then $1
                 when /\Aelsif\s+(.+)\z/ then $1
+                when /\Aunless\s+(.+)\z/ then "!(#{$1})"
                 else return nil
                 end
               predicate = parse_expression(predicate_source, context: :branch_predicate)

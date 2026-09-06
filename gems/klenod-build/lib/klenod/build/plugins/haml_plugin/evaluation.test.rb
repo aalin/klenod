@@ -212,6 +212,37 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_rewrites_configured_global_splat_to_props
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %h1= $*.fetch(:title)
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      assert_equal([:h1, "Hello"], exports::Default.new(title: "Hello").render)
+      assert_includes(record.transformed_source, "@__props.fetch(:title)")
+    end
+  end
+
+  def test_haml_transformer_uses_rewritten_source_for_dynamic_attribute_values
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %p{class: [:title, $active]} Hello
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, _exports|
+      assert_includes(record.transformed_source, "[:title, (@__props)[:active]]")
+    end
+  end
+
   def test_haml_transformer_rewrites_configured_class_variables_to_context
     plugin = haml_plugin(
       component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
@@ -648,6 +679,20 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
         ],
         exports::Default.new.render
       )
+    end
+  end
+
+  def test_haml_transformer_supports_plain_filters
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %article
+            :plain
+              Plain text
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:article, "Plain text\n"], exports::Default.new.render)
     end
   end
 

@@ -536,6 +536,14 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_kind_of(SyntaxTree::Else, node.consequent)
   end
 
+  def test_ruby_builder_builds_unless_branch_nodes
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    node = builder.send(:branch_node, [["unless hidden", builder.expression("H[:p]")]])
+
+    assert_kind_of(SyntaxTree::IfNode, node)
+    assert_kind_of(SyntaxTree::Unary, node.predicate)
+  end
+
   def test_ruby_builder_builds_silent_branches_with_nil_result
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
@@ -564,6 +572,18 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     formatted = formatted_source(builder, fragment)
     assert_includes(formatted, "return")
     assert_includes(formatted, "nil")
+  end
+
+  def test_ruby_builder_builds_silent_script_with_children
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    fragment = builder.silent_script_with_children("return unless show", builder.expression("H[:p]"))
+
+    assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
+      begin
+        return unless show
+        H[:p]
+      end
+    RUBY
   end
 
   def test_ruby_builder_builds_case_branches_from_syntax_tree_nodes

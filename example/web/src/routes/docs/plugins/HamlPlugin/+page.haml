@@ -37,7 +37,7 @@
       - `component_base_class` sets the superclass of each generated component.
       - `factory` receives every HTML tag and component call.
       - `component_children` controls how component children are passed. Use `:eager` for positional arguments or `:lazy` for a block.
-      - `variables` maps Haml variables to framework-owned objects. It accepts `global`, `class`, and `instance`.
+      - `variables` maps Haml variables to framework-owned objects. It accepts `global`, `class`, and `instance`; `$*` uses the configured `global` receiver directly.
       - `i18n` configures translations. `class` creates the helper. `constant` names it.
       - `cache_static_subtrees` reuses frozen element trees that contain no dynamic values. This is an experimental optimization.
 
@@ -52,6 +52,8 @@
       ```
 
       With the configuration above, these read `(@__props)[:title]`, `(Example::Framework::Context.current)[:request]`, and `(@__state)[:count]`.
+
+      `$*` is the complete configured global receiver rather than an indexed lookup, so `%Button{ **$* }` forwards all props. No separate splat option is needed.
 
       The mappings also apply to assignments. For an indexed state store, reassign mutable values to trigger its assignment method. Use `@items = [*@items, item]` instead of `@items << item`.
 
@@ -81,9 +83,15 @@
 
       Top-level `:ruby` defines imports, constants, and methods. Other Ruby blocks run while the component renders.
 
-      `=` prints a value, `-` runs code silently, and printed Ruby blocks such as `= if condition` render their Haml body.
+      `=` prints a value, `-` runs code silently, and printed Ruby blocks such as `= if condition` render their Haml body. Silent conditional blocks also support `- unless condition`. An empty `:ruby` filter is valid and emits no declarations.
 
-      `:markdown` filters use `MarkdownPlugin`. `:css` filters add inline styles to the module graph.
+      Dynamic brace-style attributes accept Ruby keyword splats, so a component can forward a props hash while adding or overriding values:
+
+      ```haml
+      %Button{ **button_props, disabled: $disabled } Save
+      ```
+
+      `:markdown` filters use `MarkdownPlugin`. `:css` filters add inline styles to the module graph. `:plain` filters render their text unchanged.
 
   %DocsSection{ title: "Companions" }
     :markdown

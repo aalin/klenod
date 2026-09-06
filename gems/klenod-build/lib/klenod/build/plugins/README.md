@@ -89,7 +89,8 @@ Handles `.haml` modules.
 - Transforms Haml templates into Ruby component classes exported as `Default`.
 - Rewrites Haml-side imports.
 - Supports `import_glob(...)` in Haml Ruby code and Ruby filters.
-- Supports `:markdown` filters rendered through factory calls.
+- Supports `:markdown` filters rendered through factory calls and `:plain` filters as literal text.
+- Accepts empty `:ruby` filters and Ruby keyword splats in dynamic brace-style attributes.
 - Supports Haml component references such as `%Card`.
 - Adds companion dependencies for `Component.css` and translations from `Component.intl.*.toml`.
 - Emits source maps so runtime errors can be mapped back to Haml source.
@@ -117,11 +118,17 @@ Klenod::Build::Plugins::HamlPlugin.new(
 - `component_base_class`: Ruby constant path used as the generated component superclass. Defaults to `"Object"`.
 - `factory`: Ruby constant path used for generated HTML/component calls. Defaults to `"Object"`.
 - `component_children`: controls how children of constant-named component tags such as `%Card` are passed to the factory. `:eager` generates positional children and is the default; `:lazy` generates a block whose result is an array of children. Lazy mode lets a framework defer and memoize child or slot evaluation.
-- `variables`: optional receiver expressions for app-style global, class, and instance variables in Haml Ruby code. For example, `global: "@__props"` compiles `$title` to `(@__props)[:title]`, while `instance: "@__state"` makes `@count` read and assign `(@__state)[:count]`. Built-in Ruby globals and underscore-prefixed framework variables are left untouched.
+- `variables`: optional receiver expressions for app-style global, class, and instance variables in Haml Ruby code. For example, `global: "@__props"` compiles `$title` to `(@__props)[:title]` and `$*` to `@__props`, while `instance: "@__state"` makes `@count` read and assign `(@__state)[:count]`. Use `**$*` to forward all global props; no separate splat option is needed. Built-in Ruby globals and underscore-prefixed framework variables are left untouched.
 - `i18n`: optional translation helper configuration. `class` is the helper's Ruby constant path. `constant` names the generated component constant and defaults to `I18n`.
 - `cache_static_subtrees`: optional experimental optimization. When enabled, fully static Haml tag subtrees are compiled once into frozen constants and reused across renders. Defaults to `false`.
 
 `:markdown` filters use `MarkdownPlugin`'s source-root component map convention when `markdown-components.rb` exists.
+
+An empty `:ruby` filter is valid. Dynamic brace-style attributes can forward a Ruby keyword hash alongside explicit values:
+
+```haml
+%Button{ **button_props, disabled: $disabled } Save
+```
 
 With the default `component_children: :eager`, component children are generated as positional factory arguments:
 

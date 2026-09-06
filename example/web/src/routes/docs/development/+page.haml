@@ -44,4 +44,10 @@
     :markdown
       Runtime owns source maps and backtrace rewriting so production error pages can report transformed sources without loading build plugins. Haml generated Ruby includes source map marks that let runtime errors point back to Haml source lines.
 
+  %DocsSection{ title: "Evaluation Namespaces" }
+    :markdown
+      Each development context owns a graph with a private generated-module namespace. Separate contexts can therefore evaluate modules with the same canonical ID without replacing one another. Reloads remain in their owning context and replace only that context's generated module.
+
+      This isolates Klenod's generated modules, not general Ruby process state. Use Ruby::Box when separate applications also need isolation for global constants, loaded libraries, or other process-wide state.
+
 %title= "Development Updates"

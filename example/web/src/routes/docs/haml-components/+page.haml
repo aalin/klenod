@@ -25,15 +25,23 @@
 
       Haml component references such as `%Button` compile to factory calls using the imported component class as the tag.
 
-      When `HamlPlugin` is configured with `variables: { global: "@__props" }`, app-style global variable reads become prop lookups. In the example above, `$title` compiles to `(@__props)[:title]`. This keeps templates concise while leaving the props storage object under framework control.
+      When `HamlPlugin` is configured with `variables: { global: "@__props" }`, app-style global variable reads become prop lookups. In the example above, `$title` compiles to `(@__props)[:title]`; `$*` compiles to `@__props` itself, which is useful for forwarding props with `**$*`. This keeps templates concise while leaving the props storage object under framework control.
 
       The example also configures `class: "Example::Framework::Context.current"`. Context reads use `@@name`, so `@@request` compiles to `(Example::Framework::Context.current)[:request]`. Context values inherit through nested providers and through default or named slots.
 
   %DocsSection{ title: "Ruby And Filters" }
     :markdown
-      `=` prints a value. `-` runs Ruby silently. Ruby filters define class-level code for imports and methods, while later Ruby script blocks inside the template render method can access request-local helpers.
+      `=` prints a value. `-` runs Ruby silently. Ruby filters define class-level code for imports and methods, while later Ruby script blocks inside the template render method can access request-local helpers. An empty `:ruby` filter is valid when a template generator or conditional section has no declarations to emit.
 
-      Haml also supports inline `:css` and `:markdown` filters. Markdown filters are handled by `MarkdownPlugin` and use `/markdown-components.rb` when that map exists.
+      Dynamic attribute hashes support Ruby keyword splats. Use Haml's brace-style attributes to forward a hash while retaining explicit attributes:
+
+      ```haml
+      %button{ type: "button", **button_props } Save
+      ```
+
+      Silent conditional blocks support both `if` and `unless`, so `- unless hidden` renders its nested Haml only when the condition is false.
+
+      Haml also supports inline `:css`, `:markdown`, and `:plain` filters. Markdown filters are handled by `MarkdownPlugin` and use `/markdown-components.rb` when that map exists; `:plain` renders its text unchanged.
 
   %DocsSection{ title: "Children And Slots" }
     :markdown

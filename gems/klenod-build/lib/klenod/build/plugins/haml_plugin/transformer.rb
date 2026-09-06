@@ -12,6 +12,8 @@ module Klenod
     module Plugins
       module HamlPlugin
         class Transformer
+          ATTRIBUTE_SPLATS_KEY = :__klenod_attribute_splats__
+
           VALID_CONST_PATH = /\A[A-Z]\w*(?:::[A-Z]\w*)*\z/
 
           ConstPath = Data.define(:value) do
@@ -369,6 +371,13 @@ module Klenod
               )
             end
 
+            unless source.start_with?("if ", "unless ", "case ")
+              return builder.silent_script_with_children(
+                source,
+                compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
+              )
+            end
+
             compile_silent_branches(
               split_silent_script_branches(node, builder: builder),
               factory: factory,
@@ -507,7 +516,7 @@ module Klenod
           end
 
           def compile_ruby_filter(node, builder:, source: "", import_rewriter: nil)
-            text = node.value.fetch(:text)
+            text = node.value.fetch(:text) || ""
             if import_rewriter && text.include?("import")
               source_column_offset = source.lines.fetch(node.line, "").match(/\A\s*/).to_s.length
               text = import_rewriter.call(text, source_line_offset: node.line, source_column_offset: source_column_offset)
@@ -552,8 +561,9 @@ module Klenod
           def compile_filter_node(node, builder:, markdown_compiler:)
             return builder.render_ruby_filter(compile_ruby_filter(node, builder: builder)) if ruby_filter?(node)
             return builder.expression(markdown_compiler.compile(node.value.fetch(:text), interpolate: true)) if markdown_filter?(node)
+            return builder.literal(node.value.fetch(:text).to_s) if plain_filter?(node)
 
-            raise ArgumentError, "Only :ruby and :markdown Haml filters are supported"
+            raise ArgumentError, "Only :ruby, :markdown, and :plain Haml filters are supported"
           end
 
           def ruby_filter?(node)
@@ -562,6 +572,10 @@ module Klenod
 
           def markdown_filter?(node)
             node.type == :filter && node.value.fetch(:name) == "markdown"
+          end
+
+          def plain_filter?(node)
+            node.type == :filter && node.value.fetch(:name) == "plain"
           end
 
           def css_filter?(node)
@@ -601,8 +615,15 @@ module Klenod
 
               dynamic = {}
               hash.node.assocs.each do |assoc|
+                if assoc.is_a?(SyntaxTree::AssocSplat)
+                  splat_source = hash.source[assoc.value.location.start_char...assoc.value.location.end_char]
+                  props[ATTRIBUTE_SPLATS_KEY] ||= []
+                  props[ATTRIBUTE_SPLATS_KEY] << builder.expression(splat_source)
+                  next
+                end
+
                 key = attribute_key(assoc.key, builder: builder)
-                value = attribute_value(assoc, source, builder: builder)
+                value = attribute_value(assoc, builder: builder)
                 dynamic[key] = value
                 props[key] = value
               end
@@ -722,16 +743,9 @@ module Klenod
             end
           end
 
-          def node_source(source, node)
-            location = node.location
-            return source unless location
-
-            source[location.start_char...location.end_char]
-          end
-
-          def attribute_value(assoc, source, builder:)
+          def attribute_value(assoc, builder:)
             value = assoc.value
-            return builder.node_fragment(node_source(source, value), value) if value
+            return builder.fragment(value) if value
 
             key = omitted_attribute_value_name(assoc.key)
             return builder.expression(key) if key
