@@ -118,6 +118,7 @@ module Klenod
         @plugins = plugins
         @mode = mode
         @base = Runtime::AssetUrl.normalize(base)
+        @asset_origin = Runtime::AssetUrl.origin(@base)
         @update_handlers = []
         @graph =
           Graph.new(
@@ -131,7 +132,7 @@ module Klenod
           )
       end
 
-      attr_reader :graph, :mode, :base
+      attr_reader :graph, :mode, :base, :asset_origin
 
       def evaluate(specifier)
         @graph.load(specifier)

@@ -45,6 +45,11 @@ module Klenod
         normalized = normalize(base)
         normalized if normalized.start_with?("/")
       end
+
+      def origin(base)
+        uri = URI.parse(normalize(base))
+        uri.origin if uri.is_a?(URI::HTTP)
+      end
     end
   end
 end

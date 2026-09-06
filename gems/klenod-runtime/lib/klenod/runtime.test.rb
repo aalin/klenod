@@ -231,7 +231,9 @@ class Klenod::RuntimeBoundaryTest
     loaded = Klenod::Runtime::BundleFormat.load_bytes(Klenod::Runtime::BundleFormat.dump(bundle))
 
     assert_equal("https://cdn.example.test/assets/logo.hash.png", bundle.asset_url(asset))
+    assert_equal("https://cdn.example.test", bundle.asset_origin)
     assert_equal(bundle.base, loaded.base)
+    assert_equal(bundle.asset_origin, loaded.asset_origin)
     assert_equal(bundle.asset_url(asset), loaded.asset_url(asset))
     assert_equal(bundle.asset_url(asset), loaded.asset(asset.output_path).url)
   end
