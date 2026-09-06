@@ -45,11 +45,13 @@ module Klenod
             import_rewriter: nil,
             markdown_components_source: "{}",
             variables: nil,
+            event_handler: nil,
             haml_helper_source: nil,
             cache_static_subtrees: false
           )
             component_base_class = ConstPath.parse(component_base_class, name: "component_base_class")
             factory = ConstPath.parse(factory, name: "factory")
+            event_handler = ConstPath.parse(event_handler, name: "event_handler") if event_handler
             validate_component_children(component_children)
             builder = RubyBuilder.new(profiler: profiler, variables: variables)
             haml_helper_source ||= builder.constant_assignment("HamlHelper", "Object") if styleable || cache_static_subtrees
@@ -58,11 +60,13 @@ module Klenod
             previous_static_constants = @static_constants
             previous_cache_static_subtrees = @cache_static_subtrees
             previous_component_children = @component_children
+            previous_event_handler = @event_handler
             @profiler = profiler
             @module_id = module_id
             @static_constants = []
             @cache_static_subtrees = cache_static_subtrees
             @component_children = component_children
+            @event_handler = event_handler
             template =
               if profiler
                 profiler.measure(:haml_compile_template, module_id: module_id.to_s) do
@@ -132,12 +136,13 @@ module Klenod
             end
           rescue RubyParseError => error
             raise ParseError.new(error, source: source, module_id: module_id)
-          ensure
+            ensure
             @profiler = previous_profiler
             @module_id = previous_module_id
             @static_constants = previous_static_constants
             @cache_static_subtrees = previous_cache_static_subtrees
             @component_children = previous_component_children
+            @event_handler = previous_event_handler
           end
 
           private
@@ -602,7 +607,7 @@ module Klenod
 
             measure_compile(:haml_compile_dynamic_attributes) do
               source = builder.line_rewritten_source(source, node.line)
-              simple = simple_dynamic_attributes(source, builder: builder)
+              simple = simple_dynamic_attributes(source, builder: builder) unless @event_handler
               if simple
                 simple.each { |key, value| props[key] = value }
                 return simple
@@ -623,7 +628,7 @@ module Klenod
                 end
 
                 key = attribute_key(assoc.key, builder: builder)
-                value = attribute_value(assoc, builder: builder)
+                value = event_handler_value(key, assoc.value, builder: builder) || attribute_value(assoc, builder: builder)
                 dynamic[key] = value
                 props[key] = value
               end
@@ -751,6 +756,16 @@ module Klenod
             return builder.expression(key) if key
 
             builder.ruby_parse_error(source, line_no: assoc.key.location&.start_line, context: "Could not parse Haml dynamic attributes")
+          end
+
+          def event_handler_value(key, value, builder:)
+            return unless @event_handler && key.to_s.match?(/\Aon[a-z]/)
+            return unless value
+
+            method_name = builder.fragment(value).source
+            return unless method_name.match?(/\A[a-zA-Z_]\w*[!?=]?\z/)
+
+            builder.expression("#{@event_handler}.callback(self, :#{method_name})")
           end
 
           def omitted_attribute_value_name(node)

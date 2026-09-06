@@ -61,6 +61,23 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_includes(result.code, "FakeFramework::H[:p, \"Body\"]")
   end
 
+  def test_haml_transformer_can_compile_event_handler_references
+    transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
+    result =
+      transformer.call(
+        source: "%button(onclick=handle_click) Click\n",
+        module_id: ModuleId.new("pages/page.haml", nil),
+        component_class_name: "Page",
+        component_base_class: "Object",
+        factory: "#{self.class.name}::FakeFramework::H",
+        event_handler: "#{self.class.name}::FakeFramework::H",
+        styles_source: "{}.freeze",
+        translations_source: "{}.freeze"
+      )
+
+    assert_includes(result.code, "FakeFramework::H.callback(self, :handle_click)")
+  end
+
   def test_haml_transformer_wraps_parse_errors_with_source_context
     transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     source = <<~HAML

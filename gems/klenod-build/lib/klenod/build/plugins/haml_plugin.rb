@@ -66,6 +66,7 @@ module Klenod
             factory: DEFAULT_FACTORY,
             component_children: DEFAULT_COMPONENT_CHILDREN,
             variables: nil,
+            event_handler: nil,
             i18n: nil,
             cache_static_subtrees: false
           )
@@ -73,6 +74,7 @@ module Klenod
             @factory = factory
             @component_children = validate_component_children(component_children)
             @variables = validate_variables(variables)
+            @event_handler = event_handler
             @i18n_class, @i18n_constant = validate_i18n_options(i18n)
             @cache_static_subtrees = cache_static_subtrees
             @transformer = Transformer.new
@@ -208,6 +210,7 @@ module Klenod
                 import_rewriter: import_rewriter,
                 markdown_components_source: markdown_components_dependency ? "__klenod_import__(#{markdown_components_dependency.id.inspect})::Default" : "{}",
                 variables: @variables,
+                event_handler: @event_handler,
                 cache_static_subtrees: @cache_static_subtrees
               )
             import_rewrite =
