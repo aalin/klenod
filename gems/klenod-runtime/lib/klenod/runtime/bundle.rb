@@ -26,7 +26,7 @@ module Klenod
     AssetReference = Data.define(:index, :asset)
 
     class Bundle
-      attr_reader :entrypoints, :modules, :assets, :source_root, :base, :asset_origin
+      attr_reader :entrypoints, :modules, :assets, :source_root, :base, :asset_origin, :namespace
 
       def self.load(source, source_root: nil)
         BundleFormat.load(source, source_root: source_root)
@@ -36,13 +36,14 @@ module Klenod
         load(path, source_root: source_root)
       end
 
-      def initialize(entrypoints, modules, assets, source_root: nil, base: AssetUrl::DEFAULT_BASE)
+      def initialize(entrypoints, modules, assets, source_root: nil, base: AssetUrl::DEFAULT_BASE, namespace: Module.new)
         @entrypoints = entrypoints
         @modules = modules
         @source_root = source_root
         @base = AssetUrl.normalize(base)
         @asset_origin = AssetUrl.origin(@base)
         @assets = bind_asset_urls(assets)
+        @namespace = namespace
         @mods = {}
       end
 
@@ -155,6 +156,7 @@ module Klenod
         @base = AssetUrl.normalize(base)
         @asset_origin = AssetUrl.origin(@base)
         @assets = bind_asset_urls(assets)
+        @namespace = Module.new
         @mods = {}
       end
 
@@ -315,7 +317,8 @@ module Klenod
             source_map: spec.source_map,
             version: spec.version,
             constant_name: spec.constant_name,
-            eval_path: eval_path_for(spec)
+            eval_path: eval_path_for(spec),
+            namespace: namespace
           )
       end
 

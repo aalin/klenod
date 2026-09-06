@@ -124,6 +124,29 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_equal(41, bundle.mod("dep.rb").const_get(:Exports)::VALUE)
   end
 
+  def test_bundles_with_the_same_module_ids_use_separate_namespaces
+    module_spec = lambda do |value|
+      Klenod::Runtime::ModuleSpec.new(
+        "entry.rb",
+        "entry.rb",
+        "VALUE = #{value}",
+        {},
+        nil,
+        0,
+        Klenod::Runtime::Mod.constant_name_for("entry.rb")
+      )
+    end
+
+    first = Klenod::Runtime::Bundle.new({"entry" => "entry.rb"}, {"entry.rb" => module_spec.call(1)}, {})
+    second = Klenod::Runtime::Bundle.new({"entry" => "entry.rb"}, {"entry.rb" => module_spec.call(2)}, {})
+
+    assert_equal(1, first.exports("entry")::VALUE)
+    assert_equal(2, second.exports("entry")::VALUE)
+    refute_same(first.namespace, second.namespace)
+    assert_same(first.load("entry"), first.namespace.const_get(first.load("entry").constant_name))
+    assert_same(second.load("entry"), second.namespace.const_get(second.load("entry").constant_name))
+  end
+
   def test_bundle_load_defers_lazy_imported_modules
     bundle =
       Klenod::Runtime::Bundle.new(

@@ -55,7 +55,7 @@ module Klenod
         end
       end
 
-      attr_reader :path, :source, :source_map, :version, :constant_name, :eval_path
+      attr_reader :path, :source, :source_map, :version, :constant_name, :eval_path, :namespace
 
       def self.constant_name_for(path)
         "Mod_#{Digest::SHA256.hexdigest(path)[0, 24]}"
@@ -65,7 +65,7 @@ module Klenod
         "Mod(#{path.inspect})"
       end
 
-      def initialize(path, source, imports: {}, source_map: nil, version: 0, constant_name: nil, eval_path: nil)
+      def initialize(path, source, imports: {}, source_map: nil, version: 0, constant_name: nil, eval_path: nil, namespace: Generated)
         @path = path
         @source = source
         @imports = imports
@@ -73,6 +73,7 @@ module Klenod
         @version = version
         @constant_name = constant_name || self.class.constant_name_for(path)
         @eval_path = eval_path || path
+        @namespace = namespace
         register_constant
         create_exports
       end
@@ -84,6 +85,7 @@ module Klenod
       def marshal_load(data)
         @path, @source, @source_map, @version, @constant_name, @eval_path = data
         @eval_path ||= @path
+        @namespace = Generated
         @imports = {}
         register_constant
         create_exports
@@ -96,8 +98,8 @@ module Klenod
       private
 
       def register_constant
-        Generated.__send__(:remove_const, @constant_name) if Generated.const_defined?(@constant_name, false)
-        Generated.const_set(@constant_name, self)
+        @namespace.__send__(:remove_const, @constant_name) if @namespace.const_defined?(@constant_name, false)
+        @namespace.const_set(@constant_name, self)
       end
 
       def create_exports

@@ -125,7 +125,9 @@ module Klenod
           next unless mod.respond_to?(:constant_name)
 
           display_path = mod.respond_to?(:path) ? mod.path : key
-          index["Klenod::Runtime::Generated::#{mod.constant_name}"] = "Mod[#{display_path.inspect}]"
+          display_name = "Mod[#{display_path.inspect}]"
+          index["Klenod::Runtime::Generated::#{mod.constant_name}"] = display_name
+          index[mod.constant_name] = display_name
         end
       end
 

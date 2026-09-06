@@ -52,6 +52,8 @@
 
       Call `bundle.preload_entrypoints` to eagerly evaluate everything reachable from configured entrypoints, or `bundle.preload` to evaluate every module in the bundle.
 
+      Each loaded bundle owns its own runtime namespace. Multiple bundles can therefore run in one Ruby process even when they use the same module IDs. The namespace only isolates Klenod's generated modules; use Ruby::Box when bundles also need isolation from process-wide Ruby state.
+
       Production deployments that only load prebuilt bundles should depend on `klenod-runtime`.
 
   %DocsSection{ title: "Rack Helpers" }
