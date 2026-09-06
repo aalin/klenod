@@ -78,6 +78,23 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_includes(result.code, "FakeFramework::H.callback(self, :handle_click)")
   end
 
+  def test_haml_transformer_compiles_component_on_props_as_event_handlers
+    transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
+    result =
+      transformer.call(
+        source: "%GameGrid(ondraw=handle_draw)\n",
+        module_id: ModuleId.new("pages/page.haml", nil),
+        component_class_name: "Page",
+        component_base_class: "Object",
+        factory: "#{self.class.name}::FakeFramework::H",
+        event_handler: "#{self.class.name}::FakeFramework::H",
+        styles_source: "{}.freeze",
+        translations_source: "{}.freeze"
+      )
+
+    assert_includes(result.code, "callback(self, :handle_draw)")
+  end
+
   def test_haml_transformer_wraps_parse_errors_with_source_context
     transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     source = <<~HAML
