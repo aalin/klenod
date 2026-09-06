@@ -3,6 +3,7 @@
 require "image_size"
 require "rmagick"
 require "uri"
+require "base64"
 
 require_relative "../asset"
 require_relative "../dependency"
@@ -27,12 +28,15 @@ module Klenod
 
           ImageDefaultKey = Data.define(:source_path, :source_hash, :format, :quality)
           ImageVariantKey = Data.define(:source_path, :source_hash, :width, :format, :quality)
+          ImagePlaceholderKey = Data.define(:source_path, :source_hash, :width, :format, :quality)
 
-          def initialize(widths: [], formats: nil)
+          def initialize(widths: [], formats: nil, placeholder: nil)
             @widths = widths
             @formats = formats
+            @placeholder = normalize_placeholder(placeholder)
             @default_asset_cache = {}
             @variant_cache = {}
+            @placeholder_cache = {}
           end
 
           def resolve(dependency, _context)
@@ -51,8 +55,9 @@ module Klenod
             image_options = image_options_for(module_id)
             asset = default_image_asset(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
             variant_assets = generate_variant_assets(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
+            placeholder = image_placeholder(source_path, source_hash)
             [asset, *variant_assets].each { |image_asset| image_asset.url = context.asset_url(image_asset.output_path) }
-            javascript_asset = javascript_image_asset(module_id, asset, variant_assets, context)
+            javascript_asset = javascript_image_asset(module_id, asset, variant_assets, context, placeholder:)
             javascript_asset.url = context.asset_url(javascript_asset.output_path)
             assets = [asset, *variant_assets]
             image_runtime_dependency =
@@ -66,7 +71,7 @@ module Klenod
 
             transform =
               TransformResult.new(
-                image_module_source(module_id, assets, image_runtime_dependency, context),
+                image_module_source(module_id, assets, image_runtime_dependency, context, placeholder:),
                 [image_runtime_dependency],
                 nil,
                 assets,
@@ -184,13 +189,14 @@ module Klenod
           end
 
           ImageOptions = Data.define(:widths, :formats, :explicit_formats, :quality)
+          PlaceholderOptions = Data.define(:width, :format, :quality)
 
           def image_runtime_source
             <<~RUBY
               ImageMetadata =
-                Data.define(:src, :width, :height, :content_type, :aspect_ratio, :variants) do
-                  def initialize(src:, width:, height:, content_type:, aspect_ratio:, variants:)
-                    super(src:, width:, height:, content_type:, aspect_ratio:, variants: variants.dup.freeze)
+                Data.define(:src, :width, :height, :content_type, :aspect_ratio, :variants, :placeholder) do
+                  def initialize(src:, width:, height:, content_type:, aspect_ratio:, variants:, placeholder: nil)
+                    super(src:, width:, height:, content_type:, aspect_ratio:, variants: variants.dup.freeze, placeholder:)
                   end
 
                   alias to_s src
@@ -219,7 +225,7 @@ module Klenod
             "# image asset: #{module_id}\n"
           end
 
-          def image_module_source(module_id, assets, image_runtime_dependency, context)
+          def image_module_source(module_id, assets, image_runtime_dependency, context, placeholder:)
             asset = image_asset(assets)
             variants = image_variant_assets(assets).map { |variant_asset| image_variant_source(variant_asset, context) }
 
@@ -232,6 +238,7 @@ module Klenod
                   height: #{asset.metadata[:height].inspect},
                   content_type: #{asset.content_type.inspect},
                   aspect_ratio: #{AssetJavaScriptMetadata.aspect_ratio(asset.metadata[:width], asset.metadata[:height]).inspect},
+                  placeholder: #{placeholder.inspect},
                   variants: [
                     #{variants.join(",\n    ")}
                   ]
@@ -255,8 +262,36 @@ module Klenod
             RUBY
           end
 
-          def javascript_image_asset(module_id, asset, variant_assets, context)
-            code = javascript_image_module_source(asset, variant_assets, context)
+          def image_placeholder(source_path, source_hash)
+            return nil unless @placeholder
+
+            key = ImagePlaceholderKey.new(source_path.to_s, source_hash, @placeholder.width, @placeholder.format, @placeholder.quality)
+            @placeholder_cache[key] ||= begin
+              bytes = generate_image_bytes(source_path, @placeholder.format, width: @placeholder.width, quality: @placeholder.quality)
+              "data:image/#{@placeholder.format};base64,#{Base64.strict_encode64(bytes)}"
+            end
+          end
+
+          def normalize_placeholder(value)
+            return nil if value.nil? || value == false
+
+            value = {width: value} if value.is_a?(Integer)
+            unless value.is_a?(Hash)
+              raise ArgumentError, "placeholder must be nil, false, an Integer width, or a Hash"
+            end
+
+            width = Integer(value.fetch(:width, 16))
+            raise ArgumentError, "placeholder width must be positive" unless width.positive?
+
+            format = value.fetch(:format, "webp").to_s.downcase
+            quality = Integer(value.fetch(:quality, 80))
+            raise ArgumentError, "placeholder quality must be between 0 and 100" unless (0..100).cover?(quality)
+
+            PlaceholderOptions.new(width, format, quality)
+          end
+
+          def javascript_image_asset(module_id, asset, variant_assets, context, placeholder:)
+            code = javascript_image_module_source(asset, variant_assets, context, placeholder:)
             hash = Hashing.short(code)
             Asset.new(
               module_id.path,
@@ -269,14 +304,15 @@ module Klenod
             )
           end
 
-          def javascript_image_module_source(asset, variant_assets, context)
+          def javascript_image_module_source(asset, variant_assets, context, placeholder:)
             variants = variant_assets.map { "new ImageVariant(#{AssetJavaScriptMetadata.object_literal(javascript_image_variant(it, context))})" }
             properties = {
               src: asset.url,
               width: asset.metadata[:width],
               height: asset.metadata[:height],
               contentType: asset.content_type,
-              aspectRatio: AssetJavaScriptMetadata.aspect_ratio(asset.metadata[:width], asset.metadata[:height])
+              aspectRatio: AssetJavaScriptMetadata.aspect_ratio(asset.metadata[:width], asset.metadata[:height]),
+              placeholder: placeholder
             }.map { |key, value| AssetJavaScriptMetadata.property(key, value) }
             properties << %(variants:[#{variants.join(",")}])
 

@@ -33,9 +33,10 @@ module Klenod
           }
 
           export default class ImageMetadata extends ImageBase {
-            constructor({ src, width, height, contentType, aspectRatio, variants = [] }) {
+            constructor({ src, width, height, contentType, aspectRatio, variants = [], placeholder = null }) {
               super({ src, width, height, contentType, aspectRatio });
               this.variants = Object.freeze([...variants]);
+              this.placeholder = placeholder;
               Object.freeze(this);
             }
 

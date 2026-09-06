@@ -143,6 +143,30 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     end
   end
 
+  def test_image_placeholder_is_available_in_development_and_runtime_bundles
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/logo.png", real_png_bytes(width: 8, height: 4))
+      File.write("#{dir}/entry.rb", "Logo = import(\"images/logo.png\")\nIMAGE = Logo\n")
+      output = "#{dir}/bundle.mpk"
+      plugins = [Klenod::Build::Plugins::RubyPlugin.new, Klenod::Build::Plugins::ImagePlugin.new(placeholder: {width: 2, format: "webp", quality: 80})]
+
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: plugins)
+      record = context.evaluate("entry")
+      image = context.graph.mods.fetch(record.id).const_get(:Exports)::IMAGE
+
+      assert_match(%r{\Adata:image/webp;base64,}, image.placeholder)
+      assert(image.frozen?)
+
+      context.build(entrypoints: ["entry"], output: output)
+      loaded = Klenod::Runtime.load_bundle(output)
+      runtime_image = loaded.load("entry").const_get(:Exports)::IMAGE
+
+      assert_equal(image.placeholder, runtime_image.placeholder)
+      assert_match(%r{\Adata:image/webp;base64,}, runtime_image.placeholder)
+    end
+  end
+
   def test_ruby_import_of_image_returns_generated_variants
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")
