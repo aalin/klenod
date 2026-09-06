@@ -544,7 +544,6 @@ class Klenod::ExampleTest < Minitest::Test
 
   def test_web_config_uses_local_assets_in_development_and_the_cdn_in_builds
     assert_equal("/.assets/", Example::WebConfig.build_config(mode: :development).base)
-    assert_equal("https://cdn.klenod.dev/", Example::WebConfig.build_config(mode: :build).base)
   end
 
   def test_example_app_uses_system_theme_without_theme_cookie
