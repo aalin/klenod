@@ -97,6 +97,7 @@ module Klenod
           Plugins::GemImportPlugin.new,
           Plugins::SvgPlugin.new,
           Plugins::ImagePlugin.new,
+          Plugins::StaticAssetPlugin.new,
           Plugins::JsonPlugin.new,
           Plugins::YamlPlugin.new,
           Plugins::TomlPlugin.new,

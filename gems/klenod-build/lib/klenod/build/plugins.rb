@@ -11,6 +11,7 @@ module Klenod
       autoload :GoogleFontsPlugin, File.expand_path("plugins/google_fonts_plugin", __dir__)
       autoload :SvgPlugin, File.expand_path("plugins/svg_plugin", __dir__)
       autoload :ImagePlugin, File.expand_path("plugins/image_plugin", __dir__)
+      autoload :StaticAssetPlugin, File.expand_path("plugins/static_asset_plugin", __dir__)
       autoload :DataPlugin, File.expand_path("plugins/data_plugin", __dir__)
       autoload :JsonPlugin, File.expand_path("plugins/data_plugin", __dir__)
       autoload :YamlPlugin, File.expand_path("plugins/data_plugin", __dir__)
