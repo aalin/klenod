@@ -4,6 +4,7 @@ PATH
     klenod-build (0.0.7)
       async (~> 2.42)
       async-http (>= 0.95.1, < 0.104.0)
+      base64 (~> 0.3)
       brotli (~> 0.8)
       image_size (~> 3.6)
       klenod-runtime (= 0.0.7)
@@ -83,6 +84,7 @@ GEM
     bake (0.25.0)
       bigdecimal
       samovar (~> 2.1)
+    base64 (0.3.0)
     bigdecimal (4.1.2)
     brotli (0.8.0)
     citrus (3.0.2)
@@ -225,6 +227,7 @@ CHECKSUMS
   async-pool (0.12.0) sha256=5580493dc024bd704dab2ed0bf1307100722e49cbb825c7965f8501194f58506
   async-process (1.4.0) sha256=859c2901b9047b6b8843e9a21ec7f3c626eb04efdcff66185a05ede99257f590
   bake (0.25.0) sha256=a47bdc6a26addc048827debc36fe27bb4d5d71ac2958ad910b5386e9baf49869
+  base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
   bigdecimal (4.1.2) sha256=53d217666027eab4280346fba98e7d5b66baaae1b9c3c1c0ffe89d48188a3fbd
   brotli (0.8.0) sha256=0c5a42046b3b603fb109656881147fd76064c034b7d19c1b4fcc32a093a4d55d
   citrus (3.0.2) sha256=4ec2412fc389ad186735f4baee1460f7900a8e130ffe3f216b30d4f9c684f650
