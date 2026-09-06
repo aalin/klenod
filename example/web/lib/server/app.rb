@@ -87,7 +87,7 @@ module Example
       def asset_app
         @asset_app ||= begin
           context.write_assets(assets_dir) if assets_dir
-          Klenod::Rack::AssetApp.new(context, assets_dir: assets_dir, base: config.base)
+          Klenod::Rack::AssetApp.new(context, assets_dir: assets_dir, base: config.base, path_prefix: "/.assets/")
         end
       end
 

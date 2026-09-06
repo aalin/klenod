@@ -20,7 +20,7 @@ module Example
         assets_dir: "dist/public",
         plugins: plugins,
         mode: mode,
-        base: ENV.fetch("ASSET_BASE", "/.assets/"),
+        base: (mode == :development) ? "/.assets/" : "https://assets.klenod.dev/",
         base_dir: APP_ROOT
       )
     end

@@ -25,11 +25,10 @@
       Set Klenod's `base` build option to choose the browser-visible asset prefix. It accepts an origin-relative path or an HTTP(S) CDN URL, and normalizes a missing trailing slash:
 
       ```ruby
-      base "/.assets"
-      # or: base "https://cdn.example.test"
+      base "https://cdn.klenod.dev/"
       ```
 
-      The example web app reads `ASSET_BASE`, defaulting to `/.assets/`. Emitted files live directly in `dist/public`; configure the CDN origin or upload mapping to serve that directory at the chosen base. Every emitted asset has a build-time `url` for rendering directly. Generated CSS, JavaScript, image, SVG, and font URLs already use the configured base.
+      The example web app uses `/.assets/` in development and `https://cdn.klenod.dev/` in builds. Emitted files live directly in `dist/public`; configure the CDN origin or upload mapping to serve that directory at the chosen base. Every emitted asset has a build-time `url` for rendering directly. Generated CSS, JavaScript, image, SVG, and font URLs already use the configured base.
 
   %DocsSection{ title: "Lookup APIs" }
     :markdown
@@ -63,11 +62,12 @@
         bundle,
         assets_dir: "dist/public",
         base: bundle.base,
+        path_prefix: "/.assets/",
         app: application
       )
       ```
 
-      The asset app maps public paths under `/.assets/` to root-relative files in `assets_dir`, with immutable cache headers, and delegates every other request to `app`, which calls the bundle entrypoint. That entrypoint should accept a Rack environment and return a Rack response. When matching `.br` files are present in `assets_dir`, the asset app also serves Brotli responses to clients that accept them. Pass `base:` to choose another origin-relative public prefix; use `path_prefix:` when an external CDN base needs a local development-serving prefix.
+      The asset app maps public paths under `/.assets/` to root-relative files in `assets_dir`, with immutable cache headers, and delegates every other request to `app`, which calls the bundle entrypoint. When matching `.br` files are present in `assets_dir`, the asset app also serves Brotli responses to clients that accept them. This lets the CDN forward `https://cdn.klenod.dev/<asset>` to `https://klenod.dev/.assets/<asset>`. Configure the CDN to return `Access-Control-Allow-Origin: https://klenod.dev` so browsers can load CDN fonts.
 
   %DocsSection{ title: "CSS, SVG, And Images" }
     :markdown
