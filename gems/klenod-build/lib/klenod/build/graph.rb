@@ -56,7 +56,7 @@ module Klenod
         end
       end
 
-      attr_reader :records, :mods, :asset_generation_queue, :mode, :profiler, :base
+      attr_reader :records, :mods, :asset_generation_queue, :mode, :profiler, :base, :namespace
       attr_reader :plugins
 
       def initialize(
@@ -80,6 +80,7 @@ module Klenod
           )
         @records = {}
         @mods = {}
+        @namespace = Module.new
         @virtual_sources = {}
         @virtual_metadata = {}
         @virtual_owners = {}
@@ -358,7 +359,8 @@ module Klenod
             imports: imports_for(record.resolved_dependencies, dependency_records),
             source_map: record.source_map,
             version: record.version,
-            eval_path: eval_path_for(module_id)
+            eval_path: eval_path_for(module_id),
+            namespace: namespace
           )
 
         @mods[module_id] = mod
@@ -540,7 +542,8 @@ module Klenod
           imports: imports_for(resolved_dependencies, dependency_records),
           source_map: transform.source_map,
           version: cached ? cached.version + 1 : 0,
-          eval_path: eval_path_for(module_id)
+          eval_path: eval_path_for(module_id),
+          namespace: namespace
         )
       end
 

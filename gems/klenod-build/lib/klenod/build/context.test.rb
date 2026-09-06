@@ -186,6 +186,28 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_development_contexts_with_the_same_module_id_use_separate_namespaces
+    Dir.mktmpdir do |first_dir|
+      Dir.mktmpdir do |second_dir|
+        File.write("#{first_dir}/entry.rb", "VALUE = 1\n")
+        File.write("#{second_dir}/entry.rb", "VALUE = 2\n")
+
+        first = context_with_css(first_dir)
+        second = context_with_css(second_dir)
+        first_record = first.evaluate("entry")
+        second_record = second.evaluate("entry")
+        first_mod = first.graph.mods.fetch(first_record.id)
+        second_mod = second.graph.mods.fetch(second_record.id)
+
+        assert_equal(1, first.exports(first_record)::VALUE)
+        assert_equal(2, second.exports(second_record)::VALUE)
+        refute_same(first.graph.namespace, second.graph.namespace)
+        assert_same(first_mod, first.graph.namespace.const_get(first_mod.constant_name))
+        assert_same(second_mod, second.graph.namespace.const_get(second_mod.constant_name))
+      end
+    end
+  end
+
   def test_virtual_modules_keep_logical_eval_paths
     Dir.mktmpdir do |dir|
       context =

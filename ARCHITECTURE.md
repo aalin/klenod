@@ -110,7 +110,7 @@ Sibling dependency loading can overlap. Plugins should avoid unguarded shared mu
 
 Each collected module is evaluated as a `Klenod::Runtime::Mod`.
 
-Runtime modules get stable generated constant names so instances can be marshaled and unmarshaled. Transformed source is evaluated inside the generated runtime module, and exported values live under `Exports`.
+Runtime modules get stable generated constant names so instances can be marshaled and unmarshaled. Each runtime bundle and development graph owns a separate generated-module namespace, so module IDs can overlap across contexts without replacing one another. Transformed source is evaluated inside the generated runtime module, and exported values live under `Exports`.
 
 Ruby and Haml modules generally assign `Default` for the default export. Importing a Haml file from Haml/Ruby returns the component class.
 
