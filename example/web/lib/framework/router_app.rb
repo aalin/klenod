@@ -94,7 +94,7 @@ module Example
         route_asset_module_ids = route_asset_module_ids_for(match)
         css_asset_references = context.asset_references_for_module(route_asset_module_ids, type: :css)
         javascript_asset_references = context.asset_references_for_module(route_asset_module_ids, type: :javascript)
-        early_hints_sent = send_early_hints(raw_request, css_asset_references, javascript_asset_references)
+        send_early_hints(raw_request, context.asset_origin, css_asset_references, javascript_asset_references)
 
         body =
           Context.with(request: request, routes: routes) do
@@ -109,6 +109,7 @@ module Example
                 root,
                 stylesheet_references: css_asset_references,
                 javascript_references: javascript_asset_references,
+                asset_preconnect_origin: context.asset_origin,
                 children: route_children
               ).render
             render_html_document(document_node)
@@ -118,7 +119,11 @@ module Example
           Response.html(
             body,
             status: status,
-            headers: html_response_headers(css_asset_references, javascript_asset_references, include_link: !early_hints_sent)
+            headers: html_response_headers(
+              context.asset_origin,
+              css_asset_references,
+              javascript_asset_references
+            )
           ),
           request
         )
@@ -205,17 +210,17 @@ module Example
         context.graph.source_dir if context.respond_to?(:graph)
       end
 
-      def html_response_headers(css_asset_references, javascript_asset_references, include_link: true)
+      def html_response_headers(asset_origin, css_asset_references, javascript_asset_references)
         headers = {"vary" => "Cookie, Accept"}
-        link = asset_preload_link_header(css_asset_references, javascript_asset_references)
-        headers["link"] = link if include_link && !link.empty?
+        link = asset_preload_link_header(asset_origin, css_asset_references, javascript_asset_references)
+        headers["link"] = link unless link.empty?
         headers
       end
 
-      def send_early_hints(raw_request, css_asset_references, javascript_asset_references)
+      def send_early_hints(raw_request, asset_origin, css_asset_references, javascript_asset_references)
         return unless raw_request&.respond_to?(:send_interim_response)
 
-        link = asset_preload_link_header(css_asset_references, javascript_asset_references)
+        link = asset_preload_link_header(asset_origin, css_asset_references, javascript_asset_references)
         return false if link.empty?
 
         raw_request.send_interim_response(103, [["link", link]])
@@ -224,8 +229,9 @@ module Example
         false
       end
 
-      def asset_preload_link_header(css_asset_references, javascript_asset_references)
+      def asset_preload_link_header(asset_origin, css_asset_references, javascript_asset_references)
         [
+          *preconnect_links(asset_origin),
           *stylesheet_preload_links(css_asset_references),
           *asset_preload_links(javascript_asset_references),
           *modulepreload_links(javascript_asset_references)
@@ -235,6 +241,12 @@ module Example
       def stylesheet_preload_links(asset_references)
         asset_references
           .map { |reference| %(<#{reference.asset.url}>; rel=preload; as=style) }
+      end
+
+      def preconnect_links(asset_origin)
+        return [] unless asset_origin
+
+        ["<#{asset_origin}>; rel=preconnect", "<#{asset_origin}>; rel=preconnect; crossorigin"]
       end
 
       def modulepreload_links(asset_references)

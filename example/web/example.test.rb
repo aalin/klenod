@@ -543,7 +543,23 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_web_config_uses_local_assets_in_development_and_the_cdn_in_builds
-    assert_equal("/.assets/", Example::WebConfig.build_config(mode: :development).base)
+    development = Example::WebConfig.build_config(mode: :development).context
+    build = Example::WebConfig.build_config(mode: :build).context
+
+    assert_equal("/.assets/", development.base)
+    assert_nil(development.asset_origin)
+    assert_equal("https://assets.klenod.dev/", build.base)
+    assert_equal("https://assets.klenod.dev", build.asset_origin)
+  end
+
+  def test_router_app_preconnects_an_external_asset_origin
+    router_app = Example::Framework::RouterApp.allocate
+
+    assert_equal([], router_app.send(:preconnect_links, nil))
+    assert_equal(
+      ["<https://assets.klenod.dev>; rel=preconnect", "<https://assets.klenod.dev>; rel=preconnect; crossorigin"],
+      router_app.send(:preconnect_links, "https://assets.klenod.dev")
+    )
   end
 
   def test_example_app_uses_system_theme_without_theme_cookie
@@ -618,7 +634,7 @@ class Klenod::ExampleTest < Minitest::Test
     link = early_headers.fetch(0).fetch(1)
 
     assert_equal(200, status)
-    refute_includes(headers.keys, "link")
+    assert_equal(link, headers.fetch("link"))
     assert_equal([[103, [["link", link]]]], request.interim_responses)
     stylesheet_paths.each do |path|
       assert_includes(link, "<#{path}>; rel=preload; as=style")

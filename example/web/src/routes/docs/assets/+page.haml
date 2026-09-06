@@ -67,7 +67,7 @@
       )
       ```
 
-      The asset app maps public paths under `/.assets/` to root-relative files in `assets_dir`, with immutable cache headers, and delegates every other request to `app`, which calls the bundle entrypoint. When matching `.br` files are present in `assets_dir`, the asset app also serves Brotli responses to clients that accept them. This lets the CDN forward `https://cdn.klenod.dev/<asset>` to `https://klenod.dev/.assets/<asset>`. Configure the CDN to return `Access-Control-Allow-Origin: https://klenod.dev` so browsers can load CDN fonts.
+      The asset app maps public paths under `/.assets/` to root-relative files in `assets_dir`, with immutable cache headers, and delegates every other request to `app`, which calls the bundle entrypoint. When matching `.br` files are present in `assets_dir`, the asset app also serves Brotli responses to clients that accept them. This lets the CDN forward `https://cdn.klenod.dev/<asset>` to `https://klenod.dev/.assets/<asset>`. Configure the CDN to return `Access-Control-Allow-Origin: https://klenod.dev` so browsers can load CDN fonts. The document head and its `Link` headers preconnect to external asset origins; development assets are local, so they do not add a preconnect hint.
 
   %DocsSection{ title: "CSS, SVG, And Images" }
     :markdown
