@@ -190,7 +190,7 @@ module Example
           next if value.nil? || value == false
 
           output << " "
-          output << (name.is_a?(Symbol) ? name.to_s : escape_html(name))
+          output << escape_html(name.to_s.tr("_", "-"))
           next if value == true
 
           output << '="'

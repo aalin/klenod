@@ -63,12 +63,12 @@ class Klenod::ExampleTest < Minitest::Test
   end
 
   def test_example_h_builds_descriptors_and_escapes_when_rendering
-    node = Example::Framework::H[:p, "Fish & chips", title: %("quoted")]
+    node = Example::Framework::H[:p, "Fish & chips", title: %("quoted"), data_theme: "light"]
 
     assert_instance_of(Example::Framework::H::Element, node)
     assert_equal(:p, node.tag)
     assert_equal([Example::Framework::H::Text["Fish & chips"]], node.children)
-    assert_equal(%(<p title="&quot;quoted&quot;">Fish &amp; chips</p>), Example::Framework::H.render(node))
+    assert_equal(%(<p title="&quot;quoted&quot;" data-theme="light">Fish &amp; chips</p>), Example::Framework::H.render(node))
     assert_equal(Example::Framework::H.render(node), Example::Framework::HTMLRenderer.render(node))
   end
 
