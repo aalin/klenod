@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
+HamlHelper =
+  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class OutputConditionalWithoutElse < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -28,8 +30,13 @@ class OutputConditionalWithoutElse < TestFramework::ComponentBase
       :section,
       if @show
         # SourceMapMark:8
-        TestFramework::H[:p, "Visible"]
-      end
+        TestFramework::H[
+          :p,
+          "Visible",
+          **HamlHelper.merge_props(self.class, {})
+        ]
+      end,
+      **HamlHelper.merge_props(self.class, {})
     ]
   end
 end

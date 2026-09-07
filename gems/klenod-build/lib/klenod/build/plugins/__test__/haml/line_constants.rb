@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
+HamlHelper =
+  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class LineConstants < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -40,24 +42,34 @@ class LineConstants < TestFramework::ComponentBase
       end,
       begin
         # SourceMapMark:10
-        TestFramework::H[:span, (10)]
+        TestFramework::H[:span, (10), **HamlHelper.merge_props(self.class, {})]
       end,
       begin
         # SourceMapMark:11
         TestFramework::H[
           :section,
-          key:
-            begin
-              # SourceMapMark:11
-              11
-            end
+          **HamlHelper.merge_props(
+            self.class,
+            {
+              key:
+                begin
+                  # SourceMapMark:11
+                  11
+                end
+            }
+          )
         ]
       end,
-      data_line:
-        begin
-          # SourceMapMark:6
-          6
-        end
+      **HamlHelper.merge_props(
+        self.class,
+        {
+          data_line:
+            begin
+              # SourceMapMark:6
+              6
+            end
+        }
+      )
     ]
   end
 end

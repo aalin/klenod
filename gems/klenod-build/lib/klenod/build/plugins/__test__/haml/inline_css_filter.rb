@@ -23,11 +23,16 @@ class InlineCssFilter < TestFramework::ComponentBase
     TestFramework::H[
       :h1,
       "Hello",
-      class:
-        begin
-          # SourceMapMark:6
-          ClassNames.class_name(:__h1, :title)
-        end
+      **HamlHelper.merge_props(
+        self.class,
+        {
+          class:
+            begin
+              # SourceMapMark:6
+              %i[__h1 title]
+            end
+        }
+      )
     ]
   end
 end

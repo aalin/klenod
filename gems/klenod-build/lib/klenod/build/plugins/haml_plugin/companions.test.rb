@@ -265,6 +265,29 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_merges_scoped_classes_with_attribute_splats
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/page.css", "button { display: block; }\n")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          %button{ **{ class: "caller", "data-id": "example" } } Hello
+        HAML
+      )
+
+      context = context_for(dir, plugin: haml_plugin)
+      record = context.evaluate("pages/page.haml")
+      styles = context.graph.mods.fetch(record.id).const_get(:Exports)::ClassNames
+      rendered = context.graph.mods.fetch(record.id).const_get(:Exports)::Default.new.render
+
+      assert_equal([styles.fetch(:__button), "caller"].join(" "), rendered.fetch(2).fetch(:class))
+      assert_equal("example", rendered.fetch(2).fetch(:data_id))
+      assert_includes(record.transformed_source, "HamlHelper.merge_props(self.class")
+      assert_includes(record.transformed_source, ":__button")
+    end
+  end
+
   def test_haml_keeps_old_style_static_class_attributes_literal
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

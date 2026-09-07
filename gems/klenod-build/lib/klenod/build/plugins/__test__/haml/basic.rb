@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
+HamlHelper =
+  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class Basic < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -19,17 +21,26 @@ class Basic < TestFramework::ComponentBase
       :main,
       begin
         # SourceMapMark:2
-        TestFramework::H[:h1, "Hello"]
+        TestFramework::H[:h1, "Hello", **HamlHelper.merge_props(self.class, {})]
       end,
       begin
         # SourceMapMark:3
-        TestFramework::H[:p, ("From Ruby")]
+        TestFramework::H[
+          :p,
+          ("From Ruby"),
+          **HamlHelper.merge_props(self.class, {})
+        ]
       end,
-      class:
-        begin
-          # SourceMapMark:1
-          ClassNames.class_name(:__main, "shell".upcase)
-        end
+      **HamlHelper.merge_props(
+        self.class,
+        {
+          class:
+            begin
+              # SourceMapMark:1
+              [:__main, "shell".upcase]
+            end
+        }
+      )
     ]
   end
 end

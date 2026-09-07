@@ -518,8 +518,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
           "2026-08-05",
           {
             is: "intl-time",
-            "date-style": "full",
-            "time-style": "short",
+            date_style: "full",
+            time_style: "short",
             datetime: "2026-08-05T12:10:39-05:00"
           }
         ],

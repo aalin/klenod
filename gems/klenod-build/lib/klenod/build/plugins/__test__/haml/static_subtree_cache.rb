@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
+HamlHelper =
+  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class StaticSubtreeCache < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -23,12 +25,21 @@ class StaticSubtreeCache < TestFramework::ComponentBase
           :header,
           begin
             # SourceMapMark:3
-            TestFramework::H[:h1, "Static title"]
+            TestFramework::H[
+              :h1,
+              "Static title",
+              **HamlHelper.merge_props(self.class, {})
+            ]
           end,
           begin
             # SourceMapMark:4
-            TestFramework::H[:p, "Static lead"]
-          end
+            TestFramework::H[
+              :p,
+              "Static lead",
+              **HamlHelper.merge_props(self.class, {})
+            ]
+          end,
+          **HamlHelper.merge_props(self.class, {})
         ]
       end,
       begin
@@ -37,10 +48,16 @@ class StaticSubtreeCache < TestFramework::ComponentBase
           :section,
           begin
             # SourceMapMark:6
-            TestFramework::H[:p, (dynamic_message)]
-          end
+            TestFramework::H[
+              :p,
+              (dynamic_message),
+              **HamlHelper.merge_props(self.class, {})
+            ]
+          end,
+          **HamlHelper.merge_props(self.class, {})
         ]
-      end
+      end,
+      **HamlHelper.merge_props(self.class, {})
     ]
   end
 end

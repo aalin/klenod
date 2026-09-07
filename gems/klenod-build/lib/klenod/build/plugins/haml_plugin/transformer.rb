@@ -715,7 +715,7 @@ module Klenod
                 return
               end
 
-              props[:class] = builder.scoped_class_name(class_values)
+              props[:class] = builder.class_values(class_values)
             end
           end
 

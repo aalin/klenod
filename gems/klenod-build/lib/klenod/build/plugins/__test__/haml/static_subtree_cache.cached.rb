@@ -19,14 +19,22 @@ class StaticSubtreeCache < TestFramework::ComponentBase
     HamlHelper.freeze_static(
       begin
         # SourceMapMark:3
-        TestFramework::H[:h1, "Static title"]
+        TestFramework::H[
+          :h1,
+          "Static title",
+          **HamlHelper.merge_props(self.class, {})
+        ]
       end
     )
   STATIC_SUBTREE_1 =
     HamlHelper.freeze_static(
       begin
         # SourceMapMark:4
-        TestFramework::H[:p, "Static lead"]
+        TestFramework::H[
+          :p,
+          "Static lead",
+          **HamlHelper.merge_props(self.class, {})
+        ]
       end
     )
   STATIC_SUBTREE_2 =
@@ -42,7 +50,8 @@ class StaticSubtreeCache < TestFramework::ComponentBase
           begin
             # SourceMapMark:4
             STATIC_SUBTREE_1
-          end
+          end,
+          **HamlHelper.merge_props(self.class, {})
         ]
       end
     )
@@ -60,10 +69,16 @@ class StaticSubtreeCache < TestFramework::ComponentBase
           :section,
           begin
             # SourceMapMark:6
-            TestFramework::H[:p, (dynamic_message)]
-          end
+            TestFramework::H[
+              :p,
+              (dynamic_message),
+              **HamlHelper.merge_props(self.class, {})
+            ]
+          end,
+          **HamlHelper.merge_props(self.class, {})
         ]
-      end
+      end,
+      **HamlHelper.merge_props(self.class, {})
     ]
   end
 end

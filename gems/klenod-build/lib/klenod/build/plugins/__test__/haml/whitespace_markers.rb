@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
+HamlHelper =
+  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class WhitespaceMarkers < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -27,18 +29,24 @@ class WhitespaceMarkers < TestFramework::ComponentBase
         TestFramework::H[
           :a,
           "link",
-          href:
-            begin
-              # SourceMapMark:3
-              "#"
-            end
+          **HamlHelper.merge_props(
+            self.class,
+            {
+              href:
+                begin
+                  # SourceMapMark:3
+                  "#"
+                end
+            }
+          )
         ]
       end,
       " ",
       begin
         # SourceMapMark:4
         "after"
-      end
+      end,
+      **HamlHelper.merge_props(self.class, {})
     ]
   end
 end

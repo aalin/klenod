@@ -49,16 +49,16 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     result = transform_component_children
 
     assert_includes(result.code, "FakeFramework::H[Card, begin")
-    assert_includes(result.code, "FakeFramework::H[:p, \"Body\"]")
+    assert_includes(result.code, "FakeFramework::H[:p, \"Body\", **HamlHelper.merge_props")
     refute_includes(result.code, "FakeFramework::H[Card] do")
   end
 
   def test_haml_transformer_can_pass_component_children_lazily
     result = transform_component_children(component_children: :lazy)
 
-    assert_includes(result.code, "FakeFramework::H[Card] do")
+    assert_includes(result.code, "FakeFramework::H[Card, **HamlHelper.merge_props(self.class, {})] do")
     assert_includes(result.code, "[begin")
-    assert_includes(result.code, "FakeFramework::H[:p, \"Body\"]")
+    assert_includes(result.code, "FakeFramework::H[:p, \"Body\", **HamlHelper.merge_props")
   end
 
   def test_haml_transformer_scopes_component_tag_names
@@ -74,8 +74,8 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
         styleable: true
       )
 
-    assert_includes(result.code, "ClassNames.class_name(:__Card)")
-    assert_includes(result.code, "ClassNames.class_name(:__Foo_Bar)")
+    assert_includes(result.code, ":__Card")
+    assert_includes(result.code, ":__Foo_Bar")
   end
 
   def test_haml_transformer_returns_nested_haml_from_early_returns
@@ -100,10 +100,10 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
       )
 
     assert_equal(3, result.code.scan("return begin").length)
-    assert_match(/return begin\n\s+# SourceMapMark:\d+\n\s+FakeFramework::H\[:p, "First"\]/, result.code)
-    assert_match(/return begin\n\s+# SourceMapMark:\d+\n\s+FakeFramework::H\[:p, "Second"\]/, result.code)
-    assert_match(/return begin\n\s+# SourceMapMark:\d+\n\s+FakeFramework::H\[:p, "Third"\]/, result.code)
-    assert_includes(result.code, "FakeFramework::H[:p, \"Last\"]")
+    assert_match(/return begin\n\s+# SourceMapMark:\d+\n\s+FakeFramework::H\[:p, "First", \*\*HamlHelper\.merge_props/, result.code)
+    assert_match(/return begin\n\s+# SourceMapMark:\d+\n\s+FakeFramework::H\[:p, "Second", \*\*HamlHelper\.merge_props/, result.code)
+    assert_match(/return begin\n\s+# SourceMapMark:\d+\n\s+FakeFramework::H\[:p, "Third", \*\*HamlHelper\.merge_props/, result.code)
+    assert_includes(result.code, "FakeFramework::H[:p, \"Last\", **HamlHelper.merge_props")
   end
 
   def test_haml_transformer_can_compile_event_handler_references

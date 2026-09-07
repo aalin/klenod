@@ -31,16 +31,21 @@ class StyleClasses < TestFramework::ComponentBase
         # SourceMapMark:2
         TestFramework::H[
           :img,
-          src:
-            begin
-              # SourceMapMark:2
-              "/assets/fish.png"
-            end,
-          class:
-            begin
-              # SourceMapMark:2
-              ClassNames.class_name(:__img, :image)
-            end
+          **HamlHelper.merge_props(
+            self.class,
+            {
+              src:
+                begin
+                  # SourceMapMark:2
+                  "/assets/fish.png"
+                end,
+              class:
+                begin
+                  # SourceMapMark:2
+                  %i[__img image]
+                end
+            }
+          )
         ]
       end,
       begin
@@ -48,18 +53,28 @@ class StyleClasses < TestFramework::ComponentBase
         TestFramework::H[
           :figcaption,
           "Fresh smoke",
-          class:
-            begin
-              # SourceMapMark:3
-              ClassNames.class_name(:__figcaption)
-            end
+          **HamlHelper.merge_props(
+            self.class,
+            {
+              class:
+                begin
+                  # SourceMapMark:3
+                  :__figcaption
+                end
+            }
+          )
         ]
       end,
-      class:
-        begin
-          # SourceMapMark:1
-          ClassNames.class_name(:__figure, :card)
-        end
+      **HamlHelper.merge_props(
+        self.class,
+        {
+          class:
+            begin
+              # SourceMapMark:1
+              %i[__figure card]
+            end
+        }
+      )
     ]
   end
 end

@@ -51,7 +51,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         props: {title: '"Hello"'}
       )
 
-    assert_includes(fragment.source, "H[Card, title: \"Hello\"] do")
+    assert_includes(fragment.source, "H[Card, **HamlHelper.merge_props(self.class, {title: \"Hello\"})] do")
     assert_includes(fragment.source, '["Title", H[:p, "Body"]]')
   end
 

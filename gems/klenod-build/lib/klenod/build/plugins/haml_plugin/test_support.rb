@@ -271,24 +271,10 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
         styles_source: styles_source,
         translations_source: "{}.freeze",
         styleable: styleable,
-        haml_helper_source: ("HamlHelper = #{self.class.name}::FakeFramework::HamlHelper" if styleable || cache_static_subtrees || fixture_needs_haml_helper?(path)),
+        haml_helper_source: "HamlHelper = #{self.class.name}::FakeFramework::HamlHelper",
         cache_static_subtrees: cache_static_subtrees
       )
       .then { |result| format_generated_ruby(result.code) }
-  end
-
-  def fixture_needs_haml_helper?(path)
-    queue = Klenod::Build::Plugins::HamlPlugin.parse_haml(File.read(path)).children.dup
-
-    until queue.empty?
-      node = queue.shift
-      return true if node.type == :tag && !node.value.fetch(:attributes).fetch("class", "").empty?
-      return true if node.type == :tag && node.value.fetch(:name) == "slot"
-
-      queue.concat(node.children)
-    end
-
-    false
   end
 
   def format_generated_ruby(source)

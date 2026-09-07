@@ -427,6 +427,10 @@ module Klenod
               expression("HamlHelper.freeze_static(#{argument_source(value)})")
             end
 
+            def class_values(values)
+              source_expressions(values)
+            end
+
             def script_block(source, body, line_no: nil)
               source = rewrite_ruby_source(source, nil)
               ast_script_block(source, body) || raise_ruby_parse_error(source, line_no: line_no, context: "Could not build Ruby block from Haml script")
@@ -612,12 +616,12 @@ module Klenod
               children = children.map { |child| expression_fragment(child) }
               props = props.dup
               attribute_splats = props.delete(:__klenod_attribute_splats__) || []
+              prop_sources = ["{#{keyword_props_source(props, mark: mark).join(", ")}}", *attribute_splats.map { |value| argument_source(value) }]
 
               source_parts = [
                 to_source(tag),
                 *children.map { |child| argument_source(child) },
-                *keyword_props_source(props, mark: mark),
-                *attribute_splats.map { |value| "**#{argument_source(value)}" }
+                "**HamlHelper.merge_props(self.class, #{prop_sources.join(", ")})"
               ].compact
               Fragment.new("#{to_source(factory)}[#{source_parts.join(", ")}]", nil)
             end
@@ -697,7 +701,7 @@ module Klenod
             def block_source(source, body)
               body_source = to_source(body)
 
-              if source.include?("{")
+              if source.include?("{") && !source.end_with?(" do")
                 "#{source} #{body_source} }"
               else
                 [source, indent(body_source, 2), "end"].join("\n")

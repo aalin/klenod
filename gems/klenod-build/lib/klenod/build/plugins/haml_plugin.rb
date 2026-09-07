@@ -33,7 +33,6 @@ module Klenod
         I18N_OPTIONS = %i[class constant].freeze
         HAML_HELPER_SPECIFIER = "virtual:klenod/haml_helper"
         HAML_HELPER_MODULE_ID = ModuleId.new("#{HAML_HELPER_SPECIFIER}.rb", nil)
-        STATIC_CLASS_SOURCE_PATTERN = /^[ \t]*(?:%[-:\w]+)?(?:#[\w-]+)?\.[\w-]|[({][^)}\n]*\bclass\s*=/m
       end
 
       module HamlPlugin
@@ -51,7 +50,6 @@ module Klenod
           I18N_OPTIONS = HamlPlugin::I18N_OPTIONS
           HAML_HELPER_SPECIFIER = HamlPlugin::HAML_HELPER_SPECIFIER
           HAML_HELPER_MODULE_ID = HamlPlugin::HAML_HELPER_MODULE_ID
-          STATIC_CLASS_SOURCE_PATTERN = HamlPlugin::STATIC_CLASS_SOURCE_PATTERN
 
           def self.parse_haml(...)
             HamlPlugin.parse_haml(...)
@@ -170,9 +168,8 @@ module Klenod
             class_names_runtime_dependency = class_names_runtime_dependency(module_id)
             dependencies << class_names_runtime_dependency
             styles_source = styles_source_for(builder, style_dependencies, class_names_runtime_dependency: class_names_runtime_dependency)
-            haml_helper_needed = @cache_static_subtrees || haml_helper_needed?(code, styleable: !style_dependencies.empty?)
-            haml_helper_dependency = haml_helper_dependency(module_id) if haml_helper_needed
-            dependencies << haml_helper_dependency if haml_helper_dependency
+            haml_helper_dependency = haml_helper_dependency(module_id)
+            dependencies << haml_helper_dependency
             translations_source = builder.frozen_literal(translations_for(context, module_id)).source
             component_class_name = component_class_name(module_id)
             import_rewriter =

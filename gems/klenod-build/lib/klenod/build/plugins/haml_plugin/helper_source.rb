@@ -111,11 +111,6 @@ module Klenod
             RUBY
           end
 
-          def haml_helper_needed?(source, styleable:)
-            return true if styleable
-
-            source.match?(STATIC_CLASS_SOURCE_PATTERN) || source.match?(/^\s*%slot\b/)
-          end
         end
       end
     end

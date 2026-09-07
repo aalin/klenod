@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
+HamlHelper =
+  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class SilentConditional < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -27,10 +29,14 @@ class SilentConditional < TestFramework::ComponentBase
     begin
       if @show
         # SourceMapMark:7
-        TestFramework::H[:p, "Visible"]
+        TestFramework::H[
+          :p,
+          "Visible",
+          **HamlHelper.merge_props(self.class, {})
+        ]
       else
         # SourceMapMark:9
-        TestFramework::H[:p, "Empty"]
+        TestFramework::H[:p, "Empty", **HamlHelper.merge_props(self.class, {})]
       end
       nil
     end
