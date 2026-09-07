@@ -721,9 +721,7 @@ module Klenod
 
           def tag_class_symbol(node, builder:)
             tag_name = node.value.fetch(:name)
-            return nil if constant_tag_name?(tag_name)
-
-            builder.symbol("__#{tag_name}")
+            builder.symbol("__#{tag_name.gsub("::", "_")}")
           end
 
           def constant_tag_name?(tag_name)

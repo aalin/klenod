@@ -61,6 +61,23 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_includes(result.code, "FakeFramework::H[:p, \"Body\"]")
   end
 
+  def test_haml_transformer_scopes_component_tag_names
+    result =
+      Klenod::Build::Plugins::HamlPlugin::Transformer.new.call(
+        source: "%Card\n%Foo::Bar\n",
+        module_id: ModuleId.new("pages/page.haml", nil),
+        component_class_name: "Page",
+        component_base_class: "Object",
+        factory: "FakeFramework::H",
+        styles_source: "{}.freeze",
+        translations_source: "{}.freeze",
+        styleable: true
+      )
+
+    assert_includes(result.code, "ClassNames.class_name(:__Card)")
+    assert_includes(result.code, "ClassNames.class_name(:__Foo_Bar)")
+  end
+
   def test_haml_transformer_can_compile_event_handler_references
     transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     result =
