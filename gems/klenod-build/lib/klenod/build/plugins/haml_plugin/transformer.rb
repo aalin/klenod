@@ -136,7 +136,7 @@ module Klenod
             end
           rescue RubyParseError => error
             raise ParseError.new(error, source: source, module_id: module_id)
-            ensure
+          ensure
             @profiler = previous_profiler
             @module_id = previous_module_id
             @static_constants = previous_static_constants
