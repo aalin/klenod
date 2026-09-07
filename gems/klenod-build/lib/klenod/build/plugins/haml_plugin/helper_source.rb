@@ -110,7 +110,6 @@ module Klenod
               end
             RUBY
           end
-
         end
       end
     end
