@@ -465,7 +465,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.silent_script_block("items.each { |item|", body)
 
     assert_kind_of(SyntaxTree::Begin, fragment.node)
-    assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
+    assert_equal(<<~RUBY.chomp, fragment.source)
       begin
         items.each { |item| H[:li, item] }
         nil
@@ -574,16 +574,33 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_includes(formatted, "nil")
   end
 
-  def test_ruby_builder_builds_silent_script_with_children
+  def test_ruby_builder_returns_children_from_modifier_return
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.silent_script_with_children("return unless show", builder.expression("H[:p]"))
 
-    assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
-      begin
-        return unless show
-        H[:p]
+    assert_equal(<<~RUBY.chomp, fragment.source)
+      unless show
+        return H[:p]
       end
     RUBY
+  end
+
+  def test_ruby_builder_returns_children_from_modifier_return_if
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    fragment = builder.silent_script_with_children("return if show", builder.expression("H[:p]"))
+
+    assert_equal(<<~RUBY.chomp, fragment.source)
+      if show
+        return H[:p]
+      end
+    RUBY
+  end
+
+  def test_ruby_builder_returns_children_from_bare_return
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    fragment = builder.silent_script_with_children("return", builder.expression("H[:p]"))
+
+    assert_equal("return H[:p]", fragment.source)
   end
 
   def test_ruby_builder_builds_case_branches_from_syntax_tree_nodes

@@ -444,8 +444,25 @@ module Klenod
 
             def silent_script_with_children(source, body)
               source = rewrite_ruby_source(source, nil)
+              return_with_children = false
+
+              # A modifier return with an indented Haml block returns that block
+              # when the condition matches. Keeping the return and its children
+              # as sequential statements would instead evaluate the children
+              # after the modifier has fallen through.
+              if source == "return"
+                source = "return #{argument_source(body)}"
+                return_with_children = true
+              elsif (match = source.match(/\Areturn\s+(if|unless)\s+(.+)\z/))
+                branch, condition = match.captures
+                source = "#{branch} #{condition}\n#{indent("return #{argument_source(body)}", 2)}\nend"
+                return_with_children = true
+              end
+
               statements = parse_statements(source)
               return raise(ArgumentError, "Could not parse Haml silent script: #{source.inspect}") unless statements
+
+              return Fragment.new(source, statements) if return_with_children
 
               node = ast_begin([*statement_body_for(statements), *statement_body_for(body)])
               Fragment.new(["begin", indent(source, 2), indent(to_source(body), 2), "end"].join("\n"), node)

@@ -78,6 +78,34 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_includes(result.code, "ClassNames.class_name(:__Foo_Bar)")
   end
 
+  def test_haml_transformer_returns_nested_haml_from_early_returns
+    result =
+      Klenod::Build::Plugins::HamlPlugin::Transformer.new.call(
+        source: <<~HAML,
+          - if first
+            - return
+              %p First
+          - return if second
+            %p Second
+          - return unless third
+            %p Third
+          %p Last
+        HAML
+        module_id: ModuleId.new("pages/page.haml", nil),
+        component_class_name: "Page",
+        component_base_class: "Object",
+        factory: "FakeFramework::H",
+        styles_source: "{}.freeze",
+        translations_source: "{}.freeze"
+      )
+
+    assert_equal(3, result.code.scan("return begin").length)
+    assert_match(/return begin\n\s+# SourceMapMark:\d+\n\s+FakeFramework::H\[:p, "First"\]/, result.code)
+    assert_match(/return begin\n\s+# SourceMapMark:\d+\n\s+FakeFramework::H\[:p, "Second"\]/, result.code)
+    assert_match(/return begin\n\s+# SourceMapMark:\d+\n\s+FakeFramework::H\[:p, "Third"\]/, result.code)
+    assert_includes(result.code, "FakeFramework::H[:p, \"Last\"]")
+  end
+
   def test_haml_transformer_can_compile_event_handler_references
     transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     result =
