@@ -66,7 +66,8 @@ module Klenod
         base: Runtime::AssetUrl::DEFAULT_BASE,
         asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY,
         asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY,
-        profiler: nil
+        profiler: nil,
+        namespace: Module.new
       )
         @profiler = profiler || Profiler.new
         @resolver = Resolver.new(source_dir: source_dir, profiler: @profiler)
@@ -80,7 +81,7 @@ module Klenod
           )
         @records = {}
         @mods = {}
-        @namespace = Module.new
+        @namespace = namespace
         @virtual_sources = {}
         @virtual_metadata = {}
         @virtual_owners = {}

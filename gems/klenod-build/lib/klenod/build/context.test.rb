@@ -208,6 +208,15 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_uses_the_configured_module_namespace
+    Dir.mktmpdir do |dir|
+      namespace = Module.new
+      context = Klenod::Build::Context.new(source_dir: dir, namespace: namespace)
+
+      assert_same(namespace, context.graph.namespace)
+    end
+  end
+
   def test_virtual_modules_keep_logical_eval_paths
     Dir.mktmpdir do |dir|
       context =

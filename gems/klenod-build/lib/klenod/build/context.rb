@@ -112,7 +112,8 @@ module Klenod
         base: Runtime::AssetUrl::DEFAULT_BASE,
         asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY,
         asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY,
-        profiler: nil
+        profiler: nil,
+        namespace: Module.new
       )
         @source_dir = source_dir
         plugins = plugins.to_a if plugins.equal?(DEFAULT_PLUGINS)
@@ -129,7 +130,8 @@ module Klenod
             base: @base,
             asset_generation_concurrency: asset_generation_concurrency,
             asset_download_concurrency: asset_download_concurrency,
-            profiler: profiler
+            profiler: profiler,
+            namespace: namespace
           )
       end
 
