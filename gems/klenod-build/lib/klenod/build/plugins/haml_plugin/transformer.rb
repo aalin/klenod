@@ -602,35 +602,40 @@ module Klenod
 
           def dynamic_attributes(node, builder:, props:)
             dynamic_attributes = node.value.fetch(:dynamic_attributes)
-            source = dynamic_attributes.old || dynamic_attributes.new
-            return {} unless source
+            sources = [dynamic_attributes.new, dynamic_attributes.old].compact
+            return {} if sources.empty?
 
             measure_compile(:haml_compile_dynamic_attributes) do
-              source = builder.line_rewritten_source(source, node.line)
-              simple = simple_dynamic_attributes(source, builder: builder) unless @event_handler
-              if simple
-                simple.each { |key, value| props[key] = value }
-                return simple
-              end
-
-              hash = builder.hash_expression(source, line_no: node.line)
-              unless hash
-                builder.ruby_parse_error(source, line_no: node.line, context: "Could not parse Haml dynamic attributes")
-              end
-
               dynamic = {}
-              hash.node.assocs.each do |assoc|
-                if assoc.is_a?(SyntaxTree::AssocSplat)
-                  splat_source = hash.source[assoc.value.location.start_char...assoc.value.location.end_char]
-                  props[ATTRIBUTE_SPLATS_KEY] ||= []
-                  props[ATTRIBUTE_SPLATS_KEY] << builder.expression(splat_source)
+              sources.each do |source|
+                source = builder.line_rewritten_source(source, node.line)
+                simple = simple_dynamic_attributes(source, builder: builder) unless @event_handler
+                if simple
+                  simple.each do |key, value|
+                    dynamic[key] = value
+                    props[key] = value
+                  end
                   next
                 end
 
-                key = attribute_key(assoc.key, builder: builder)
-                value = event_handler_value(key, assoc.value, builder: builder) || attribute_value(assoc, builder: builder)
-                dynamic[key] = value
-                props[key] = value
+                hash = builder.hash_expression(source, line_no: node.line)
+                unless hash
+                  builder.ruby_parse_error(source, line_no: node.line, context: "Could not parse Haml dynamic attributes")
+                end
+
+                hash.node.assocs.each do |assoc|
+                  if assoc.is_a?(SyntaxTree::AssocSplat)
+                    splat_source = hash.source[assoc.value.location.start_char...assoc.value.location.end_char]
+                    props[ATTRIBUTE_SPLATS_KEY] ||= []
+                    props[ATTRIBUTE_SPLATS_KEY] << builder.expression(splat_source)
+                    next
+                  end
+
+                  key = attribute_key(assoc.key, builder: builder)
+                  value = event_handler_value(key, assoc.value, builder: builder) || attribute_value(assoc, builder: builder)
+                  dynamic[key] = value
+                  props[key] = value
+                end
               end
               dynamic
             end

@@ -123,6 +123,42 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_includes(result.code, "FakeFramework::H.callback(self, :handle_click)")
   end
 
+  def test_haml_transformer_combines_parenthesized_and_brace_attributes_for_event_handlers
+    result =
+      Klenod::Build::Plugins::HamlPlugin::Transformer.new.call(
+        source: "%button(onclick=handle_click){ style: { color: \"red\" } } Click\n",
+        module_id: ModuleId.new("pages/page.haml", nil),
+        component_class_name: "Page",
+        component_base_class: "Object",
+        factory: "FakeFramework::H",
+        event_handler: "#{self.class.name}::FakeFramework::H",
+        styles_source: "{}.freeze",
+        translations_source: "{}.freeze"
+      )
+
+    assert_includes(result.code, "FakeFramework::H.callback(self, :handle_click)")
+    assert_match(/style: begin.*\{ color: "red" \}/m, result.code)
+  end
+
+  def test_haml_transformer_preserves_non_bare_event_handler_values
+    result =
+      Klenod::Build::Plugins::HamlPlugin::Transformer.new.call(
+        source: "%button{ onclick: handle_click, oninput: :submit, onload: \"console.log(1)\" } Click\n",
+        module_id: ModuleId.new("pages/page.haml", nil),
+        component_class_name: "Page",
+        component_base_class: "Object",
+        factory: "FakeFramework::H",
+        event_handler: "#{self.class.name}::FakeFramework::H",
+        styles_source: "{}.freeze",
+        translations_source: "{}.freeze"
+      )
+
+    assert_includes(result.code, "FakeFramework::H.callback(self, :handle_click)")
+    refute_includes(result.code, "callback(self, :submit)")
+    assert_includes(result.code, ":submit")
+    assert_includes(result.code, '"console.log(1)"')
+  end
+
   def test_haml_transformer_compiles_component_on_props_as_event_handlers
     transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     result =
