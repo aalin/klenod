@@ -785,6 +785,24 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_joins_adjacent_plain_text_children_with_spaces
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %div
+            %p
+              Hello
+              World
+            %p
+
+              Hello World
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:div, [:p, "Hello World"], [:p, "Hello World"]], exports::Default.new.render)
+    end
+  end
+
   def test_haml_transformer_does_not_add_space_before_nested_script_tag
     evaluate_haml(
       {

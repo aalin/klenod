@@ -216,7 +216,7 @@ module Klenod
             measure_compile(:haml_build_expression_list) { builder.expressions(expressions) }
           end
 
-          def compile_node_expressions(nodes, factory:, builder:, markdown_compiler:, styleable: false)
+          def compile_node_expressions(nodes, factory:, builder:, markdown_compiler:, styleable: false, join_adjacent_plain_text: false)
             expressions = []
             previous_node = nil
             index = 0
@@ -224,7 +224,21 @@ module Klenod
             while index < nodes.length
               node = nodes[index]
 
-              if script_node?(node) && !continuation?(node)
+              if join_adjacent_plain_text && node.type == :plain
+                plain_nodes = [node]
+                index += 1
+
+                while index < nodes.length && nodes[index].type == :plain
+                  plain_nodes << nodes[index]
+                  index += 1
+                end
+
+                text = plain_nodes.map { it.value.fetch(:text).strip }.reject(&:empty?).join(" ")
+                next if text.empty?
+
+                expression = builder.marked_expression(source_mark(plain_nodes.first, builder: builder), builder.literal(text))
+                node = plain_nodes.last
+              elsif script_node?(node) && !continuation?(node)
                 group = [node]
                 index += 1
 
@@ -453,7 +467,14 @@ module Klenod
             unless node.children.empty?
               children.concat(
                 measure_compile_detail(:haml_compile_tag_children) do
-                  compile_node_expressions(node.children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
+                  compile_node_expressions(
+                    node.children,
+                    factory: factory,
+                    styleable: styleable,
+                    builder: builder,
+                    markdown_compiler: markdown_compiler,
+                    join_adjacent_plain_text: true
+                  )
                 end
               )
             end
