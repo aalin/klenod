@@ -106,8 +106,8 @@ module Klenod
         remove_const(:Exports) if const_defined?(:Exports, false)
 
         exports = Exports.new(self, @imports)
-        exports.module_eval(@source, @eval_path, 1)
         const_set(:Exports, exports)
+        exports.module_eval(@source, @eval_path, 1)
       end
     end
   end

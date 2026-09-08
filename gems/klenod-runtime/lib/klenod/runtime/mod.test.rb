@@ -36,6 +36,13 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert(lazy.loaded?)
   end
 
+  def test_assigns_exports_a_name_before_evaluating_nested_classes
+    mod = Klenod::Runtime::Mod.new("entry.rb", "class Page; end")
+
+    assert_equal("Page", mod.const_get(:Exports)::Page.name.split("::").last)
+    refute_equal(Encoding::BINARY, mod.const_get(:Exports)::Page.name.encoding)
+  end
+
   def test_marshal_round_trip_preserves_identity_fields
     mod = Klenod::Runtime::Mod.new("entry.rb", "VALUE = 1", version: 3)
     copy = Marshal.load(Marshal.dump(mod))
