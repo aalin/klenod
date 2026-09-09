@@ -402,7 +402,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       end
 
       assert_includes(error.message, "Unsupported JavaScript import \"react\"")
-      assert_includes(error.message, "Only relative, app-root, and external URL imports are supported")
+      assert_includes(error.message, "Only relative, app-root, npm, and external URL imports are supported")
     end
   end
 

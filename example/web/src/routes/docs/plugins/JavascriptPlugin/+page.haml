@@ -31,7 +31,7 @@
       button.addEventListener("click", () => import("./Panel.js"));
       ```
 
-      Relative imports, app-root imports, and external URL imports are supported. Bare package specifiers are intentionally unsupported for now. Extensionless JavaScript imports resolve according to the importer: TSX prefers `.tsx`, `.ts`, `.jsx`, then `.js`; TS prefers `.ts`, then `.js`.
+      Relative imports, app-root imports, `npm://` imports, and external URL imports are supported. Bare specifiers stay relative to the importer, so npm packages are addressed through the `npm://` scheme. Extensionless JavaScript imports resolve according to the importer: TSX prefers `.tsx`, `.ts`, `.jsx`, then `.js`; TS prefers `.ts`, then `.js`.
 
   %DocsSection{ title: "CSS And Asset Imports" }
     :markdown

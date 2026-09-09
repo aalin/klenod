@@ -2,3 +2,4 @@
 
 require "klenod/build"
 require_relative "../build/plugins/javascript_plugin"
+require_relative "../build/plugins/node_modules_plugin"
