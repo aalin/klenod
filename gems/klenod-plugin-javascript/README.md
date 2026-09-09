@@ -41,11 +41,36 @@ plugins [
 ]
 ```
 
+A specifier is `npm://` followed by the package name, optionally followed by a
+subpath:
+
 ```js
 import * as THREE from "npm://three";
-import { OrbitControls } from "npm://three/addons/controls/OrbitControls.js";
 import { vec3 } from "npm://gl-matrix";
+import { OrbitControls } from "npm://three/addons/controls/OrbitControls.js";
 ```
+
+Scoped packages keep their `@scope/name` spelling, and take subpaths the same
+way:
+
+```js
+import { ReactiveElement } from "npm://@lit/reactive-element";
+import { css } from "npm://@lit/reactive-element/css-tag.js";
+```
+
+Every import form works, including side-effect imports, re-exports, and dynamic
+imports:
+
+```js
+import "npm://@scope/widget";
+export { html } from "npm://lit";
+button.addEventListener("click", () => import("npm://three"));
+```
+
+Whether a subpath needs a file extension depends on the package. A subpath has
+to match what the package's `exports` field declares, so `three` publishes
+`./addons/*` and expects `npm://three/addons/controls/OrbitControls.js`, while
+`zod` publishes `./mini` and expects `npm://zod/mini`.
 
 Packages resolve through the `exports` field, falling back to `module` and then
 `main` when a package has none. Package files go through the graph like any

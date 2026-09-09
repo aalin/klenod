@@ -798,6 +798,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html_by_path.fetch("/docs/plugins/JavascriptPlugin"), "language-js")
     assert_includes(html_by_path.fetch("/docs/plugins/JavascriptPlugin"), "language-ts")
     assert_includes(html_by_path.fetch("/docs/plugins/JavascriptPlugin"), "language-tsx")
+    assert_includes(html_by_path.fetch("/docs/plugins/JavascriptPlugin"), "npm Packages")
+    assert_includes(html_by_path.fetch("/docs/plugins/JavascriptPlugin"), "npm://@lit/reactive-element")
     assert_match(%r{components/markdown/InlineCode\.(k|kd|nx|s2)\?}, html_by_path.fetch("/docs/plugins/JavascriptPlugin"))
     assert_match(/<details(?=[^>]*open)[^>]*>\s*<summary[^>]*>Guides/, html_by_path.fetch("/docs/haml-components"))
     assert_match(/<details(?=[^>]*open)[^>]*>\s*<summary[^>]*>Plugins/, html_by_path.fetch("/docs/plugins/HamlPlugin"))

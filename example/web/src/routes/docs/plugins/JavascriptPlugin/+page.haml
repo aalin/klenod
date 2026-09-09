@@ -7,7 +7,7 @@
   %PageHeader{
     kicker: "Plugin Reference",
     title: "JavaScriptPlugin",
-    summary: "JavaScriptPlugin emits content-hashed JavaScript assets, rewrites module imports, supports TypeScript and TSX, and can expose TSX custom elements to Ruby and Haml."
+    summary: "JavaScriptPlugin emits content-hashed JavaScript assets, rewrites module imports, resolves npm packages, supports TypeScript and TSX, and can expose TSX custom elements to Ruby and Haml."
   }
 
   %DocsSection{ title: "Source Files" }
@@ -31,7 +31,52 @@
       button.addEventListener("click", () => import("./Panel.js"));
       ```
 
-      Relative imports, app-root imports, `npm://` imports, and external URL imports are supported. Bare specifiers stay relative to the importer, so npm packages are addressed through the `npm://` scheme. Extensionless JavaScript imports resolve according to the importer: TSX prefers `.tsx`, `.ts`, `.jsx`, then `.js`; TS prefers `.ts`, then `.js`.
+      Relative imports, app-root imports, `npm://` imports, and external URL imports are supported. Extensionless JavaScript imports resolve according to the importer: TSX prefers `.tsx`, `.ts`, `.jsx`, then `.js`; TS prefers `.ts`, then `.js`.
+
+  %DocsSection{ title: "npm Packages" }
+    :markdown
+      Bare specifiers stay relative to the importer, so npm packages are addressed through the `npm://` scheme. Resolution is handled by `NodeModulesPlugin`, which is a separate plugin and must be registered before `JavaScriptPlugin`.
+
+      ```ruby
+      plugins [
+        Klenod::Build::Plugins::NodeModulesPlugin.new,
+        Klenod::Build::Plugins::JavaScriptPlugin.new
+      ]
+      ```
+
+      A specifier is `npm://` followed by the package name, optionally followed by a subpath. Scoped packages keep their `@scope/name` spelling.
+
+      ```js
+      import * as THREE from "npm://three";
+      import { vec3 } from "npm://gl-matrix";
+      import { OrbitControls } from "npm://three/addons/controls/OrbitControls.js";
+      import { ReactiveElement } from "npm://@lit/reactive-element";
+      import { css } from "npm://@lit/reactive-element/css-tag.js";
+      ```
+
+      Side-effect imports, re-exports, and dynamic imports all work, and resolve to the same content-hashed asset as a static import of the same module.
+
+      ```js
+      import "npm://@scope/widget";
+      export { html } from "npm://lit";
+      button.addEventListener("click", () => import("npm://three"));
+      ```
+
+      Whether a subpath needs a file extension depends on the package, because a subpath has to match what that package's `exports` field declares. `three` publishes `./addons/*` and expects `npm://three/addons/controls/OrbitControls.js`, while `zod` publishes `./mini` and expects `npm://zod/mini`.
+
+      Package files go through the graph like any other module, so they are transformed, content-hashed, minified in build mode, and shared when two modules import the same package.
+
+  %DocsSection{ title: "npm Resolution" }
+    :markdown
+      A package entry resolves through its `exports` field, matched against the `browser`, `import`, `module`, and `default` conditions. Conditions are matched in the order the package lists them rather than the order above, which is how Node and browser bundlers behave. A package with no `exports` field falls back to `module`, then `main`, then `index.js`.
+
+      Inside a package, bare specifiers name other packages and resolve by walking up through `node_modules`, nearest first, so a nested copy takes precedence over a hoisted one. A package that declares `exports` can also import itself by name, which is how libraries such as `three` reference their own core from bundled addons. Imports that omit an extension are probed for `.js` and `.mjs`, then for an `index.js` or `index.mjs` inside a directory. Targets named by `exports` are never probed, since that field names exact files. A package can also use `#`-prefixed private imports, resolved against its own `imports` field.
+
+      Only ES modules are supported. The `require` condition is deliberately not matched, so a CommonJS-only package fails when it is resolved rather than in the browser. Node builtins are reported the same way: a package that imports `node:fs`, or `fs` with nothing installed under that name, fails at resolve time.
+
+      Module IDs are `npm://<package>/<path>`, so a package name identifies one directory. Finding two copies of the same package is reported as an error rather than resolved, because the ID has nowhere to record which copy a module came from.
+
+      `NodeModulesPlugin.new(root:)` overrides the `node_modules` directory, which otherwise defaults to the nearest one at or above the source directory. `NodeModulesPlugin.new(conditions:)` overrides the matched export conditions.
 
   %DocsSection{ title: "CSS And Asset Imports" }
     :markdown
