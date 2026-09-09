@@ -22,7 +22,7 @@ FROM ruby:4.0.6-slim AS build
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential ca-certificates imagemagick libheif-plugin-aomdec libheif-plugin-aomenc libmagickwand-dev libsodium23 libssl-dev pkg-config \
+  && apt-get install -y --no-install-recommends build-essential ca-certificates imagemagick libheif-plugin-aomdec libheif-plugin-aomenc libmagickwand-dev libsodium23 libssl-dev nodejs npm pkg-config \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=klenod-gems /tmp/klenod-gems /tmp/klenod-gems
@@ -30,7 +30,9 @@ COPY . .
 
 WORKDIR /app/example/web
 
+# npm packages imported through the npm:// scheme are read at build time.
 RUN bundle install \
+  && npm ci \
   && bundle exec bin/build
 
 FROM ruby:4.0.6-alpine3.24 AS runtime-gems

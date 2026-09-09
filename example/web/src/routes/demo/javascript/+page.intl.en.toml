@@ -8,3 +8,7 @@ title = "IntlTime custom element"
 date_style = "date_style"
 time_style = "time_style"
 output = "Output"
+
+[webgl]
+title = "npm packages in a WebGL custom element"
+summary = "This canvas is drawn by a TSX custom element that imports two npm packages through the npm:// scheme. gl-matrix builds the camera and model matrices, and simplex-noise displaces every vertex of the wireframe sphere over time."

@@ -11,7 +11,8 @@
     "moduleResolution": "Bundler",
     "noEmit": true,
     "paths": {
-      "/*": ["./src/*"]
+      "/*": ["./src/*"],
+      "npm://*": ["./node_modules/*"]
     },
     "strict": true,
     "target": "ESNext"

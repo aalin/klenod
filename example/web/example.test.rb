@@ -664,6 +664,35 @@ class Klenod::ExampleTest < Minitest::Test
     end
   end
 
+  def test_example_app_bundles_npm_packages_for_the_webgl_demo
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    status, _headers, body = entry.call(request("/demo/javascript"), context)
+    html = body.join
+    npm_assets = context.graph.each_asset.select { it.logical_name.to_s.start_with?("npm://") }
+    logical_names = npm_assets.map(&:logical_name)
+    sphere = context.graph.each_asset.find { it.logical_name.to_s.end_with?("NoiseSphere.tsx") }
+
+    assert_equal(200, status)
+    assert_match(/<klenod-[a-z0-9-]*noisesphere[a-z0-9-]*/i, html)
+
+    # gl-matrix has no exports field, so it resolves through "module".
+    assert_includes(logical_names, "npm://gl-matrix/esm/index.js")
+    # simplex-noise exports a bare condition object, matched by "import".
+    assert_includes(logical_names, "npm://simplex-noise/dist/esm/simplex-noise.js")
+    # Neither CommonJS build may be pulled in.
+    refute(logical_names.any? { |name| name.include?("/cjs/") })
+
+    # Package code is emitted like any other module, source maps included.
+    assert_equal(
+      [:javascript, :javascript_source_map],
+      npm_assets.map { it.metadata.fetch(:type) }.uniq.sort
+    )
+    refute_includes(sphere.bytes, "npm://")
+  end
+
   def test_example_app_includes_route_javascript_as_module_script
     config = example_config
     context = config.context

@@ -36,6 +36,13 @@ Tests are co-located:
 - Fixtures live in a sibling `__test__/` directory near the implementation.
 - Haml transform golden tests live under `gems/klenod-build/lib/klenod/build/plugins/__test__/haml`.
 
+`test:web` and `test:examples` need `example/web`'s npm packages installed, because
+its JavaScript demo imports them through the `npm://` scheme:
+
+```sh
+cd example/web && npm ci
+```
+
 Useful suites:
 
 ```sh

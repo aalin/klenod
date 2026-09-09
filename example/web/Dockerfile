@@ -9,13 +9,18 @@ ARG KLENOD_VERSION
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential ca-certificates imagemagick libheif-plugin-aomdec libheif-plugin-aomenc libmagickwand-dev libsodium23 libssl-dev pkg-config \
+  && apt-get install -y --no-install-recommends build-essential ca-certificates imagemagick libheif-plugin-aomdec libheif-plugin-aomenc libmagickwand-dev libsodium23 libssl-dev nodejs npm pkg-config \
   && rm -rf /var/lib/apt/lists/*
 
 COPY Gemfile ./
 
 RUN sed -i "s/, path: \"[^\"]*\"/, \"${KLENOD_VERSION}\"/" Gemfile \
   && bundle install
+
+# npm packages imported through the npm:// scheme are read at build time.
+COPY package.json package-lock.json ./
+
+RUN npm ci
 
 COPY bin ./bin
 COPY lib ./lib
