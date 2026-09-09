@@ -52,9 +52,21 @@ Packages resolve through the `exports` field, falling back to `module` and then
 other module, so they are transformed, content-hashed, and minified in build
 mode.
 
+Inside a package, bare specifiers name other packages and resolve by walking up
+through `node_modules`, nearest first, so a nested copy takes precedence over a
+hoisted one. A package that declares `exports` can also import itself by name.
+Imports that omit an extension are probed for `.js` and `.mjs`, then for an
+`index.js` or `index.mjs` inside a directory. Targets named by `exports` are
+never probed, since that field names exact files.
+
 Only ES modules are supported. The `require` condition is deliberately not
 matched, so a CommonJS-only package fails when it is resolved rather than in the
 browser.
+
+Module IDs are `npm://<package>/<path>`, so a package name identifies one
+directory. Finding two copies of the same package is reported as an error rather
+than resolved, because the ID has nowhere to record which copy a module came
+from. Deduplicate the package in your lockfile.
 
 - `root:` overrides the `node_modules` directory. By default the nearest one at
   or above the source directory is used.
@@ -62,5 +74,5 @@ browser.
   `browser`, `import`, `module`, and `default`, matched in the order the package
   lists them.
 
-Imports between npm packages, extensionless imports inside a package, and the
-legacy `browser` field are not supported yet.
+The legacy `browser` field, `#`-prefixed private imports, Node builtins, and
+JSON imports are not supported yet.
