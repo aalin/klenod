@@ -7,7 +7,7 @@
   %PageHeader{
     kicker: "Plugin Reference",
     title: "JavaScriptPlugin",
-    summary: "JavaScriptPlugin emits content-hashed JavaScript assets, rewrites module imports, resolves npm packages, supports TypeScript and TSX, and can expose TSX custom elements to Ruby and Haml."
+    summary: "JavaScriptPlugin transforms JavaScript and TypeScript into content-hashed browser assets. The companion NodeModulesPlugin adds npm package resolution."
   }
 
   %DocsSection{ title: "Source Files" }
@@ -31,11 +31,11 @@
       button.addEventListener("click", () => import("./Panel.js"));
       ```
 
-      Relative imports, app-root imports, `npm://` imports, and external URL imports are supported. Extensionless JavaScript imports resolve according to the importer: TSX prefers `.tsx`, `.ts`, `.jsx`, then `.js`; TS prefers `.ts`, then `.js`.
+      Relative imports, app-root imports, and external URL imports are supported. Extensionless JavaScript imports resolve according to the importer: TSX prefers `.tsx`, `.ts`, `.jsx`, then `.js`; TS prefers `.ts`, then `.js`.
 
   %DocsSection{ title: "npm Packages" }
     :markdown
-      Bare specifiers stay relative to the importer, so npm packages are addressed through the `npm://` scheme. Resolution is handled by `NodeModulesPlugin`, which is a separate plugin and must be registered before `JavaScriptPlugin`.
+      `NodeModulesPlugin` adds installed npm packages to the graph. It is opt-in; register it before `JavaScriptPlugin` so the JavaScript plugin can transform the files it resolves.
 
       ```ruby
       plugins [
@@ -44,7 +44,7 @@
       ]
       ```
 
-      A specifier is `npm://` followed by the package name, optionally followed by a subpath. Scoped packages keep their `@scope/name` spelling.
+      Application code imports a package with an explicit `npm://` URL. This keeps npm lookup separate from Klenod's usual rule that a bare specifier is relative to its importer. Add an exported subpath after the package name when needed; scoped packages retain their usual `@scope/package` form.
 
       ```js
       import * as THREE from "npm://three";
@@ -54,7 +54,7 @@
       import { css } from "npm://@lit/reactive-element/css-tag.js";
       ```
 
-      Side-effect imports, re-exports, and dynamic imports all work, and resolve to the same content-hashed asset as a static import of the same module.
+      The scheme works with side-effect imports, re-exports, and string-literal dynamic imports.
 
       ```js
       import "npm://@scope/widget";
@@ -62,21 +62,21 @@
       button.addEventListener("click", () => import("npm://three"));
       ```
 
-      Whether a subpath needs a file extension depends on the package, because a subpath has to match what that package's `exports` field declares. `three` publishes `./addons/*` and expects `npm://three/addons/controls/OrbitControls.js`, while `zod` publishes `./mini` and expects `npm://zod/mini`.
+      Exported subpaths must match the package's `exports` map. Include an extension when the export includes one: use `npm://three/addons/controls/OrbitControls.js` for Three.js, but `npm://zod/mini` for Zod.
 
-      Package files go through the graph like any other module, so they are transformed, content-hashed, minified in build mode, and shared when two modules import the same package.
+      Resolved package files are ordinary graph modules. Klenod transforms them, rewrites their imports, emits content-hashed assets, and minifies them in build mode.
 
   %DocsSection{ title: "npm Resolution" }
     :markdown
-      A package entry resolves through its `exports` field, matched against the `browser`, `import`, `module`, and `default` conditions. Conditions are matched in the order the package lists them rather than the order above, which is how Node and browser bundlers behave. A package with no `exports` field falls back to `module`, then `main`, then `index.js`.
+      Package exports use the `browser`, `import`, `module`, and `default` conditions, respecting their order in `package.json`. Packages without `exports` fall back to `module`, then `main`, then `index.js`.
 
-      Inside a package, bare specifiers name other packages and resolve by walking up through `node_modules`, nearest first, so a nested copy takes precedence over a hoisted one. A package that declares `exports` can also import itself by name, which is how libraries such as `three` reference their own core from bundled addons. Imports that omit an extension are probed for `.js` and `.mjs`, then for an `index.js` or `index.mjs` inside a directory. Targets named by `exports` are never probed, since that field names exact files. A package can also use `#`-prefixed private imports, resolved against its own `imports` field.
+      Within a package, relative imports stay in that package and bare specifiers resolve dependencies from the nearest `node_modules` directory. Package self-references and `#` imports work through the package's `exports` and `imports` maps. Extensionless imports probe `.js`, `.mjs`, `index.js`, and `index.mjs`; targets from an `exports` map are exact and are not probed.
 
-      Only ES modules are supported. The `require` condition is deliberately not matched, so a CommonJS-only package fails when it is resolved rather than in the browser. Node builtins are reported the same way: a package that imports `node:fs`, or `fs` with nothing installed under that name, fails at resolve time.
+      Only ES modules are supported. CommonJS packages, Node builtins, the legacy `browser` field, and JSON package imports are not supported. A `browser` condition inside `exports` is supported.
 
-      Module IDs are `npm://<package>/<path>`, so a package name identifies one directory. Finding two copies of the same package is reported as an error rather than resolved, because the ID has nowhere to record which copy a module came from.
+      Each package name can refer to only one physical directory in a graph because module IDs use the form `npm://<package>/<path>`. Klenod reports an error if it finds two copies of the same package; deduplicate the package in the lockfile.
 
-      `NodeModulesPlugin.new(root:)` overrides the `node_modules` directory, which otherwise defaults to the nearest one at or above the source directory. `NodeModulesPlugin.new(conditions:)` overrides the matched export conditions.
+      By default, the plugin uses the nearest `node_modules` directory at or above the application source directory. Pass `root:` to choose one explicitly, or `conditions:` to replace the default export conditions.
 
   %DocsSection{ title: "CSS And Asset Imports" }
     :markdown
