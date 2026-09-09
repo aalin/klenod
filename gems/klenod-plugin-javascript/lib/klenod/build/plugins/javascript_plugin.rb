@@ -30,6 +30,9 @@ module Klenod
           JSX_RUNTIME_MODULE_ID = ModuleId.new("virtual:klenod/jsx-runtime.js", nil)
           LOCAL_SPECIFIER_PATTERN = %r{\A(?:\.{1,2}/|/|app:/)}
           EXTERNAL_SPECIFIER_PATTERN = %r{\A(?:[A-Za-z][A-Za-z0-9+.-]*:)?//}
+          # Also matches EXTERNAL_SPECIFIER_PATTERN, so npm imports have to be
+          # recognised before a specifier is treated as an external URL.
+          NPM_SPECIFIER_PATTERN = %r{\Anpm://}
           VALID_SOURCE_MAP_MODES = [false, true, :development].freeze
           IDENTIFIER_PATTERN = '[$_\p{Alpha}][$\u200c\u200d\p{Alnum}_]*'
           DEFAULT_EXPORT_CLASS_PATTERN = /\bexport\s+default\s+class\s+(#{IDENTIFIER_PATTERN})\b/
@@ -217,9 +220,13 @@ module Klenod
           end
 
           def build_dependencies(module_id, imports)
+            # Inside an npm package a bare specifier names another package, so
+            # let it reach the resolver instead of rejecting it here.
+            npm_importer = module_id.scheme == :npm
+
             imports.filter_map.with_index do |import, index|
-              next if external_specifier?(import.specifier)
-              raise DynamicImportError, unsupported_specifier_message(import) unless local_specifier?(import.specifier) || import.specifier == JSX_RUNTIME_SPECIFIER
+              next if external_specifier?(import.specifier) && !npm_specifier?(import.specifier)
+              raise DynamicImportError, unsupported_specifier_message(import) unless npm_importer || bundled_specifier?(import.specifier)
 
               Dependency
                 .create(
@@ -415,11 +422,19 @@ module Klenod
           end
 
           def unsupported_specifier_message(import)
-            "Unsupported JavaScript import #{import.specifier.inspect} at #{import.loc}. Only relative, app-root, and external URL imports are supported."
+            "Unsupported JavaScript import #{import.specifier.inspect} at #{import.loc}. Only relative, app-root, npm, and external URL imports are supported."
+          end
+
+          def bundled_specifier?(specifier)
+            local_specifier?(specifier) || npm_specifier?(specifier) || specifier == JSX_RUNTIME_SPECIFIER
           end
 
           def local_specifier?(specifier)
             specifier.match?(LOCAL_SPECIFIER_PATTERN)
+          end
+
+          def npm_specifier?(specifier)
+            specifier.match?(NPM_SPECIFIER_PATTERN)
           end
 
           def external_specifier?(specifier)
