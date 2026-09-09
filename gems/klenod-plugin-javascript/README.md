@@ -59,9 +59,15 @@ Imports that omit an extension are probed for `.js` and `.mjs`, then for an
 `index.js` or `index.mjs` inside a directory. Targets named by `exports` are
 never probed, since that field names exact files.
 
+A package can also use `#`-prefixed private imports. They resolve against that
+package's own `imports` field and may point at a file inside the package or name
+another package.
+
 Only ES modules are supported. The `require` condition is deliberately not
 matched, so a CommonJS-only package fails when it is resolved rather than in the
-browser.
+browser. Node builtins are reported the same way: a package that imports
+`node:fs`, or `fs` with nothing installed under that name, fails at resolve time
+rather than in the browser.
 
 Module IDs are `npm://<package>/<path>`, so a package name identifies one
 directory. Finding two copies of the same package is reported as an error rather
@@ -74,5 +80,7 @@ from. Deduplicate the package in your lockfile.
   `browser`, `import`, `module`, and `default`, matched in the order the package
   lists them.
 
-The legacy `browser` field, `#`-prefixed private imports, Node builtins, and
-JSON imports are not supported yet.
+The legacy `browser` field and JSON imports are not supported yet. The `browser`
+field matters mostly for older CommonJS packages, which cannot be imported
+anyway; `browser` as an export condition is supported and is the mechanism
+modern packages use.
