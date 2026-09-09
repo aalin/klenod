@@ -59,6 +59,9 @@ module Example
           cache_path: google_fonts_cache_path
         ),
         Klenod::Build::Plugins::CSSPlugin.new,
+        # Must precede JavaScriptPlugin so npm:// imports resolve before the
+        # JavaScript plugin treats them as external URLs.
+        Klenod::Build::Plugins::NodeModulesPlugin.new,
         Klenod::Build::Plugins::JavaScriptPlugin.new,
         Klenod::Build::Plugins::SvgPlugin.new,
         Klenod::Build::Plugins::ImagePlugin.new(

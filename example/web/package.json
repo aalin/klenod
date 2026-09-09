@@ -1,0 +1,10 @@
+{
+  "name": "klenod-example-web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "npm packages imported by the Klenod example app through the npm:// scheme.",
+  "dependencies": {
+    "gl-matrix": "3.4.4",
+    "simplex-noise": "4.0.3"
+  }
+}

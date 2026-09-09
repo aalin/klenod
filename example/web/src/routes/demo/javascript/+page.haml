@@ -8,6 +8,7 @@
 
   IntlTime = import("./IntlTime.tsx")
   TimeDemo = import("./TimeDemo.tsx")
+  NoiseSphere = import("./NoiseSphere.tsx")
 
 %article
   %PageHeader{
@@ -15,6 +16,10 @@
     title: I18n.t(:header, :title),
     summary: I18n.t(:header, :summary)
   }
+
+  %Panel{ title: I18n.t(:webgl, :title) }
+    %p= I18n.t(:webgl, :summary)
+    %NoiseSphere
 
   %Panel{ title: I18n.t(:matrix, :title) }
     %table

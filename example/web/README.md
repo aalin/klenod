@@ -13,7 +13,11 @@ bundle exec rake -C gems/klenod-plugin-javascript compile
 bundle exec rake -C gems/klenod-plugin-css compile
 cd example/web
 bundle install
+npm ci
 ```
+
+`npm ci` is required. The JavaScript demo imports npm packages through the
+`npm://` scheme, and the app does not build without them.
 
 The remaining commands are run from `example/web/`.
 
