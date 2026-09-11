@@ -155,7 +155,7 @@ GEM
     protocol-http2 (0.28.0)
       protocol-hpack (~> 1.4)
       protocol-http (~> 0.62)
-    protocol-url (0.18.0)
+    protocol-url (0.19.0)
     racc (1.8.1)
     rake-compiler-dock (1.12.0)
     rb-fsevent (0.11.2)
@@ -282,7 +282,7 @@ CHECKSUMS
   protocol-http (0.71.0) sha256=38577bf3df0bf0c3f7ee7e21b43fcb4bd7624e36f697dbe9c3eea344f14bd9ba
   protocol-http1 (0.41.0) sha256=9863874a1228948a896c3e7ea16d13a680c8f3ed50706007c78b7033018b0ea3
   protocol-http2 (0.28.0) sha256=b7c6195dcfa80ec2484670e9fd8fc21024cc654a391aa0792433aff1188c1691
-  protocol-url (0.18.0) sha256=b16f55983094b46d18e04b709333b260e4ab5962a32696728e33a6c396150ed6
+  protocol-url (0.19.0) sha256=3f6b9f6aa742a259a0b3610fbbd9685dcd9506adf6734f428ff96259faabfb21
   racc (1.8.1) sha256=4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f
   rake-compiler-dock (1.12.0) sha256=f13205c2738f3d2053afcd03491a9e4541b22a59a0bfc53fc8bc883bd8188023
   rb-fsevent (0.11.2) sha256=43900b972e7301d6570f64b850a5aa67833ee7d87b458ee92805d56b7318aefe
