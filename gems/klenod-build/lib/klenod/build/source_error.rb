@@ -93,5 +93,43 @@ module Klenod
         ["#{module_id}:#{[line, column].compact.join(":")}", *frames]
       end
     end
+
+    # A module whose Ruby fails to parse when it is evaluated.
+    #
+    # Most .rb files never reach the build-time parser: RubyImportRewriter only
+    # parses a file that contains an import, so the syntax error first surfaces
+    # at `Runtime::Mod` evaluation as a bare SyntaxError -- a ScriptError, which
+    # escapes every `rescue => e` in the build. Generated Ruby from another
+    # format fails here too, in which case the excerpt shows the generated
+    # source.
+    class EvaluationSyntaxError < SourceError
+      # "app:/x.rb:3: syntax error found"
+      HEADER = /\A(?<file>.+?):(?<line>\d+): (?<detail>.+?)$/
+      # "    | ^~~ unexpected 'end'; expected a `)` to close the arguments"
+      CARET = /^ *\| (?<pad> *)\^+~* *(?<message>.*)$/
+
+      def kind
+        "Ruby syntax error"
+      end
+
+      private
+
+      # Prism renders its own excerpt into the message. We re-render it from the
+      # line and column, and keep the explanation it prints beside the caret.
+      def location(error)
+        header = HEADER.match(error.message)
+        return nil unless header
+
+        caret = CARET.match(error.message)
+        detail, _, hint = (caret ? caret[:message] : header[:detail]).partition("; ")
+
+        Location.new(
+          line: header[:line].to_i,
+          column: caret && caret[:pad].length + 1,
+          detail: detail,
+          hints: [hint.empty? ? nil : hint.capitalize].compact
+        )
+      end
+    end
   end
 end

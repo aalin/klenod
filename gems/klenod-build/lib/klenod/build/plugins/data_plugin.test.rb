@@ -63,13 +63,81 @@ class Klenod::Build::Plugins::DataPlugin::Test < Minitest::Test
     end
   end
 
-  def test_invalid_json_raises_parse_error
+  BROKEN_JSON = "{\n  \"a\": 1,\n  \"b\" 2\n}\n"
+  BROKEN_YAML = "name: ok\nitems:\n  - a\nbad: [1, 2\n"
+  BROKEN_TOML = "title = \"Hello\"\ninvalid =\n"
+
+  def test_invalid_json_raises_a_located_parse_error
+    error = parse_error("config.json", BROKEN_JSON, Klenod::Build::Plugins::JsonPlugin::ParseError)
+
+    assert_equal("JSON parse error", error.kind)
+    assert_equal(3, error.line)
+    assert_equal(7, error.column)
+    assert_equal(BROKEN_JSON, error.source)
+    # The parser repeats the location in its message; the title and caret carry it.
+    assert_equal("expected ':' after object key, got: '2'", error.detail)
+    assert_includes(error.message, "app:/config.json:3:7: JSON parse error")
+  end
+
+  def test_invalid_yaml_raises_a_located_parse_error_with_the_parser_context_as_a_hint
+    error = parse_error("settings.yaml", BROKEN_YAML, Klenod::Build::Plugins::YamlPlugin::ParseError)
+
+    assert_equal("YAML parse error", error.kind)
+    assert_equal(4, error.line)
+    assert_equal(6, error.column)
+    assert_equal("did not find expected ',' or ']'", error.detail)
+    assert_equal(["While parsing a flow sequence"], error.hints)
+  end
+
+  def test_invalid_toml_raises_a_located_parse_error
+    error = parse_error("site.toml", BROKEN_TOML, Klenod::Build::Plugins::TomlPlugin::ParseError)
+
+    assert_equal("TOML parse error", error.kind)
+    assert_equal(2, error.line)
+    # citrus reports a zero-based offset into the line.
+    assert_equal(10, error.column)
+    # toml-rb embeds its own caret diagram, which we replace with our excerpt.
+    refute_includes(error.message, "Failed to parse input on line")
+  end
+
+  def test_parse_errors_are_collected_during_invalidation_instead_of_raising
     Dir.mktmpdir do |dir|
-      File.write("#{dir}/config.json", "{")
+      File.write("#{dir}/config.json", JSON.dump({"a" => 1}))
+      File.write("#{dir}/entry.rb", "Config = import(\"./config.json\")\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("entry.rb")
 
-      assert_raises(JSON::ParserError) { context.evaluate("config.json") }
+      File.write("#{dir}/config.json", BROKEN_JSON)
+      result = context.invalidate_paths(["#{dir}/config.json"])
+
+      refute_empty(result.errors)
+      _module_id, error = result.errors.fetch(0)
+      assert_instance_of(Klenod::Build::Plugins::JsonPlugin::ParseError, error)
+      assert_equal(3, error.line)
+    end
+  end
+
+  def test_text_files_cannot_fail_to_parse
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/readme.txt", "{ not json, not yaml: [\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.evaluate("readme.txt")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_equal("{ not json, not yaml: [\n", exports::Default)
+    end
+  end
+
+  private
+
+  def parse_error(name, source, expected_class)
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/#{name}", source)
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      assert_raises(expected_class) { context.evaluate(name) }
     end
   end
 end

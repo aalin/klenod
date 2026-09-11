@@ -493,8 +493,15 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       File.write(intl_path, "title = \"Hello\"\ninvalid =\n")
       result = context.invalidate_paths([intl_path])
 
+      # The Haml page is the module that failed to reload, but the error points
+      # at the companion the developer has to fix.
       assert_equal(["app:/pages/page.haml"], result.errors.map { |module_id, _error| module_id.to_s })
-      assert_kind_of(TomlRB::ParseError, result.errors.first.last)
+
+      error = result.errors.first.last
+      assert_kind_of(Klenod::Build::Plugins::IntlPlugin::ParseError, error)
+      assert_equal("app:/pages/page.intl.en-US.toml", error.module_id.to_s)
+      assert_equal(2, error.line)
+      assert_includes(error.message, "> 2 | invalid =")
     end
   end
 

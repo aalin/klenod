@@ -7,6 +7,7 @@ require "klenod/runtime/mod"
 require "klenod/runtime/bundle"
 require_relative "asset_generation_queue"
 require_relative "errors"
+require_relative "source_error"
 require_relative "graph/invalidator"
 require_relative "hashing"
 require_relative "invalidation_result"
@@ -282,7 +283,7 @@ module Klenod
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
           assert_supported_transform!(module_id, source, transform)
           transformed_hash = Hashing.hexdigest(transform.code)
-          mod = instantiate_module(module_id, transform, resolved_dependencies, dependency_records, cached)
+          mod = instantiate_module(module_id, transform, resolved_dependencies, dependency_records, cached, source)
           record = build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, mod)
 
           @records[module_id] = record
@@ -354,15 +355,17 @@ module Klenod
         evaluate_eager_dependencies(record.resolved_dependencies)
         dependency_records = dependency_records_for(eager_dependencies(record.resolved_dependencies))
         mod =
-          Runtime::Mod.new(
-            module_id.to_s,
-            record.transformed_source,
-            imports: imports_for(record.resolved_dependencies, dependency_records),
-            source_map: record.source_map,
-            version: record.version,
-            eval_path: eval_path_for(module_id),
-            namespace: namespace
-          )
+          evaluating(module_id, record.transformed_source, record.source) do
+            Runtime::Mod.new(
+              module_id.to_s,
+              record.transformed_source,
+              imports: imports_for(record.resolved_dependencies, dependency_records),
+              source_map: record.source_map,
+              version: record.version,
+              eval_path: eval_path_for(module_id),
+              namespace: namespace
+            )
+          end
 
         @mods[module_id] = mod
       end
@@ -536,16 +539,34 @@ module Klenod
         extname.empty? || extname == ".rb"
       end
 
-      def instantiate_module(module_id, transform, resolved_dependencies, dependency_records, cached)
-        Runtime::Mod.new(
-          module_id.to_s,
-          transform.code,
-          imports: imports_for(resolved_dependencies, dependency_records),
-          source_map: transform.source_map,
-          version: cached ? cached.version + 1 : 0,
-          eval_path: eval_path_for(module_id),
-          namespace: namespace
-        )
+      def instantiate_module(module_id, transform, resolved_dependencies, dependency_records, cached, source)
+        evaluating(module_id, transform.code, source) do
+          Runtime::Mod.new(
+            module_id.to_s,
+            transform.code,
+            imports: imports_for(resolved_dependencies, dependency_records),
+            source_map: transform.source_map,
+            version: cached ? cached.version + 1 : 0,
+            eval_path: eval_path_for(module_id),
+            namespace: namespace
+          )
+        end
+      end
+
+      # Evaluating a module runs its Ruby, and a syntax error there is a
+      # ScriptError that escapes every `rescue => e` in the build. Only a syntax
+      # error is wrapped: a LoadError from the module's own `require` is also a
+      # ScriptError, and reporting that as a syntax error would be wrong.
+      #
+      # The reported line refers to the evaluated source, so the excerpt has to
+      # come from that -- except for a Ruby module, whose transform only
+      # rewrites import calls in place and leaves every line where it was. There
+      # the original source reads better.
+      def evaluating(module_id, evaluated_source, original_source)
+        yield
+      rescue ::SyntaxError => error
+        excerpt_source = ruby_module_extension?(module_id.extname) ? original_source : evaluated_source
+        raise EvaluationSyntaxError.new(error, source: excerpt_source || evaluated_source, module_id: module_id)
       end
 
       def eval_path_for(module_id)

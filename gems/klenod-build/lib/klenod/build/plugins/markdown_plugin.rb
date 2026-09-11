@@ -7,10 +7,12 @@ require "yaml"
 require_relative "../dependency"
 require_relative "../module_id"
 require_relative "../plugin"
+require_relative "../source_error"
 require_relative "../transform_result"
 require_relative "../watched_pattern"
 require_relative "class_names_runtime"
 require_relative "component_defaults"
+require_relative "data_plugin"
 require_relative "haml_plugin"
 require_relative "markdown_compiler"
 
@@ -20,6 +22,30 @@ module Klenod
       module MarkdownPlugin
         def self.new(...)
           Plugin.new(...)
+        end
+
+        # Frontmatter is YAML, so the report is the YAML one, shifted to file
+        # lines. Kramdown does not fail on malformed Markdown -- it collects
+        # warnings -- so frontmatter is the only parse failure a .md file has.
+        class FrontmatterError < YamlPlugin::ParseError
+          def initialize(error, source:, module_id:, line_offset: 0)
+            @line_offset = line_offset
+
+            super(error, source: source, module_id: module_id)
+          end
+
+          def kind
+            "Markdown frontmatter error"
+          end
+
+          private
+
+          def location(error)
+            found = super
+            return found unless found&.line
+
+            found.with(line: found.line + @line_offset)
+          end
         end
 
         class Plugin < Klenod::Build::Plugin
@@ -49,7 +75,7 @@ module Klenod
           def transform(module_id, code, context)
             return super unless module_id.extname == ".md"
 
-            frontmatter, markdown_source = parse_frontmatter(code)
+            frontmatter, markdown_source = parse_frontmatter(code, module_id)
             builder = HamlPlugin::Transformer::RubyBuilder.new(profiler: context.profiler)
             dependency = markdown_components_dependency(module_id, context)
             class_names_dependency = class_names_runtime_dependency(module_id)
@@ -96,17 +122,29 @@ module Klenod
 
           private
 
-          def parse_frontmatter(source)
+          def parse_frontmatter(source, module_id)
             match = source.match(/\A---[ \t]*\r?\n(?<frontmatter>.*?\r?\n)---[ \t]*(?:\r?\n|\z)/m)
             return [{}, source] unless match
 
-            frontmatter = YAML.safe_load(match[:frontmatter], permitted_classes: [Date, Time, Symbol], aliases: false, symbolize_names: true) || {}
+            frontmatter = load_frontmatter(match[:frontmatter], source, module_id) || {}
 
             unless frontmatter.is_a?(Hash)
-              raise ArgumentError, "Markdown frontmatter must be a mapping"
+              raise FrontmatterError.new(
+                ArgumentError.new("Markdown frontmatter must be a mapping"),
+                source: source,
+                module_id: module_id
+              )
             end
 
             [normalize_frontmatter(frontmatter), source.byteslice(match.end(0)..) || ""]
+          end
+
+          # Psych reports lines within the frontmatter slice, which starts after
+          # the opening "---", so shift them to match the file.
+          def load_frontmatter(frontmatter, source, module_id)
+            YAML.safe_load(frontmatter, permitted_classes: [Date, Time, Symbol], aliases: false, symbolize_names: true)
+          rescue Psych::Exception => error
+            raise FrontmatterError.new(error, source: source, module_id: module_id, line_offset: 1)
           end
 
           def normalize_frontmatter(value)

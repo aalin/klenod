@@ -272,6 +272,73 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
     end
   end
 
+  BROKEN_RUBY = "def greet\n  puts(\nend\n"
+
+  def test_a_file_without_imports_reports_its_syntax_error_from_evaluation
+    # RubyImportRewriter only parses a file that contains an import, so most
+    # syntax errors surface as a bare SyntaxError when the module is evaluated.
+    error = ruby_error("plain.rb", BROKEN_RUBY, Klenod::Build::EvaluationSyntaxError)
+
+    assert_equal("Ruby syntax error", error.kind)
+    assert_equal(3, error.line)
+    assert_equal(1, error.column)
+    assert_equal("unexpected 'end'", error.detail)
+    assert_equal(["Expected a `)` to close the arguments"], error.hints)
+    assert_includes(error.message, "> 3 | end")
+  end
+
+  def test_evaluation_syntax_errors_are_collectable_by_the_build
+    # A bare SyntaxError is a ScriptError and escapes every `rescue => e`.
+    assert_operator(Klenod::Build::EvaluationSyntaxError, :<, StandardError)
+  end
+
+  def test_an_evaluation_excerpt_shows_the_original_source_not_the_rewritten_one
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/other.rb", "X = 1\n")
+      File.write("#{dir}/entry.rb", "Other = import(\"./other.rb\")\ndef a(\nend\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      error = assert_raises(Klenod::Build::EvaluationSyntaxError) { context.evaluate("entry.rb") }
+
+      # Rewriting import calls leaves every line where it was, so the original
+      # source lines still match the reported line.
+      assert_includes(error.message, %(import("./other.rb")))
+      refute_includes(error.message, "__klenod_import__")
+    end
+  end
+
+  def test_a_file_with_a_dynamic_import_reports_its_syntax_error_from_the_transform
+    # A non-literal import forces the rewriter past its fast path into
+    # SyntaxTree, which fails before the module is ever evaluated.
+    error = ruby_error("a.rb", "Other = import(compute_name)\ndef a(\nend\n", Klenod::Build::Plugins::RubyPlugin::ParseError)
+
+    assert_equal("Ruby parse error", error.kind)
+    assert_equal(3, error.line)
+    # SyntaxTree reports a zero-based column.
+    assert_equal(1, error.column)
+    assert_includes(error.detail, "unexpected 'end'")
+  end
+
+  def test_a_load_error_from_the_module_is_not_reported_as_a_syntax_error
+    # LoadError is a ScriptError too, but it is not a syntax error.
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/entry.rb", "require \"no_such_library_anywhere\"\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      assert_raises(LoadError) { context.evaluate("entry.rb") }
+    end
+  end
+
+  def ruby_error(name, source, expected_class)
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/#{name}", source)
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      assert_raises(expected_class) { context.evaluate(name) }
+    end
+  end
+
   def transform_context(source_dir: nil, profiler: nil)
     Context.new(source_dir, profiler)
   end

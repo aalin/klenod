@@ -220,6 +220,39 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
     end
   end
 
+  def test_malformed_frontmatter_reports_the_file_line_not_the_frontmatter_line
+    error =
+      with_context("page.md" => "---\ntitle: ok\nbad: [1, 2\n---\n\n# Hello\n") do |context|
+        assert_raises(Klenod::Build::Plugins::MarkdownPlugin::FrontmatterError) { context.evaluate("page.md") }
+      end
+
+    assert_equal("Markdown frontmatter error", error.kind)
+    # Psych counts from the start of the frontmatter, which begins after "---".
+    assert_equal(3, error.line)
+    assert_equal(6, error.column)
+    assert_equal("did not find expected ',' or ']'", error.detail)
+    assert_equal(["While parsing a flow sequence"], error.hints)
+    assert_includes(error.message, "> 3 | bad: [1, 2")
+  end
+
+  def test_frontmatter_that_is_not_a_mapping_reports_the_file
+    error =
+      with_context("page.md" => "---\n- one\n- two\n---\n\n# Hello\n") do |context|
+        assert_raises(Klenod::Build::Plugins::MarkdownPlugin::FrontmatterError) { context.evaluate("page.md") }
+      end
+
+    assert_equal("app:/page.md", error.module_id.to_s)
+    assert_includes(error.message, "Markdown frontmatter must be a mapping")
+  end
+
+  def test_malformed_markdown_body_is_not_an_error
+    # Kramdown collects warnings rather than raising, so frontmatter is the only
+    # parse failure a .md file has.
+    with_context("page.md" => "# Hello\n\n| broken | table\n| --\n\n<span>unclosed\n") do |context|
+      context.evaluate("page.md")
+    end
+  end
+
   def with_context(files)
     Dir.mktmpdir do |dir|
       files.each do |path, source|
