@@ -1214,6 +1214,39 @@ class Klenod::ExampleTest < Minitest::Test
     refute_includes(html, "ERROR  components/DataTable.haml")
   end
 
+  def test_example_server_renders_parse_errors_from_every_plugin_not_just_haml
+    config = example_config
+    error_page = Example::Server::DevelopmentErrorPage.new(config: config, context: config.context)
+    source = "{\n  \"a\": 1,\n  \"b\" 2\n}\n"
+    error =
+      begin
+        JSON.parse(source)
+      rescue JSON::ParserError => parser_error
+        Klenod::Build::Plugins::JsonPlugin::ParseError.new(
+          parser_error,
+          source: source,
+          module_id: Klenod::Build::ModuleId.new("data/config.json", nil)
+        )
+      end
+
+    status, _headers, body =
+      error_page.response_for(
+        HeaderRequest["GET", "/demo/data", HeaderList.new([["Accept", "text/html"]])],
+        error,
+        Example::Server::ServerErrors.format_exception(error, nil)
+      )
+    html = body.join
+
+    assert_equal(500, status)
+    # Filename, line and column, and a caret under the offending character.
+    assert_includes(html, "src/data/config.json:3:7: JSON parse error")
+    assert_includes(html, "expected &#39;:&#39; after object key")
+    assert_includes(html, "<h2>Source</h2>")
+    assert_includes(html, "&gt; 3 |   &quot;b&quot; 2")
+    assert_includes(html, "|       ^")
+    refute_includes(html, "<h2>Backtrace</h2>")
+  end
+
   def test_example_server_keeps_plain_error_response_for_non_html_requests
     error_page = Example::Server::DevelopmentErrorPage.new(config: nil, context: nil)
     status, headers, body =

@@ -60,18 +60,16 @@ module Example
       end
 
       def parse_error_values(request, error)
-        title, details = parse_error_details(error.cause.message)
         location = parse_error_location(error)
-        kind = error.is_a?(Klenod::Build::Plugins::JavaScriptPlugin::ParseError) ? "JavaScript" : "Haml"
-        label = location ? "#{location}: #{kind} parse error" : "#{kind} parse error"
+        label = location ? "#{location}: #{error.kind}" : error.kind
 
         {
           "ERROR_LABEL" => escape_html(label),
-          "ERROR_TITLE" => escape_html(title),
+          "ERROR_TITLE" => escape_html(error.detail),
           "ERROR_CLASS" => escape_html(error.class.name),
           "REQUEST_PATH" => escape_html(request_path(request)),
-          "ERROR_LIST" => error_list_html(details),
-          "SOURCE_SECTION" => source_section_html(error.source, error.line),
+          "ERROR_LIST" => error_list_html(error.hints),
+          "SOURCE_SECTION" => source_section_html(error.source, error.line, error.column),
           "BACKTRACE_SECTION" => ""
         }
       end
@@ -88,27 +86,14 @@ module Example
         }
       end
 
-      def parse_error_details(message)
-        sections = message.split(/\n\n+/)
-        title = sections.shift.to_s
-        details =
-          sections.flat_map do |section|
-            _heading, *lines = section.lines.map(&:chomp)
-            lines.map(&:strip).reject(&:empty?)
-          end
-
-        [title, details]
-      end
-
       def parse_error_location(error)
         return nil unless error.module_id && error.line
 
-        "#{display_path_for_module(error.module_id)}:#{error.line}"
+        "#{display_path_for_module(error.module_id)}:#{[error.line, error.column].compact.join(":")}"
       end
 
       def parse_error?(error)
-        error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError) ||
-          error.is_a?(Klenod::Build::Plugins::JavaScriptPlugin::ParseError)
+        error.is_a?(Klenod::Build::SourceError)
       end
 
       def display_path_for_module(module_id)
@@ -162,24 +147,11 @@ module Example
         error.is_a?(Klenod::Build::ResolveError) && error.resolution_failure?
       end
 
-      def source_section_html(source, line)
-        return "" unless source && line
+      def source_section_html(source, line, column = nil)
+        excerpt = Klenod::Build::SourceExcerpt.excerpt(source: source, line: line, column: column, ansi: false)
+        return "" unless excerpt
 
-        pre_section_html("Source", source_excerpt(source, line))
-      end
-
-      def source_excerpt(source, line)
-        lines = source.lines
-        index = line - 1
-        first = [index - 2, 0].max
-        last = [index + 2, lines.length - 1].min
-        width = (last + 1).to_s.length
-
-        (first..last).map do |line_index|
-          marker = (line_index == index) ? ">" : " "
-          number = (line_index + 1).to_s.rjust(width)
-          "#{marker} #{number} | #{lines.fetch(line_index).chomp}"
-        end.join("\n")
+        pre_section_html("Source", excerpt.delete_prefix("Source:\n"))
       end
 
       def pre_section_html(title, content)

@@ -1542,6 +1542,30 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_demanding_a_module_that_failed_to_reload_raises_the_stored_error
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/entry.rb", "VALUE = 1\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("entry.rb")
+
+      File.write("#{dir}/entry.rb", "VALUE = 1\ndef broken(\n")
+      result = context.invalidate_paths(["#{dir}/entry.rb"])
+
+      assert_instance_of(Klenod::Build::EvaluationSyntaxError, result.errors.fetch(0).last)
+
+      # Rather than serving stale exports, or blowing up on the FailedModule
+      # placeholder that stands in for the evicted one.
+      error = assert_raises(Klenod::Build::EvaluationSyntaxError) { context.exports("entry.rb") }
+      assert_equal(2, error.line)
+
+      File.write("#{dir}/entry.rb", "VALUE = 7\n")
+      context.invalidate_paths(["#{dir}/entry.rb"])
+
+      assert_equal(7, context.exports("entry.rb")::VALUE)
+    end
+  end
+
   def test_invalidate_paths_reloads_changed_module_and_reevaluates_dependents
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

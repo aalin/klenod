@@ -36,7 +36,10 @@ module Klenod
                 graph.collect_module(module_id, force: true)
               end
               module_id
-            rescue => e
+            rescue StandardError, ScriptError => e
+              # ScriptError too: a syntax error in a module is not a
+              # StandardError, and letting it escape here kills the watcher
+              # thread rather than reporting the module that failed.
               mark_module_failed(module_id, e)
               errors << [module_id, e]
               nil
@@ -58,7 +61,7 @@ module Klenod
                 graph.collect_module(module_id, force: true)
                 nil
               end
-            rescue => e
+            rescue StandardError, ScriptError => e
               errors << [module_id, e]
               nil
             end

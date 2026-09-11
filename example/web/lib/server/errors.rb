@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "klenod/build/resolution_error_formatter"
+require "klenod/build/source_excerpt"
 
 module Example
   module Server
@@ -75,8 +76,7 @@ module Example
       end
 
       def parse_error?(error)
-        error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError) ||
-          error.is_a?(Klenod::Build::Plugins::JavaScriptPlugin::ParseError)
+        error.is_a?(Klenod::Build::SourceError)
       end
 
       def source_root(context)
@@ -101,7 +101,8 @@ module Example
       end
 
       def source_context_for_update_error(module_id, error, context)
-        return nil if error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError)
+        # A SourceError renders its own excerpt into its message.
+        return nil if parse_error?(error)
         return nil unless error.respond_to?(:line)
 
         source_path = context.graph.absolute_path(module_id)
@@ -116,26 +117,7 @@ module Example
       end
 
       def source_excerpt(source, line)
-        lines = source.lines
-        return nil if lines.empty?
-
-        index = line - 1
-        first = [index - 2, 0].max
-        last = [index + 2, lines.length - 1].min
-        width = (last + 1).to_s.length
-        excerpt =
-          (first..last).map do |line_index|
-            marker = (line_index == index) ? ">" : " "
-            number = (line_index + 1).to_s.rjust(width)
-            formatted = "#{marker} #{number} | #{lines.fetch(line_index).chomp}"
-            if marker == ">"
-              "\e[1;31m#{formatted}\e[0m"
-            else
-              formatted
-            end
-          end
-
-        "Source:\n#{excerpt.join("\n")}"
+        Klenod::Build::SourceExcerpt.excerpt(source: source, line: line, ansi: ansi?)
       end
     end
   end

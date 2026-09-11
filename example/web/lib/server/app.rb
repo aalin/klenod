@@ -27,7 +27,7 @@ module Example
       end
 
       def run
-        entry
+        boot
         asset_app
         runner = server_runner
         ServerFormatting.log_startup(host:, port:, source_dir:, assets_dir:, scheme: runner.scheme, protocol: runner.protocol_name)
@@ -57,8 +57,21 @@ module Example
         @context ||= config.context
       end
 
+      # A broken file at startup must not kill the server. The watcher still
+      # starts, requests render the error page, and saving a fix recovers
+      # without a restart because `entry` is only memoized once it succeeds.
+      def boot
+        entry
+      rescue Klenod::Build::SourceError => error
+        report(error)
+      end
+
       def entry
         @entry ||= context.entry(entrypoint)
+      end
+
+      def report(error)
+        recent_error_log.warn_unless_recent(error, ServerErrors.format_exception(error, context))
       end
 
       def watcher
@@ -109,18 +122,26 @@ module Example
 
       def install_update_handler
         context.on_update do |event|
-          start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-          update = context.apply_update(event, entry: entry, assets_dir: assets_dir)
+          handle_update(event)
+        rescue Klenod::Build::SourceError => error
+          # The entrypoint is still broken, from startup or an earlier failed
+          # update. Report it rather than letting it kill the watcher thread.
+          report(error)
+        end
+      end
 
-          update_logger.log(event: event, update: update, duration: ServerFormatting.duration_ms(start_time)) do |module_id, error|
-            ServerErrors.format_update_error(module_id, error, context)
-          end
+      def handle_update(event)
+        start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        update = context.apply_update(event, entry: entry, assets_dir: assets_dir)
 
-          if update.failed?
-            update.each_error { |_module_id, error| recent_error_log.remember(error) }
-          else
-            recent_error_log.clear
-          end
+        update_logger.log(event: event, update: update, duration: ServerFormatting.duration_ms(start_time)) do |module_id, error|
+          ServerErrors.format_update_error(module_id, error, context)
+        end
+
+        if update.failed?
+          update.each_error { |_module_id, error| recent_error_log.remember(error) }
+        else
+          recent_error_log.clear
         end
       end
 

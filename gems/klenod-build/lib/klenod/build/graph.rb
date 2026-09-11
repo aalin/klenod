@@ -25,9 +25,12 @@ module Klenod
       include TSort
 
       AsyncResult = Data.define(:value, :error) do
+        # ScriptError too, so a syntax error in a module comes back to the
+        # parent graph path instead of surfacing as an unhandled Async::Task
+        # exception.
         def self.capture
           new(yield, nil)
-        rescue => e
+        rescue StandardError, ScriptError => e
           new(nil, e)
         end
 
@@ -348,7 +351,14 @@ module Klenod
       end
 
       def evaluate_module(module_id)
-        return @mods.fetch(module_id) if @mods.key?(module_id)
+        if @mods.key?(module_id)
+          mod = @mods.fetch(module_id)
+          # A failed reload is remembered so later demand raises the stored
+          # error rather than serving stale exports.
+          raise mod.error if mod.is_a?(FailedModule)
+
+          return mod
+        end
 
         record = @records.fetch(module_id) { collect_module(module_id) }
         raise_failed_module!(record)
@@ -691,7 +701,7 @@ module Klenod
 
         tasks.each_with_object({}) do |(dependency_id, child_task), records|
           records[dependency_id] = AsyncResult.unwrap(child_task.wait)
-        rescue => e
+        rescue StandardError, ScriptError => e
           first_error ||= e
         end.tap do
           raise first_error if first_error

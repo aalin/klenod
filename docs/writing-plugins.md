@@ -395,6 +395,52 @@ Raise `Klenod::Build::ResolveError` when a plugin cannot resolve an import that 
 
 Raise `Klenod::Build::UnsupportedFileError` when a supported file contains unsupported input. Include the module ID in the message.
 
+Subclass `Klenod::Build::SourceError` when a file the plugin owns fails to parse. It
+turns the exception your parsing library raised into a report that names the file,
+line and column, shows the offending source, and suggests what to try next. The same
+report is used by the terminal and the browser error dialog.
+
+A subclass supplies `kind` and a `location`:
+
+```ruby
+class ParseError < Klenod::Build::SourceError
+  def kind
+    "Message parse error"
+  end
+
+  private
+
+  def location(error)
+    Location.new(
+      line: error.line,
+      column: error.column,
+      detail: error.problem,
+      hints: ["Did you mean #{error.suggestion}?"]
+    )
+  end
+end
+```
+
+Then wrap the parse call, passing the source so the excerpt can be rendered:
+
+```ruby
+def transform(module_id, code, _context)
+  MessageFormat.parse(code)
+rescue MessageFormat::Error => error
+  raise ParseError.new(error, source: code, module_id: module_id)
+end
+```
+
+Every field is optional. Return `nil` from `location` when the library reports no
+position, and the report falls back to the file name and the wrapped message.
+`line` and `column` are one-based; normalize them in `location` if your library
+counts from zero.
+
+Being a `SourceError` matters beyond formatting. A bare Ruby `SyntaxError` is a
+`ScriptError` rather than a `StandardError`, so it escapes the collectors that gather
+build failures and takes the file watcher down with it. Wrapping keeps a syntax error
+in a broken file a reported error rather than a dead dev server.
+
 ## Test a Plugin
 
 Create a temporary source directory and use a small plugin list. This method keeps plugin tests independent from application code.
