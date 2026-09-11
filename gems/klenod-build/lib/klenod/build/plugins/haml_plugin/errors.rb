@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "klenod/runtime/source_map"
+require_relative "../../source_excerpt"
 
 module Klenod
   module Build
@@ -42,47 +43,13 @@ module Klenod
           end
 
           def message_for(error)
-            location =
-              if module_id && line
-                "#{module_id}:#{line}"
-              elsif module_id
-                module_id.to_s
-              elsif line
-                "line #{line}"
-              end
-
-            title = location ? "#{location}: Haml parse error" : "Haml parse error"
-
-            [
-              title,
-              error.message,
-              source_excerpt
-            ].compact.join("\n\n")
-          end
-
-          def source_excerpt
-            return nil unless line
-
-            lines = source.lines
-            return nil if lines.empty?
-
-            index = line - 1
-            first = [index - 2, 0].max
-            last = [index + 2, lines.length - 1].min
-            width = (last + 1).to_s.length
-            excerpt =
-              (first..last).map do |line_index|
-                marker = (line_index == index) ? ">" : " "
-                number = (line_index + 1).to_s.rjust(width)
-                formatted = "#{marker} #{number} | #{lines.fetch(line_index).chomp}"
-                if marker == ">"
-                  "\e[1;31m#{formatted}\e[0m"
-                else
-                  formatted
-                end
-              end
-
-            "Source:\n#{excerpt.join("\n")}"
+            SourceExcerpt.message(
+              module_id: module_id,
+              line: line,
+              kind: "Haml parse error",
+              source: source,
+              message: error.message
+            )
           end
         end
 

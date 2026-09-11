@@ -180,6 +180,36 @@ class Klenod::Build::Watcher::Test < Minitest::Test
     end
   end
 
+  def test_emit_update_reports_a_failed_invalidation_instead_of_killing_the_thread
+    context = RaisingContext.new(ScriptError.new("boom"))
+    watcher = Klenod::Build::Watcher.new(source_dir: "/nowhere", context: context)
+
+    watcher.send(:emit_update, ["a.rb"], [])
+    event = context.events.fetch(0)
+    _module_id, error = event.result.errors.fetch(0)
+
+    assert_equal(1, event.graph_version)
+    assert_equal("boom", error.message)
+    refute(event.result.empty?)
+  end
+
+  class RaisingContext
+    attr_reader :events
+
+    def initialize(error)
+      @error = error
+      @events = []
+    end
+
+    def invalidate_paths(_changed_paths, removed_paths: [])
+      raise @error
+    end
+
+    def emit_update(event)
+      @events << event
+    end
+  end
+
   private
 
   def emit_update(context, changed_paths, removed_paths, graph_version)

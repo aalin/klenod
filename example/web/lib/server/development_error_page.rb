@@ -38,7 +38,7 @@ module Example
       end
 
       def template_values(request, error, formatted)
-        if error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError)
+        if parse_error?(error)
           parse_error_values(request, error)
         elsif resolution_error?(error)
           resolution_error_values(request, error, formatted)
@@ -62,7 +62,8 @@ module Example
       def parse_error_values(request, error)
         title, details = parse_error_details(error.cause.message)
         location = parse_error_location(error)
-        label = location ? "#{location}: Haml parse error" : "Haml parse error"
+        kind = error.is_a?(Klenod::Build::Plugins::JavaScriptPlugin::ParseError) ? "JavaScript" : "Haml"
+        label = location ? "#{location}: #{kind} parse error" : "#{kind} parse error"
 
         {
           "ERROR_LABEL" => escape_html(label),
@@ -103,6 +104,11 @@ module Example
         return nil unless error.module_id && error.line
 
         "#{display_path_for_module(error.module_id)}:#{error.line}"
+      end
+
+      def parse_error?(error)
+        error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError) ||
+          error.is_a?(Klenod::Build::Plugins::JavaScriptPlugin::ParseError)
       end
 
       def display_path_for_module(module_id)

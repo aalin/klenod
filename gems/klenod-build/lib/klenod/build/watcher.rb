@@ -129,9 +129,18 @@ module Klenod
 
       def emit_update(changed_paths, removed_paths)
         @graph_version += 1
-        result = @context.invalidate_paths(changed_paths, removed_paths: removed_paths)
+        result = invalidate(changed_paths, removed_paths)
 
         @context.emit_update(UpdateEvent.new(changed_paths, removed_paths, @graph_version, result))
+      end
+
+      # Invalidation runs on the worker thread, so anything escaping here
+      # would kill it and take hot reloading down for the rest of the
+      # process. Report the failure as a result instead.
+      def invalidate(changed_paths, removed_paths)
+        @context.invalidate_paths(changed_paths, removed_paths: removed_paths)
+      rescue StandardError, ScriptError => e
+        InvalidationResult.failed(e)
       end
 
       def monotonic_time

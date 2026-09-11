@@ -1,7 +1,8 @@
 use magnus::{function, prelude::*, Error, RArray, RHash, Ruby, TryConvert};
 use swc_core::{
     common::{
-        comments::NoopComments, sync::Lrc, FileName, Globals, Mark, SourceMap, Span, GLOBALS,
+        comments::NoopComments, sync::Lrc, FileName, Globals, Mark, SourceMap, Span, Spanned,
+        GLOBALS,
     },
     ecma::{
         ast::{
@@ -222,9 +223,16 @@ fn parse_module(
     );
     let mut parser = Parser::new_from(lexer);
     let module = parser.parse_module().map_err(|error| {
+        let loc = source_map.lookup_char_pos(error.span().lo);
         Error::new(
             ruby.exception_syntax_error(),
-            format!("{}: {}", filename, error.kind().msg()),
+            format!(
+                "{}:{}:{}: {}",
+                filename,
+                loc.line,
+                loc.col.0 + 1,
+                error.kind().msg()
+            ),
         )
     })?;
     Ok(ParsedProgram {

@@ -38,6 +38,23 @@ module Klenod
         :asset_updates,
         :errors
       ) do
+        # An invalidation that blew up before it could inspect any module, so
+        # subscribers still get told about the failure instead of the build
+        # going quiet.
+        def self.failed(error, module_id: nil)
+          new(
+            changed_module_ids: [].freeze,
+            removed_module_ids: [].freeze,
+            reloaded_module_ids: [].freeze,
+            reevaluated_module_ids: [].freeze,
+            added_assets: [].freeze,
+            changed_assets: [].freeze,
+            removed_assets: [].freeze,
+            asset_updates: [].freeze,
+            errors: [[module_id, error]].freeze
+          )
+        end
+
         def asset_changes
           AssetChanges.new(added_assets, changed_assets, removed_assets)
         end

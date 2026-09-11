@@ -8,7 +8,7 @@ module Example
       module_function
 
       def format_exception(error, context)
-        return format_parse_update_error(error) if error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError)
+        return format_parse_update_error(error) if parse_error?(error)
         if resolution_error?(error)
           return Klenod::Build::ResolutionErrorFormatter.format(
             error,
@@ -28,7 +28,7 @@ module Example
       end
 
       def format_update_error(module_id, error, context)
-        return format_parse_update_error(error) if error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError)
+        return format_parse_update_error(error) if parse_error?(error)
 
         if resolution_error?(error)
           return Klenod::Build::ResolutionErrorFormatter.format(
@@ -72,6 +72,11 @@ module Example
 
       def resolution_error?(error)
         error.is_a?(Klenod::Build::ResolveError) && error.resolution_failure?
+      end
+
+      def parse_error?(error)
+        error.is_a?(Klenod::Build::Plugins::HamlPlugin::ParseError) ||
+          error.is_a?(Klenod::Build::Plugins::JavaScriptPlugin::ParseError)
       end
 
       def source_root(context)

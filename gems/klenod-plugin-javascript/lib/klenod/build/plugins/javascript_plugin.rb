@@ -12,6 +12,7 @@ require "klenod/build/source_map"
 require "klenod/build/transform_result"
 require "klenod/runtime"
 
+require_relative "../../plugin/javascript/errors"
 require_relative "../../plugin/javascript/parser"
 
 module Klenod
@@ -73,13 +74,18 @@ module Klenod
 
             custom_element = custom_element_module?(module_id)
             jsx_runtime_namespace = custom_element ? jsx_runtime_namespace(module_id) : nil
-            transform = Parser.transform(
-              code,
-              filename: module_id.to_s,
-              source_kind: source_kind(module_id),
-              minify: minify_enabled?(context),
-              jsx_runtime_namespace: jsx_runtime_namespace
-            )
+            transform =
+              begin
+                Parser.transform(
+                  code,
+                  filename: module_id.to_s,
+                  source_kind: source_kind(module_id),
+                  minify: minify_enabled?(context),
+                  jsx_runtime_namespace: jsx_runtime_namespace
+                )
+              rescue ScriptError => e
+                raise ParseError.new(e, source: code, module_id: module_id)
+              end
             javascript_source, imports =
               if custom_element
                 inject_jsx_runtime(transform.code, transform.imports, module_id, jsx_runtime_namespace)
