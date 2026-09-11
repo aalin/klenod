@@ -274,12 +274,13 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
 
   BROKEN_RUBY = "def greet\n  puts(\nend\n"
 
-  def test_a_file_without_imports_reports_its_syntax_error_from_evaluation
-    # RubyImportRewriter only parses a file that contains an import, so most
-    # syntax errors surface as a bare SyntaxError when the module is evaluated.
-    error = ruby_error("plain.rb", BROKEN_RUBY, Klenod::Build::EvaluationSyntaxError)
+  def test_a_syntax_error_is_caught_while_collecting_not_at_evaluation
+    # The rewriter only parses a file containing an import it cannot rewrite
+    # literally, so this used to surface only when the module was evaluated --
+    # which a production build never does.
+    error = ruby_error("plain.rb", BROKEN_RUBY, Klenod::Build::Plugins::RubyPlugin::ParseError)
 
-    assert_equal("Ruby syntax error", error.kind)
+    assert_equal("Ruby parse error", error.kind)
     assert_equal(3, error.line)
     assert_equal(1, error.column)
     assert_equal("unexpected 'end'", error.detail)
@@ -287,36 +288,55 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
     assert_includes(error.message, "> 3 | end")
   end
 
-  def test_evaluation_syntax_errors_are_collectable_by_the_build
-    # A bare SyntaxError is a ScriptError and escapes every `rescue => e`.
-    assert_operator(Klenod::Build::EvaluationSyntaxError, :<, StandardError)
+  def test_a_syntax_error_fails_collection_without_evaluating_the_module
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/broken.rb", BROKEN_RUBY)
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      assert_raises(Klenod::Build::Plugins::RubyPlugin::ParseError) { context.collect("broken.rb") }
+    end
   end
 
-  def test_an_evaluation_excerpt_shows_the_original_source_not_the_rewritten_one
+  def test_a_syntax_error_reports_every_thing_prism_found
+    error = ruby_error("plain.rb", "VALUE = 1\ndef broken(\n", Klenod::Build::Plugins::RubyPlugin::ParseError)
+
+    assert_equal(2, error.line)
+    assert_operator(error.hints.length, :>, 1)
+    assert_includes(error.hints, "Expected a `)` to close the parameters")
+  end
+
+  def test_a_syntax_error_excerpt_shows_the_original_source_not_the_rewritten_one
     Dir.mktmpdir do |dir|
       File.write("#{dir}/other.rb", "X = 1\n")
       File.write("#{dir}/entry.rb", "Other = import(\"./other.rb\")\ndef a(\nend\n")
 
       context = Klenod::Build::Context.new(source_dir: dir)
-      error = assert_raises(Klenod::Build::EvaluationSyntaxError) { context.evaluate("entry.rb") }
+      error = assert_raises(Klenod::Build::Plugins::RubyPlugin::ParseError) { context.evaluate("entry.rb") }
 
-      # Rewriting import calls leaves every line where it was, so the original
-      # source lines still match the reported line.
       assert_includes(error.message, %(import("./other.rb")))
       refute_includes(error.message, "__klenod_import__")
     end
   end
 
-  def test_a_file_with_a_dynamic_import_reports_its_syntax_error_from_the_transform
-    # A non-literal import forces the rewriter past its fast path into
-    # SyntaxTree, which fails before the module is ever evaluated.
-    error = ruby_error("a.rb", "Other = import(compute_name)\ndef a(\nend\n", Klenod::Build::Plugins::RubyPlugin::ParseError)
+  def test_evaluation_syntax_errors_remain_the_backstop_for_generated_ruby
+    # Ruby files are validated while collecting, but Ruby generated from another
+    # format is not, so a codegen bug still has to be reportable.
+    assert_operator(Klenod::Build::GeneratedRubyError, :<, StandardError)
 
-    assert_equal("Ruby parse error", error.kind)
-    assert_equal(3, error.line)
-    # SyntaxTree reports a zero-based column.
-    assert_equal(1, error.column)
-    assert_includes(error.detail, "unexpected 'end'")
+    error =
+      Klenod::Build::GeneratedRubyError.new(
+        begin
+          RubyVM::InstructionSequence.compile("def a(\nend\n", "app:/page.haml")
+        rescue ScriptError => e
+          e
+        end,
+        source: "def a(\nend\n",
+        module_id: "app:/page.haml"
+      )
+
+    assert_equal("Generated Ruby syntax error", error.kind)
+    assert_equal(2, error.line)
   end
 
   def test_a_load_error_from_the_module_is_not_reported_as_a_syntax_error

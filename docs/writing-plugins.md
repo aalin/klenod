@@ -436,6 +436,13 @@ position, and the report falls back to the file name and the wrapped message.
 `line` and `column` are one-based; normalize them in `location` if your library
 counts from zero.
 
+Klenod parses the Ruby a plugin generates and fails collection when it does not
+parse, raising `Klenod::Build::GeneratedRubyError` against the generated source.
+This runs while collecting rather than when the module is evaluated, because a
+production build never evaluates application modules -- without it a codegen bug
+would be serialized into the bundle. Ruby source files are checked the same way
+against the file the developer wrote.
+
 Being a `SourceError` matters beyond formatting. A bare Ruby `SyntaxError` is a
 `ScriptError` rather than a `StandardError`, so it escapes the collectors that gather
 build failures and takes the file watcher down with it. Wrapping keeps a syntax error

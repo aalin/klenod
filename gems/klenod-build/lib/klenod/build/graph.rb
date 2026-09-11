@@ -285,6 +285,7 @@ module Klenod
           dependency_records = load_eager_dependency_records(resolved_dependencies)
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
           assert_supported_transform!(module_id, source, transform)
+          assert_generated_ruby_parses!(module_id, transform)
           transformed_hash = Hashing.hexdigest(transform.code)
           mod = instantiate_module(module_id, transform, resolved_dependencies, dependency_records, cached, source)
           record = build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, mod)
@@ -340,6 +341,7 @@ module Klenod
           dependency_records = collect_eager_dependency_records(resolved_dependencies)
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
           assert_supported_transform!(module_id, source, transform)
+          assert_generated_ruby_parses!(module_id, transform)
           transformed_hash = Hashing.hexdigest(transform.code)
           record = build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, cached)
 
@@ -545,6 +547,18 @@ module Klenod
         raise UnsupportedFileError, "No plugin transformed #{module_id.path.inspect}. Add a plugin for #{module_id.extname.inspect} files."
       end
 
+      # A plugin that generates Ruby can generate Ruby that does not parse.
+      # Without this the failure waits until the module is evaluated, and a
+      # production build never evaluates application modules, so the bundle
+      # would ship broken. Ruby modules are already checked by RubyPlugin
+      # against their original source, which reports better locations.
+      def assert_generated_ruby_parses!(module_id, transform)
+        return if ruby_module_extension?(module_id.extname)
+        return if Prism.parse_success?(transform.code)
+
+        raise GeneratedRubyError.new(Prism.parse(transform.code), source: transform.code, module_id: module_id)
+      end
+
       def ruby_module_extension?(extname)
         extname.empty? || extname == ".rb"
       end
@@ -576,7 +590,7 @@ module Klenod
         yield
       rescue ::SyntaxError => error
         excerpt_source = ruby_module_extension?(module_id.extname) ? original_source : evaluated_source
-        raise EvaluationSyntaxError.new(error, source: excerpt_source || evaluated_source, module_id: module_id)
+        raise GeneratedRubyError.new(error, source: excerpt_source || evaluated_source, module_id: module_id)
       end
 
       def eval_path_for(module_id)

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "prism"
+
 require_relative "errors"
 require_relative "source_excerpt"
 
@@ -76,6 +78,20 @@ module Klenod
         nil
       end
 
+      # Prism reports each failure as data rather than a message to scrape, and
+      # phrases the first as "what is wrong; what was expected".
+      def prism_location(result)
+        first, *rest = result.errors
+        detail, _, expected = first.message.partition("; ")
+
+        Location.new(
+          line: first.location.start_line,
+          column: first.location.start_column + 1,
+          detail: detail,
+          hints: [expected, *rest.map(&:message)].reject(&:empty?).map(&:capitalize)
+        )
+      end
+
       # A native extension can raise with a bare message rather than an
       # exception, so do not assume #message exists.
       def message_for(error)
@@ -94,29 +110,31 @@ module Klenod
       end
     end
 
-    # A module whose Ruby fails to parse when it is evaluated.
+    # Ruby generated from another format that does not parse.
     #
-    # Most .rb files never reach the build-time parser: RubyImportRewriter only
-    # parses a file that contains an import, so the syntax error first surfaces
-    # at `Runtime::Mod` evaluation as a bare SyntaxError -- a ScriptError, which
-    # escapes every `rescue => e` in the build. Generated Ruby from another
-    # format fails here too, in which case the excerpt shows the generated
-    # source.
-    class EvaluationSyntaxError < SourceError
+    # This is a bug in the plugin that generated it rather than in anything the
+    # developer wrote, so the excerpt shows the generated source. It is checked
+    # while collecting, and again as a backstop when a module is evaluated: a
+    # bare SyntaxError there is a ScriptError, which escapes every `rescue => e`
+    # in the build and takes the watcher thread down with it.
+    class GeneratedRubyError < SourceError
       # "app:/x.rb:3: syntax error found"
       HEADER = /\A(?<file>.+?):(?<line>\d+): (?<detail>.+?)$/
       # "    | ^~~ unexpected 'end'; expected a `)` to close the arguments"
       CARET = /^ *\| (?<pad> *)\^+~* *(?<message>.*)$/
 
       def kind
-        "Ruby syntax error"
+        "Generated Ruby syntax error"
       end
 
       private
 
-      # Prism renders its own excerpt into the message. We re-render it from the
-      # line and column, and keep the explanation it prints beside the caret.
+      # Prism renders its own excerpt into the message it puts on a SyntaxError.
+      # We re-render it from the line and column, and keep the explanation it
+      # prints beside the caret.
       def location(error)
+        return prism_location(error) if error.is_a?(Prism::ParseResult)
+
         header = HEADER.match(error.message)
         return nil unless header
 

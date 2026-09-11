@@ -1542,6 +1542,58 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_build_refuses_to_ship_a_bundle_containing_a_syntax_error
+    Dir.mktmpdir do |dir|
+      # Never evaluated during a build, so this used to be serialized into the
+      # bundle unchecked.
+      File.write("#{dir}/broken.rb", "def greet\n  puts(\nend\n")
+      File.write("#{dir}/entry.rb", "Broken = import(\"./broken.rb\")\n")
+      output = "#{dir}/dist/klenod.bundle"
+
+      context = Klenod::Build::Context.new(source_dir: dir, mode: :production)
+      error =
+        assert_raises(Klenod::Build::Plugins::RubyPlugin::ParseError) do
+          context.build(entrypoints: ["entry.rb"], output: output, assets_dir: "#{dir}/dist/public")
+        end
+
+      assert_equal(3, error.line)
+      refute(File.exist?(output))
+    end
+  end
+
+  def test_build_refuses_to_ship_generated_ruby_that_does_not_parse
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/thing.weird", "x\n")
+      File.write("#{dir}/entry.rb", "Thing = import(\"./thing.weird\")\n")
+      output = "#{dir}/dist/klenod.bundle"
+
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          mode: :production,
+          plugins: [BrokenCodegenPlugin.new, *Klenod::Build::Context.default_plugins]
+        )
+      error =
+        assert_raises(Klenod::Build::GeneratedRubyError) do
+          context.build(entrypoints: ["entry.rb"], output: output, assets_dir: "#{dir}/dist/public")
+        end
+
+      # A plugin bug rather than anything the developer wrote, so the excerpt
+      # shows the generated source.
+      assert_equal("Generated Ruby syntax error", error.kind)
+      assert_includes(error.message, "> 1 | Default = (")
+      refute(File.exist?(output))
+    end
+  end
+
+  class BrokenCodegenPlugin < Klenod::Build::Plugin
+    def transform(module_id, code, _context)
+      return super unless module_id.extname == ".weird"
+
+      Klenod::Build::TransformResult.new("Default = (\n", [], nil, [], [], {})
+    end
+  end
+
   def test_demanding_a_module_that_failed_to_reload_raises_the_stored_error
     Dir.mktmpdir do |dir|
       File.write("#{dir}/entry.rb", "VALUE = 1\n")
@@ -1552,11 +1604,11 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/entry.rb", "VALUE = 1\ndef broken(\n")
       result = context.invalidate_paths(["#{dir}/entry.rb"])
 
-      assert_instance_of(Klenod::Build::EvaluationSyntaxError, result.errors.fetch(0).last)
+      assert_instance_of(Klenod::Build::Plugins::RubyPlugin::ParseError, result.errors.fetch(0).last)
 
       # Rather than serving stale exports, or blowing up on the FailedModule
       # placeholder that stands in for the evicted one.
-      error = assert_raises(Klenod::Build::EvaluationSyntaxError) { context.exports("entry.rb") }
+      error = assert_raises(Klenod::Build::Plugins::RubyPlugin::ParseError) { context.exports("entry.rb") }
       assert_equal(2, error.line)
 
       File.write("#{dir}/entry.rb", "VALUE = 7\n")
