@@ -544,8 +544,10 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       end
 
     assert_equal(3, error.line)
-    assert_includes(error.message, "Could not parse Haml dynamic attributes")
-    assert_match(/Errors:|Missing:/, error.message)
+    assert_equal("Could not parse Haml dynamic attributes", error.detail)
+    # What SyntaxSuggest worked out about the broken block becomes the hints.
+    refute_empty(error.hints)
+    assert_includes(error.message, "Hints:")
   end
 
   def test_haml_transformer_supports_omitted_dynamic_attribute_values

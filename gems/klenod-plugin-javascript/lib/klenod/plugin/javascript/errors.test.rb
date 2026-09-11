@@ -55,9 +55,17 @@ class Klenod::Build::Plugins::JavaScriptPlugin::ErrorsTest < Minitest::Test
   def test_parse_error_message_includes_location_and_source_excerpt
     error = ParseError.new(syntax_error, source: BROKEN_TSX, module_id: "app:/Thing.tsx")
 
-    assert_includes(error.message, "app:/Thing.tsx:#{BROKEN_LINE}: JavaScript parse error")
+    assert_includes(error.message, "app:/Thing.tsx:#{BROKEN_LINE}:#{error.column}: JavaScript parse error")
     assert_includes(error.message, "Expected '</', got ':'")
     assert_includes(error.message, "#root { color: red; }")
+  end
+
+  def test_parse_error_message_points_a_caret_at_the_offending_column
+    error = ParseError.new(syntax_error, source: BROKEN_TSX, module_id: "app:/Thing.tsx")
+
+    # The colon inside the JSX expression container is what SWC rejects.
+    assert_equal(":", BROKEN_TSX.lines.fetch(BROKEN_LINE - 1)[error.column - 1])
+    assert_includes(error.message, "#{" " * (error.column - 1)}^")
   end
 
   def test_parse_error_backtrace_points_at_the_module

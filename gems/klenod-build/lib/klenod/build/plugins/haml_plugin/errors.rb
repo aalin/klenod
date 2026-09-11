@@ -1,27 +1,33 @@
 # frozen_string_literal: true
 
 require "klenod/runtime/source_map"
-require_relative "../../source_excerpt"
+require_relative "../../source_error"
 
 module Klenod
   module Build
     module Plugins
       module HamlPlugin
-        class ParseError < StandardError
-          attr_reader :module_id, :source, :line, :column, :cause
-
-          def initialize(error, source:, module_id:)
-            @cause = error
-            @module_id = module_id
-            @source = source
-            @line = source_line_for(error)
-            @column = nil
-
-            super(message_for(error))
-            set_backtrace(error.backtrace)
+        class ParseError < Klenod::Build::SourceError
+          def kind
+            "Haml parse error"
           end
 
           private
+
+          def location(error)
+            detail, *sections = error.message.split(/\n\n+/)
+
+            Location.new(line: source_line_for(error), detail: detail.to_s, hints: hints_from(sections))
+          end
+
+          # A RubyParseError explains itself in trailing "Errors:"/"Missing:"
+          # sections, each an indented list of what to fix.
+          def hints_from(sections)
+            sections.flat_map do |section|
+              _heading, *lines = section.lines.map(&:chomp)
+              lines.map(&:strip)
+            end
+          end
 
           def source_line_for(error)
             line = error.line if error.respond_to?(:line)
@@ -40,16 +46,6 @@ module Klenod
 
           def error_line_zero_based?(error)
             error.respond_to?(:line) && error.line.is_a?(Integer) && !error.is_a?(RubyParseError)
-          end
-
-          def message_for(error)
-            SourceExcerpt.message(
-              module_id: module_id,
-              line: line,
-              kind: "Haml parse error",
-              source: source,
-              message: error.message
-            )
           end
         end
 
