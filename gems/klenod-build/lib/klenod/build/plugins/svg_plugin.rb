@@ -6,6 +6,7 @@ require_relative "../errors"
 require_relative "../hashing"
 require_relative "../module_id"
 require_relative "../plugin"
+require_relative "../source_error"
 require_relative "../transform_result"
 require_relative "asset_javascript_metadata"
 
@@ -15,6 +16,23 @@ module Klenod
       module SvgPlugin
         def self.new(...)
           Plugin.new(...)
+        end
+
+        # SVG markup is scraped with a regex rather than parsed, so malformed
+        # markup is tolerated. A file that is not text at all is not.
+        class EncodingError < Klenod::Build::SourceError
+          def kind
+            "SVG encoding error"
+          end
+
+          private
+
+          def location(error)
+            Location.new(
+              detail: error.message,
+              hints: ["An SVG file must be valid UTF-8 text."]
+            )
+          end
         end
 
         class Plugin < Klenod::Build::Plugin
@@ -39,7 +57,7 @@ module Klenod
 
             raise UnsupportedFileError, "SVG imports do not support query options: #{module_id}" if module_id.query
 
-            dimensions = svg_dimensions(code)
+            dimensions = svg_dimensions(code, module_id)
             hash = Hashing.short(code)
             output_path = "/#{asset_name(module_id)}.#{hash}.svg"
             asset =
@@ -146,8 +164,8 @@ module Klenod
             JAVASCRIPT
           end
 
-          def svg_dimensions(code)
-            attributes = svg_attributes(code)
+          def svg_dimensions(code, module_id)
+            attributes = svg_attributes(code, module_id)
             return Dimensions.new(nil, nil) unless attributes
 
             explicit_width = parse_length(attributes["width"])
@@ -157,13 +175,18 @@ module Klenod
             view_box_dimensions(attributes["viewBox"] || attributes["viewbox"])
           end
 
-          def svg_attributes(code)
+          # Malformed markup is tolerated: no <svg> match just means unknown
+          # dimensions. Only a file that is not text at all fails here, and
+          # String#match raises without saying which file it was reading.
+          def svg_attributes(code, module_id)
             match = code.match(/<svg(?=[\s>])(?<attributes>[^>]*)>/im)
             return nil unless match
 
             match[:attributes].scan(/([:\w.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/).to_h do |name, double_quoted, single_quoted, unquoted|
               [name, double_quoted || single_quoted || unquoted]
             end
+          rescue ArgumentError => error
+            raise EncodingError.new(error, source: "", module_id: module_id)
           end
 
           def view_box_dimensions(view_box)

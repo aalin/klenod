@@ -174,4 +174,29 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
       </svg>
     SVG
   end
+
+  def test_malformed_markup_is_tolerated_with_unknown_dimensions
+    # SVG is scraped with a regex rather than parsed, so an unclosed tag is not
+    # an error -- it just means the dimensions are unknown.
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/logo.svg", "<svg><g><rect width='2'\n")
+      File.write("#{dir}/entry.rb", "Logo = import(\"./logo.svg\")\n")
+
+      Klenod::Build::Context.new(source_dir: dir).evaluate("entry.rb")
+    end
+  end
+
+  def test_a_file_that_is_not_text_reports_the_module
+    Dir.mktmpdir do |dir|
+      File.binwrite("#{dir}/logo.svg", "\xFF\xFE\x00\x01junk\xC3\x28".b)
+      File.write("#{dir}/entry.rb", "Logo = import(\"./logo.svg\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      error = assert_raises(Klenod::Build::Plugins::SvgPlugin::EncodingError) { context.evaluate("entry.rb") }
+
+      assert_equal("SVG encoding error", error.kind)
+      assert_equal("app:/logo.svg", error.module_id.to_s)
+      assert_equal(["An SVG file must be valid UTF-8 text."], error.hints)
+    end
+  end
 end

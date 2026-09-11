@@ -10,6 +10,7 @@ require_relative "../dependency"
 require_relative "../hashing"
 require_relative "../load_result"
 require_relative "../plugin"
+require_relative "../source_error"
 require_relative "../transform_result"
 require_relative "asset_javascript_metadata"
 
@@ -19,6 +20,46 @@ module Klenod
       module ImagePlugin
         def self.new(...)
           Plugin.new(...)
+        end
+
+        # An image that cannot be read. There is no line to point at, so the
+        # report is the file, what went wrong, and -- when the bytes turn out to
+        # be a different format than the extension claims -- what to rename it
+        # to.
+        class DecodeError < Klenod::Build::SourceError
+          # image_size names the format it recognised in its own message, e.g.
+          # "EOF in JPEG".
+          DETECTED_FORMAT = /\b(?<format>JPEG|PNG|GIF|WEBP|AVIF|HEIC|BMP|TIFF|SVG)\b/i
+
+          def initialize(error, module_id:, source: nil)
+            super(error, source: source, module_id: module_id)
+          end
+
+          def kind
+            "Image decode error"
+          end
+
+          private
+
+          def location(error)
+            detail = message_for(error)
+
+            Location.new(detail: detail, hints: [hint_for(detail)])
+          end
+
+          # When the bytes turn out to be a format the extension does not claim,
+          # renaming the file is the fix.
+          def hint_for(detail)
+            extname = module_id.extname.delete_prefix(".").downcase
+            detected = DETECTED_FORMAT.match(detail) { it[:format].downcase }
+
+            if detected && detected != extname && !(detected == "jpeg" && extname == "jpg")
+              basename = File.basename(module_id.path, module_id.extname)
+              "The file contains #{detected.upcase} data. Did you mean #{basename}.#{detected}?"
+            else
+              "The file is not a valid #{extname.upcase} image. It may be truncated or corrupt."
+            end
+          end
         end
 
         class Plugin < Klenod::Build::Plugin
@@ -51,11 +92,11 @@ module Klenod
 
             source_path = context.absolute_path(module_id)
             source_hash = Hashing.file_hexdigest(source_path)
-            dimensions = image_dimensions(source_path)
+            dimensions = image_dimensions(source_path, module_id)
             image_options = image_options_for(module_id)
             asset = default_image_asset(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
             variant_assets = generate_variant_assets(module_id, source_path, source_hash, dimensions, image_options, context.asset_generation_queue)
-            placeholder = image_placeholder(source_path, source_hash)
+            placeholder = image_placeholder(source_path, source_hash, module_id)
             [asset, *variant_assets].each { |image_asset| image_asset.url = context.asset_url(image_asset.output_path) }
             javascript_asset = javascript_image_asset(module_id, asset, variant_assets, context, placeholder:)
             javascript_asset.url = context.asset_url(javascript_asset.output_path)
@@ -101,11 +142,20 @@ module Klenod
 
           Dimensions = Data.define(:width, :height, :format)
 
-          def image_dimensions(path)
+          # A file whose bytes are not an image at all used to pass silently with
+          # nil dimensions, and only failed later -- inside the asset generation
+          # queue -- if a variant happened to be requested.
+          def image_dimensions(path, module_id)
             size = ImageSize.path(path)
+            # A file that is not an image at all reports no format rather than
+            # raising, which used to pass silently with nil dimensions and only
+            # fail later, inside the asset generation queue, if a variant
+            # happened to be requested.
+            raise DecodeError.new("Could not read the image", module_id: module_id) if size.format.nil?
+
             Dimensions.new(size.width, size.height, size.format)
-          rescue ImageSize::FormatError
-            Dimensions.new(nil, nil, nil)
+          rescue ImageSize::FormatError => error
+            raise DecodeError.new(error, module_id: module_id)
           end
 
           def default_image_asset(module_id, source_path, source_hash, dimensions, image_options, queue)
@@ -165,11 +215,11 @@ module Klenod
               source_path,
               content_type(extname),
               metadata,
-              writer: ->(io) { write_image_bytes(source_path, format, quality, io) },
+              writer: ->(io) { write_image_bytes(module_id, source_path, format, quality, io) },
               queue: queue,
               queue_kind: :cpu
             ) do
-              generate_image_bytes(source_path, format, quality:)
+              generate_image_bytes(module_id, source_path, format, quality:)
             end
           end
 
@@ -262,12 +312,12 @@ module Klenod
             RUBY
           end
 
-          def image_placeholder(source_path, source_hash)
+          def image_placeholder(source_path, source_hash, module_id)
             return nil unless @placeholder
 
             key = ImagePlaceholderKey.new(source_path.to_s, source_hash, @placeholder.width, @placeholder.format, @placeholder.quality)
             @placeholder_cache[key] ||= begin
-              bytes = generate_image_bytes(source_path, @placeholder.format, width: @placeholder.width, quality: @placeholder.quality)
+              bytes = generate_image_bytes(module_id, source_path, @placeholder.format, width: @placeholder.width, quality: @placeholder.quality)
               "data:image/#{@placeholder.format};base64,#{Base64.strict_encode64(bytes)}"
             end
           end
@@ -393,16 +443,16 @@ module Klenod
               source_path,
               content_type(extname),
               metadata,
-              writer: ->(io) { write_variant_bytes(source_path, width, format, quality, io) },
+              writer: ->(io) { write_variant_bytes(module_id, source_path, width, format, quality, io) },
               queue: queue,
               queue_kind: :cpu
             ) do
-              generate_image_bytes(source_path, format, width: width, quality:)
+              generate_image_bytes(module_id, source_path, format, width: width, quality:)
             end
           end
 
-          def generate_image_bytes(source_path, format, width: nil, quality: nil)
-            image = Magick::Image.read(source_path.to_s).first
+          def generate_image_bytes(module_id, source_path, format, width: nil, quality: nil)
+            image = read_image(module_id, source_path)
             output_image = width ? image.resize_to_fit(width) : image
             output_image.to_blob do |info|
               info.format = format.upcase
@@ -413,12 +463,24 @@ module Klenod
             image&.destroy!
           end
 
-          def write_variant_bytes(source_path, width, format, quality, io)
-            io.write(generate_image_bytes(source_path, format, width: width, quality:))
+          # ImageMagick raises for a corrupt file and returns nothing at all for
+          # one it cannot identify. Both run inside the asset generation queue,
+          # where an unhandled failure says nothing about which import caused it.
+          def read_image(module_id, source_path)
+            image = Magick::Image.read(source_path.to_s).first
+            return image if image
+
+            raise DecodeError.new("ImageMagick could not identify the image", module_id: module_id)
+          rescue Magick::ImageMagickError => error
+            raise DecodeError.new(error, module_id: module_id)
           end
 
-          def write_image_bytes(source_path, format, quality, io)
-            io.write(generate_image_bytes(source_path, format, quality:))
+          def write_variant_bytes(module_id, source_path, width, format, quality, io)
+            io.write(generate_image_bytes(module_id, source_path, format, width: width, quality:))
+          end
+
+          def write_image_bytes(module_id, source_path, format, quality, io)
+            io.write(generate_image_bytes(module_id, source_path, format, quality:))
           end
 
           def scaled_height(dimensions, width)

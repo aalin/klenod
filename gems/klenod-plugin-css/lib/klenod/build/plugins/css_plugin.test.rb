@@ -369,7 +369,7 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/styles")
       FileUtils.mkdir_p("#{dir}/images")
       File.write("#{dir}/styles/base.css", ".base { color: blue; }\n")
-      File.binwrite("#{dir}/images/logo.png", "not really a png")
+      File.binwrite("#{dir}/images/logo.png", png_bytes)
       File.write(
         "#{dir}/styles/home.css",
         <<~CSS
@@ -734,7 +734,7 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
       FileUtils.mkdir_p("#{dir}/styles")
       FileUtils.mkdir_p("#{dir}/images")
       File.write("#{dir}/styles/base.css", ".base { color: blue; }\n")
-      File.binwrite("#{dir}/images/logo.png", "not really a png")
+      File.binwrite("#{dir}/images/logo.png", png_bytes)
       File.write(
         "#{dir}/styles/home.css",
         <<~CSS
@@ -771,5 +771,16 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
 
   def local_css_variables_plugin
     Klenod::Build::Plugins::CSSPlugin.new(local_css_variables: true)
+  end
+
+  # The image plugin decodes imported images, so a url() target has to be a real
+  # PNG rather than a placeholder string.
+  def png_bytes
+    signature = "\x89PNG\r\n\x1a\n".b
+    ihdr_data = [1, 1, 8, 2, 0, 0, 0].pack("NNCCCCC")
+    ihdr = [ihdr_data.bytesize].pack("N") + "IHDR" + ihdr_data + [0].pack("N")
+    iend = [0].pack("N") + "IEND" + [0].pack("N")
+
+    signature + ihdr + iend
   end
 end

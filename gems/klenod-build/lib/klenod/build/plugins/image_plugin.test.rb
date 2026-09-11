@@ -10,6 +10,54 @@ require "klenod/runtime"
 require_relative "ruby_plugin"
 
 class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
+  DecodeError = Klenod::Build::Plugins::ImagePlugin::DecodeError
+
+  def test_a_file_that_is_not_an_image_is_reported_instead_of_passing_silently
+    # It used to emit an asset with nil dimensions and only fail later, inside
+    # the asset generation queue, if a variant happened to be requested.
+    error = decode_error("notes.png") { |path| File.write(path, "<html>not an image</html>\n") }
+
+    assert_equal("Image decode error", error.kind)
+    assert_equal("app:/notes.png", error.module_id.to_s)
+    assert_nil(error.line)
+    assert_equal(["The file is not a valid PNG image. It may be truncated or corrupt."], error.hints)
+  end
+
+  def test_a_truncated_image_names_the_format_it_actually_contains
+    error =
+      decode_error("hero.png") do |path|
+        File.binwrite(path, real_jpeg_bytes(width: 8, height: 8)[0, 20])
+      end
+
+    assert_equal(["The file contains JPEG data. Did you mean hero.jpeg?"], error.hints)
+  end
+
+  def test_decode_errors_are_collected_during_invalidation_instead_of_raising
+    Dir.mktmpdir do |dir|
+      File.binwrite("#{dir}/hero.png", png_bytes(width: 8, height: 8))
+      File.write("#{dir}/entry.rb", "Hero = import(\"./hero.png\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("entry.rb")
+
+      File.write("#{dir}/hero.png", "not an image any more\n")
+      result = context.invalidate_paths(["#{dir}/hero.png"])
+
+      refute_empty(result.errors)
+      assert_instance_of(DecodeError, result.errors.fetch(0).last)
+    end
+  end
+
+  def decode_error(name)
+    Dir.mktmpdir do |dir|
+      yield "#{dir}/#{name}"
+      File.write("#{dir}/entry.rb", "Image = import(\"./#{name}\")\n")
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      assert_raises(DecodeError) { context.evaluate("entry.rb") }
+    end
+  end
+
   def test_ruby_import_of_image_returns_dimensions
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")
@@ -580,6 +628,13 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
   end
 
   private
+
+  def real_jpeg_bytes(width:, height:)
+    image = Magick::Image.new(width, height) { |info| info.background_color = "red" }
+    image.to_blob { |info| info.format = "JPEG" }
+  ensure
+    image&.destroy!
+  end
 
   def real_png_bytes(width:, height:)
     image = Magick::Image.new(width, height) { |info| info.background_color = "red" }

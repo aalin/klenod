@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "klenod/plugin/css/errors"
 require "klenod/plugin/css/transformer"
 require "uri"
 
@@ -202,6 +203,8 @@ module Klenod
           end
 
           def transform_css(module_id, code, transform_names:, context:)
+            # The filename also names the source in the emitted source map, so
+            # it stays the plain path. The error report uses module_id instead.
             Transformer.transform(
               module_id.path,
               code,
@@ -212,6 +215,10 @@ module Klenod
               local_css_variables: @local_css_variables && transform_names,
               variable_pattern: @variable_pattern
             )
+          rescue ParseError => error
+            # The native extension raises with only a message. Re-raise with the
+            # source so the report carries an excerpt like every other format.
+            raise ParseError.new(error, source: code, module_id: module_id)
           end
 
           def minify_enabled?(context)

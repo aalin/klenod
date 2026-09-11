@@ -1522,7 +1522,7 @@ class Klenod::Build::Context::Test < Minitest::Test
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
       FileUtils.mkdir_p("#{dir}/images")
-      File.binwrite("#{dir}/images/logo.png", "png bytes")
+      File.binwrite("#{dir}/images/logo.png", png_bytes(width: 1, height: 1))
       File.write(
         "#{dir}/styles/home.css",
         ".logo { background: url(\"../images/logo.png\"); }\n"
@@ -1538,7 +1538,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       written_path = File.join(assets_dir, image_asset.output_path.delete_prefix("/"))
 
       assert_match(%r{\A/logo\.[a-f0-9]{16}\.png\z}, image_asset.output_path)
-      assert_equal("png bytes", File.binread(written_path))
+      assert_equal(png_bytes(width: 1, height: 1), File.binread(written_path))
     end
   end
 

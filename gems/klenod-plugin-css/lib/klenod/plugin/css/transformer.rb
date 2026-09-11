@@ -2,6 +2,8 @@
 
 require "json"
 
+require "klenod/plugin/css/errors"
+
 begin
   require "klenod/plugin/css/native"
 rescue LoadError
@@ -13,7 +15,6 @@ module Klenod
     module Plugins
       module CSSPlugin
         class Error < StandardError; end
-        class ParseError < Error; end
 
         ImportDependency = Data.define(:url, :placeholder, :supports, :media, :loc)
         UrlDependency = Data.define(:url, :placeholder, :loc)
