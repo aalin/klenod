@@ -481,6 +481,50 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
     end
   end
 
+  def test_a_broken_companion_css_is_reported_once
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      css_path = "#{dir}/pages/page.css"
+      File.write("#{dir}/pages/page.haml", "%h1.title Hello\n")
+      File.write(css_path, ".title { color: red; }\n")
+
+      context = context_for(dir)
+      context.evaluate("pages/page.haml")
+
+      File.write(css_path, ".title { color: red; }\n@@@ {}\n")
+      result = context.invalidate_paths([css_path])
+
+      # The owning page reloads because of the companion and re-raises the very
+      # same error, which the dev server would otherwise log twice.
+      assert_equal(1, result.errors.length)
+      module_id, error = result.errors.fetch(0)
+      assert_equal("app:/pages/page.css", module_id.to_s)
+      assert_kind_of(Klenod::Build::Plugins::CSSPlugin::ParseError, error)
+    end
+  end
+
+  def test_a_broken_companion_still_recovers_when_it_is_fixed
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      css_path = "#{dir}/pages/page.css"
+      File.write("#{dir}/pages/page.haml", "%h1.title Hello\n")
+      File.write(css_path, ".title { color: red; }\n")
+
+      context = context_for(dir)
+      record = context.evaluate("pages/page.haml")
+
+      File.write(css_path, ".title { color: red; }\n@@@ {}\n")
+      context.invalidate_paths([css_path])
+
+      File.write(css_path, ".title { color: blue; }\n")
+      result = context.invalidate_paths([css_path])
+
+      assert_empty(result.errors)
+      assert_equal(["app:/pages/page.css", "app:/pages/page.haml"], result.reloaded_module_ids.map(&:to_s))
+      refute_empty(context.graph.mods.fetch(record.id).const_get(:Exports)::ClassNames.keys)
+    end
+  end
+
   def test_malformed_companion_intl_reports_load_error
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

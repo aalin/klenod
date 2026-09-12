@@ -28,6 +28,7 @@ module Klenod
             mods.delete(module_id)
           end
 
+          failed_reload_ids = []
           reloaded_module_ids =
             reload_module_ids.filter_map do |module_id|
               if evaluated_module_ids.include?(module_id)
@@ -41,10 +42,10 @@ module Klenod
               # StandardError, and letting it escape here kills the watcher
               # thread rather than reporting the module that failed.
               mark_module_failed(module_id, e)
-              errors << [module_id, e]
+              failed_reload_ids << module_id
+              record_error(errors, module_id, e)
               nil
             end
-          failed_reload_ids = errors.map(&:first) & reload_module_ids
           blocked_dependent_ids = dependent_closure(failed_reload_ids)
           blocked_dependent_ids.each { |module_id| mods.delete(module_id) }
 
@@ -62,7 +63,7 @@ module Klenod
                 nil
               end
             rescue StandardError, ScriptError => e
-              errors << [module_id, e]
+              record_error(errors, module_id, e)
               nil
             end
           asset_updates = diff_assets(previous_assets, graph.assets)
@@ -82,6 +83,16 @@ module Klenod
         end
 
         private
+
+        # One failure, reported once. A module whose dependency already failed
+        # in this invalidation re-raises that same error when it reloads, so a
+        # broken companion would otherwise be reported once for itself and
+        # again for every module that imports it.
+        def record_error(errors, module_id, error)
+          return if errors.any? { |(_id, recorded)| recorded.equal?(error) }
+
+          errors << [module_id, error]
+        end
 
         attr_reader :graph, :resolver, :source_loader
 
