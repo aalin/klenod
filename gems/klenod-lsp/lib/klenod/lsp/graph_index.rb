@@ -16,7 +16,7 @@ module Klenod
     # is ever evaluated. Root collections are serialized so two walks cannot
     # deadlock on a shared import cycle; the graph parallelizes inside each.
     class GraphIndex
-      ROOT_EXTENSIONS = [".rb", ".haml"].freeze
+      ROOT_EXTENSIONS = [".rb", ".haml", ".css"].freeze
 
       attr_reader :failed
 

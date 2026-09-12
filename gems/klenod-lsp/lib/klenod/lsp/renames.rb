@@ -5,6 +5,7 @@ require "language_server-protocol"
 require "klenod/build/module_id"
 
 require_relative "diagnostics"
+require_relative "languages"
 
 module Klenod
   module LSP
@@ -105,11 +106,12 @@ module Klenod
         replacement = rewrite_specifier(specifier, importer_path, target_path, workspace.source_dir)
         return if replacement == specifier
 
-        span = Diagnostics.literal_span(specifier, lines)
-        return unless span
-        return if changes[uri].any? { |edit| edit.range.start.line == span.line && edit.range.start.character == span.start_character }
+        syntax = Languages.syntax_for(File.extname(workspace.path_for_uri(uri).to_s))
+        Diagnostics.literal_spans(specifier, lines, syntax: syntax).each do |span|
+          next if changes[uri].any? { |edit| edit.range.start.line == span.line && edit.range.start.character == span.start_character }
 
-        changes[uri] << Interface::TextEdit.new(range: span.to_range, new_text: replacement)
+          changes[uri] << Interface::TextEdit.new(range: span.to_range, new_text: replacement)
+        end
       end
 
       def rewrite_specifier(specifier, importer_path, target_path, source_dir)

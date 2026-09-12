@@ -6,6 +6,7 @@ require "klenod/build/module_id"
 
 require_relative "../diagnostics"
 require_relative "../text"
+require_relative "syntax"
 
 module Klenod
   module LSP
@@ -18,29 +19,30 @@ module Klenod
         Interface = LanguageServer::Protocol::Interface
         Constant = LanguageServer::Protocol::Constant
 
-        IMPORT_CALL = /\b(?<call>(?:lazy_)?import(?:_glob)?)\(\s*(?<quote>["'])(?<specifier>[^"']*)\k<quote>/
         BINDING = /\A\s*(?<name>[A-Z][A-Za-z0-9_]*)\s*=\s*(?:lazy_)?import\(\s*(?<quote>["'])(?<specifier>[^"']*)\k<quote>/
-        IMPORT_PREFIX = /\b(?:lazy_)?import(?:_glob)?\(\s*["'](?<partial>[^"']*)\z/
         PROP_TOKEN = /\$(?<name>[a-z]\w*|\*)/
         SKIPPED_FILE = /\A\.|\.test\.rb\z/
 
-        # Something in a document that names another module.
-        Target = Data.define(:kind, :name, :specifier, :span)
+        # Something in a document that names another module. `resolve_kind`
+        # is the dependency kind Klenod resolves it with.
+        Target = Data.define(:kind, :name, :specifier, :span, :resolve_kind) do
+          def initialize(kind:, name:, specifier:, span:, resolve_kind: :haml_import) = super
+        end
 
         module_function
 
-        def target_at(line_text, position)
-          each_target(line_text, position.line) do |target|
+        def target_at(line_text, position, syntax: Syntax::Ruby)
+          each_target(line_text, position.line, syntax: syntax) do |target|
             return target if target.span.include?(position)
           end
 
-          binding_target_at(line_text, position)
+          (syntax == Syntax::Ruby) ? binding_target_at(line_text, position) : nil
         end
 
         # The constant a module is bound to, as in `Card = import("./Card")`.
         def binding_target_at(line_text, position)
           Text.each_match(line_text, position.line, BINDING, group: :name) do |match, span|
-            return Target.new(:binding, match[:name], match[:specifier], span) if span.include?(position)
+            return Target.new(kind: :binding, name: match[:name], specifier: match[:specifier], span: span) if span.include?(position)
           end
 
           nil
@@ -54,18 +56,15 @@ module Klenod
           end
         end
 
-        # Import literals on one line; glob imports name many modules and are
-        # skipped.
-        def each_target(line_text, line_index)
-          Text.each_match(line_text, line_index, IMPORT_CALL, group: :specifier) do |match, span|
-            next if match[:call] == "import_glob"
-
-            yield Target.new(:import, match[:specifier], match[:specifier], span)
+        # Import literals on one line in the given syntax.
+        def each_target(line_text, line_index, syntax: Syntax::Ruby)
+          syntax.each_literal(line_text, line_index) do |literal|
+            yield Target.new(kind: :import, name: literal.specifier, specifier: literal.specifier, span: literal.span, resolve_kind: literal.kind)
           end
         end
 
         def resolve(target, analysis, workspace)
-          analysis.resolved_module_id_for(target.specifier) || workspace.resolve(target.specifier, importer_id: analysis.module_id)
+          analysis.resolved_module_id_for(target.specifier) || workspace.resolve(target.specifier, importer_id: analysis.module_id, kind: target.resolve_kind)
         end
 
         def location(module_id, workspace)
@@ -102,11 +101,9 @@ module Klenod
 
         # Completion items for the path being typed inside an import literal,
         # or nil when the line prefix is not inside one.
-        def completion_items(prefix, position, analysis, workspace)
-          match = IMPORT_PREFIX.match(prefix)
-          return nil unless match
-
-          partial = match[:partial]
+        def completion_items(prefix, position, analysis, workspace, syntax: Syntax::Ruby)
+          partial = syntax.prefix_partial(prefix)
+          return nil unless partial
           return nil if partial.match?(Klenod::Build::ModuleId::SCHEME_PATTERN)
 
           directory = completion_directory(partial, analysis, workspace)
@@ -180,6 +177,11 @@ module Klenod
       # Request handlers shared by languages that navigate through imports.
       # Including classes define `target_at(analysis, position)`.
       module ImportNavigation
+        # How this language spells imports. Ruby-shaped unless overridden.
+        def syntax
+          Syntax::Ruby
+        end
+
         def definition(analysis, position, workspace)
           target = target_at(analysis, position)
           module_id = target && Imports.resolve(target, analysis, workspace)
@@ -292,7 +294,7 @@ module Klenod
           links = []
 
           analysis.lines.each_with_index do |line_text, index|
-            Imports.each_target(line_text, index) do |target|
+            Imports.each_target(line_text, index, syntax: syntax) do |target|
               module_id = Imports.resolve(target, analysis, workspace)
               uri = module_id && workspace.uri_for_module_id(module_id)
               links << Imports::Interface::DocumentLink.new(range: target.span.to_range, target: uri) if uri
@@ -314,10 +316,12 @@ module Klenod
             next unless uri
 
             lines = record.source.lines(chomp: true)
+            importer_syntax = Languages.syntax_for(importer_id.extname)
             specifiers = record.resolved_dependencies.select { |resolved| resolved.module_id == target_module_id }.map { |resolved| resolved.dependency.specifier.to_s }.uniq
             specifiers.each do |specifier|
-              span = Diagnostics.literal_span(specifier, lines)
-              locations << Imports::Interface::Location.new(uri: uri, range: span.to_range) if span
+              Diagnostics.literal_spans(specifier, lines, syntax: importer_syntax).each do |span|
+                locations << Imports::Interface::Location.new(uri: uri, range: span.to_range)
+              end
             end
             usage_spans(importer_id, lines, specifiers).each do |span|
               locations << Imports::Interface::Location.new(uri: uri, range: span.to_range)
@@ -356,7 +360,7 @@ module Klenod
 
           analysis.resolve_errors.flat_map do |error|
             specifier = error.requested_specifier
-            span = specifier && Diagnostics.literal_span(specifier, analysis.lines)
+            span = specifier && Diagnostics.literal_span(specifier, analysis.lines, syntax: syntax)
             next [] unless span && lines.cover?(span.line)
 
             diagnostic = Diagnostics.diagnostic(span, error.message)

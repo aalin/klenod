@@ -21,6 +21,8 @@ Current support covers Haml modules and the `import("...")` literals of Ruby mod
 
 Ruby modules get the diagnostics, navigation, completion, quick fixes, and links for their import literals. Everything else about Ruby is left to a Ruby language server.
 
+Stylesheets get the same treatment for their `@import`, `url()`, and `composes ... from` references, resolved the way the CSS plugin resolves them, including fonts and images.
+
 The server never evaluates application code. Diagnostics for an open document come from transforming its buffer. Cross-file features come from a module graph collected in the background in analysis mode: the configured entrypoints plus every Ruby and Haml file under the source directory, following lazy imports such as router pages. Analysis mode keeps plugins from doing asset work, so no images are hashed or resized, no fonts are downloaded, no JavaScript is compiled, and nothing is written. Open buffers overlay the files on disk, and indexing reports progress when the client supports `window/workDoneProgress`.
 
 The server does not watch files itself. When the client supports dynamic registration it asks the editor to report changes under the source directory and runs them through the build's own invalidation, which keeps the graph current and re-analyzes the open documents a change affects. Clients without dynamic registration need a static watcher configuration.
@@ -53,7 +55,7 @@ Build the context with `analysis: true` so plugins skip asset work, and pass the
 
 ## Editor configuration
 
-The server handles documents whose file extension is `.haml` or `.rb` and whose path lies inside the configured source directory. Point your editor's LSP client at the start command and the `haml` file type, and optionally the `ruby` file type for import navigation alongside a Ruby language server.
+The server handles documents whose file extension is `.haml`, `.rb`, or `.css` and whose path lies inside the configured source directory. Point your editor's LSP client at the start command and the `haml` file type, and optionally the `ruby` and `css` file types for import navigation alongside the language servers you already run for those.
 
 Neovim:
 

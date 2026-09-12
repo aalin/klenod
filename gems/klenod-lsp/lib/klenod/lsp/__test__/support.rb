@@ -6,6 +6,7 @@ require "stringio"
 
 require "klenod/build"
 require "klenod/lsp"
+require "klenod/plugin/css"
 
 module Klenod
   module LSP
@@ -21,6 +22,8 @@ module Klenod
             *extra_plugins,
             Klenod::Build::Plugins::RubyPlugin.new,
             Klenod::Build::Plugins::IntlPlugin.new,
+            Klenod::Build::Plugins::CSSPlugin.new,
+            Klenod::Build::Plugins::SvgPlugin.new,
             Klenod::Build::Plugins::HamlPlugin.new(
               component_base_class: "Fixture::Component",
               factory: "Fixture::H",

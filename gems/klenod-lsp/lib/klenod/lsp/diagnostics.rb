@@ -2,6 +2,7 @@
 
 require "klenod/build/source_error"
 
+require_relative "languages/syntax"
 require_relative "text"
 
 module Klenod
@@ -13,16 +14,15 @@ module Klenod
       Constant = LanguageServer::Protocol::Constant
 
       SOURCE = "klenod"
-      IMPORT_CALL = /\b(?:lazy_)?import(?:_glob)?\(\s*(?<quote>["'])(?<specifier>[^"']*)\k<quote>/
 
       module_function
 
-      def for_analysis(analysis)
+      def for_analysis(analysis, syntax: Languages::Syntax::Ruby)
         lines = analysis.lines
         diagnostics = []
         diagnostics << build_error(analysis, lines) if analysis.build_error
         diagnostics.concat(ruby_errors(analysis, lines))
-        diagnostics.concat(resolve_errors(analysis, lines))
+        diagnostics.concat(resolve_errors(analysis, lines, syntax))
         diagnostics
       end
 
@@ -58,18 +58,18 @@ module Klenod
         }.uniq { |diagnostic| [diagnostic.range.start.line, diagnostic.message] }
       end
 
-      def resolve_errors(analysis, lines)
+      def resolve_errors(analysis, lines, syntax)
         analysis.resolve_errors.map do |error|
-          diagnostic(resolve_error_span(error, lines), error.message)
+          diagnostic(resolve_error_span(error, lines, syntax), error.message)
         end
       end
 
       # Resolve errors know their import's line and column, but for imports
       # outside the leading `:ruby` filter the location points into generated
       # Ruby, so the literal is looked up in the document text first.
-      def resolve_error_span(error, lines)
+      def resolve_error_span(error, lines, syntax = Languages::Syntax::Ruby)
         specifier = error.requested_specifier || error.dependency&.specifier&.to_s
-        span = specifier && literal_span(specifier, lines)
+        span = specifier && literal_span(specifier, lines, syntax: syntax)
         return span if span
 
         line = error.source_location&.line
@@ -77,14 +77,20 @@ module Klenod
         Text.line_span(lines, line)
       end
 
-      def literal_span(specifier, lines)
+      def literal_span(specifier, lines, syntax: Languages::Syntax::Ruby)
+        literal_spans(specifier, lines, syntax: syntax).first
+      end
+
+      # Every occurrence of a specifier; stylesheets repeat one across
+      # `@import` and `composes`.
+      def literal_spans(specifier, lines, syntax: Languages::Syntax::Ruby)
+        spans = []
         lines.each_with_index do |line_text, index|
-          Text.each_match(line_text, index, IMPORT_CALL, group: :specifier) do |match, span|
-            return span if match[:specifier] == specifier
+          syntax.each_literal(line_text, index) do |literal|
+            spans << literal.span if literal.specifier == specifier
           end
         end
-
-        nil
+        spans
       end
 
       def diagnostic(span, message)

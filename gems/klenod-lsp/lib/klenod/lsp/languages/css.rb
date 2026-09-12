@@ -1,26 +1,26 @@
 # frozen_string_literal: true
 
 require_relative "../diagnostics"
-require_relative "../symbols"
 require_relative "imports"
+require_relative "syntax"
 
 module Klenod
   module LSP
     module Languages
-      # Ruby modules under the source directory: build diagnostics plus
-      # navigation and completion for their `import("...")` literals. General
-      # Ruby language features are left to a Ruby language server.
-      class Ruby
+      # Stylesheets under the source directory: build diagnostics plus
+      # navigation and completion for `@import`, `url()`, and `composes ...
+      # from` references, resolved the way the CSS plugin resolves them.
+      class CSS
         include ImportNavigation
 
         Interface = LanguageServer::Protocol::Interface
 
-        def diagnostics(analysis)
-          Diagnostics.for_analysis(analysis)
+        def syntax
+          Syntax::CSS
         end
 
-        def document_symbols(analysis)
-          Symbols.binding_symbols(analysis.source)
+        def diagnostics(analysis)
+          Diagnostics.for_analysis(analysis, syntax: syntax)
         end
 
         def completion(analysis, position, workspace)
@@ -29,6 +29,10 @@ module Klenod
 
           items = Imports.completion_items(line_text[0...position.character].to_s, position, analysis, workspace, syntax: syntax)
           items && Interface::CompletionList.new(is_incomplete: false, items: items)
+        end
+
+        def document_symbols(_analysis)
+          []
         end
 
         def target_at(analysis, position)

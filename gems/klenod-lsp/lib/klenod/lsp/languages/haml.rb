@@ -40,7 +40,7 @@ module Klenod
           line_text = analysis.lines[position.line]
           return nil unless line_text
 
-          Imports.target_at(line_text, position) || component_target_at(line_text, position, analysis.lines)
+          Imports.target_at(line_text, position, syntax: syntax) || component_target_at(line_text, position, analysis.lines)
         end
 
         # `%Details` compiles to the constant `Details`, bound by an import in
@@ -57,7 +57,7 @@ module Klenod
 
             constant_name = match[:name].split("::").first
             specifier = self.class.bindings(lines)[constant_name]
-            return specifier && Imports::Target.new(:component, match[:name], specifier, span)
+            return specifier && Imports::Target.new(kind: :component, name: match[:name], specifier: specifier, span: span)
           end
 
           nil

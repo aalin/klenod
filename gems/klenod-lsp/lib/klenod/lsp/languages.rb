@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
+require_relative "languages/css"
 require_relative "languages/haml"
 require_relative "languages/ruby"
+require_relative "languages/syntax"
 
 module Klenod
   module LSP
@@ -15,7 +17,8 @@ module Klenod
     module Languages
       HANDLERS = {
         ".haml" => Haml.new,
-        ".rb" => Ruby.new
+        ".rb" => Ruby.new,
+        ".css" => CSS.new
       }.freeze
 
       module_function
@@ -24,6 +27,11 @@ module Klenod
         return nil unless document.module_id
 
         HANDLERS[document.extname]
+      end
+
+      # The import syntax of a file by extension, Ruby-shaped by default.
+      def syntax_for(extname)
+        HANDLERS[extname]&.syntax || Syntax::Ruby
       end
     end
   end

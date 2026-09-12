@@ -91,8 +91,8 @@ module Klenod
         failed_analysis(module_id, source, error)
       end
 
-      def resolve(specifier, importer_id:)
-        dependency = Klenod::Build::Dependency.create(specifier: specifier, importer_id: importer_id, kind: IMPORT_KIND)
+      def resolve(specifier, importer_id:, kind: IMPORT_KIND)
+        dependency = Klenod::Build::Dependency.create(specifier: specifier, importer_id: importer_id, kind: kind)
         @graph.resolve_dependency(dependency).module_id
       rescue Klenod::Build::ResolveError
         nil

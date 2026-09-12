@@ -337,7 +337,7 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
 
     list = completion(source, position(2, 22))
 
-    assert_equal(["components/", "entry.rb", "pages/"], list.items.map(&:label))
+    assert_equal(["components/", "entry.rb", "pages/", "pattern.svg", "styles/"], list.items.map(&:label))
     assert_nil(completion(@page_source.sub("import(\"./layout\")", "import(\"../../"), position(2, 25)))
   end
 

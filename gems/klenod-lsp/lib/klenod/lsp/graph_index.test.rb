@@ -48,7 +48,7 @@ class Klenod::LSP::GraphIndex::Test < Minitest::Test
       assert_equal(["app:/pages/BrokenIntl.haml"], index.failed.keys)
       assert_equal([:begin], progress.events.first.first(1))
       assert_equal([:finish], progress.events.last)
-      assert_empty(index.records.values.flat_map(&:assets).reject { |asset| asset.metadata[:type] == :css })
+      assert(index.records.values.flat_map(&:assets).all? { |asset| %i[css svg].include?(asset.metadata[:type]) }, "analysis mode emits no image, font, or JavaScript assets")
     end
   end
 

@@ -1,0 +1,6 @@
+@import "./base.css";
+
+.title {
+  composes: base from "./base.css";
+  background: url("../pattern.svg");
+}
