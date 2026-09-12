@@ -19,11 +19,11 @@ module Klenod
           Syntax::CSS
         end
 
-        def diagnostics(analysis)
+        def diagnostics(analysis, _workspace = nil, _index = nil)
           Diagnostics.for_analysis(analysis, syntax: syntax)
         end
 
-        def completion(analysis, position, workspace)
+        def completion(analysis, position, workspace, _index = nil)
           line_text = analysis.lines[position.line]
           return nil unless line_text
 

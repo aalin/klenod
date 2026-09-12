@@ -182,13 +182,13 @@ module Klenod
           Syntax::Ruby
         end
 
-        def definition(analysis, position, workspace)
+        def definition(analysis, position, workspace, _index = nil)
           target = target_at(analysis, position)
           module_id = target && Imports.resolve(target, analysis, workspace)
           module_id && Imports.location(module_id, workspace)
         end
 
-        def hover(analysis, position, workspace)
+        def hover(analysis, position, workspace, _index = nil)
           target = target_at(analysis, position)
           return route_hover(analysis, position, workspace) unless target
 

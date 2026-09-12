@@ -54,7 +54,8 @@ module Klenod
           next unless module_id.scheme == :app && GraphIndex::ROOT_EXTENSIONS.include?(module_id.extname)
 
           relative = module_id.relative_path
-          name = File.basename(relative, module_id.extname)
+          stylesheet = module_id.extname == ".css"
+          name = stylesheet ? File.basename(relative) : File.basename(relative, module_id.extname)
           next unless needle.empty? || fuzzy_match?(name.downcase, needle) || relative.downcase.include?(needle)
 
           uri = workspace.uri_for_module_id(module_id)
@@ -62,13 +63,21 @@ module Klenod
 
           matches << Interface::SymbolInformation.new(
             name: name,
-            kind: (module_id.extname == ".haml") ? Constant::SymbolKind::CLASS : Constant::SymbolKind::MODULE,
+            kind: symbol_kind(module_id),
             location: Interface::Location.new(uri: uri, range: Text.zero_range),
             container_name: File.dirname(relative)
           )
         end
 
         matches.sort_by { |symbol| [symbol.name.downcase, symbol.container_name] }.first(WORKSPACE_LIMIT)
+      end
+
+      def symbol_kind(module_id)
+        case module_id.extname
+        when ".haml" then Constant::SymbolKind::CLASS
+        when ".css" then Constant::SymbolKind::FILE
+        else Constant::SymbolKind::MODULE
+        end
       end
 
       def symbols_for_nodes(nodes, lines)

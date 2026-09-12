@@ -3,6 +3,7 @@
 require "language_server-protocol"
 
 require_relative "../imports"
+require_relative "classes"
 
 module Klenod
   module LSP
@@ -21,12 +22,13 @@ module Klenod
 
           module_function
 
-          def call(analysis, position, workspace)
+          def call(analysis, position, workspace, index = nil)
             line_text = analysis.lines[position.line]
             return nil unless line_text
 
             prefix = line_text[0...position.character].to_s
             items = component_items(prefix, position, analysis, workspace) || Imports.completion_items(prefix, position, analysis, workspace)
+            items ||= Classes.completion_items(prefix, position, analysis, workspace, index) if index
             return nil unless items
 
             Interface::CompletionList.new(is_incomplete: false, items: items)

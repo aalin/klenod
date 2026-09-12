@@ -8,12 +8,12 @@ require_relative "languages/syntax"
 module Klenod
   module LSP
     # Maps a document to the handler that knows its syntax. Handlers respond
-    # to `diagnostics(analysis)`, `document_links(analysis, workspace)`,
+    # to `diagnostics(analysis, workspace, index)`, `document_links(analysis, workspace)`,
     # `code_actions(analysis, lines, workspace)`, `document_symbols(analysis)`,
     # `code_lenses(analysis, workspace, index)`, `prepare_rename(analysis,
     # position)`, `rename(analysis, position, new_name, workspace)`, `references(analysis,
     # position, workspace, index, include_declaration:)`, and to `definition`,
-    # `hover`, and `completion`, each taking `(analysis, position, workspace)`.
+    # `hover`, and `completion`, each taking `(analysis, position, workspace, index)`.
     module Languages
       HANDLERS = {
         ".haml" => Haml.new,

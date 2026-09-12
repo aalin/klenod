@@ -4,6 +4,7 @@ require_relative "../diagnostics"
 require_relative "../symbols"
 require_relative "../text"
 require_relative "imports"
+require_relative "haml/classes"
 require_relative "haml/completion"
 require_relative "haml/rename"
 
@@ -19,12 +20,28 @@ module Klenod
 
         COMPONENT_TAG = /%(?<name>[A-Z][A-Za-z0-9_]*(?:::[A-Z][A-Za-z0-9_]*)*)/
 
-        def diagnostics(analysis)
-          Diagnostics.for_analysis(analysis)
+        def diagnostics(analysis, workspace = nil, index = nil)
+          diagnostics = Diagnostics.for_analysis(analysis)
+          diagnostics.concat(Classes.diagnostics(analysis, workspace, index)) if workspace && index
+          diagnostics
         end
 
-        def completion(analysis, position, workspace)
-          Completion.call(analysis, position, workspace)
+        def completion(analysis, position, workspace, index = nil)
+          Completion.call(analysis, position, workspace, index)
+        end
+
+        def definition(analysis, position, workspace, index = nil)
+          occurrence = index && Classes.occurrence_at(analysis.lines, position)
+          return Classes.definition(occurrence, analysis, workspace, index) if occurrence
+
+          super(analysis, position, workspace)
+        end
+
+        def hover(analysis, position, workspace, index = nil)
+          occurrence = index && Classes.occurrence_at(analysis.lines, position)
+          return Classes.hover(occurrence, analysis, workspace, index) if occurrence
+
+          super(analysis, position, workspace)
         end
 
         def document_symbols(analysis)

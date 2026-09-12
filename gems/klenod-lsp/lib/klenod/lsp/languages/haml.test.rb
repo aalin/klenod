@@ -320,8 +320,8 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
 
     list = completion(source, position(1, 32))
 
-    assert_equal(["Details.haml", "Details.intl.en.toml"], list.items.map(&:label))
-    assert_equal("1Details.haml", list.items.fetch(0).sort_text)
+    assert_equal(["Details.css", "Details.haml", "Details.intl.en.toml"], list.items.map(&:label))
+    assert_equal("1Details.css", list.items.fetch(0).sort_text)
   end
 
   def test_completion_lists_entries_next_to_the_importer_for_relative_paths

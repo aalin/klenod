@@ -212,7 +212,7 @@ module Klenod
             ),
             definition_provider: true,
             hover_provider: true,
-            completion_provider: Interface::CompletionOptions.new(trigger_characters: ["%", "/", "\"", "'"]),
+            completion_provider: Interface::CompletionOptions.new(trigger_characters: ["%", "/", "\"", "'", ".", ":"]),
             document_link_provider: Interface::DocumentLinkOptions.new,
             code_action_provider: Interface::CodeActionOptions.new(code_action_kinds: [Constant::CodeActionKind::QUICK_FIX]),
             references_provider: true,
@@ -324,7 +324,7 @@ module Klenod
           language = Languages.for(document)
           next unless language
 
-          diagnostics = language.diagnostics(@workspace.analyze(module_id, document.text))
+          diagnostics = language.diagnostics(@workspace.analyze(module_id, document.text), @workspace, @index)
           current[uri] = diagnostics unless diagnostics.empty?
         end
 
@@ -422,15 +422,15 @@ module Klenod
       end
 
       def handle_definition(message)
-        with_position(message) { |language, analysis, position| language.definition(analysis, position, @workspace) }
+        with_position(message) { |language, analysis, position| language.definition(analysis, position, @workspace, @index) }
       end
 
       def handle_hover(message)
-        with_position(message) { |language, analysis, position| language.hover(analysis, position, @workspace) }
+        with_position(message) { |language, analysis, position| language.hover(analysis, position, @workspace, @index) }
       end
 
       def handle_completion(message)
-        with_position(message) { |language, analysis, position| language.completion(analysis, position, @workspace) }
+        with_position(message) { |language, analysis, position| language.completion(analysis, position, @workspace, @index) }
       end
 
       def handle_references(message)
@@ -504,7 +504,7 @@ module Klenod
         language = Languages.for(document)
         return unless language
 
-        diagnostics = language.diagnostics(@documents.analysis_for(document))
+        diagnostics = language.diagnostics(@documents.analysis_for(document), @workspace, @index)
         notify(
           "textDocument/publishDiagnostics",
           Interface::PublishDiagnosticsParams.new(uri: document.uri, version: document.version, diagnostics: diagnostics)

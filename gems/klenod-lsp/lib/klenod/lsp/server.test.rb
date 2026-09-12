@@ -67,7 +67,7 @@ class Klenod::LSP::Server::Test < Minitest::Test
       assert_equal({openClose: true, change: 1, save: true}, result.dig(:capabilities, :textDocumentSync))
       assert_equal(true, result.dig(:capabilities, :definitionProvider))
       assert_equal(true, result.dig(:capabilities, :hoverProvider))
-      assert_equal(["%", "/", "\"", "'"], result.dig(:capabilities, :completionProvider, :triggerCharacters))
+      assert_equal(["%", "/", "\"", "'", ".", ":"], result.dig(:capabilities, :completionProvider, :triggerCharacters))
       assert_equal({}, result.dig(:capabilities, :documentLinkProvider))
       assert_equal({codeActionKinds: ["quickfix"]}, result.dig(:capabilities, :codeActionProvider))
       assert_equal(true, result.dig(:capabilities, :referencesProvider))
@@ -391,7 +391,7 @@ class Klenod::LSP::Server::Test < Minitest::Test
       assert_equal(["Details", "Layout", "%Layout"], outline.map { |symbol| symbol[:name] })
 
       found = client.request("workspace/symbol", query: "det").fetch(:result)
-      assert_equal(["Details"], found.map { |symbol| symbol[:name] })
+      assert_equal(["Details", "Details.css"], found.map { |symbol| symbol[:name] })
     end
   end
 

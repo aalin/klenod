@@ -18,6 +18,7 @@ Current support covers Haml modules and the `import("...")` literals of Ruby mod
 - Code lens: the number of places that import or render a module, on its first line, opening the reference list in clients that know VS Code's `showReferences` command.
 - Route lenses and hovers: with the router plugin configured, a page or handler shows the route it serves, a layout shows how many routes it wraps, and a special view shows its kind and path. Hovering the first line of such a file shows the route's params, page and handler files, and layout chain.
 - Rename symbol: renaming the constant a module is bound to, from the binding or a `%Name` tag, updates the binding, every tag, and the Ruby uses in that file, leaving plain text and string literals alone.
+- CSS classes in Haml: the `.name` shorthand on tags and `ClassNames[:name]` lookups are checked against the companion stylesheet and inline `:css` filters. Unknown classes get a warning when the component has styles, definition jumps to the selector, hover shows the generated class name, and completion offers the defined classes.
 
 Ruby modules get the diagnostics, navigation, completion, quick fixes, and links for their import literals. Everything else about Ruby is left to a Ruby language server.
 

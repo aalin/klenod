@@ -15,7 +15,7 @@ module Klenod
 
         Interface = LanguageServer::Protocol::Interface
 
-        def diagnostics(analysis)
+        def diagnostics(analysis, _workspace = nil, _index = nil)
           Diagnostics.for_analysis(analysis)
         end
 
@@ -23,7 +23,7 @@ module Klenod
           Symbols.binding_symbols(analysis.source)
         end
 
-        def completion(analysis, position, workspace)
+        def completion(analysis, position, workspace, _index = nil)
           line_text = analysis.lines[position.line]
           return nil unless line_text
 

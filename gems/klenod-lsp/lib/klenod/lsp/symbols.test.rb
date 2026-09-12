@@ -57,7 +57,8 @@ class Klenod::LSP::Symbols::Test < Minitest::Test
     assert_includes(all.map(&:name), "entry")
 
     details = Klenod::LSP::Symbols.workspace_symbols("dtl", index, workspace)
-    assert_equal(["Details"], details.map(&:name))
+    assert_equal(["Details", "Details.css"], details.map(&:name))
+    assert_equal(1, details.fetch(1).kind)
     assert_equal(5, details.fetch(0).kind)
     assert_equal("components", details.fetch(0).container_name)
     assert_equal(fixture_uri("components/Details.haml"), details.fetch(0).location.uri)
