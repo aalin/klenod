@@ -71,6 +71,7 @@ class Klenod::LSP::Server::Test < Minitest::Test
       assert_equal({}, result.dig(:capabilities, :documentLinkProvider))
       assert_equal({codeActionKinds: ["quickfix"]}, result.dig(:capabilities, :codeActionProvider))
       assert_equal(true, result.dig(:capabilities, :referencesProvider))
+      assert_equal("#{Klenod::LSP::TestSupport::FIXTURE_SOURCE_DIR}/**", result.dig(:capabilities, :workspace, :fileOperations, :willRename, :filters, 0, :pattern, :glob))
       assert_equal("klenod", result.dig(:serverInfo, :name))
     end
   end
@@ -306,6 +307,21 @@ class Klenod::LSP::Server::Test < Minitest::Test
       result = client.request("textDocument/references", textDocument: {uri: @page_uri}, position: {line: 5, character: 4}, context: {includeDeclaration: false}).fetch(:result)
 
       assert_equal([fixture_uri("entry.rb"), @page_uri, @page_uri], result.map { |location| location[:uri] })
+    end
+  end
+
+  def test_will_rename_files_rewrites_imports_before_the_move
+    with_server do |client|
+      client.request("initialize", capabilities: {window: {workDoneProgress: true}})
+      client.notify("initialized")
+      client.respond(client.read[:id])
+      loop { break if client.read.dig(:params, :value, :kind) == "end" }
+
+      result = client.request("workspace/willRenameFiles", files: [{oldUri: fixture_uri("components/Details.haml"), newUri: fixture_uri("components/Card.haml")}]).fetch(:result)
+      changes = result[:changes]
+
+      assert_equal("/components/Card.haml", changes.dig(fixture_uri("entry.rb").to_sym, 0, :newText))
+      assert_equal("/components/Card", changes.dig(@page_uri.to_sym, 0, :newText))
     end
   end
 

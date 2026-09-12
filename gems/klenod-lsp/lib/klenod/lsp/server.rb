@@ -7,6 +7,7 @@ require "logger"
 require_relative "documents"
 require_relative "graph_index"
 require_relative "languages"
+require_relative "renames"
 require_relative "text"
 require_relative "version"
 require_relative "workspace"
@@ -47,6 +48,7 @@ module Klenod
         "textDocument/documentLink" => :handle_document_link,
         "textDocument/codeAction" => :handle_code_action,
         "textDocument/references" => :handle_references,
+        "workspace/willRenameFiles" => :handle_will_rename_files,
         "workspace/didChangeConfiguration" => :handle_noop,
         "workspace/didChangeWatchedFiles" => :handle_did_change_watched_files,
         "$/cancelRequest" => :handle_noop,
@@ -195,7 +197,19 @@ module Klenod
             completion_provider: Interface::CompletionOptions.new(trigger_characters: ["%", "/", "\"", "'"]),
             document_link_provider: Interface::DocumentLinkOptions.new,
             code_action_provider: Interface::CodeActionOptions.new(code_action_kinds: [Constant::CodeActionKind::QUICK_FIX]),
-            references_provider: true
+            references_provider: true,
+            workspace: {
+              fileOperations: Interface::FileOperationOptions.new(
+                will_rename: Interface::FileOperationRegistrationOptions.new(
+                  filters: [
+                    Interface::FileOperationFilter.new(
+                      scheme: "file",
+                      pattern: Interface::FileOperationPattern.new(glob: File.join(@workspace.source_dir, "**"))
+                    )
+                  ]
+                )
+              )
+            }
           ),
           server_info: {name: "klenod", version: VERSION}
         )
@@ -361,6 +375,14 @@ module Klenod
           include_declaration = message.dig(:params, :context, :includeDeclaration) == true
           language.references(analysis, position, @workspace, @index, include_declaration: include_declaration)
         end
+      end
+
+      # The editor asks before renaming or moving files, and applies the
+      # returned edits first; the watched-file events that follow bring the
+      # graph up to date.
+      def handle_will_rename_files(message)
+        files = Array(message.dig(:params, :files)).map { |file| [file[:oldUri].to_s, file[:newUri].to_s] }
+        Renames.call(files, @index, @workspace)
       end
 
       def handle_document_link(message)

@@ -17,7 +17,7 @@ This repository contains the following gems:
 - [`klenod-runtime`](gems/klenod-runtime): loads bundles, evaluates modules, reads source maps, and rewrites backtraces.
 - [`klenod-build`](gems/klenod-build): builds graphs, runs plugins, watches files, writes bundles, and provides the CLI.
 - [`klenod-test`](gems/klenod-test): runs application tests, watches their dependency graph, and reports source-mapped coverage without choosing a test framework.
-- [`klenod-lsp`](gems/klenod-lsp): serves editor diagnostics, navigation, completion, and quick fixes for Haml modules and Ruby imports over the Language Server Protocol. Install it separately; the `klenod` meta gem does not depend on it.
+- [`klenod-lsp`](gems/klenod-lsp): serves editor diagnostics, navigation, completion, quick fixes, references, and import-preserving renames for Haml modules and Ruby imports over the Language Server Protocol. Install it separately; the `klenod` meta gem does not depend on it.
 - [`klenod-rack`](gems/klenod-rack): provides Rack helpers for serving bundled assets.
 - [`klenod-plugin-css`](gems/klenod-plugin-css): adds CSS assets and CSS Modules support.
 - [`klenod-plugin-javascript`](gems/klenod-plugin-javascript): adds JavaScript and TypeScript assets.

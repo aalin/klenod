@@ -11,7 +11,7 @@ Keep these boundaries intact:
 - `gems/klenod-runtime/lib/klenod/runtime/`: production bundle loading, module evaluation, source maps, assets, and backtrace rewriting. It must not require build plugins or heavyweight build dependencies.
 - `gems/klenod-build/lib/klenod/build/`: graph collection, resolving, transforms, plugins, invalidation, asset generation, and bundle writing.
 - `gems/klenod-test/`: framework-independent test discovery, dependency selection, watch runs, worker isolation, and source-mapped coverage. It depends on `klenod-build` but not on a test framework.
-- `gems/klenod-lsp/`: the Language Server Protocol server. It depends on `klenod-build`, transforms and resolves editor documents without collecting or evaluating them, and stays framework-neutral.
+- `gems/klenod-lsp/`: the Language Server Protocol server. It depends on `klenod-build`, transforms open documents for diagnostics, keeps a graph collected in analysis mode for cross-file features, never evaluates application code, and stays framework-neutral.
 - `gems/klenod-rack/lib/klenod/rack/`: Rack-compatible serving helpers, not application or framework policy.
 - `gems/klenod-plugin-css/`: the native CSS plugin and its Ruby integration.
 - `gems/klenod-plugin-javascript/`: the native JavaScript/TypeScript plugin and its Ruby integration.
@@ -137,6 +137,7 @@ Development invalidation must preserve that split:
 - `runtime_import_value` supplies serializable bundle values or runtime instructions.
 - Collection and runtime serialization must not depend on evaluated application exports.
 - Plugin `load` and `transform` hooks can overlap across sibling dependencies; avoid unguarded shared mutable state.
+- When `context.analysis?` is true, keep the record shape but skip network fetches, whole-file hashing, compilation, and asset bytes. The language server collects graphs this way.
 
 ### Module IDs And Imports
 

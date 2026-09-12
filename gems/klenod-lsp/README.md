@@ -10,10 +10,14 @@ Current support covers Haml modules and the `import("...")` literals of Ruby mod
 - Completion: `%` offers the components bound by imports in the file, and the string inside `import("...")` offers directories and files under the source directory, relative to the importing module or to the source root for leading-slash paths.
 - Quick fixes: an unresolved import offers the build's own suggestions, such as a corrected casing or a close filename, as code actions that replace the literal.
 - Document links: every resolvable `import("...")` literal is a clickable link to its file.
+- Find references: importers of a module and the `%Component` tags that render it, from the collected graph. The cursor can be on an import literal, a component tag, the constant a module is bound to, or anywhere else to mean the current document.
+- Rename on file move: when the editor renames or moves a file or folder, importers get their literals rewritten and the moved module's own relative imports follow it. Each literal keeps its style and its extension only when it had one.
 
 Ruby modules get the diagnostics, navigation, completion, quick fixes, and links for their import literals. Everything else about Ruby is left to a Ruby language server.
 
-The server never evaluates application code. It only transforms and resolves, so unsaved editor text stays out of the module graph. It does not watch files itself: when the client supports dynamic registration it asks the editor to report changes under the source directory and re-analyzes the other open documents, so creating a missing import target or editing a companion file refreshes diagnostics. Clients without dynamic registration need a static watcher configuration.
+The server never evaluates application code. Diagnostics for an open document come from transforming its buffer. Cross-file features come from a module graph collected in the background in analysis mode: the configured entrypoints plus every Ruby and Haml file under the source directory, following lazy imports such as router pages. Analysis mode keeps plugins from doing asset work, so no images are hashed or resized, no fonts are downloaded, no JavaScript is compiled, and nothing is written. Open buffers overlay the files on disk, and indexing reports progress when the client supports `window/workDoneProgress`.
+
+The server does not watch files itself. When the client supports dynamic registration it asks the editor to report changes under the source directory and runs them through the build's own invalidation, which keeps the graph current and re-analyzes the open documents a change affects. Clients without dynamic registration need a static watcher configuration.
 
 ## Starting the server
 
@@ -32,9 +36,12 @@ Frameworks that build their `Klenod::Build::Config` in Ruby start the same serve
 ```ruby
 require "klenod/lsp"
 
-context = Example::WebConfig.build_config(mode: :development).context
-exit Klenod::LSP::Server.new(context: context).start
+config = Example::WebConfig.build_config(mode: :development)
+context = config.context(analysis: true)
+exit Klenod::LSP::Server.new(context: context, entrypoints: config.entrypoints).start
 ```
+
+Build the context with `analysis: true` so plugins skip asset work, and pass the entrypoints so the graph index covers everything reachable from them. Without entrypoints the index still covers every source file.
 
 `Klenod::LSP::Server.new(context:)` speaks JSON-RPC over stdin and stdout. Anything printed to `$stdout` while the server runs is redirected to stderr so plugin output cannot corrupt the protocol stream. `start` returns the process exit status: `0` after the client sent `shutdown`, `1` otherwise.
 
@@ -74,6 +81,7 @@ Zed (`.zed/settings.json`) can run it through a generic language server extensio
 
 - Positions are counted in Ruby characters rather than UTF-16 code units, so ranges on lines containing characters outside the Basic Multilingual Plane can be off by one per such character.
 - Documents are synchronized with their full text on every change, and every change is analyzed synchronously.
-- Definitions only target modules under the application source directory. `gem://` and virtual modules return no location yet.
+- Definitions, references, and renames only target modules under the application source directory. `gem://` and virtual modules return no location yet.
+- References and renames answer from whatever the background index has collected so far; right after startup on a large project they can be incomplete until indexing finishes.
 - Completion inspects only the current line up to the cursor. Component completion offers the constants bound in the file, not HTML tags.
 - CSS class navigation is not implemented, and Ruby modules only get import-related features.
