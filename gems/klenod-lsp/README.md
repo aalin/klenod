@@ -80,7 +80,7 @@ Zed (`.zed/settings.json`) can run it through a generic language server extensio
 ## Limitations
 
 - Positions are counted in Ruby characters rather than UTF-16 code units, so ranges on lines containing characters outside the Basic Multilingual Plane can be off by one per such character.
-- Documents are synchronized with their full text on every change, and every change is analyzed synchronously.
+- Documents are synchronized with their full text on every change. Diagnostics are published about 100 ms after typing pauses and the graph record follows about 250 ms after; requests in between analyze the current text on demand.
 - Definitions, references, and renames only target modules under the application source directory. `gem://` and virtual modules return no location yet.
 - References and renames answer from whatever the background index has collected so far; right after startup on a large project they can be incomplete until indexing finishes.
 - Completion inspects only the current line up to the cursor. Component completion offers the constants bound in the file, not HTML tags.

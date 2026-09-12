@@ -31,6 +31,7 @@ module Klenod
       Interface = Protocol::Interface
       Constant = Protocol::Constant
 
+      DIAGNOSTICS_DEBOUNCE = 0.1
       COLLECTION_DEBOUNCE = 0.25
 
       HANDLERS = {
@@ -297,15 +298,27 @@ module Klenod
         collect_document(document)
       end
 
+      # Editors send a change per keystroke; diagnostics wait for a short
+      # pause and the graph record for a slightly longer one. Requests that
+      # arrive meanwhile analyze the current text on demand.
       def handle_did_change(message)
         params = message[:params]
         change = Array(params[:contentChanges]).last
         return unless change
 
         document = @documents.change(uri: params.dig(:textDocument, :uri), text: change[:text], version: params.dig(:textDocument, :version))
-        publish_diagnostics(document)
-        overlay(document)
-        schedule_collection(document)
+        return unless Languages.for(document)
+
+        @pending_collections.delete(document.uri)&.stop
+        @pending_collections[document.uri] =
+          @task.async do |task|
+            task.sleep(DIAGNOSTICS_DEBOUNCE)
+            publish_diagnostics(document)
+            overlay(document)
+            task.sleep(COLLECTION_DEBOUNCE - DIAGNOSTICS_DEBOUNCE)
+            @pending_collections.delete(document.uri)
+            @index.ensure_collected(document.module_id)
+          end
       end
 
       # Companion files may have changed on disk, so the cached analysis is
@@ -331,11 +344,15 @@ module Klenod
         notify("textDocument/publishDiagnostics", Interface::PublishDiagnosticsParams.new(uri: uri, diagnostics: []))
       end
 
-      # The graph reads open documents from their buffers rather than disk.
+      # The graph reads open documents from their buffers rather than disk,
+      # and reuses the diagnostics transform when the buffer had no errors so
+      # collection does not transform the same text twice.
       def overlay(document)
         return unless Languages.for(document)
 
-        @workspace.context.graph.override_source(document.module_id, document.text)
+        analysis = @documents.cached_analysis(document)
+        transform = analysis&.transform if analysis && analysis.build_error.nil? && analysis.resolve_errors.empty?
+        @workspace.context.graph.override_source(document.module_id, document.text, transform: transform)
       end
 
       def collect_document(document)
@@ -343,19 +360,6 @@ module Klenod
 
         @pending_collections.delete(document.uri)&.stop
         @index.ensure_collected(document.module_id)
-      end
-
-      # Keystrokes only refresh the record once typing pauses.
-      def schedule_collection(document)
-        return unless Languages.for(document)
-
-        @pending_collections.delete(document.uri)&.stop
-        @pending_collections[document.uri] =
-          @task.async do |task|
-            task.sleep(COLLECTION_DEBOUNCE)
-            @pending_collections.delete(document.uri)
-            @index.ensure_collected(document.module_id)
-          end
       end
 
       def handle_definition(message)
