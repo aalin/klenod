@@ -20,6 +20,13 @@ PATH
       tsort (~> 0.2.0)
 
 PATH
+  remote: gems/klenod-lsp
+  specs:
+    klenod-lsp (0.0.14)
+      klenod-build (= 0.0.14)
+      language_server-protocol (~> 3.17)
+
+PATH
   remote: gems/klenod-plugin-css
   specs:
     klenod-plugin-css (0.0.14)
@@ -229,6 +236,7 @@ PLATFORMS
 DEPENDENCIES
   klenod!
   klenod-build!
+  klenod-lsp!
   klenod-plugin-css!
   klenod-plugin-javascript!
   klenod-rack!
@@ -269,6 +277,7 @@ CHECKSUMS
   json (2.21.2) sha256=1f1d3b7cf2b3ba1a69beca0bb6db13d5438b80bff3cd54cdaaa620b9b07c1c6a
   klenod (0.0.14)
   klenod-build (0.0.14)
+  klenod-lsp (0.0.14)
   klenod-plugin-css (0.0.14)
   klenod-plugin-javascript (0.0.14)
   klenod-rack (0.0.14)

@@ -1,0 +1,196 @@
+# frozen_string_literal: true
+
+require "language_server-protocol"
+require "logger"
+
+require_relative "documents"
+require_relative "languages"
+require_relative "text"
+require_relative "version"
+require_relative "workspace"
+
+module Klenod
+  module LSP
+    # A single-threaded Language Server Protocol server over stdio.
+    #
+    # Frameworks start it with their own build context:
+    #
+    #   Klenod::LSP::Server.new(context: config.context(mode: :development)).start
+    #
+    # The server transforms open documents with the context's plugins and
+    # publishes the resulting build errors as diagnostics. It never evaluates
+    # application code.
+    class Server
+      Protocol = LanguageServer::Protocol
+      Interface = Protocol::Interface
+      Constant = Protocol::Constant
+
+      HANDLERS = {
+        "initialize" => :handle_initialize,
+        "initialized" => :handle_noop,
+        "shutdown" => :handle_shutdown,
+        "exit" => :handle_exit,
+        "textDocument/didOpen" => :handle_did_open,
+        "textDocument/didChange" => :handle_did_change,
+        "textDocument/didSave" => :handle_did_save,
+        "textDocument/didClose" => :handle_did_close,
+        "textDocument/definition" => :handle_definition,
+        "workspace/didChangeConfiguration" => :handle_noop,
+        "workspace/didChangeWatchedFiles" => :handle_noop,
+        "$/cancelRequest" => :handle_noop,
+        "$/setTrace" => :handle_noop
+      }.freeze
+
+      def initialize(context:, input: $stdin, output: $stdout, logger: nil)
+        @reader = Protocol::Transport::Io::Reader.new(input)
+        @writer = Protocol::Transport::Io::Writer.new(output)
+        @logger = logger || Logger.new($stderr, progname: "klenod-lsp")
+        @workspace = Workspace.new(context: context)
+        @documents = Documents.new(@workspace)
+        @shutdown_requested = false
+        @exit_requested = false
+      end
+
+      # Runs until the client sends `exit` or closes the input. Returns the
+      # exit status the protocol expects: 0 after `shutdown`, 1 otherwise.
+      def start
+        with_protocol_stdout do
+          @reader.read do |message|
+            dispatch(message)
+            break if @exit_requested
+          end
+        end
+
+        @shutdown_requested ? 0 : 1
+      end
+
+      private
+
+      # Plugins may print while transforming. The protocol stream is the
+      # writer's IO, so anything written to $stdout meanwhile goes to stderr,
+      # which editors show in their language server log.
+      def with_protocol_stdout
+        previous_stdout = $stdout
+        $stdout = $stderr
+        yield
+      ensure
+        $stdout = previous_stdout
+      end
+
+      def dispatch(message)
+        method_name = message[:method]
+        return unless method_name
+
+        handler = HANDLERS[method_name]
+        if handler
+          result = send(handler, message)
+          reply(message, result) if request?(message)
+        elsif request?(message)
+          reply_error(message, Constant::ErrorCodes::METHOD_NOT_FOUND, "Unsupported method: #{method_name}")
+        else
+          @logger.debug { "Ignoring notification #{method_name}" }
+        end
+      rescue => error
+        @logger.error { "#{error.class}: #{error.message}\n#{Array(error.backtrace).join("\n")}" }
+        reply_error(message, Constant::ErrorCodes::INTERNAL_ERROR, "#{error.class}: #{error.message}") if request?(message)
+      end
+
+      def request?(message)
+        message.key?(:id)
+      end
+
+      def reply(message, result)
+        @writer.write(id: message[:id], result: result)
+      end
+
+      def reply_error(message, code, text)
+        @writer.write(id: message[:id], error: Interface::ResponseError.new(code: code, message: text))
+      end
+
+      def notify(method_name, params)
+        @writer.write(method: method_name, params: params)
+      end
+
+      def handle_initialize(_message)
+        Interface::InitializeResult.new(
+          capabilities: Interface::ServerCapabilities.new(
+            text_document_sync: Interface::TextDocumentSyncOptions.new(
+              open_close: true,
+              change: Constant::TextDocumentSyncKind::FULL,
+              save: true
+            ),
+            definition_provider: true
+          ),
+          server_info: {name: "klenod", version: VERSION}
+        )
+      end
+
+      def handle_noop(_message)
+        nil
+      end
+
+      def handle_shutdown(_message)
+        @shutdown_requested = true
+        nil
+      end
+
+      def handle_exit(_message)
+        @exit_requested = true
+      end
+
+      def handle_did_open(message)
+        text_document = message.dig(:params, :textDocument)
+        document = @documents.open(uri: text_document[:uri], text: text_document[:text], version: text_document[:version])
+        publish_diagnostics(document)
+      end
+
+      def handle_did_change(message)
+        params = message[:params]
+        change = Array(params[:contentChanges]).last
+        return unless change
+
+        document = @documents.change(uri: params.dig(:textDocument, :uri), text: change[:text], version: params.dig(:textDocument, :version))
+        publish_diagnostics(document)
+      end
+
+      # Companion files may have changed on disk, so the cached analysis is
+      # dropped even though the document version did not change.
+      def handle_did_save(message)
+        document = @documents.fetch(message.dig(:params, :textDocument, :uri))
+        return unless document
+
+        @documents.invalidate(document.uri)
+        publish_diagnostics(document)
+      end
+
+      def handle_did_close(message)
+        uri = message.dig(:params, :textDocument, :uri)
+        document = @documents.close(uri)
+        return unless document && Languages.for(document)
+
+        notify("textDocument/publishDiagnostics", Interface::PublishDiagnosticsParams.new(uri: uri, diagnostics: []))
+      end
+
+      def handle_definition(message)
+        params = message[:params]
+        document = @documents.fetch(params.dig(:textDocument, :uri))
+        language = document && Languages.for(document)
+        return nil unless language
+
+        position = Text::Position.new(line: params.dig(:position, :line), character: params.dig(:position, :character))
+        language.definition(@documents.analysis_for(document), position, @workspace)
+      end
+
+      def publish_diagnostics(document)
+        language = Languages.for(document)
+        return unless language
+
+        diagnostics = language.diagnostics(@documents.analysis_for(document))
+        notify(
+          "textDocument/publishDiagnostics",
+          Interface::PublishDiagnosticsParams.new(uri: document.uri, version: document.version, diagnostics: diagnostics)
+        )
+      end
+    end
+  end
+end

@@ -211,6 +211,15 @@ module Klenod
         end
       end
 
+      # Transform source for a module without collecting it. Editor tooling
+      # such as the language server uses this to analyze unsaved text with the
+      # same plugins as a build, without adding a record or evaluating anything.
+      def transform_source(module_id, source)
+        transform = transform_module_source(module_id, source)
+        assert_supported_transform!(module_id, source, transform)
+        transform
+      end
+
       def absolute_path(module_id)
         @resolver.absolute_path(module_id)
       end

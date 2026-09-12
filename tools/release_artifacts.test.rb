@@ -23,7 +23,7 @@ class ReleaseArtifactsTest < Minitest::Test
       ReleaseArtifacts::NATIVE_GEMS.length * ReleaseArtifacts::NATIVE_PLATFORMS.length,
       ReleaseArtifacts.native_matrix.length
     )
-    assert_equal 15, ReleaseArtifacts.expected_identities(VERSION).length
+    assert_equal 16, ReleaseArtifacts.expected_identities(VERSION).length
   end
 
   def test_verify_accepts_a_complete_release_and_writes_checksums
@@ -33,8 +33,8 @@ class ReleaseArtifactsTest < Minitest::Test
 
       artifacts = ReleaseArtifacts.verify(directory, version: VERSION, manifest:)
 
-      assert_equal 15, artifacts.length
-      assert_equal 15, File.readlines(manifest).length
+      assert_equal 16, artifacts.length
+      assert_equal 16, File.readlines(manifest).length
     end
   end
 

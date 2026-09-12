@@ -11,6 +11,7 @@ Keep these boundaries intact:
 - `gems/klenod-runtime/lib/klenod/runtime/`: production bundle loading, module evaluation, source maps, assets, and backtrace rewriting. It must not require build plugins or heavyweight build dependencies.
 - `gems/klenod-build/lib/klenod/build/`: graph collection, resolving, transforms, plugins, invalidation, asset generation, and bundle writing.
 - `gems/klenod-test/`: framework-independent test discovery, dependency selection, watch runs, worker isolation, and source-mapped coverage. It depends on `klenod-build` but not on a test framework.
+- `gems/klenod-lsp/`: the Language Server Protocol server. It depends on `klenod-build`, transforms and resolves editor documents without collecting or evaluating them, and stays framework-neutral.
 - `gems/klenod-rack/lib/klenod/rack/`: Rack-compatible serving helpers, not application or framework policy.
 - `gems/klenod-plugin-css/`: the native CSS plugin and its Ruby integration.
 - `gems/klenod-plugin-javascript/`: the native JavaScript/TypeScript plugin and its Ruby integration.
@@ -48,6 +49,7 @@ Useful suites:
 ```sh
 bundle exec rake test:runtime
 bundle exec rake test:build
+bundle exec rake test:lsp
 bundle exec rake test:rack
 bundle exec rake test:css
 bundle exec rake test:javascript
@@ -63,6 +65,7 @@ bundle exec ruby gems/klenod-build/lib/klenod/build/context.test.rb
 bundle exec ruby gems/klenod-build/lib/klenod/build/plugins/router_plugin.test.rb
 bundle exec ruby gems/klenod-build/lib/klenod/build/plugins/haml.test.rb
 bundle exec ruby gems/klenod-runtime/lib/klenod/runtime/mod.test.rb
+bundle exec ruby gems/klenod-lsp/lib/klenod/lsp/languages/haml.test.rb
 bundle exec ruby example/standalone/example.test.rb
 ```
 
@@ -79,6 +82,7 @@ Example web commands:
 ```sh
 example/web/bin/build
 example/web/bin/dev
+example/web/bin/lsp
 example/web/bin/routes
 example/web/bin/server
 ```

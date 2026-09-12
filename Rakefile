@@ -10,6 +10,7 @@ VERSION_FILES = {
   "gems/klenod/lib/klenod/version.rb" => ["Klenod", "VERSION"],
   "gems/klenod-build/lib/klenod/build/version.rb" => ["Klenod", "Build", "VERSION"],
   "gems/klenod-test/lib/klenod/test/version.rb" => ["Klenod", "Test", "VERSION"],
+  "gems/klenod-lsp/lib/klenod/lsp/version.rb" => ["Klenod", "LSP", "VERSION"],
   "gems/klenod-runtime/lib/klenod/runtime/version.rb" => ["Klenod", "Runtime", "VERSION"],
   "gems/klenod-rack/lib/klenod/rack/version.rb" => ["Klenod", "Rack", "VERSION"],
   "gems/klenod-plugin-javascript/lib/klenod/plugin/javascript/version.rb" => ["Klenod", "Build", "Plugins", "JavaScriptPlugin", "VERSION"],
@@ -21,6 +22,7 @@ TEST_LIBS = [
   "gems/klenod-runtime/lib",
   "gems/klenod-build/lib",
   "gems/klenod-test/lib",
+  "gems/klenod-lsp/lib",
   "gems/klenod-rack/lib",
   "gems/klenod-plugin-javascript/lib",
   "gems/klenod-plugin-css/lib"
@@ -29,6 +31,7 @@ GEMS = {
   "klenod-runtime" => "gems/klenod-runtime",
   "klenod-build" => "gems/klenod-build",
   "klenod-test" => "gems/klenod-test",
+  "klenod-lsp" => "gems/klenod-lsp",
   "klenod-rack" => "gems/klenod-rack",
   "klenod-plugin-javascript" => "gems/klenod-plugin-javascript",
   "klenod-plugin-css" => "gems/klenod-plugin-css",
@@ -89,6 +92,7 @@ namespace :test do
   minitest_task(:runtime, "Run klenod-runtime tests", ["gems/klenod-runtime/lib/**/*.test.rb"])
   minitest_task(:build, "Run klenod-build tests", ["gems/klenod-build/lib/**/*.test.rb"])
   minitest_task(:klenod_test, "Run klenod-test tests", ["gems/klenod-test/lib/**/*.test.rb"])
+  minitest_task(:lsp, "Run klenod-lsp tests", ["gems/klenod-lsp/lib/**/*.test.rb"])
   minitest_task(:rack, "Run klenod-rack tests", ["gems/klenod-rack/lib/**/*.test.rb"])
   minitest_task(:javascript, "Run klenod-plugin-javascript tests", ["gems/klenod-plugin-javascript/lib/**/*.test.rb"])
   minitest_task(:css, "Run klenod-plugin-css tests", ["gems/klenod-plugin-css/lib/**/*.test.rb"])
@@ -118,7 +122,7 @@ namespace :test do
   end
 
   desc "Run all packaged gem tests"
-  task gems: %i[runtime build klenod_test rack javascript css meta]
+  task gems: %i[runtime build klenod_test lsp rack javascript css meta]
 
   desc "Run all example app tests"
   task examples: %i[standalone box performance web]

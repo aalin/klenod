@@ -2,6 +2,7 @@
 
 require "klenod/build/cli"
 require "klenod/test/cli"
+require_relative "lsp_command"
 
 module Klenod
   module CLI
@@ -17,6 +18,7 @@ module Klenod
         "build" => Klenod::Build::CLI::Build,
         "coverage" => Klenod::Test::CLI::CoverageCommand,
         "graph" => Klenod::Build::CLI::Graph,
+        "lsp" => Klenod::CLI.lsp_command,
         "test" => Klenod::Test::CLI::Command
       }
 

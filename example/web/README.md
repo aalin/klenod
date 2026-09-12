@@ -57,6 +57,7 @@ assets and include `Vary: Accept` for caches.
 - `bin/routes` prints the discovered routes.
 - `bin/test` delegates to `klenod test`, which runs colocated application tests and watches their dependency graph.
 - `bin/coverage` runs the complete colocated test suite once and reports application coverage.
+- `bin/lsp` starts the `klenod-lsp` language server with the example configuration, for editor diagnostics and go-to-definition in Haml files.
 
 Use `bin/test --run` or `bundle exec klenod test --run` for one test run. The command also runs once automatically when `CI` is set. Tests live beside source modules as `*.test.rb`; when watching, changing a test or any eager or lazy dependency reruns only the related tests.
 

@@ -313,6 +313,43 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_transform_source_transforms_without_collecting
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/helper.rb", "Default = 1\n")
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [Klenod::Build::Plugins::RubyPlugin.new]
+        )
+      module_id = Klenod::Build::ModuleId.new("app:/entry.rb")
+
+      transform = context.graph.transform_source(module_id, "Helper = import(\"helper\")\n")
+
+      assert_kind_of(Klenod::Build::TransformResult, transform)
+      assert_equal(["helper"], transform.dependencies.map(&:specifier))
+      assert_includes(transform.code, "__klenod_import__")
+      assert_empty(context.graph.records)
+      assert_empty(context.graph.mods)
+    end
+  end
+
+  def test_transform_source_reports_unsupported_files
+    Dir.mktmpdir do |dir|
+      context =
+        Klenod::Build::Context.new(
+          source_dir: dir,
+          plugins: [Klenod::Build::Plugins::RubyPlugin.new, ExtensionOnlyPlugin.new]
+        )
+      module_id = Klenod::Build::ModuleId.new("app:/config.yaml")
+
+      error = assert_raises(Klenod::Build::UnsupportedFileError) do
+        context.graph.transform_source(module_id, "groups: []\n")
+      end
+
+      assert_includes(error.message, "No plugin transformed \"config.yaml\"")
+    end
+  end
+
   def test_exports_returns_loaded_module_exports
     Dir.mktmpdir do |dir|
       File.write("#{dir}/entry.rb", "VALUE = 42\n")

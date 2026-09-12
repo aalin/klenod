@@ -11,6 +11,7 @@ module ReleaseArtifacts
     klenod-runtime
     klenod-build
     klenod-test
+    klenod-lsp
     klenod-rack
     klenod-plugin-css
     klenod-plugin-javascript

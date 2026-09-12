@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "klenod/lsp"
+require_relative "../lib/web_config"
+
+Dir.chdir(Example::WebConfig::APP_ROOT)
+context = Example::WebConfig.build_config(mode: :development).context
+exit Klenod::LSP::Server.new(context: context).start

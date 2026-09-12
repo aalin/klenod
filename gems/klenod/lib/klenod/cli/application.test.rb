@@ -7,12 +7,12 @@ require "tmpdir"
 require_relative "application"
 
 class Klenod::CLI::Application::Test < Minitest::Test
-  def test_help_lists_build_graph_test_and_coverage_commands
+  def test_help_lists_build_graph_lsp_test_and_coverage_commands
     output = StringIO.new
 
     Klenod::CLI::Application.new(["--help"], output:).call
 
-    assert_includes(output.string, "One of: build, coverage, graph, test")
+    assert_includes(output.string, "One of: build, coverage, graph, lsp, test")
     assert_includes(output.string, "Run and watch application tests")
     assert_includes(output.string, "Run the full application test suite with coverage")
   end
@@ -71,6 +71,33 @@ class Klenod::CLI::Application::Test < Minitest::Test
       assert_includes(output.string, path)
       assert_includes(output.string, "missing execute")
     end
+  end
+
+  def test_lsp_command_reports_a_missing_config
+    Dir.mktmpdir do |directory|
+      output = StringIO.new
+
+      result = Dir.chdir(directory) do
+        Klenod::CLI::Application.new(["lsp"], output:).call
+      end
+
+      assert_equal(1, result)
+      assert_equal("Could not find klenod.config.rb\n", output.string)
+    end
+  end
+
+  def test_lsp_command_explains_when_klenod_lsp_is_not_installed
+    output = StringIO.new
+
+    result = Klenod::CLI::MissingLSPCommand.new([], output:).call
+
+    assert_equal(1, result)
+    assert_includes(output.string, "klenod-lsp gem is not installed")
+    assert_includes(Klenod::CLI::MissingLSPCommand.description, "requires the klenod-lsp gem")
+  end
+
+  def test_lsp_command_uses_klenod_lsp_when_installed
+    assert_equal(Klenod::LSP::CLI::Command, Klenod::CLI.lsp_command)
   end
 
   def test_coverage_worker_uses_the_nearest_test_config
