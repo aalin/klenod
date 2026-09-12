@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "../diagnostics"
+require_relative "../symbols"
 require_relative "imports"
 
 module Klenod
@@ -16,6 +17,10 @@ module Klenod
 
         def diagnostics(analysis)
           Diagnostics.for_analysis(analysis)
+        end
+
+        def document_symbols(analysis)
+          Symbols.binding_symbols(analysis.source)
         end
 
         def completion(analysis, position, workspace)

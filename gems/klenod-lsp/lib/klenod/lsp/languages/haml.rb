@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "../diagnostics"
+require_relative "../symbols"
 require_relative "../text"
 require_relative "imports"
 require_relative "haml/completion"
@@ -23,6 +24,10 @@ module Klenod
 
         def completion(analysis, position, workspace)
           Completion.call(analysis, position, workspace)
+        end
+
+        def document_symbols(analysis)
+          Symbols.haml_document_symbols(analysis.source)
         end
 
         # The import literal or `%Component` tag under the cursor.

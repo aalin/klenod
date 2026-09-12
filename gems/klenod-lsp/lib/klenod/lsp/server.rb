@@ -9,6 +9,7 @@ require_relative "documents"
 require_relative "graph_index"
 require_relative "languages"
 require_relative "renames"
+require_relative "symbols"
 require_relative "text"
 require_relative "version"
 require_relative "workspace"
@@ -51,6 +52,8 @@ module Klenod
         "textDocument/codeAction" => :handle_code_action,
         "textDocument/references" => :handle_references,
         "workspace/willRenameFiles" => :handle_will_rename_files,
+        "textDocument/documentSymbol" => :handle_document_symbol,
+        "workspace/symbol" => :handle_workspace_symbol,
         "workspace/didChangeConfiguration" => :handle_noop,
         "workspace/didChangeWatchedFiles" => :handle_did_change_watched_files,
         "$/cancelRequest" => :handle_noop,
@@ -201,6 +204,8 @@ module Klenod
             document_link_provider: Interface::DocumentLinkOptions.new,
             code_action_provider: Interface::CodeActionOptions.new(code_action_kinds: [Constant::CodeActionKind::QUICK_FIX]),
             references_provider: true,
+            document_symbol_provider: true,
+            workspace_symbol_provider: true,
             workspace: {
               fileOperations: Interface::FileOperationOptions.new(
                 will_rename: Interface::FileOperationRegistrationOptions.new(
@@ -426,6 +431,14 @@ module Klenod
       def handle_will_rename_files(message)
         files = Array(message.dig(:params, :files)).map { |file| [file[:oldUri].to_s, file[:newUri].to_s] }
         Renames.call(files, @index, @workspace)
+      end
+
+      def handle_document_symbol(message)
+        with_document(message) { |language, analysis| language.document_symbols(analysis) }
+      end
+
+      def handle_workspace_symbol(message)
+        Symbols.workspace_symbols(message.dig(:params, :query), @index, @workspace)
       end
 
       def handle_document_link(message)

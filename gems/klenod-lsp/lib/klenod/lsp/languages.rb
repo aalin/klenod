@@ -7,7 +7,7 @@ module Klenod
   module LSP
     # Maps a document to the handler that knows its syntax. Handlers respond
     # to `diagnostics(analysis)`, `document_links(analysis, workspace)`,
-    # `code_actions(analysis, lines, workspace)`, `references(analysis,
+    # `code_actions(analysis, lines, workspace)`, `document_symbols(analysis)`, `references(analysis,
     # position, workspace, index, include_declaration:)`, and to `definition`,
     # `hover`, and `completion`, each taking `(analysis, position, workspace)`.
     module Languages

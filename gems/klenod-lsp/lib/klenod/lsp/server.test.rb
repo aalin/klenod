@@ -71,6 +71,8 @@ class Klenod::LSP::Server::Test < Minitest::Test
       assert_equal({}, result.dig(:capabilities, :documentLinkProvider))
       assert_equal({codeActionKinds: ["quickfix"]}, result.dig(:capabilities, :codeActionProvider))
       assert_equal(true, result.dig(:capabilities, :referencesProvider))
+      assert_equal(true, result.dig(:capabilities, :documentSymbolProvider))
+      assert_equal(true, result.dig(:capabilities, :workspaceSymbolProvider))
       assert_equal("#{Klenod::LSP::TestSupport::FIXTURE_SOURCE_DIR}/**", result.dig(:capabilities, :workspace, :fileOperations, :willRename, :filters, 0, :pattern, :glob))
       assert_equal("klenod", result.dig(:serverInfo, :name))
     end
@@ -358,6 +360,22 @@ class Klenod::LSP::Server::Test < Minitest::Test
 
         assert_equal([], cleared.fetch(page_uri))
       end
+    end
+  end
+
+  def test_document_and_workspace_symbols
+    with_server do |client|
+      client.request("initialize", capabilities: {window: {workDoneProgress: true}})
+      client.notify("initialized")
+      wait_for_index(client)
+      client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
+      client.read
+
+      outline = client.request("textDocument/documentSymbol", textDocument: {uri: @page_uri}).fetch(:result)
+      assert_equal(["Details", "Layout", "%Layout"], outline.map { |symbol| symbol[:name] })
+
+      found = client.request("workspace/symbol", query: "det").fetch(:result)
+      assert_equal(["Details"], found.map { |symbol| symbol[:name] })
     end
   end
 
