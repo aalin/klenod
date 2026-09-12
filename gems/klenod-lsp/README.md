@@ -18,6 +18,7 @@ Current support covers Haml modules and the `import("...")` literals of Ruby mod
 - Code lens: the number of places that import or render a module, on its first line, opening the reference list in clients that know VS Code's `showReferences` command.
 - Route lenses and hovers: with the router plugin configured, a page or handler shows the route it serves, a layout shows how many routes it wraps, and a special view shows its kind and path. Hovering the first line of such a file shows the route's params, page and handler files, and layout chain.
 - Rename symbol: renaming the constant a module is bound to, from the binding or a `%Name` tag, updates the binding, every tag, and the Ruby uses in that file, leaving plain text and string literals alone.
+- Unused imports: a constant bound by an import but never used as a `%Name` tag or in Ruby gets a warning tagged as unnecessary.
 - CSS classes in Haml: the `.name` shorthand on tags and `ClassNames[:name]` lookups are checked against the companion stylesheet and inline `:css` filters. Unknown classes get a warning when the component has styles, definition jumps to the selector, hover shows the generated class name, and completion offers the defined classes.
 
 Ruby modules get the diagnostics, navigation, completion, quick fixes, and links for their import literals. Everything else about Ruby is left to a Ruby language server.
@@ -90,7 +91,7 @@ Zed (`.zed/settings.json`) can run it through a generic language server extensio
 
 - Positions are counted in characters. Clients that offer the `utf-32` position encoding get exact positions; with the `utf-16` default, ranges on lines containing characters outside the Basic Multilingual Plane can be off by one per such character.
 - Documents are synchronized with their full text on every change. Diagnostics are published about 100 ms after typing pauses and the graph record follows about 250 ms after; requests in between analyze the current text on demand.
-- Definitions, references, and renames only target modules under the application source directory. `gem://` and virtual modules return no location yet.
+- References and renames only cover modules under the application source directory; definition and hover also reach files inside installed gems, but virtual modules have no location.
 - References and renames answer from whatever the background index has collected so far; right after startup on a large project they can be incomplete until indexing finishes.
 - Completion inspects only the current line up to the cursor. Component completion offers the constants bound in the file, not HTML tags.
 - CSS class navigation is not implemented, and Ruby modules only get import-related features.

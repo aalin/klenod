@@ -33,6 +33,17 @@ class Klenod::LSP::Languages::Ruby::Test < Minitest::Test
     assert_includes(diagnostic.message, "Did you mean \"pages/layout.rb\"?")
   end
 
+  def test_unused_bindings_are_warned_about
+    source = @entry_source.sub("EXTRAS = [Layout, Details].freeze\n", "")
+
+    diagnostics = diagnostics(source)
+
+    assert_equal(["Layout is imported but never used", "Details is imported but never used"], diagnostics.map(&:message))
+    assert_equal([2, 2], diagnostics.map(&:severity))
+    assert_equal([[1]] * 2, diagnostics.map(&:tags))
+    assert_equal([3, 4], diagnostics.map { |diagnostic| diagnostic.range.start.line })
+  end
+
   def test_definition_and_hover_on_import_literals
     line = @entry_source.lines[4]
     position = position(4, line.index("/components") + 2)

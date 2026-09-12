@@ -16,7 +16,7 @@ module Klenod
         Interface = LanguageServer::Protocol::Interface
 
         def diagnostics(analysis, _workspace = nil, _index = nil)
-          Diagnostics.for_analysis(analysis)
+          Diagnostics.for_analysis(analysis) + unused_binding_diagnostics(analysis)
         end
 
         def document_symbols(analysis)

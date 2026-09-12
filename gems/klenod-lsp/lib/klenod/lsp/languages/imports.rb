@@ -352,6 +352,24 @@ module Klenod
           spans
         end
 
+        # Bindings whose constant is never used in the file. Languages give
+        # the spans a constant occupies, the binding included.
+        def unused_binding_diagnostics(analysis)
+          Imports.bindings(analysis.lines).filter_map do |name, _specifier|
+            spans = rename_spans(analysis, name)
+            next if spans.length > 1
+
+            span = spans.first || next
+            Imports::Interface::Diagnostic.new(
+              range: span.to_range,
+              severity: Imports::Constant::DiagnosticSeverity::WARNING,
+              source: "klenod",
+              message: "#{name} is imported but never used",
+              tags: [Imports::Constant::DiagnosticTag::UNNECESSARY]
+            )
+          end
+        end
+
         # Quick fixes replacing an unresolved import literal with each of the
         # build's own suggestions, for literals inside the requested lines.
         def code_actions(analysis, lines, workspace)
