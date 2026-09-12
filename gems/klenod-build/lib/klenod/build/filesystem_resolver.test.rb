@@ -115,4 +115,22 @@ class Klenod::Build::FilesystemResolver::Test < Minitest::Test
       yield dir
     end
   end
+
+  def test_suggestions_reuse_the_file_listing_until_the_cache_is_cleared
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/helper.rb", "")
+      resolver = Klenod::Build::FilesystemResolver.new(root: dir, extensions: [".rb"])
+
+      error = assert_raises(Klenod::Build::ResolveError) { resolver.resolve("helpr") }
+      assert_equal(["helper.rb"], error.suggestions)
+
+      File.write("#{dir}/helpers.rb", "")
+      error = assert_raises(Klenod::Build::ResolveError) { resolver.resolve("helpr") }
+      assert_equal(["helper.rb"], error.suggestions, "the listing is cached between file events")
+
+      resolver.clear_cache
+      error = assert_raises(Klenod::Build::ResolveError) { resolver.resolve("helpr") }
+      assert_equal(["helper.rb", "helpers.rb"], error.suggestions.sort)
+    end
+  end
 end
