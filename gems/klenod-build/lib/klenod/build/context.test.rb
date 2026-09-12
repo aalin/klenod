@@ -425,25 +425,26 @@ class Klenod::Build::Context::Test < Minitest::Test
 
   def test_collect_reachable_walks_lazy_dependencies_and_yields_new_records
     Dir.mktmpdir do |dir|
-      File.write("#{dir}/entry.rb", "Page = lazy_import(\"./page\")\n")
+      File.write("#{dir}/entry.rb", "Page = lazy_import(\"./page\")\nBroken = lazy_import(\"./broken\")\n")
       File.write("#{dir}/page.rb", "Helper = import(\"./helper\")\n")
       File.write("#{dir}/helper.rb", "VALUE = 1\n")
+      File.write("#{dir}/broken.rb", "Missing = import(\"./missing\")\n")
       context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new])
       entry = context.collect("entry")
 
       assert_equal(["app:/entry.rb"], context.graph.records.keys.map(&:to_s))
 
       collected = []
-      context.graph.collect_reachable(entry.id) { |module_id| collected << module_id.to_s }
+      context.graph.collect_reachable(entry.id) { |module_id, error| collected << [module_id.to_s, error&.class] }
 
-      assert_equal(["app:/page.rb"], collected, "eager dependencies are collected with their importer, not yielded separately")
+      assert_equal([["app:/page.rb", nil], ["app:/broken.rb", Klenod::Build::ResolveError]], collected, "eager dependencies are collected with their importer, not yielded separately")
       assert_equal(["app:/entry.rb", "app:/helper.rb", "app:/page.rb"], context.graph.records.keys.map(&:to_s).sort)
       assert_empty(context.graph.mods)
 
       collected = []
-      context.graph.collect_reachable(entry.id) { |module_id| collected << module_id.to_s }
+      context.graph.collect_reachable(entry.id) { |module_id, error| collected << [module_id.to_s, error&.class] }
 
-      assert_empty(collected)
+      assert_equal([["app:/broken.rb", Klenod::Build::ResolveError]], collected)
     end
   end
 

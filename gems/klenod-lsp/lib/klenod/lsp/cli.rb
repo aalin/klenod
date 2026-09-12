@@ -23,7 +23,8 @@ module Klenod
           end
 
           Dir.chdir(config.base_dir) do
-            Klenod::LSP::Server.new(context: config.context(mode: :development)).start
+            context = config.context(mode: :development, analysis: true)
+            Klenod::LSP::Server.new(context: context, entrypoints: config.entrypoints).start
           end
         end
       end

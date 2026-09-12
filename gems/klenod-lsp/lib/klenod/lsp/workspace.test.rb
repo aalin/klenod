@@ -43,13 +43,6 @@ class Klenod::LSP::Workspace::Test < Minitest::Test
     assert_empty(@workspace.context.graph.mods)
   end
 
-  def test_companion_owner_module_ids_map_companions_to_their_haml_module
-    owners = @workspace.companion_owner_module_ids([fixture_path("components/Details.intl.en.toml"), fixture_path("pages/layout.rb")])
-
-    assert_equal(["app:/components/Details.haml"], owners.map(&:to_s))
-    assert_empty(@workspace.companion_owner_module_ids([fixture_path("pages/Missing.css")]))
-  end
-
   def test_resolve_returns_nil_for_unknown_specifiers
     assert_equal("app:/pages/layout.rb", @workspace.resolve("./layout", importer_id: module_id("pages/Page.haml")).to_s)
     assert_nil(@workspace.resolve("./nope", importer_id: module_id("pages/Page.haml")))

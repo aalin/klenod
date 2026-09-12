@@ -14,6 +14,7 @@ module Klenod
       def fixture_context(source_dir: FIXTURE_SOURCE_DIR, variables: {global: "@__props"})
         Klenod::Build::Context.new(
           source_dir: source_dir,
+          analysis: true,
           plugins: [
             Klenod::Build::Plugins::RubyPlugin.new,
             Klenod::Build::Plugins::IntlPlugin.new,

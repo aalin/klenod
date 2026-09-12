@@ -66,7 +66,7 @@ class Klenod::LSP::Languages::Ruby::Test < Minitest::Test
 
     list = @language.completion(analysis(source), position(3, 23), @workspace)
 
-    assert_equal(["BrokenIntl.haml", "BrokenIntl.intl.en.toml", "Page.haml", "layout.rb"], list.items.map(&:label))
+    assert_equal(["BrokenIntl.haml", "BrokenIntl.intl.en.toml", "LazyPage.haml", "Page.haml", "layout.rb", "lazy.rb", "page_spec.rb"], list.items.map(&:label))
     assert_nil(@language.completion(analysis(source), position(0, 0), @workspace))
   end
 

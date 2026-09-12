@@ -6,5 +6,6 @@ require "klenod/lsp"
 require_relative "../lib/web_config"
 
 Dir.chdir(Example::WebConfig::APP_ROOT)
-context = Example::WebConfig.build_config(mode: :development).context
-exit Klenod::LSP::Server.new(context: context).start
+config = Example::WebConfig.build_config(mode: :development)
+context = config.context(analysis: true)
+exit Klenod::LSP::Server.new(context: context, entrypoints: config.entrypoints).start

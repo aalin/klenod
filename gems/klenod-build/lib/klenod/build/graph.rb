@@ -258,8 +258,9 @@ module Klenod
       end
 
       # Collect everything reachable from a collected module through eager
-      # and lazy dependencies, yielding each newly collected id. Errors
-      # propagate from the module that raised them.
+      # and lazy dependencies. Each module the walk collects itself is
+      # yielded with `nil`; a module that fails to collect is yielded with
+      # its error and the walk continues past it.
       def collect_reachable(module_id)
         queue = @records.fetch(module_id).resolved_dependencies.dup
         seen = Set.new([module_id])
@@ -272,8 +273,13 @@ module Klenod
 
           record = @records[dependency_id]
           unless record
-            record = collect_module(dependency_id)
-            yield dependency_id if block_given?
+            begin
+              record = collect_module(dependency_id)
+            rescue StandardError, ScriptError => error
+              yield dependency_id, error if block_given?
+              next
+            end
+            yield dependency_id, nil if block_given?
           end
           queue.concat(record.resolved_dependencies)
         end

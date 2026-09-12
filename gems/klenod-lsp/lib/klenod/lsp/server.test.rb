@@ -237,11 +237,23 @@ class Klenod::LSP::Server::Test < Minitest::Test
     with_server do |client|
       client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
       client.read
-      client.notify("workspace/didChangeWatchedFiles", changes: [{uri: fixture_uri("components/Details.haml"), type: 2}, {uri: fixture_uri("entry.rb"), type: 1}])
+      client.notify("workspace/didChangeWatchedFiles", changes: [{uri: fixture_uri("pages/LazyPage.haml"), type: 2}, {uri: fixture_uri("entry.rb"), type: 2}])
 
       response = client.request("shutdown")
 
       assert(response.key?(:id))
+    end
+  end
+
+  def test_watched_changes_to_dependencies_republish_the_importer
+    with_server do |client|
+      client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
+      client.read
+      client.notify("workspace/didChangeWatchedFiles", changes: [{uri: fixture_uri("components/Details.haml"), type: 2}])
+      published = client.read
+
+      assert_equal("textDocument/publishDiagnostics", published[:method])
+      assert_equal(@page_uri, published.dig(:params, :uri))
     end
   end
 
@@ -256,6 +268,28 @@ class Klenod::LSP::Server::Test < Minitest::Test
       response = client.request("shutdown")
 
       assert(response.key?(:id))
+    end
+  end
+
+  def test_initialized_indexes_the_workspace_with_progress
+    with_server do |client|
+      client.request("initialize", capabilities: {window: {workDoneProgress: true}})
+      client.notify("initialized")
+
+      create = client.read
+      assert_equal("window/workDoneProgress/create", create[:method])
+      client.respond(create[:id])
+
+      kinds = []
+      loop do
+        message = client.read
+        assert_equal("$/progress", message[:method])
+        kinds << message.dig(:params, :value, :kind)
+        break if kinds.last == "end"
+      end
+
+      assert_equal("begin", kinds.first)
+      assert_includes(kinds, "report")
     end
   end
 

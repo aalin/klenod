@@ -248,9 +248,9 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
   end
 
   def test_completion_lists_entries_next_to_the_importer_for_relative_paths
-    source = @page_source.sub("import(\"./layout\")", "import(\"./la")
+    source = @page_source.sub("import(\"./layout\")", "import(\"./lay")
 
-    list = completion(source, position(2, 23))
+    list = completion(source, position(2, 24))
 
     assert_equal(["layout.rb"], list.items.map(&:label))
   end
