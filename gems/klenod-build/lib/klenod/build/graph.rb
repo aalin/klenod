@@ -224,6 +224,13 @@ module Klenod
         @resolver.absolute_path(module_id)
       end
 
+      # Forget resolved paths so files created, renamed, or deleted outside
+      # a build invalidation are looked up again. Invalidation does this
+      # itself; tooling that only transforms must ask for it.
+      def clear_resolver_cache
+        @resolver.clear_cache
+      end
+
       def source_dir
         @resolver.source_dir
       end

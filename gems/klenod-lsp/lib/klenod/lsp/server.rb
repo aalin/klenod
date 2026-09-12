@@ -27,7 +27,7 @@ module Klenod
 
       HANDLERS = {
         "initialize" => :handle_initialize,
-        "initialized" => :handle_noop,
+        "initialized" => :handle_initialized,
         "shutdown" => :handle_shutdown,
         "exit" => :handle_exit,
         "textDocument/didOpen" => :handle_did_open,
@@ -40,7 +40,7 @@ module Klenod
         "textDocument/documentLink" => :handle_document_link,
         "textDocument/codeAction" => :handle_code_action,
         "workspace/didChangeConfiguration" => :handle_noop,
-        "workspace/didChangeWatchedFiles" => :handle_noop,
+        "workspace/didChangeWatchedFiles" => :handle_did_change_watched_files,
         "$/cancelRequest" => :handle_noop,
         "$/setTrace" => :handle_noop
       }.freeze
@@ -51,6 +51,8 @@ module Klenod
         @logger = logger || Logger.new($stderr, progname: "klenod-lsp")
         @workspace = Workspace.new(context: context)
         @documents = Documents.new(@workspace)
+        @client_capabilities = {}
+        @next_request_id = 0
         @shutdown_requested = false
         @exit_requested = false
       end
@@ -115,7 +117,15 @@ module Klenod
         @writer.write(method: method_name, params: params)
       end
 
-      def handle_initialize(_message)
+      # Server-to-client requests. Their responses arrive without a method
+      # and are ignored by dispatch, because nothing here depends on them.
+      def request(method_name, params)
+        @writer.write(id: "klenod-lsp-#{@next_request_id += 1}", method: method_name, params: params)
+      end
+
+      def handle_initialize(message)
+        @client_capabilities = message.dig(:params, :capabilities) || {}
+
         Interface::InitializeResult.new(
           capabilities: Interface::ServerCapabilities.new(
             text_document_sync: Interface::TextDocumentSyncOptions.new(
@@ -135,6 +145,65 @@ module Klenod
 
       def handle_noop(_message)
         nil
+      end
+
+      # Ask the editor to report file changes under the source directory, so
+      # diagnostics can follow files created, changed, or removed outside the
+      # open documents. Clients without dynamic registration need a static
+      # watcher configuration instead.
+      def handle_initialized(_message)
+        return unless @client_capabilities.dig(:workspace, :didChangeWatchedFiles, :dynamicRegistration)
+
+        request(
+          "client/registerCapability",
+          Interface::RegistrationParams.new(
+            registrations: [
+              Interface::Registration.new(
+                id: "klenod-lsp.watched-files",
+                method: "workspace/didChangeWatchedFiles",
+                register_options: Interface::DidChangeWatchedFilesRegistrationOptions.new(
+                  watchers: [Interface::FileSystemWatcher.new(glob_pattern: File.join(@workspace.source_dir, "**", "*"))]
+                )
+              )
+            ]
+          )
+        )
+      end
+
+      # Re-analyze the open documents a file change can affect: owners of a
+      # changed companion file, documents whose unresolved import may now
+      # resolve, and documents importing a deleted file. A document's own
+      # file is skipped: the editor already reported that save through didSave.
+      def handle_did_change_watched_files(message)
+        changes = Array(message.dig(:params, :changes)).filter_map do |change|
+          path = @workspace.path_for_uri(change[:uri].to_s)
+          path && [path, change[:type]]
+        end
+        return if changes.empty?
+
+        @workspace.clear_resolver_cache
+        changed_paths = changes.map(&:first)
+        owner_ids = @workspace.companion_owner_module_ids(changed_paths).map(&:to_s)
+        deleted_ids = changes.filter_map { |path, type| @workspace.module_id_for_path(path)&.to_s if type == Constant::FileChangeType::DELETED }
+
+        @documents.each do |document|
+          next if changed_paths.include?(document.path)
+          next unless Languages.for(document)
+          next unless affected_by_change?(document, owner_ids, deleted_ids)
+
+          @documents.invalidate(document.uri)
+          publish_diagnostics(document)
+        end
+      end
+
+      def affected_by_change?(document, owner_ids, deleted_ids)
+        return true if owner_ids.include?(document.module_id.to_s)
+
+        analysis = @documents.cached_analysis(document)
+        return true unless analysis
+        return true unless analysis.resolve_errors.empty?
+
+        analysis.resolved_dependencies.any? { |resolved| deleted_ids.include?(resolved.module_id.to_s) }
       end
 
       def handle_shutdown(_message)

@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
+require "fileutils"
 require "json"
 require "stringio"
+require "tmpdir"
 
 require_relative "__test__/support"
 
@@ -33,6 +35,10 @@ class Klenod::LSP::Server::Test < Minitest::Test
       header = @output.gets("\r\n\r\n") or raise "server closed its output"
       length = header[/Content-Length: (\d+)/i, 1].to_i
       JSON.parse(@output.read(length), symbolize_names: true)
+    end
+
+    def respond(id, result: nil)
+      send(id: id, result: result)
     end
 
     def exit_status
@@ -162,6 +168,97 @@ class Klenod::LSP::Server::Test < Minitest::Test
     end
   end
 
+  def test_watched_file_changes_refresh_other_open_documents
+    Dir.mktmpdir do |dir|
+      FileUtils.cp_r("#{Klenod::LSP::TestSupport::FIXTURE_SOURCE_DIR}/.", dir)
+      page_uri = "file://#{dir}/pages/Page.haml"
+
+      with_server(source_dir: dir) do |client|
+        client.request("initialize", capabilities: {workspace: {didChangeWatchedFiles: {dynamicRegistration: true}}})
+        client.notify("initialized")
+        registration = client.read
+
+        assert_equal("client/registerCapability", registration[:method])
+        assert_equal("workspace/didChangeWatchedFiles", registration.dig(:params, :registrations, 0, :method))
+        assert_equal("#{dir}/**/*", registration.dig(:params, :registrations, 0, :registerOptions, :watchers, 0, :globPattern))
+        client.respond(registration[:id])
+
+        broken = @page_source.sub("./layout", "./sidebar")
+        client.notify("textDocument/didOpen", textDocument: {uri: page_uri, languageId: "haml", version: 1, text: broken})
+        assert_includes(client.read.dig(:params, :diagnostics, 0, :message), "Could not resolve")
+
+        File.write("#{dir}/pages/sidebar.rb", "Default = 1\n")
+        client.notify("workspace/didChangeWatchedFiles", changes: [{uri: "file://#{dir}/pages/sidebar.rb", type: 1}])
+        published = client.read
+
+        assert_equal(page_uri, published.dig(:params, :uri))
+        assert_empty(published.dig(:params, :diagnostics))
+      end
+    end
+  end
+
+  def test_watched_companion_changes_refresh_the_owning_document
+    Dir.mktmpdir do |dir|
+      FileUtils.cp_r("#{Klenod::LSP::TestSupport::FIXTURE_SOURCE_DIR}/.", dir)
+      page_uri = "file://#{dir}/pages/Page.haml"
+
+      with_server(source_dir: dir) do |client|
+        client.notify("textDocument/didOpen", textDocument: {uri: page_uri, languageId: "haml", version: 1, text: @page_source})
+        assert_empty(client.read.dig(:params, :diagnostics))
+
+        File.write("#{dir}/pages/Page.intl.en.toml", "title = \"unterminated\n")
+        client.notify("workspace/didChangeWatchedFiles", changes: [{uri: "file://#{dir}/pages/Page.intl.en.toml", type: 1}])
+        published = client.read
+
+        assert_equal(page_uri, published.dig(:params, :uri))
+        assert_includes(published.dig(:params, :diagnostics, 0, :message), "Page.intl.en.toml")
+      end
+    end
+  end
+
+  def test_watched_dependency_deletions_refresh_the_importing_document
+    Dir.mktmpdir do |dir|
+      FileUtils.cp_r("#{Klenod::LSP::TestSupport::FIXTURE_SOURCE_DIR}/.", dir)
+      page_uri = "file://#{dir}/pages/Page.haml"
+
+      with_server(source_dir: dir) do |client|
+        client.notify("textDocument/didOpen", textDocument: {uri: page_uri, languageId: "haml", version: 1, text: @page_source})
+        client.read
+
+        File.delete("#{dir}/pages/layout.rb")
+        client.notify("workspace/didChangeWatchedFiles", changes: [{uri: "file://#{dir}/pages/layout.rb", type: 3}])
+
+        assert_includes(client.read.dig(:params, :diagnostics, 0, :message), "Could not resolve \"./layout\"")
+      end
+    end
+  end
+
+  def test_watched_changes_to_unrelated_files_do_not_republish
+    with_server do |client|
+      client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
+      client.read
+      client.notify("workspace/didChangeWatchedFiles", changes: [{uri: fixture_uri("components/Details.haml"), type: 2}, {uri: fixture_uri("entry.rb"), type: 1}])
+
+      response = client.request("shutdown")
+
+      assert(response.key?(:id))
+    end
+  end
+
+  def test_watched_file_changes_skip_the_changed_document_itself_and_unsupported_clients
+    with_server do |client|
+      client.request("initialize", capabilities: {})
+      client.notify("initialized")
+      client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
+      client.read
+      client.notify("workspace/didChangeWatchedFiles", changes: [{uri: @page_uri, type: 2}])
+
+      response = client.request("shutdown")
+
+      assert(response.key?(:id))
+    end
+  end
+
   def test_documents_outside_the_source_dir_are_ignored
     with_server do |client|
       client.notify("textDocument/didOpen", textDocument: {uri: "file:///elsewhere/Page.haml", languageId: "haml", version: 1, text: "%h1"})
@@ -227,10 +324,10 @@ class Klenod::LSP::Server::Test < Minitest::Test
 
   private
 
-  def with_server
+  def with_server(source_dir: Klenod::LSP::TestSupport::FIXTURE_SOURCE_DIR)
     client_to_server_reader, client_to_server_writer = IO.pipe
     server_to_client_reader, server_to_client_writer = IO.pipe
-    server = Klenod::LSP::Server.new(context: fixture_context, input: client_to_server_reader, output: server_to_client_writer, logger: Logger.new(@stderr))
+    server = Klenod::LSP::Server.new(context: fixture_context(source_dir:), input: client_to_server_reader, output: server_to_client_writer, logger: Logger.new(@stderr))
     status = Thread.new { server.start }
     client = Client.new(client_to_server_writer, server_to_client_reader, status)
 

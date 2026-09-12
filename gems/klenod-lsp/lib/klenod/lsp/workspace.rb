@@ -38,9 +38,27 @@ module Klenod
 
       def module_id_for_uri(uri)
         path = path_for_uri(uri)
-        return nil unless path&.start_with?("#{source_dir}/")
+        path && module_id_for_path(path)
+      end
+
+      def module_id_for_path(path)
+        return nil unless path.start_with?("#{source_dir}/")
 
         Klenod::Build::ModuleId.new("app:/#{path.delete_prefix("#{source_dir}/")}")
+      end
+
+      # Modules whose transform depends on the given files without importing
+      # them, such as the Haml component owning a changed `.css` or
+      # `.intl.*.toml` companion. This is the same plugin hook the build's
+      # invalidator uses.
+      def companion_owner_module_ids(paths)
+        @graph.plugins.flat_map { |plugin| plugin.invalidate_module_ids(paths, @graph) }.uniq
+      end
+
+      # The graph caches resolved paths until a build invalidation, which the
+      # language server never runs, so file changes must clear it here.
+      def clear_resolver_cache
+        @graph.clear_resolver_cache
       end
 
       def path_for_module_id(module_id)

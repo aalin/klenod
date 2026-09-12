@@ -333,6 +333,22 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_clear_resolver_cache_forgets_deleted_files
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/helper.rb", "Default = 1\n")
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new])
+      dependency = Klenod::Build::Dependency.create(specifier: "./helper", importer_id: Klenod::Build::ModuleId.new("app:/entry.rb"), kind: :import)
+
+      assert_equal("app:/helper.rb", context.graph.resolve_dependency(dependency).module_id.to_s)
+
+      File.delete("#{dir}/helper.rb")
+
+      assert_equal("app:/helper.rb", context.graph.resolve_dependency(dependency).module_id.to_s)
+      context.graph.clear_resolver_cache
+      assert_raises(Klenod::Build::ResolveError) { context.graph.resolve_dependency(dependency) }
+    end
+  end
+
   def test_transform_source_reports_unsupported_files
     Dir.mktmpdir do |dir|
       context =

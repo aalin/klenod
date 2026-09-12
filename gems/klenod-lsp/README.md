@@ -2,14 +2,18 @@
 
 A [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) server for Klenod applications. It transforms open editor documents with the same plugins as a build and reports the result back to the editor.
 
-Current support covers Haml modules:
+Current support covers Haml modules and the `import("...")` literals of Ruby modules under the source directory:
 
 - Diagnostics: Haml syntax errors, Ruby syntax errors inside Haml, syntax errors in the generated component Ruby, and unresolved imports with the same "did you mean" suggestions the build prints.
 - Go to definition: `import("...")` literals and `%Component` tags jump to the imported file. Component tags are followed through the constant bound in the leading `:ruby` filter, such as `Details = import("/components/Details")`.
 - Hover: the same targets show their module id and path. Haml components also list the `$name` props they read when the Haml plugin maps global variables to props.
 - Completion: `%` offers the components bound by imports in the file, and the string inside `import("...")` offers directories and files under the source directory, relative to the importing module or to the source root for leading-slash paths.
+- Quick fixes: an unresolved import offers the build's own suggestions, such as a corrected casing or a close filename, as code actions that replace the literal.
+- Document links: every resolvable `import("...")` literal is a clickable link to its file.
 
-The server never evaluates application code. It only transforms and resolves, so unsaved editor text stays out of the module graph.
+Ruby modules get the diagnostics, navigation, completion, quick fixes, and links for their import literals. Everything else about Ruby is left to a Ruby language server.
+
+The server never evaluates application code. It only transforms and resolves, so unsaved editor text stays out of the module graph. It does not watch files itself: when the client supports dynamic registration it asks the editor to report changes under the source directory and re-analyzes the other open documents, so creating a missing import target or editing a companion file refreshes diagnostics. Clients without dynamic registration need a static watcher configuration.
 
 ## Starting the server
 
@@ -36,7 +40,7 @@ exit Klenod::LSP::Server.new(context: context).start
 
 ## Editor configuration
 
-The server handles documents whose file extension is `.haml` and whose path lies inside the configured source directory. Point your editor's LSP client at the start command and the `haml` file type.
+The server handles documents whose file extension is `.haml` or `.rb` and whose path lies inside the configured source directory. Point your editor's LSP client at the start command and the `haml` file type, and optionally the `ruby` file type for import navigation alongside a Ruby language server.
 
 Neovim:
 
@@ -72,4 +76,4 @@ Zed (`.zed/settings.json`) can run it through a generic language server extensio
 - Documents are synchronized with their full text on every change, and every change is analyzed synchronously.
 - Definitions only target modules under the application source directory. `gem://` and virtual modules return no location yet.
 - Completion inspects only the current line up to the cursor. Component completion offers the constants bound in the file, not HTML tags.
-- CSS class navigation and `.rb` support are not implemented.
+- CSS class navigation is not implemented, and Ruby modules only get import-related features.

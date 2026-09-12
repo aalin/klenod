@@ -49,17 +49,23 @@ module Klenod
         @documents[uri]
       end
 
+      def each(&)
+        @documents.each_value(&)
+      end
+
       def invalidate(uri)
         @analyses.delete(uri)
       end
 
       def analysis_for(document)
-        cached_version, cached = @analyses[document.uri]
-        return cached if cached && cached_version == document.version
+        cached_analysis(document) || @workspace.analyze(document.module_id, document.text).tap do |analysis|
+          @analyses[document.uri] = [document.version, analysis]
+        end
+      end
 
-        analysis = @workspace.analyze(document.module_id, document.text)
-        @analyses[document.uri] = [document.version, analysis]
-        analysis
+      def cached_analysis(document)
+        cached_version, cached = @analyses[document.uri]
+        cached if cached && cached_version == document.version
       end
     end
   end
