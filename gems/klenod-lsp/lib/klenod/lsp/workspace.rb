@@ -51,10 +51,18 @@ module Klenod
         Klenod::Build::ModuleId.new("app:/#{path.delete_prefix("#{source_dir}/")}")
       end
 
+      # App modules map through the resolver; gem modules through the gem
+      # import plugin, which reports the file in its resolution metadata.
       def path_for_module_id(module_id)
-        return nil unless module_id.scheme == :app
-
-        @graph.absolute_path(module_id).to_s
+        case module_id.scheme
+        when :app
+          @graph.absolute_path(module_id).to_s
+        when :gem
+          dependency = Klenod::Build::Dependency.create(specifier: module_id.to_s, importer_id: nil, kind: IMPORT_KIND)
+          @graph.resolve_dependency(dependency).metadata[:path]&.to_s
+        end
+      rescue Klenod::Build::ResolveError
+        nil
       end
 
       def uri_for_module_id(module_id)

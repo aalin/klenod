@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "fileutils"
+require "tmpdir"
+
 require_relative "__test__/support"
 
 class Klenod::LSP::Workspace::Test < Minitest::Test
@@ -21,6 +24,27 @@ class Klenod::LSP::Workspace::Test < Minitest::Test
 
     assert_equal(fixture_uri("pages/Page.haml"), uri)
     assert_nil(@workspace.uri_for_module_id(Klenod::Build::ModuleId.new("virtual:/router.rb")))
+  end
+
+  def test_gem_modules_map_to_files_inside_the_installed_gem
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/klenod/components")
+      File.write("#{dir}/klenod/components/Button.rb", "Default = 1\n")
+      spec = Struct.new(:full_gem_path).new(dir)
+      original = Gem::Specification.method(:find_by_name)
+      Gem::Specification.define_singleton_method(:find_by_name) { |name, *rest| (name == "klenod-ui") ? spec : original.call(name, *rest) }
+
+      begin
+        workspace = fixture_workspace(extra_plugins: [Klenod::Build::Plugins::GemImportPlugin.new])
+        module_id = Klenod::Build::ModuleId.new("gem://klenod-ui/components/Button.rb")
+
+        assert_equal("#{dir}/klenod/components/Button.rb", workspace.path_for_module_id(module_id))
+        assert_equal(workspace.uri_for_path("#{dir}/klenod/components/Button.rb"), workspace.uri_for_module_id(module_id))
+        assert_nil(workspace.path_for_module_id(Klenod::Build::ModuleId.new("gem://klenod-ui/components/Missing.rb")))
+      ensure
+        Gem::Specification.define_singleton_method(:find_by_name, original)
+      end
+    end
   end
 
   def test_percent_encodes_and_decodes_paths
