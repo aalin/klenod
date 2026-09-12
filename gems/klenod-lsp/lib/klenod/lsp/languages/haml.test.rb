@@ -16,6 +16,16 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_empty(diagnostics(@page_source))
   end
 
+  def test_unused_bindings_are_warned_about_but_tag_and_ruby_uses_count
+    source = @page_source.sub("%Layout\n", "%section\n")
+
+    diagnostics = diagnostics(source)
+
+    assert_equal(["Layout is imported but never used"], diagnostics.map(&:message))
+    assert_equal(2, diagnostics.fetch(0).range.start.line)
+    assert_empty(diagnostics(@page_source.sub("%Layout\n", "- helper = Layout\n")))
+  end
+
   def test_haml_syntax_error_is_reported_on_its_line
     source = @page_source.sub("  %Details{", "      %Details{")
 
@@ -63,8 +73,9 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
 
     diagnostic = diagnostics(source).fetch(0)
 
-    assert_equal(0, diagnostic.range.start.line)
-    assert_includes(diagnostic.message, "ParseError: unterminated string")
+    assert_includes([2, 3], diagnostic.range.start.line, "the literal line or the end of the :ruby filter, where the parser gives up")
+    assert_includes(diagnostic.message, "Haml parse error")
+    assert_includes(diagnostic.message, "unterminated string")
   end
 
   def test_dynamic_import_is_reported_at_the_top
