@@ -261,8 +261,9 @@ class Klenod::LSP::Server::Test < Minitest::Test
 
   def test_watched_file_changes_skip_the_changed_document_itself_and_unsupported_clients
     with_server do |client|
-      client.request("initialize", capabilities: {})
+      client.request("initialize", capabilities: {window: {workDoneProgress: true}})
       client.notify("initialized")
+      wait_for_index(client)
       client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
       client.read
       client.notify("workspace/didChangeWatchedFiles", changes: [{uri: @page_uri, type: 2}])
@@ -292,6 +293,7 @@ class Klenod::LSP::Server::Test < Minitest::Test
 
       assert_equal("begin", kinds.first)
       assert_includes(kinds, "report")
+      assert_equal(fixture_uri("pages/BrokenIntl.haml"), client.read.dig(:params, :uri), "closed modules that failed to collect get diagnostics")
     end
   end
 
@@ -299,8 +301,7 @@ class Klenod::LSP::Server::Test < Minitest::Test
     with_server do |client|
       client.request("initialize", capabilities: {window: {workDoneProgress: true}})
       client.notify("initialized")
-      client.respond(client.read[:id])
-      loop { break if client.read.dig(:params, :value, :kind) == "end" }
+      wait_for_index(client)
       client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
       client.read
 
@@ -314,14 +315,49 @@ class Klenod::LSP::Server::Test < Minitest::Test
     with_server do |client|
       client.request("initialize", capabilities: {window: {workDoneProgress: true}})
       client.notify("initialized")
-      client.respond(client.read[:id])
-      loop { break if client.read.dig(:params, :value, :kind) == "end" }
+      wait_for_index(client)
 
       result = client.request("workspace/willRenameFiles", files: [{oldUri: fixture_uri("components/Details.haml"), newUri: fixture_uri("components/Card.haml")}]).fetch(:result)
       changes = result[:changes]
 
       assert_equal("/components/Card.haml", changes.dig(fixture_uri("entry.rb").to_sym, 0, :newText))
       assert_equal("/components/Card", changes.dig(@page_uri.to_sym, 0, :newText))
+    end
+  end
+
+  def test_closed_importers_get_diagnostics_when_a_dependency_disappears
+    Dir.mktmpdir do |dir|
+      FileUtils.cp_r("#{Klenod::LSP::TestSupport::FIXTURE_SOURCE_DIR}/.", dir)
+      page_uri = "file://#{dir}/pages/Page.haml"
+
+      with_server(source_dir: dir) do |client|
+        client.request("initialize", capabilities: {window: {workDoneProgress: true}})
+        client.notify("initialized")
+        client.respond(client.read[:id])
+        loop { break if client.read.dig(:params, :value, :kind) == "end" }
+        client.read
+
+        File.delete("#{dir}/pages/layout.rb")
+        client.notify("workspace/didChangeWatchedFiles", changes: [{uri: "file://#{dir}/pages/layout.rb", type: 3}])
+        published = {}
+        2.times do
+          message = client.read
+          published[message.dig(:params, :uri)] = message.dig(:params, :diagnostics)
+        end
+
+        assert_includes(published.fetch(page_uri).fetch(0).fetch(:message), "Could not resolve \"./layout\"")
+        assert_includes(published.fetch("file://#{dir}/entry.rb").fetch(0).fetch(:message), "Could not resolve \"pages/layout\"")
+
+        File.write("#{dir}/pages/layout.rb", "Default = 1\n")
+        client.notify("workspace/didChangeWatchedFiles", changes: [{uri: "file://#{dir}/pages/layout.rb", type: 1}])
+        cleared = {}
+        published.length.times do
+          message = client.read
+          cleared[message.dig(:params, :uri)] = message.dig(:params, :diagnostics)
+        end
+
+        assert_equal([], cleared.fetch(page_uri))
+      end
     end
   end
 
@@ -389,6 +425,17 @@ class Klenod::LSP::Server::Test < Minitest::Test
   end
 
   private
+
+  # Runs the background index to completion. The fixture's BrokenIntl.haml
+  # cannot be collected, so its workspace diagnostics follow the progress end.
+  def wait_for_index(client)
+    client.respond(client.read[:id])
+    loop { break if client.read.dig(:params, :value, :kind) == "end" }
+    published = client.read
+    assert_equal("textDocument/publishDiagnostics", published[:method])
+    assert_equal(fixture_uri("pages/BrokenIntl.haml"), published.dig(:params, :uri))
+    assert_includes(published.dig(:params, :diagnostics, 0, :message), "Intl parse error")
+  end
 
   def with_server(source_dir: Klenod::LSP::TestSupport::FIXTURE_SOURCE_DIR)
     client_to_server_reader, client_to_server_writer = IO.pipe

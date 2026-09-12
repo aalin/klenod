@@ -82,7 +82,7 @@ class Klenod::LSP::GraphIndex::Test < Minitest::Test
 
         assert_includes(affected, "app:/pages/layout.rb")
         assert_includes(affected, "app:/pages/Page.haml")
-        assert_includes(index.failed.keys, "app:/pages/layout.rb")
+        assert_includes(index.failed.keys, "app:/pages/Page.haml")
 
         File.write(File.join(workspace.source_dir, "pages/layout.rb"), "Default = 2\n")
         affected = index.invalidate([File.join(workspace.source_dir, "pages/layout.rb")], [])

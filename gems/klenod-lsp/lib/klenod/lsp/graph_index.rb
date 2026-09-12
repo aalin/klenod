@@ -33,8 +33,8 @@ module Klenod
 
       # Collect every root in the background, yielding to other work between
       # roots. `progress` responds to `begin(total)`, `report(done, total)`,
-      # and `finish`.
-      def start(parent_task, progress: nil)
+      # and `finish`; the block runs once the pass completed.
+      def start(parent_task, progress: nil, &on_complete)
         @task =
           parent_task.async do |task|
             roots = root_module_ids
@@ -44,10 +44,11 @@ module Klenod
               progress&.report(index + 1, roots.length)
               task.yield
             end
-          rescue => error
-            @logger.error { "Graph index failed: #{error.class}: #{error.message}" }
-          ensure
             progress&.finish
+            on_complete&.call
+          rescue => error
+            progress&.finish
+            @logger.error { "Graph index failed: #{error.class}: #{error.message}" }
           end
       end
 
@@ -108,9 +109,11 @@ module Klenod
           end
 
           # A retried module is affected whether or not it recovers: its
-          # diagnostics changed either way.
+          # diagnostics changed either way. The retry forces a re-collect,
+          # because a module that failed after its record was stored still has
+          # that stale record.
           @failed.keys.each do |module_id_string|
-            collect_root(Klenod::Build::ModuleId.new(module_id_string))
+            collect_root(Klenod::Build::ModuleId.new(module_id_string), force: true)
             affected << module_id_string
           end
           @unresolved_entrypoints.dup.each do |specifier|
@@ -152,8 +155,12 @@ module Klenod
       end
 
       # Returns true when the root is collected, false when it failed.
-      def collect_root(module_id)
-        @graph.records[module_id] || @graph.collect_module(module_id)
+      def collect_root(module_id, force: false)
+        if force
+          @graph.collect_module(module_id, force: true)
+        else
+          @graph.records[module_id] || @graph.collect_module(module_id)
+        end
         @failed.delete(module_id.to_s)
         @graph.collect_reachable(module_id) do |reached_id, error|
           if error

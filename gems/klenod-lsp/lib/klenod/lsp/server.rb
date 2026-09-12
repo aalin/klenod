@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "async"
+require "json"
 require "language_server-protocol"
 require "logger"
 
@@ -101,6 +102,7 @@ module Klenod
         @documents = Documents.new(@workspace)
         @index = GraphIndex.new(workspace: @workspace, entrypoints: entrypoints, logger: @logger)
         @pending_collections = {}
+        @closed_diagnostics = {}
         @client_capabilities = {}
         @next_request_id = 0
         @shutdown_requested = false
@@ -228,7 +230,7 @@ module Klenod
       def handle_initialized(_message)
         register_file_watchers if @client_capabilities.dig(:workspace, :didChangeWatchedFiles, :dynamicRegistration)
         progress_supported = @client_capabilities.dig(:window, :workDoneProgress) == true
-        @index.start(@task, progress: WorkDoneProgress.new(self, enabled: progress_supported))
+        @index.start(@task, progress: WorkDoneProgress.new(self, enabled: progress_supported)) { publish_workspace_diagnostics }
       end
 
       def register_file_watchers
@@ -279,6 +281,42 @@ module Klenod
           @documents.invalidate(document.uri)
           publish_diagnostics(document)
         end
+        publish_workspace_diagnostics
+      end
+
+      # Modules the index could not collect get diagnostics even while
+      # closed, so a rename or deletion that breaks importers shows up in the
+      # editor's problem list. Open documents publish their own; a module
+      # that recovers has its diagnostics cleared.
+      def publish_workspace_diagnostics
+        current = {}
+        @index.failed.each_key do |module_id_string|
+          module_id = Klenod::Build::ModuleId.new(module_id_string)
+          next unless GraphIndex::ROOT_EXTENSIONS.include?(module_id.extname)
+
+          path = @workspace.path_for_module_id(module_id)
+          next unless path && File.file?(path)
+
+          uri = @workspace.uri_for_path(path)
+          next if @documents.fetch(uri)
+
+          document = Document.new(uri: uri, path: path, module_id: module_id, text: File.read(path), version: nil)
+          language = Languages.for(document)
+          next unless language
+
+          diagnostics = language.diagnostics(@workspace.analyze(module_id, document.text))
+          current[uri] = diagnostics unless diagnostics.empty?
+        end
+
+        (@closed_diagnostics.keys - current.keys).each do |uri|
+          notify("textDocument/publishDiagnostics", Interface::PublishDiagnosticsParams.new(uri: uri, diagnostics: []))
+        end
+        current.each do |uri, diagnostics|
+          next if @closed_diagnostics[uri] == JSON.generate(diagnostics)
+
+          notify("textDocument/publishDiagnostics", Interface::PublishDiagnosticsParams.new(uri: uri, diagnostics: diagnostics))
+        end
+        @closed_diagnostics = current.transform_values { |diagnostics| JSON.generate(diagnostics) }
       end
 
       def handle_shutdown(_message)
@@ -342,6 +380,7 @@ module Klenod
         @workspace.context.graph.clear_source_override(document.module_id)
         collect_document(document)
         notify("textDocument/publishDiagnostics", Interface::PublishDiagnosticsParams.new(uri: uri, diagnostics: []))
+        publish_workspace_diagnostics
       end
 
       # The graph reads open documents from their buffers rather than disk,
