@@ -225,9 +225,10 @@ module Klenod
 
       # Editor buffers take precedence over files on disk for the given
       # module until cleared. The next collection re-reads and, when the text
-      # changed, re-transforms the module.
-      def override_source(module_id, source)
-        @source_overrides[module_id] = source
+      # changed, re-transforms the module. A caller that already transformed
+      # the same text can pass that `transform` so collection reuses it.
+      def override_source(module_id, source, transform: nil)
+        @source_overrides[module_id] = LoadResult.new(source, nil, transform)
       end
 
       def clear_source_override(module_id)
@@ -943,7 +944,7 @@ module Klenod
       def load_source(module_id)
         if (override = @source_overrides[module_id])
           @profiler.count(:source_override_hit)
-          return LoadResult.new(override, nil, nil)
+          return override
         end
 
         @plugins.each do |plugin|

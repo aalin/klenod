@@ -398,6 +398,21 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_source_overrides_can_carry_a_prebaked_transform
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/entry.rb", "VALUE = :disk\n")
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new])
+      module_id = Klenod::Build::ModuleId.new("app:/entry.rb")
+      transform = context.graph.transform_source(module_id, "VALUE = :buffer\n")
+
+      context.graph.override_source(module_id, "VALUE = :buffer\n", transform: transform.with(code: "VALUE = :prebaked\n"))
+      record = context.graph.collect_module(module_id)
+
+      assert_equal("VALUE = :buffer\n", record.source)
+      assert_equal("VALUE = :prebaked\n", record.transformed_source)
+    end
+  end
+
   def test_dependents_follow_collected_records
     Dir.mktmpdir do |dir|
       File.write("#{dir}/shared.rb", "VALUE = 1\n")
