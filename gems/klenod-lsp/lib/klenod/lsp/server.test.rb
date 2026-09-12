@@ -63,6 +63,7 @@ class Klenod::LSP::Server::Test < Minitest::Test
       assert_equal(true, result.dig(:capabilities, :hoverProvider))
       assert_equal(["%", "/", "\"", "'"], result.dig(:capabilities, :completionProvider, :triggerCharacters))
       assert_equal({}, result.dig(:capabilities, :documentLinkProvider))
+      assert_equal({codeActionKinds: ["quickfix"]}, result.dig(:capabilities, :codeActionProvider))
       assert_equal("klenod", result.dig(:serverInfo, :name))
     end
   end
@@ -138,6 +139,26 @@ class Klenod::LSP::Server::Test < Minitest::Test
       assert_equal(2, result.length)
       assert_equal(fixture_uri("components/Details.haml"), result.dig(0, :target))
       assert_equal({line: 1, character: 20}, result.dig(0, :range, :start))
+    end
+  end
+
+  def test_code_actions_return_quick_fixes_for_the_diagnostics_in_range
+    with_server do |client|
+      broken = @page_source.sub("/components/Details", "/components/Detials")
+      client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: broken})
+      published = client.read
+      diagnostic = published.dig(:params, :diagnostics, 0)
+
+      result = client.request(
+        "textDocument/codeAction",
+        textDocument: {uri: @page_uri},
+        range: diagnostic[:range],
+        context: {diagnostics: [diagnostic]}
+      ).fetch(:result)
+
+      assert_equal(["Replace with \"/components/Details.haml\""], result.map { |action| action[:title] })
+      assert_equal("/components/Details.haml", result.dig(0, :edit, :changes, @page_uri.to_sym, 0, :newText))
+      assert_equal(diagnostic[:range], result.dig(0, :edit, :changes, @page_uri.to_sym, 0, :range))
     end
   end
 

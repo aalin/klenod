@@ -53,6 +53,14 @@ class Klenod::LSP::Languages::Ruby::Test < Minitest::Test
     assert_equal(fixture_uri("pages/layout.rb"), links.fetch(1).target)
   end
 
+  def test_code_actions_fix_unresolved_imports
+    source = @entry_source.sub("pages/layout", "pages/layuot")
+
+    actions = @language.code_actions(analysis(source), 3..3, @workspace)
+
+    assert_equal(["Replace with \"pages/layout.rb\""], actions.map(&:title))
+  end
+
   def test_completion_inside_import_literals
     source = @entry_source.sub("import(\"pages/layout\")", "import(\"pages/")
 

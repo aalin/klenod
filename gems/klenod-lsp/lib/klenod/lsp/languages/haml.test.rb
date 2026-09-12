@@ -143,6 +143,27 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_empty(@language.document_links(@workspace.analyze(@page_id, source), @workspace))
   end
 
+  def test_code_actions_offer_the_build_suggestions_for_unresolved_imports
+    source = @page_source.sub("/components/Details", "/components/Detials")
+
+    actions = @language.code_actions(@workspace.analyze(@page_id, source), 0..2, @workspace)
+
+    assert_equal(["Replace with \"/components/Details.haml\""], actions.map(&:title))
+    assert_equal("quickfix", actions.fetch(0).kind)
+    assert_equal(true, actions.fetch(0).is_preferred)
+    assert_includes(actions.fetch(0).diagnostics.fetch(0).message, "Did you mean")
+    edit = actions.fetch(0).edit.changes.fetch(fixture_uri("pages/Page.haml")).fetch(0)
+    assert_equal("/components/Details.haml", edit.new_text)
+    assert_equal("/components/Detials", source.lines[1][edit.range.start.character...edit.range.end.character])
+  end
+
+  def test_code_actions_are_limited_to_the_requested_lines
+    source = @page_source.sub("/components/Details", "/components/Detials")
+
+    assert_empty(@language.code_actions(@workspace.analyze(@page_id, source), 4..6, @workspace))
+    assert_empty(@language.code_actions(@workspace.analyze(@page_id, @page_source), 0..9, @workspace))
+  end
+
   def test_hover_on_component_tag_summarizes_the_component
     hover = hover(@page_source, position(5, 4))
 

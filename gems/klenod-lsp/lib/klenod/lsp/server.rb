@@ -38,6 +38,7 @@ module Klenod
         "textDocument/hover" => :handle_hover,
         "textDocument/completion" => :handle_completion,
         "textDocument/documentLink" => :handle_document_link,
+        "textDocument/codeAction" => :handle_code_action,
         "workspace/didChangeConfiguration" => :handle_noop,
         "workspace/didChangeWatchedFiles" => :handle_noop,
         "$/cancelRequest" => :handle_noop,
@@ -125,7 +126,8 @@ module Klenod
             definition_provider: true,
             hover_provider: true,
             completion_provider: Interface::CompletionOptions.new(trigger_characters: ["%", "/", "\"", "'"]),
-            document_link_provider: Interface::DocumentLinkOptions.new
+            document_link_provider: Interface::DocumentLinkOptions.new,
+            code_action_provider: Interface::CodeActionOptions.new(code_action_kinds: [Constant::CodeActionKind::QUICK_FIX])
           ),
           server_info: {name: "klenod", version: VERSION}
         )
@@ -191,6 +193,13 @@ module Klenod
 
       def handle_document_link(message)
         with_document(message) { |language, analysis| language.document_links(analysis, @workspace) }
+      end
+
+      def handle_code_action(message)
+        with_document(message) do |language, analysis|
+          range = message.dig(:params, :range)
+          language.code_actions(analysis, range.dig(:start, :line)..range.dig(:end, :line), @workspace)
+        end
       end
 
       # Document requests share the same shape: nothing for documents the

@@ -4,6 +4,7 @@ require "language_server-protocol"
 
 require "klenod/build/module_id"
 
+require_relative "../diagnostics"
 require_relative "../text"
 
 module Klenod
@@ -171,6 +172,32 @@ module Klenod
           end
 
           links
+        end
+
+        # Quick fixes replacing an unresolved import literal with each of the
+        # build's own suggestions, for literals inside the requested lines.
+        def code_actions(analysis, lines, workspace)
+          uri = workspace.uri_for_module_id(analysis.module_id)
+          return [] unless uri
+
+          analysis.resolve_errors.flat_map do |error|
+            specifier = error.requested_specifier
+            span = specifier && Diagnostics.literal_span(specifier, analysis.lines)
+            next [] unless span && lines.cover?(span.line)
+
+            diagnostic = Diagnostics.diagnostic(span, error.message)
+            error.suggestions.each_with_index.map do |suggestion, index|
+              Imports::Interface::CodeAction.new(
+                title: "Replace with #{suggestion.inspect}",
+                kind: Imports::Constant::CodeActionKind::QUICK_FIX,
+                diagnostics: [diagnostic],
+                is_preferred: index.zero?,
+                edit: Imports::Interface::WorkspaceEdit.new(
+                  changes: {uri => [Imports::Interface::TextEdit.new(range: span.to_range, new_text: suggestion)]}
+                )
+              )
+            end
+          end
         end
       end
     end
