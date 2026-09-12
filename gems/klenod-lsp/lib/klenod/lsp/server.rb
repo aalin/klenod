@@ -54,6 +54,7 @@ module Klenod
         "workspace/willRenameFiles" => :handle_will_rename_files,
         "textDocument/documentSymbol" => :handle_document_symbol,
         "workspace/symbol" => :handle_workspace_symbol,
+        "textDocument/codeLens" => :handle_code_lens,
         "workspace/didChangeConfiguration" => :handle_noop,
         "workspace/didChangeWatchedFiles" => :handle_did_change_watched_files,
         "$/cancelRequest" => :handle_noop,
@@ -206,6 +207,7 @@ module Klenod
             references_provider: true,
             document_symbol_provider: true,
             workspace_symbol_provider: true,
+            code_lens_provider: Interface::CodeLensOptions.new,
             workspace: {
               fileOperations: Interface::FileOperationOptions.new(
                 will_rename: Interface::FileOperationRegistrationOptions.new(
@@ -431,6 +433,10 @@ module Klenod
       def handle_will_rename_files(message)
         files = Array(message.dig(:params, :files)).map { |file| [file[:oldUri].to_s, file[:newUri].to_s] }
         Renames.call(files, @index, @workspace)
+      end
+
+      def handle_code_lens(message)
+        with_document(message) { |language, analysis| language.code_lenses(analysis, @workspace, @index) }
       end
 
       def handle_document_symbol(message)

@@ -187,6 +187,21 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_equal([fixture_uri("entry.rb"), fixture_uri("pages/page_spec.rb")], locations.map(&:uri))
   end
 
+  def test_code_lens_counts_references_to_the_document
+    index = fixture_index(@workspace, module_id("entry.rb"), module_id("pages/page_spec.rb"))
+    details = @workspace.analyze(module_id("components/Details.haml"), fixture_source("components/Details.haml"))
+    index.ensure_collected(@page_id)
+
+    page_lens = @language.code_lenses(@workspace.analyze(@page_id, @page_source), @workspace, index).fetch(0)
+    details_lens = @language.code_lenses(details, @workspace, index).fetch(0)
+
+    assert_equal("2 references", page_lens.command.title)
+    assert_equal("editor.action.showReferences", page_lens.command.command)
+    assert_equal(0, page_lens.range.start.line)
+    assert_equal("3 references", details_lens.command.title, "import literals and %Details tags in Page plus the entry import")
+    assert_equal("No references", @language.code_lenses(@workspace.analyze(module_id("pages/LazyPage.haml"), "%h1 Lazy\n"), @workspace, index).fetch(0).command.title)
+  end
+
   def test_definition_on_a_binding_constant_uses_its_import
     location = definition(@page_source, position(1, 4))
 

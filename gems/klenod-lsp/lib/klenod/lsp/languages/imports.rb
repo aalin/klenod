@@ -188,6 +188,29 @@ module Klenod
           reference_locations(module_id, index, workspace, include_declaration: include_declaration)
         end
 
+        # One lens on the first line with the number of places that import
+        # or render this module. Clients that know VS Code's command show
+        # the list on click; others show the count.
+        def code_lenses(analysis, workspace, index)
+          locations = reference_locations(analysis.module_id, index, workspace)
+          uri = workspace.uri_for_module_id(analysis.module_id)
+          return [] unless uri
+
+          title =
+            case locations.length
+            when 0 then "No references"
+            when 1 then "1 reference"
+            else "#{locations.length} references"
+            end
+          command = Imports::Interface::Command.new(
+            title: title,
+            command: "editor.action.showReferences",
+            arguments: [uri, Imports::Interface::Position.new(line: 0, character: 0), locations]
+          )
+
+          [Imports::Interface::CodeLens.new(range: Text.line_span(analysis.lines, 0).to_range, command: command)]
+        end
+
         # Every import literal that resolves to a file becomes a link.
         def document_links(analysis, workspace)
           links = []

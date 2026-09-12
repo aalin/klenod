@@ -73,6 +73,7 @@ class Klenod::LSP::Server::Test < Minitest::Test
       assert_equal(true, result.dig(:capabilities, :referencesProvider))
       assert_equal(true, result.dig(:capabilities, :documentSymbolProvider))
       assert_equal(true, result.dig(:capabilities, :workspaceSymbolProvider))
+      assert_equal({}, result.dig(:capabilities, :codeLensProvider))
       assert_equal("#{Klenod::LSP::TestSupport::FIXTURE_SOURCE_DIR}/**", result.dig(:capabilities, :workspace, :fileOperations, :willRename, :filters, 0, :pattern, :glob))
       assert_equal("klenod", result.dig(:serverInfo, :name))
     end
@@ -376,6 +377,21 @@ class Klenod::LSP::Server::Test < Minitest::Test
 
       found = client.request("workspace/symbol", query: "det").fetch(:result)
       assert_equal(["Details"], found.map { |symbol| symbol[:name] })
+    end
+  end
+
+  def test_code_lens_reports_reference_counts
+    with_server do |client|
+      client.request("initialize", capabilities: {window: {workDoneProgress: true}})
+      client.notify("initialized")
+      wait_for_index(client)
+      client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
+      client.read
+
+      lenses = client.request("textDocument/codeLens", textDocument: {uri: @page_uri}).fetch(:result)
+
+      assert_equal(["2 references"], lenses.map { |lens| lens.dig(:command, :title) })
+      assert_equal(2, lenses.dig(0, :command, :arguments, 2).length)
     end
   end
 
