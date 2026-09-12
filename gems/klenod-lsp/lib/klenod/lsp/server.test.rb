@@ -79,6 +79,20 @@ class Klenod::LSP::Server::Test < Minitest::Test
     end
   end
 
+  def test_initialize_negotiates_utf32_positions_when_offered
+    with_server do |client|
+      result = client.request("initialize", capabilities: {general: {positionEncodings: ["utf-16", "utf-32"]}}).fetch(:result)
+
+      assert_equal("utf-32", result.dig(:capabilities, :positionEncoding))
+    end
+
+    with_server do |client|
+      result = client.request("initialize", capabilities: {general: {positionEncodings: ["utf-16"]}}).fetch(:result)
+
+      assert_nil(result.dig(:capabilities, :positionEncoding))
+    end
+  end
+
   def test_hover_returns_markdown_for_the_component_under_the_cursor
     with_server do |client|
       client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})

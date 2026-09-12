@@ -12,6 +12,10 @@ Current support covers Haml modules and the `import("...")` literals of Ruby mod
 - Document links: every resolvable `import("...")` literal is a clickable link to its file.
 - Find references: importers of a module and the `%Component` tags that render it, from the collected graph. The cursor can be on an import literal, a component tag, the constant a module is bound to, or anywhere else to mean the current document.
 - Rename on file move: when the editor renames or moves a file or folder, importers get their literals rewritten and the moved module's own relative imports follow it. Each literal keeps its style and its extension only when it had one.
+- Workspace diagnostics: modules the index could not collect get diagnostics even while closed, so a rename or deletion that breaks importers shows up in the problem list, and they clear once the module recovers.
+- Document symbols: an outline of a Haml component from its parse tree, with the constants and methods of the leading `:ruby` filter and the tag tree. Ruby modules list their import bindings.
+- Workspace symbols: fuzzy search over every indexed module by name or path.
+- Code lens: the number of places that import or render a module, on its first line, opening the reference list in clients that know VS Code's `showReferences` command.
 
 Ruby modules get the diagnostics, navigation, completion, quick fixes, and links for their import literals. Everything else about Ruby is left to a Ruby language server.
 
@@ -79,7 +83,7 @@ Zed (`.zed/settings.json`) can run it through a generic language server extensio
 
 ## Limitations
 
-- Positions are counted in Ruby characters rather than UTF-16 code units, so ranges on lines containing characters outside the Basic Multilingual Plane can be off by one per such character.
+- Positions are counted in characters. Clients that offer the `utf-32` position encoding get exact positions; with the `utf-16` default, ranges on lines containing characters outside the Basic Multilingual Plane can be off by one per such character.
 - Documents are synchronized with their full text on every change. Diagnostics are published about 100 ms after typing pauses and the graph record follows about 250 ms after; requests in between analyze the current text on demand.
 - Definitions, references, and renames only target modules under the application source directory. `gem://` and virtual modules return no location yet.
 - References and renames answer from whatever the background index has collected so far; right after startup on a large project they can be incomplete until indexing finishes.

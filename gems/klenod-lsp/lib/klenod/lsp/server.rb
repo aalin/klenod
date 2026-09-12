@@ -189,11 +189,18 @@ module Klenod
         @writer.write(id: message[:id], error: Interface::ResponseError.new(code: code, message: text))
       end
 
+      # Positions are counted in characters, which equals UTF-32 code units.
+      # A client that offers utf-32 gets exact positions; the utf-16 default
+      # is only off on lines with characters outside the Basic Multilingual
+      # Plane.
       def handle_initialize(message)
         @client_capabilities = message.dig(:params, :capabilities) || {}
+        encodings = Array(@client_capabilities.dig(:general, :positionEncodings))
+        position_encoding = Constant::PositionEncodingKind::UTF32 if encodings.include?(Constant::PositionEncodingKind::UTF32)
 
         Interface::InitializeResult.new(
           capabilities: Interface::ServerCapabilities.new(
+            position_encoding: position_encoding,
             text_document_sync: Interface::TextDocumentSyncOptions.new(
               open_close: true,
               change: Constant::TextDocumentSyncKind::FULL,
