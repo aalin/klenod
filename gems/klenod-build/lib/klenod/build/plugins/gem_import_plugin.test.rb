@@ -133,6 +133,19 @@ module Klenod
 
           private
 
+          def test_analysis_keys_gem_modules_by_file_stat_instead_of_hashing
+            with_fake_gem("klenod-ui") do |dir|
+              FileUtils.mkdir_p("#{dir}/klenod")
+              File.write("#{dir}/klenod/tokens.rb", "VALUE = :tokens\n")
+
+              context = Klenod::Build::Context.new(source_dir: dir, analysis: true, plugins: [Plugin.new, RubyPlugin.new])
+              record = context.collect("gem://klenod-ui/tokens").record
+
+              assert_equal(Hashing.file_key("#{dir}/klenod/tokens.rb"), record.source_hash)
+              assert_equal("VALUE = :tokens\n", record.source)
+            end
+          end
+
           def context_for(source_dir:)
             Klenod::Build::Context.new(
               source_dir: source_dir,

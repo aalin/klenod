@@ -73,6 +73,8 @@ module Klenod
             return super unless EXTENSIONS.include?(module_id.extname)
 
             custom_element = custom_element_module?(module_id)
+            return analysis_transform(module_id, code, custom_element) if context.analysis?
+
             jsx_runtime_namespace = custom_element ? jsx_runtime_namespace(module_id) : nil
             transform =
               begin
@@ -106,6 +108,22 @@ module Klenod
                 javascript_imports: imports,
                 javascript_custom_element: custom_element
               }
+            )
+          end
+
+          # Analysis only needs the module graph: imports are scanned without
+          # compiling, and the missing javascript_source makes finalize skip
+          # import rewriting and asset emission.
+          def analysis_transform(module_id, code, custom_element)
+            imports = Parser::FallbackScanner.new(code, module_id.to_s).imports
+
+            Klenod::Build::TransformResult.new(
+              module_source(nil),
+              build_dependencies(module_id, imports),
+              nil,
+              [],
+              [],
+              {javascript_imports: imports, javascript_custom_element: custom_element}
             )
           end
 

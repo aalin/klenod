@@ -40,6 +40,26 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
     end
   end
 
+  def test_analysis_records_imports_without_compiling_or_emitting_assets
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/scripts")
+      File.write("#{dir}/scripts/app.ts", "import { helper } from \"./helper.ts\";\nconst value: number = helper();\nconsole.log(value);\n")
+      File.write("#{dir}/scripts/helper.ts", "export function helper(): number { return 1; }\n")
+      File.write("#{dir}/entry.rb", "Script = import(\"scripts/app.ts\")\n")
+
+      context = context_for(dir, analysis: true)
+      context.collect("entry")
+      record = context.graph.records.fetch(Klenod::Build::ModuleId.new("scripts/app.ts", nil))
+
+      assert_equal(["app:/scripts/helper.ts"], record.resolved_dependencies.map { |dependency| dependency.module_id.to_s })
+      assert_empty(record.assets)
+      assert_equal("Default = nil\n", record.transformed_source)
+      assert_nil(record.metadata[:javascript_source])
+      assert_nil(record.metadata[:javascript_asset_path])
+      assert(context.graph.records.key?(Klenod::Build::ModuleId.new("scripts/helper.ts", nil)))
+    end
+  end
+
   def test_javascript_can_be_minified_in_development
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/scripts")
@@ -758,10 +778,11 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
 
   private
 
-  def context_for(dir, mode: :development, base: "/assets/", javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin.new)
+  def context_for(dir, mode: :development, base: "/assets/", javascript_plugin: Klenod::Build::Plugins::JavaScriptPlugin.new, analysis: false)
     Klenod::Build::Context.new(
       source_dir: dir,
       mode: mode,
+      analysis: analysis,
       base: base,
       plugins: [
         *Klenod::Build::Context.default_plugins,

@@ -113,7 +113,8 @@ module Klenod
         asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY,
         asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY,
         profiler: nil,
-        namespace: Module.new
+        namespace: Module.new,
+        analysis: false
       )
         @source_dir = source_dir
         plugins = plugins.to_a if plugins.equal?(DEFAULT_PLUGINS)
@@ -131,11 +132,16 @@ module Klenod
             asset_generation_concurrency: asset_generation_concurrency,
             asset_download_concurrency: asset_download_concurrency,
             profiler: profiler,
-            namespace: namespace
+            namespace: namespace,
+            analysis: analysis
           )
       end
 
       attr_reader :graph, :mode, :base, :asset_origin
+
+      def analysis?
+        @graph.analysis?
+      end
 
       def evaluate(specifier)
         @graph.load(specifier)

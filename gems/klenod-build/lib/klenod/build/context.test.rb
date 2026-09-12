@@ -366,6 +366,87 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_analysis_flag_defaults_to_false_and_reaches_the_graph
+    Dir.mktmpdir do |dir|
+      refute(Klenod::Build::Context.new(source_dir: dir).analysis?)
+
+      context = Klenod::Build::Context.new(source_dir: dir, analysis: true)
+
+      assert(context.analysis?)
+      assert(context.graph.analysis?)
+    end
+  end
+
+  def test_source_overrides_replace_disk_until_cleared
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/entry.rb", "VALUE = :disk\n")
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new])
+      module_id = Klenod::Build::ModuleId.new("app:/entry.rb")
+
+      context.graph.override_source(module_id, "VALUE = :buffer\n")
+      record = context.graph.collect_module(module_id)
+
+      assert(context.graph.source_override?(module_id))
+      assert_equal("VALUE = :buffer\n", record.source)
+      assert_includes(record.transformed_source, ":buffer")
+
+      context.graph.clear_source_override(module_id)
+      record = context.graph.collect_module(module_id)
+
+      refute(context.graph.source_override?(module_id))
+      assert_equal("VALUE = :disk\n", record.source)
+    end
+  end
+
+  def test_dependents_follow_collected_records
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/shared.rb", "VALUE = 1\n")
+      File.write("#{dir}/a.rb", "Shared = import(\"./shared\")\n")
+      File.write("#{dir}/b.rb", "Shared = lazy_import(\"./shared\")\n")
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new])
+      shared_id = Klenod::Build::ModuleId.new("app:/shared.rb")
+
+      context.collect("a")
+      context.collect("b")
+
+      assert_equal(["app:/a.rb", "app:/b.rb"], context.graph.dependents(shared_id).map(&:to_s).sort)
+
+      context.graph.override_source(Klenod::Build::ModuleId.new("app:/a.rb"), "VALUE = 2\n")
+      context.graph.collect_module(Klenod::Build::ModuleId.new("app:/a.rb"))
+
+      assert_equal(["app:/b.rb"], context.graph.dependents(shared_id).map(&:to_s))
+
+      context.graph.remove_record(Klenod::Build::ModuleId.new("app:/b.rb"))
+
+      assert_empty(context.graph.dependents(shared_id))
+      assert_empty(context.graph.dependents(Klenod::Build::ModuleId.new("app:/unknown.rb")))
+    end
+  end
+
+  def test_collect_reachable_walks_lazy_dependencies_and_yields_new_records
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/entry.rb", "Page = lazy_import(\"./page\")\n")
+      File.write("#{dir}/page.rb", "Helper = import(\"./helper\")\n")
+      File.write("#{dir}/helper.rb", "VALUE = 1\n")
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [Klenod::Build::Plugins::RubyPlugin.new])
+      entry = context.collect("entry")
+
+      assert_equal(["app:/entry.rb"], context.graph.records.keys.map(&:to_s))
+
+      collected = []
+      context.graph.collect_reachable(entry.id) { |module_id| collected << module_id.to_s }
+
+      assert_equal(["app:/page.rb"], collected, "eager dependencies are collected with their importer, not yielded separately")
+      assert_equal(["app:/entry.rb", "app:/helper.rb", "app:/page.rb"], context.graph.records.keys.map(&:to_s).sort)
+      assert_empty(context.graph.mods)
+
+      collected = []
+      context.graph.collect_reachable(entry.id) { |module_id| collected << module_id.to_s }
+
+      assert_empty(collected)
+    end
+  end
+
   def test_exports_returns_loaded_module_exports
     Dir.mktmpdir do |dir|
       File.write("#{dir}/entry.rb", "VALUE = 42\n")

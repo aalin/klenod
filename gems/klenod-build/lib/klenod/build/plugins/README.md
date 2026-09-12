@@ -29,6 +29,8 @@ Plugins participate in graph collection through these hooks:
 
 Plugins can also implement `invalidate_module_ids` for custom invalidation.
 
+When `context.analysis?` is true, the graph is being collected for tooling rather than a build. Keep the record shape but skip fetches, whole-file hashing, compilation, and asset bytes; see [Graph and Plugin Phases](../../../../../../docs/graph-and-plugin-phases.md).
+
 ## Default Plugin Set
 
 `Klenod::Build::Context.default_plugins` includes:
