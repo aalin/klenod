@@ -202,6 +202,39 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_equal("No references", @language.code_lenses(@workspace.analyze(module_id("pages/LazyPage.haml"), "%h1 Lazy\n"), @workspace, index).fetch(0).command.title)
   end
 
+  def test_rename_changes_the_binding_tags_and_ruby_uses_but_not_text
+    source = <<~HAML
+      :ruby
+        Details = import("/components/Details")
+        Layout = import("./layout")
+        helper = Details.new
+
+      %Layout
+        - widget = Details
+        %Details{ summary: Details.name }
+          %p Details are plain text
+          %p= Details.name
+        %Details::Nested(title=Details)
+        %DetailsPanel
+    HAML
+    analysis = @workspace.analyze(@page_id, source)
+
+    prepared = @language.prepare_rename(analysis, position(7, 5))
+    assert_equal("Details", prepared[:placeholder])
+    assert_equal({line: 7, character: 3}, {line: prepared[:range].start.line, character: prepared[:range].start.character})
+    assert_nil(@language.prepare_rename(analysis, position(1, 25)), "import literals are not renamed")
+
+    edit = @language.rename(analysis, position(7, 5), "Card", @workspace)
+    edits = edit.changes.fetch(fixture_uri("pages/Page.haml"))
+
+    assert_equal(
+      [[1, 2], [3, 11], [6, 13], [7, 3], [7, 21], [9, 8], [10, 3], [10, 25]],
+      edits.map { |text_edit| [text_edit.range.start.line, text_edit.range.start.character] }
+    )
+    assert(edits.all? { |text_edit| text_edit.new_text == "Card" })
+    assert_raises(Klenod::LSP::Languages::ImportNavigation::InvalidRename) { @language.rename(analysis, position(7, 5), "card", @workspace) }
+  end
+
   def test_definition_on_a_binding_constant_uses_its_import
     location = definition(@page_source, position(1, 4))
 

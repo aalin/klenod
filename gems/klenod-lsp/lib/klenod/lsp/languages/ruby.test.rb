@@ -70,6 +70,14 @@ class Klenod::LSP::Languages::Ruby::Test < Minitest::Test
     assert_equal([[fixture_uri("entry.rb"), 3], [fixture_uri("pages/Page.haml"), 2], [fixture_uri("pages/Page.haml"), 4]], locations.map { |location| [location.uri, location.range.start.line] })
   end
 
+  def test_rename_changes_the_binding_and_whole_word_uses
+    edit = @language.rename(analysis(@entry_source), position(2, 1), "Home", @workspace)
+    edits = edit.changes.fetch(fixture_uri("entry.rb"))
+
+    assert_equal([[2, 0], [6, 10]], edits.map { |text_edit| [text_edit.range.start.line, text_edit.range.start.character] })
+    assert_nil(@language.rename(analysis(@entry_source), position(0, 0), "Home", @workspace))
+  end
+
   def test_completion_inside_import_literals
     source = @entry_source.sub("import(\"pages/layout\")", "import(\"pages/")
 

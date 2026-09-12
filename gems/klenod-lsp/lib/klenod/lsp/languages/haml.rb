@@ -5,6 +5,7 @@ require_relative "../symbols"
 require_relative "../text"
 require_relative "imports"
 require_relative "haml/completion"
+require_relative "haml/rename"
 
 module Klenod
   module LSP
@@ -28,6 +29,10 @@ module Klenod
 
         def document_symbols(analysis)
           Symbols.haml_document_symbols(analysis.source)
+        end
+
+        def rename_spans(analysis, name)
+          Rename.spans(analysis.source, name)
         end
 
         # The import literal or `%Component` tag under the cursor.

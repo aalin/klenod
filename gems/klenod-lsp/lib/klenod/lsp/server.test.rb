@@ -74,6 +74,7 @@ class Klenod::LSP::Server::Test < Minitest::Test
       assert_equal(true, result.dig(:capabilities, :documentSymbolProvider))
       assert_equal(true, result.dig(:capabilities, :workspaceSymbolProvider))
       assert_equal({}, result.dig(:capabilities, :codeLensProvider))
+      assert_equal({prepareProvider: true}, result.dig(:capabilities, :renameProvider))
       assert_equal("#{Klenod::LSP::TestSupport::FIXTURE_SOURCE_DIR}/**", result.dig(:capabilities, :workspace, :fileOperations, :willRename, :filters, 0, :pattern, :glob))
       assert_equal("klenod", result.dig(:serverInfo, :name))
     end
@@ -409,6 +410,22 @@ class Klenod::LSP::Server::Test < Minitest::Test
     end
   end
 
+  def test_rename_returns_edits_and_rejects_invalid_names
+    with_server do |client|
+      client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
+      client.read
+
+      prepared = client.request("textDocument/prepareRename", textDocument: {uri: @page_uri}, position: {line: 5, character: 4}).fetch(:result)
+      assert_equal("Details", prepared[:placeholder])
+
+      result = client.request("textDocument/rename", textDocument: {uri: @page_uri}, position: {line: 5, character: 4}, newName: "Card").fetch(:result)
+      assert_equal(["Card", "Card"], result.dig(:changes, @page_uri.to_sym).map { |edit| edit[:newText] })
+
+      error = client.request("textDocument/rename", textDocument: {uri: @page_uri}, position: {line: 5, character: 4}, newName: "card").fetch(:error)
+      assert_equal(-32602, error[:code])
+    end
+  end
+
   def test_documents_outside_the_source_dir_are_ignored
     with_server do |client|
       client.notify("textDocument/didOpen", textDocument: {uri: "file:///elsewhere/Page.haml", languageId: "haml", version: 1, text: "%h1"})
@@ -421,10 +438,10 @@ class Klenod::LSP::Server::Test < Minitest::Test
   def test_unknown_requests_are_rejected_and_unknown_notifications_ignored
     with_server do |client|
       client.notify("workspace/somethingNew", {})
-      error = client.request("textDocument/rename", {}).fetch(:error)
+      error = client.request("textDocument/typeDefinition", {}).fetch(:error)
 
       assert_equal(-32601, error[:code])
-      assert_includes(error[:message], "textDocument/rename")
+      assert_includes(error[:message], "textDocument/typeDefinition")
     end
   end
 

@@ -157,6 +157,21 @@ module Klenod
           end
         end
 
+        STRING_LITERAL = /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/
+
+        def constant_pattern(name)
+          /(?<![\w:@$])(?<name>#{Regexp.escape(name)})(?!\w)/
+        end
+
+        # Whole-word occurrences of a constant in Ruby text, ignoring the
+        # contents of string literals.
+        def constant_spans(text, line_index, name)
+          blanked = text.gsub(STRING_LITERAL) { |literal| " " * literal.length }
+          spans = []
+          Text.each_match(blanked, line_index, constant_pattern(name), group: :name) { |_match, span| spans << span }
+          spans
+        end
+
         def replacement_range(position, partial)
           Text::Span.new(position.line, position.character - partial.length, position.character).to_range
         end
@@ -214,6 +229,46 @@ module Klenod
           end
 
           [*route_lenses, Imports::Interface::CodeLens.new(range: range, command: command)]
+        end
+
+        CONSTANT_NAME = /\A[A-Z][A-Za-z0-9_]*\z/
+
+        class InvalidRename < StandardError; end
+
+        # The constant a module is bound to can be renamed within its file:
+        # the cursor must be on the binding or on a component tag.
+        def prepare_rename(analysis, position)
+          target = rename_target(analysis, position)
+          return nil unless target
+
+          {range: target.span.to_range, placeholder: target.name.split("::").first}
+        end
+
+        def rename(analysis, position, new_name, workspace)
+          raise InvalidRename, "#{new_name.inspect} is not a constant name" unless new_name.match?(CONSTANT_NAME)
+
+          target = rename_target(analysis, position)
+          uri = target && workspace.uri_for_module_id(analysis.module_id)
+          return nil unless uri
+
+          name = target.name.split("::").first
+          edits = rename_spans(analysis, name).map { |span| Imports::Interface::TextEdit.new(range: span.to_range, new_text: new_name) }
+          return nil if edits.empty?
+
+          Imports::Interface::WorkspaceEdit.new(changes: {uri => edits})
+        end
+
+        # Whole-word occurrences of the constant outside comments. Languages
+        # with non-Ruby text override this to stay inside Ruby contexts.
+        def rename_spans(analysis, name)
+          analysis.lines.each_with_index.flat_map do |line_text, index|
+            line_text.match?(/\A\s*#/) ? [] : Imports.constant_spans(line_text, index, name)
+          end
+        end
+
+        def rename_target(analysis, position)
+          target = target_at(analysis, position)
+          target if target && %i[binding component].include?(target.kind)
         end
 
         # Every import literal that resolves to a file becomes a link.

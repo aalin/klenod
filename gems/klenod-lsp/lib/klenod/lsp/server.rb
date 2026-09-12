@@ -55,6 +55,8 @@ module Klenod
         "textDocument/documentSymbol" => :handle_document_symbol,
         "workspace/symbol" => :handle_workspace_symbol,
         "textDocument/codeLens" => :handle_code_lens,
+        "textDocument/prepareRename" => :handle_prepare_rename,
+        "textDocument/rename" => :handle_rename,
         "workspace/didChangeConfiguration" => :handle_noop,
         "workspace/didChangeWatchedFiles" => :handle_did_change_watched_files,
         "$/cancelRequest" => :handle_noop,
@@ -172,6 +174,8 @@ module Klenod
         else
           @logger.debug { "Ignoring notification #{method_name}" }
         end
+      rescue Languages::ImportNavigation::InvalidRename => error
+        reply_error(message, Constant::ErrorCodes::INVALID_PARAMS, error.message) if request?(message)
       rescue => error
         @logger.error { "#{error.class}: #{error.message}\n#{Array(error.backtrace).join("\n")}" }
         reply_error(message, Constant::ErrorCodes::INTERNAL_ERROR, "#{error.class}: #{error.message}") if request?(message)
@@ -215,6 +219,7 @@ module Klenod
             document_symbol_provider: true,
             workspace_symbol_provider: true,
             code_lens_provider: Interface::CodeLensOptions.new,
+            rename_provider: Interface::RenameOptions.new(prepare_provider: true),
             workspace: {
               fileOperations: Interface::FileOperationOptions.new(
                 will_rename: Interface::FileOperationRegistrationOptions.new(
@@ -441,6 +446,16 @@ module Klenod
       def handle_will_rename_files(message)
         files = Array(message.dig(:params, :files)).map { |file| [file[:oldUri].to_s, file[:newUri].to_s] }
         Renames.call(files, @index, @workspace)
+      end
+
+      def handle_prepare_rename(message)
+        with_position(message) { |language, analysis, position| language.prepare_rename(analysis, position) }
+      end
+
+      def handle_rename(message)
+        with_position(message) do |language, analysis, position|
+          language.rename(analysis, position, message.dig(:params, :newName).to_s, @workspace)
+        end
       end
 
       def handle_code_lens(message)
