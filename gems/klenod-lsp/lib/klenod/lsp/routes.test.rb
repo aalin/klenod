@@ -38,6 +38,34 @@ class Klenod::LSP::Routes::Test < Minitest::Test
     end
   end
 
+  def test_hover_markdown_describes_routes_layouts_and_special_views
+    with_routed_app do |workspace, dir|
+      FileUtils.mkdir_p("#{dir}/pages/docs/[slug]")
+      File.write("#{dir}/pages/docs/[slug]/+page.haml", "%h1 Doc\n")
+      File.write("#{dir}/pages/docs/[slug]/+route.rb", "def GET(request)\nend\n")
+      routes = workspace.routes
+
+      page = routes.hover_markdown(module_id("pages/docs/[slug]/+page.haml"))
+      assert_includes(page, "**Route** `/docs/:slug` · `pages/docs/[slug]`")
+      assert_includes(page, "Params: `slug` (dynamic)")
+      assert_includes(page, "Page: `pages/docs/[slug]/+page.haml`")
+      assert_includes(page, "Handler: `pages/docs/[slug]/+route.rb`")
+      assert_includes(page, "Layouts: `pages/+layout.haml`")
+
+      layout = routes.hover_markdown(module_id("pages/+layout.haml"))
+      assert_includes(layout, "**Layout** for 3 routes: `/`, `/docs`, `/docs/:slug`")
+
+      assert_includes(routes.hover_markdown(module_id("pages/+not-found.haml")), "**Not found view** for `/`")
+      assert_nil(routes.hover_markdown(module_id("components/Details.haml")))
+
+      language = Klenod::LSP::Languages::Haml.new
+      analysis = workspace.analyze(module_id("pages/docs/+page.haml"), "%h1 Docs\n%p More\n")
+      hover = language.hover(analysis, position(0, 3), workspace)
+      assert_includes(hover.contents.value, "**Route** `/docs`")
+      assert_nil(language.hover(analysis, position(1, 3), workspace), "only the first line describes the route")
+    end
+  end
+
   def test_without_a_router_plugin_nothing_is_described
     assert_empty(fixture_workspace.routes.descriptions(module_id("pages/Page.haml")))
   end

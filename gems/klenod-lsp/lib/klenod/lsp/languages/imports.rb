@@ -188,8 +188,24 @@ module Klenod
 
         def hover(analysis, position, workspace)
           target = target_at(analysis, position)
-          module_id = target && Imports.resolve(target, analysis, workspace)
+          return route_hover(analysis, position, workspace) unless target
+
+          module_id = Imports.resolve(target, analysis, workspace)
           module_id && Imports.hover(target, module_id, workspace)
+        end
+
+        # Hovering the first line of a route module describes the route it
+        # serves, the same place its lenses appear.
+        def route_hover(analysis, position, workspace)
+          return nil unless position.line.zero?
+
+          markdown = workspace.routes.hover_markdown(analysis.module_id)
+          return nil unless markdown
+
+          Imports::Interface::Hover.new(
+            contents: Imports::Interface::MarkupContent.new(kind: Imports::Constant::MarkupKind::MARKDOWN, value: markdown),
+            range: Text.line_span(analysis.lines, 0).to_range
+          )
         end
 
         # References to the module under the cursor, or to the document's own
