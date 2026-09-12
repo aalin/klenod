@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "languages/haml"
+require_relative "languages/ruby"
 
 module Klenod
   module LSP
@@ -9,7 +10,8 @@ module Klenod
     # `completion`, each taking `(analysis, position, workspace)`.
     module Languages
       HANDLERS = {
-        ".haml" => Haml.new
+        ".haml" => Haml.new,
+        ".rb" => Ruby.new
       }.freeze
 
       module_function
