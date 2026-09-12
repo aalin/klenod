@@ -5,6 +5,7 @@ require "prism"
 require "klenod/build/context"
 
 require_relative "analysis"
+require_relative "routes"
 
 module Klenod
   module LSP
@@ -22,7 +23,10 @@ module Klenod
         @context = context
         @graph = context.graph
         @source_dir = File.expand_path(@graph.source_dir.to_s)
+        @routes = Routes.new(self)
       end
+
+      attr_reader :routes
 
       def path_for_uri(uri)
         return nil unless uri.start_with?("file://")

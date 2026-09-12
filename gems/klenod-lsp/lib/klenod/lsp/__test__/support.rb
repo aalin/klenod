@@ -13,11 +13,12 @@ module Klenod
       FIXTURE_APP = File.expand_path("app", __dir__)
       FIXTURE_SOURCE_DIR = File.join(FIXTURE_APP, "src")
 
-      def fixture_context(source_dir: FIXTURE_SOURCE_DIR, variables: {global: "@__props"})
+      def fixture_context(source_dir: FIXTURE_SOURCE_DIR, variables: {global: "@__props"}, extra_plugins: [])
         Klenod::Build::Context.new(
           source_dir: source_dir,
           analysis: true,
           plugins: [
+            *extra_plugins,
             Klenod::Build::Plugins::RubyPlugin.new,
             Klenod::Build::Plugins::IntlPlugin.new,
             Klenod::Build::Plugins::HamlPlugin.new(

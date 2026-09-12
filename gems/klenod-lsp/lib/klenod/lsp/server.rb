@@ -284,6 +284,7 @@ module Klenod
         end
         return if changed_paths.empty? && removed_paths.empty?
 
+        @workspace.routes.invalidate
         affected = @index.invalidate(changed_paths, removed_paths)
         own_paths = changed_paths + removed_paths
 

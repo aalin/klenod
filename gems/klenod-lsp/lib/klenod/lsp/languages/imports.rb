@@ -208,7 +208,12 @@ module Klenod
             arguments: [uri, Imports::Interface::Position.new(line: 0, character: 0), locations]
           )
 
-          [Imports::Interface::CodeLens.new(range: Text.line_span(analysis.lines, 0).to_range, command: command)]
+          range = Text.line_span(analysis.lines, 0).to_range
+          route_lenses = workspace.routes.descriptions(analysis.module_id).map do |description|
+            Imports::Interface::CodeLens.new(range: range, command: Imports::Interface::Command.new(title: description, command: ""))
+          end
+
+          [*route_lenses, Imports::Interface::CodeLens.new(range: range, command: command)]
         end
 
         # Every import literal that resolves to a file becomes a link.
