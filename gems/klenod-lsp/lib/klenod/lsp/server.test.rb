@@ -70,6 +70,7 @@ class Klenod::LSP::Server::Test < Minitest::Test
       assert_equal(["%", "/", "\"", "'"], result.dig(:capabilities, :completionProvider, :triggerCharacters))
       assert_equal({}, result.dig(:capabilities, :documentLinkProvider))
       assert_equal({codeActionKinds: ["quickfix"]}, result.dig(:capabilities, :codeActionProvider))
+      assert_equal(true, result.dig(:capabilities, :referencesProvider))
       assert_equal("klenod", result.dig(:serverInfo, :name))
     end
   end
@@ -290,6 +291,21 @@ class Klenod::LSP::Server::Test < Minitest::Test
 
       assert_equal("begin", kinds.first)
       assert_includes(kinds, "report")
+    end
+  end
+
+  def test_references_answer_from_the_index
+    with_server do |client|
+      client.request("initialize", capabilities: {window: {workDoneProgress: true}})
+      client.notify("initialized")
+      client.respond(client.read[:id])
+      loop { break if client.read.dig(:params, :value, :kind) == "end" }
+      client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
+      client.read
+
+      result = client.request("textDocument/references", textDocument: {uri: @page_uri}, position: {line: 5, character: 4}, context: {includeDeclaration: false}).fetch(:result)
+
+      assert_equal([fixture_uri("entry.rb"), @page_uri, @page_uri], result.map { |location| location[:uri] })
     end
   end
 

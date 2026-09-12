@@ -117,7 +117,6 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
   def test_definition_ignores_other_positions
     assert_nil(definition(@page_source, position(0, 0)))
     assert_nil(definition(@page_source, position(6, 6)))
-    assert_nil(definition(@page_source, position(1, 4)))
     assert_nil(definition(@page_source, position(40, 0)))
   end
 
@@ -162,6 +161,36 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
 
     assert_empty(@language.code_actions(@workspace.analyze(@page_id, source), 4..6, @workspace))
     assert_empty(@language.code_actions(@workspace.analyze(@page_id, @page_source), 0..9, @workspace))
+  end
+
+  def test_references_list_import_literals_and_component_tags_across_the_index
+    index = fixture_index(@workspace, module_id("entry.rb"), @page_id)
+
+    locations = @language.references(@workspace.analyze(@page_id, @page_source), position(5, 4), @workspace, index, include_declaration: true)
+
+    assert_equal(
+      [
+        [fixture_uri("components/Details.haml"), 0, 0],
+        [fixture_uri("entry.rb"), 4, 18],
+        [fixture_uri("pages/Page.haml"), 1, 20],
+        [fixture_uri("pages/Page.haml"), 5, 3]
+      ],
+      locations.map { |location| [location.uri, location.range.start.line, location.range.start.character] }
+    )
+  end
+
+  def test_references_without_a_target_use_the_document_itself
+    index = fixture_index(@workspace, module_id("entry.rb"), module_id("pages/page_spec.rb"))
+
+    locations = @language.references(@workspace.analyze(@page_id, @page_source), position(6, 6), @workspace, index)
+
+    assert_equal([fixture_uri("entry.rb"), fixture_uri("pages/page_spec.rb")], locations.map(&:uri))
+  end
+
+  def test_definition_on_a_binding_constant_uses_its_import
+    location = definition(@page_source, position(1, 4))
+
+    assert_equal(fixture_uri("components/Details.haml"), location.uri)
   end
 
   def test_hover_on_component_tag_summarizes_the_component

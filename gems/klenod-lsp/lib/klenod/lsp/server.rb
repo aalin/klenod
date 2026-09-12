@@ -46,6 +46,7 @@ module Klenod
         "textDocument/completion" => :handle_completion,
         "textDocument/documentLink" => :handle_document_link,
         "textDocument/codeAction" => :handle_code_action,
+        "textDocument/references" => :handle_references,
         "workspace/didChangeConfiguration" => :handle_noop,
         "workspace/didChangeWatchedFiles" => :handle_did_change_watched_files,
         "$/cancelRequest" => :handle_noop,
@@ -193,7 +194,8 @@ module Klenod
             hover_provider: true,
             completion_provider: Interface::CompletionOptions.new(trigger_characters: ["%", "/", "\"", "'"]),
             document_link_provider: Interface::DocumentLinkOptions.new,
-            code_action_provider: Interface::CodeActionOptions.new(code_action_kinds: [Constant::CodeActionKind::QUICK_FIX])
+            code_action_provider: Interface::CodeActionOptions.new(code_action_kinds: [Constant::CodeActionKind::QUICK_FIX]),
+            references_provider: true
           ),
           server_info: {name: "klenod", version: VERSION}
         )
@@ -352,6 +354,13 @@ module Klenod
 
       def handle_completion(message)
         with_position(message) { |language, analysis, position| language.completion(analysis, position, @workspace) }
+      end
+
+      def handle_references(message)
+        with_position(message) do |language, analysis, position|
+          include_declaration = message.dig(:params, :context, :includeDeclaration) == true
+          language.references(analysis, position, @workspace, @index, include_declaration: include_declaration)
+        end
       end
 
       def handle_document_link(message)

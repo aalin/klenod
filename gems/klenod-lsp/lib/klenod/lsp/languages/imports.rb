@@ -19,6 +19,7 @@ module Klenod
         Constant = LanguageServer::Protocol::Constant
 
         IMPORT_CALL = /\b(?<call>(?:lazy_)?import(?:_glob)?)\(\s*(?<quote>["'])(?<specifier>[^"']*)\k<quote>/
+        BINDING = /\A\s*(?<name>[A-Z][A-Za-z0-9_]*)\s*=\s*(?:lazy_)?import\(\s*(?<quote>["'])(?<specifier>[^"']*)\k<quote>/
         IMPORT_PREFIX = /\b(?:lazy_)?import(?:_glob)?\(\s*["'](?<partial>[^"']*)\z/
         PROP_TOKEN = /\$(?<name>[a-z]\w*|\*)/
         SKIPPED_FILE = /\A\.|\.test\.rb\z/
@@ -33,7 +34,24 @@ module Klenod
             return target if target.span.include?(position)
           end
 
+          binding_target_at(line_text, position)
+        end
+
+        # The constant a module is bound to, as in `Card = import("./Card")`.
+        def binding_target_at(line_text, position)
+          Text.each_match(line_text, position.line, BINDING, group: :name) do |match, span|
+            return Target.new(:binding, match[:name], match[:specifier], span) if span.include?(position)
+          end
+
           nil
+        end
+
+        # Constant names bound to imports in a document, keyed by name.
+        def bindings(lines)
+          lines.each_with_object({}) do |line_text, bindings|
+            match = BINDING.match(line_text)
+            bindings[match[:name]] ||= match[:specifier] if match
+          end
         end
 
         # Import literals on one line; glob imports name many modules and are
@@ -159,6 +177,17 @@ module Klenod
           module_id && Imports.hover(target, module_id, workspace)
         end
 
+        # References to the module under the cursor, or to the document's own
+        # module when the cursor is on nothing in particular.
+        def references(analysis, position, workspace, index, include_declaration: false)
+          target = target_at(analysis, position)
+          module_id = target ? Imports.resolve(target, analysis, workspace) : analysis.module_id
+          return [] unless module_id
+
+          index.ensure_collected(module_id) if workspace.path_for_module_id(module_id)
+          reference_locations(module_id, index, workspace, include_declaration: include_declaration)
+        end
+
         # Every import literal that resolves to a file becomes a link.
         def document_links(analysis, workspace)
           links = []
@@ -172,6 +201,52 @@ module Klenod
           end
 
           links
+        end
+
+        # Every place the graph knows imports the target: import literals in
+        # its dependents and, in Haml importers, the `%Component` tags bound to
+        # it. `include_declaration` adds the target file itself.
+        def reference_locations(target_module_id, index, workspace, include_declaration: false)
+          locations = []
+
+          index.dependents(target_module_id).each do |importer_id|
+            record = index.record(importer_id)
+            uri = record && workspace.uri_for_module_id(importer_id)
+            next unless uri
+
+            lines = record.source.lines(chomp: true)
+            specifiers = record.resolved_dependencies.select { |resolved| resolved.module_id == target_module_id }.map { |resolved| resolved.dependency.specifier.to_s }.uniq
+            specifiers.each do |specifier|
+              span = Diagnostics.literal_span(specifier, lines)
+              locations << Imports::Interface::Location.new(uri: uri, range: span.to_range) if span
+            end
+            usage_spans(importer_id, lines, specifiers).each do |span|
+              locations << Imports::Interface::Location.new(uri: uri, range: span.to_range)
+            end
+          end
+
+          if include_declaration && (uri = workspace.uri_for_module_id(target_module_id))
+            locations << Imports::Interface::Location.new(uri: uri, range: Text.zero_range)
+          end
+
+          locations.uniq { |location| [location.uri, location.range.start.line, location.range.start.character] }
+            .sort_by { |location| [location.uri, location.range.start.line, location.range.start.character] }
+        end
+
+        # `%Name` tags in a Haml importer whose binding refers to the target.
+        def usage_spans(importer_id, lines, specifiers)
+          return [] unless importer_id.extname == ".haml"
+
+          names = Imports.bindings(lines).select { |_name, specifier| specifiers.include?(specifier) }.keys
+          return [] if names.empty?
+
+          spans = []
+          lines.each_with_index do |line_text, index|
+            Text.each_match(line_text, index, Languages::Haml::COMPONENT_TAG, group: :name) do |match, span|
+              spans << span if names.include?(match[:name].split("::").first)
+            end
+          end
+          spans
         end
 
         # Quick fixes replacing an unresolved import literal with each of the

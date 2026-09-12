@@ -61,6 +61,15 @@ class Klenod::LSP::Languages::Ruby::Test < Minitest::Test
     assert_equal(["Replace with \"pages/layout.rb\""], actions.map(&:title))
   end
 
+  def test_references_to_a_ruby_module_from_ruby_and_haml_importers
+    index = fixture_index(@workspace, @entry_id, module_id("pages/Page.haml"))
+    line = @entry_source.lines[3]
+
+    locations = @language.references(analysis(@entry_source), position(3, line.index("pages/layout") + 2), @workspace, index)
+
+    assert_equal([[fixture_uri("entry.rb"), 3], [fixture_uri("pages/Page.haml"), 2], [fixture_uri("pages/Page.haml"), 4]], locations.map { |location| [location.uri, location.range.start.line] })
+  end
+
   def test_completion_inside_import_literals
     source = @entry_source.sub("import(\"pages/layout\")", "import(\"pages/")
 

@@ -16,7 +16,6 @@ module Klenod
         include ImportNavigation
 
         COMPONENT_TAG = /%(?<name>[A-Z][A-Za-z0-9_]*(?:::[A-Z][A-Za-z0-9_]*)*)/
-        BINDING = /\A\s*(?<name>[A-Z][A-Za-z0-9_]*)\s*=\s*(?:lazy_)?import\(\s*(?<quote>["'])(?<specifier>[^"']*)\k<quote>/
 
         def diagnostics(analysis)
           Diagnostics.for_analysis(analysis)
@@ -37,10 +36,7 @@ module Klenod
         # `%Details` compiles to the constant `Details`, bound by an import in
         # the leading `:ruby` filter such as `Details = import("/components/Details")`.
         def self.bindings(lines)
-          lines.each_with_object({}) do |line_text, bindings|
-            match = BINDING.match(line_text)
-            bindings[match[:name]] ||= match[:specifier] if match
-          end
+          Imports.bindings(lines)
         end
 
         private

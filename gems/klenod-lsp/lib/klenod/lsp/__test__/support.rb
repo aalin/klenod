@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
+require "logger"
 require "minitest/autorun"
+require "stringio"
 
 require "klenod/build"
 require "klenod/lsp"
@@ -29,6 +31,12 @@ module Klenod
 
       def fixture_workspace(**)
         Workspace.new(context: fixture_context(**))
+      end
+
+      def fixture_index(workspace, *module_ids)
+        index = GraphIndex.new(workspace: workspace, logger: Logger.new(StringIO.new))
+        Sync { module_ids.each { |module_id| index.ensure_collected(module_id) } }
+        index
       end
 
       def fixture_path(relative)
