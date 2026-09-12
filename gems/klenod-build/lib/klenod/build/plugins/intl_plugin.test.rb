@@ -29,6 +29,26 @@ class Klenod::Build::Plugins::IntlPlugin::Test < Minitest::Test
     end
   end
 
+  def test_invalidation_evicts_changed_and_removed_companions
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      path = "#{dir}/pages/page.intl.en.toml"
+      File.write(path, "title = \"Hello\"\n")
+      plugin = Klenod::Build::Plugins::IntlPlugin.new
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin]).graph
+      module_id = Klenod::Build::ModuleId.new("pages/page.haml", nil)
+      first = plugin.translations_for(context, module_id)
+
+      assert_equal([], plugin.invalidate_module_ids([path], context))
+      refute_same(first.fetch("en"), plugin.translations_for(context, module_id).fetch("en"))
+
+      File.delete(path)
+      plugin.invalidate_module_ids([path], context)
+
+      assert_equal({}, plugin.translations_for(context, module_id))
+    end
+  end
+
   def test_parse_errors_are_not_cached
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

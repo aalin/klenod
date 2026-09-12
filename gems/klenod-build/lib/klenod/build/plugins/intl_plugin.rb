@@ -45,6 +45,14 @@ module Klenod
               end
           end
 
+          # Changed or removed companions leave the cache immediately, so it
+          # only ever holds live files. Nothing else needs invalidating: the
+          # owning Haml module is re-transformed by HamlPlugin's own hook.
+          def invalidate_module_ids(paths, _context)
+            paths.each { |path| @cache.delete(File.expand_path(path)) }
+            []
+          end
+
           private
 
           # Parsed translations are kept per file and validated by stat, so a
