@@ -5,7 +5,8 @@ require_relative "languages/haml"
 module Klenod
   module LSP
     # Maps a document to the handler that knows its syntax. Handlers respond
-    # to `diagnostics(analysis)` and `definition(analysis, position, workspace)`.
+    # to `diagnostics(analysis)` and to `definition`, `hover`, and
+    # `completion`, each taking `(analysis, position, workspace)`.
     module Languages
       HANDLERS = {
         ".haml" => Haml.new

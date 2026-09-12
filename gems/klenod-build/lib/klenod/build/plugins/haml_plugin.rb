@@ -78,6 +78,10 @@ module Klenod
             @transformer = Transformer.new
           end
 
+          # The validated `variables` mapping, so tooling such as the language
+          # server can tell whether `$name` reads a framework prop.
+          attr_reader :variables
+
           def resolve(dependency, _context)
             styles_dependency = resolve_class_names_runtime(dependency)
             return styles_dependency if styles_dependency

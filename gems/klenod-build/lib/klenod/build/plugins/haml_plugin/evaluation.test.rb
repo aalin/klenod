@@ -196,6 +196,14 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_plugin_exposes_validated_variables
+    plugin = haml_plugin(variables: {global: "@__props"})
+
+    assert_equal({global: "@__props"}, plugin.variables)
+    assert(plugin.variables.frozen?)
+    assert_equal({}, haml_plugin.variables)
+  end
+
   def test_haml_transformer_rewrites_configured_global_variables_to_props
     plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
 

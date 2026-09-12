@@ -6,6 +6,8 @@ Current support covers Haml modules:
 
 - Diagnostics: Haml syntax errors, Ruby syntax errors inside Haml, syntax errors in the generated component Ruby, and unresolved imports with the same "did you mean" suggestions the build prints.
 - Go to definition: `import("...")` literals and `%Component` tags jump to the imported file. Component tags are followed through the constant bound in the leading `:ruby` filter, such as `Details = import("/components/Details")`.
+- Hover: the same targets show their module id and path. Haml components also list the `$name` props they read when the Haml plugin maps global variables to props.
+- Completion: `%` offers the components bound by imports in the file, and the string inside `import("...")` offers directories and files under the source directory, relative to the importing module or to the source root for leading-slash paths.
 
 The server never evaluates application code. It only transforms and resolves, so unsaved editor text stays out of the module graph.
 
@@ -69,4 +71,5 @@ Zed (`.zed/settings.json`) can run it through a generic language server extensio
 - Positions are counted in Ruby characters rather than UTF-16 code units, so ranges on lines containing characters outside the Basic Multilingual Plane can be off by one per such character.
 - Documents are synchronized with their full text on every change, and every change is analyzed synchronously.
 - Definitions only target modules under the application source directory. `gem://` and virtual modules return no location yet.
-- Hover, completion, CSS class navigation, and `.rb` support are not implemented.
+- Completion inspects only the current line up to the cursor. Component completion offers the constants bound in the file, not HTML tags.
+- CSS class navigation and `.rb` support are not implemented.

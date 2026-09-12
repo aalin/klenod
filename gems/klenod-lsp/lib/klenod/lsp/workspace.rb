@@ -43,10 +43,22 @@ module Klenod
         Klenod::Build::ModuleId.new("app:/#{path.delete_prefix("#{source_dir}/")}")
       end
 
-      def uri_for_module_id(module_id)
+      def path_for_module_id(module_id)
         return nil unless module_id.scheme == :app
 
-        uri_for_path(@graph.absolute_path(module_id).to_s)
+        @graph.absolute_path(module_id).to_s
+      end
+
+      def uri_for_module_id(module_id)
+        path = path_for_module_id(module_id)
+        path && uri_for_path(path)
+      end
+
+      # The Haml plugin's `variables` mapping, e.g. `{global: "@__props"}`.
+      # Empty when no Haml plugin is configured or it maps nothing.
+      def haml_variables
+        plugin = @graph.plugins.find { |candidate| candidate.is_a?(Klenod::Build::Plugins::HamlPlugin::Plugin) }
+        plugin&.variables || {}
       end
 
       def analyze(module_id, source)
@@ -63,6 +75,11 @@ module Klenod
           resolve_errors: resolve_errors
         )
       rescue Klenod::Build::Error => error
+        failed_analysis(module_id, source, error)
+      rescue => error
+        # Plugins can raise their parser's own errors on half-typed source,
+        # e.g. SyntaxTree on an unterminated import string. Report them
+        # rather than dropping the document's diagnostics.
         failed_analysis(module_id, source, error)
       end
 

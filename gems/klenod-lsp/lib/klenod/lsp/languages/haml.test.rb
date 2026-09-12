@@ -58,6 +58,15 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_includes(diagnostic.message, "Did you mean \"/components/Details.haml\"?")
   end
 
+  def test_half_typed_import_is_reported_instead_of_crashing
+    source = @page_source.sub("import(\"./layout\")", "import(\"./la")
+
+    diagnostic = diagnostics(source).fetch(0)
+
+    assert_equal(0, diagnostic.range.start.line)
+    assert_includes(diagnostic.message, "ParseError: unterminated string")
+  end
+
   def test_dynamic_import_is_reported_at_the_top
     source = @page_source.sub("import(\"/components/Details\")", "import(name)")
 
@@ -120,6 +129,112 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_nil(definition(source, position(4, 3)))
   end
 
+  def test_hover_on_component_tag_summarizes_the_component
+    hover = hover(@page_source, position(5, 4))
+
+    assert_equal("markdown", hover.contents.kind)
+    assert_includes(hover.contents.value, "**Details** · `app:/components/Details.haml`")
+    assert_includes(hover.contents.value, "`components/Details.haml`")
+    assert_includes(hover.contents.value, "Props: `$summary`")
+    assert_equal(3, hover.range.start.character)
+    assert_equal(10, hover.range.end.character)
+  end
+
+  def test_hover_on_import_literal_shows_the_module_without_props
+    line = @page_source.lines[2]
+
+    hover = hover(@page_source, position(2, line.index("./layout") + 3))
+
+    assert_includes(hover.contents.value, "**./layout** · `app:/pages/layout.rb`")
+    assert_includes(hover.contents.value, "`pages/layout.rb`")
+    refute_includes(hover.contents.value, "Props")
+  end
+
+  def test_hover_omits_props_when_globals_are_not_mapped
+    workspace = fixture_workspace(variables: nil)
+
+    hover = @language.hover(workspace.analyze(@page_id, @page_source), position(5, 4), workspace)
+
+    refute_includes(hover.contents.value, "Props")
+  end
+
+  def test_hover_ignores_other_positions
+    assert_nil(hover(@page_source, position(0, 0)))
+    assert_nil(hover(@page_source, position(6, 6)))
+  end
+
+  def test_completion_offers_bound_components_matching_the_partial_tag
+    source = @page_source.sub("%Layout", "%De")
+
+    list = completion(source, position(4, 3))
+
+    assert_equal(false, list.is_incomplete)
+    assert_equal(["Details"], list.items.map(&:label))
+    assert_equal("app:/components/Details.haml", list.items.fetch(0).detail)
+    assert_equal(1, list.items.fetch(0).text_edit.range.start.character)
+    assert_equal(3, list.items.fetch(0).text_edit.range.end.character)
+    assert_equal("Details", list.items.fetch(0).text_edit.new_text)
+  end
+
+  def test_completion_offers_every_binding_after_a_bare_percent
+    source = @page_source.sub("%Layout", "%")
+
+    list = completion(source, position(4, 1))
+
+    assert_equal(%w[Details Layout], list.items.map(&:label).sort)
+  end
+
+  def test_completion_leaves_lowercase_tags_alone
+    source = @page_source.sub("%Layout", "%di")
+
+    assert_nil(completion(source, position(4, 3)))
+    assert_nil(completion(source, position(6, 6)))
+    assert_nil(completion(source, position(40, 0)))
+  end
+
+  def test_completion_lists_source_root_directories_for_absolute_paths
+    source = @page_source.sub("import(\"/components/Details\")", "import(\"/comp")
+
+    list = completion(source, position(1, 25))
+
+    assert_equal(["components/"], list.items.map(&:label))
+    assert_equal("components/", list.items.fetch(0).text_edit.new_text)
+    assert_equal(21, list.items.fetch(0).text_edit.range.start.character)
+    assert_equal(25, list.items.fetch(0).text_edit.range.end.character)
+  end
+
+  def test_completion_lists_directory_entries_without_tests_or_dotfiles
+    source = @page_source.sub("import(\"/components/Details\")", "import(\"/components/")
+
+    list = completion(source, position(1, 32))
+
+    assert_equal(["Details.haml", "Details.intl.en.toml"], list.items.map(&:label))
+    assert_equal("1Details.haml", list.items.fetch(0).sort_text)
+  end
+
+  def test_completion_lists_entries_next_to_the_importer_for_relative_paths
+    source = @page_source.sub("import(\"./layout\")", "import(\"./la")
+
+    list = completion(source, position(2, 23))
+
+    assert_equal(["layout.rb"], list.items.map(&:label))
+  end
+
+  def test_completion_walks_up_to_the_source_root_but_not_beyond
+    source = @page_source.sub("import(\"./layout\")", "import(\"../")
+
+    list = completion(source, position(2, 22))
+
+    assert_equal(["components/", "pages/"], list.items.map(&:label))
+    assert_nil(completion(@page_source.sub("import(\"./layout\")", "import(\"../../"), position(2, 25)))
+  end
+
+  def test_completion_ignores_scheme_specifiers
+    source = @page_source.sub("import(\"./layout\")", "import(\"gem://")
+
+    assert_nil(completion(source, position(2, 25)))
+  end
+
   private
 
   def diagnostics(source)
@@ -128,5 +243,13 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
 
   def definition(source, position)
     @language.definition(@workspace.analyze(@page_id, source), position, @workspace)
+  end
+
+  def hover(source, position)
+    @language.hover(@workspace.analyze(@page_id, source), position, @workspace)
+  end
+
+  def completion(source, position)
+    @language.completion(@workspace.analyze(@page_id, source), position, @workspace)
   end
 end

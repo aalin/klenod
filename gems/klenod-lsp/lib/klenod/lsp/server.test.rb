@@ -60,7 +60,35 @@ class Klenod::LSP::Server::Test < Minitest::Test
 
       assert_equal({openClose: true, change: 1, save: true}, result.dig(:capabilities, :textDocumentSync))
       assert_equal(true, result.dig(:capabilities, :definitionProvider))
+      assert_equal(true, result.dig(:capabilities, :hoverProvider))
+      assert_equal(["%", "/", "\"", "'"], result.dig(:capabilities, :completionProvider, :triggerCharacters))
       assert_equal("klenod", result.dig(:serverInfo, :name))
+    end
+  end
+
+  def test_hover_returns_markdown_for_the_component_under_the_cursor
+    with_server do |client|
+      client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
+      client.read
+
+      result = client.request("textDocument/hover", textDocument: {uri: @page_uri}, position: {line: 5, character: 4}).fetch(:result)
+
+      assert_equal("markdown", result.dig(:contents, :kind))
+      assert_includes(result.dig(:contents, :value), "app:/components/Details.haml")
+      assert_equal({line: 5, character: 3}, result.dig(:range, :start))
+    end
+  end
+
+  def test_completion_lists_bound_components
+    with_server do |client|
+      client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
+      client.read
+
+      result = client.request("textDocument/completion", textDocument: {uri: @page_uri}, position: {line: 5, character: 5}).fetch(:result)
+
+      assert_equal(false, result[:isIncomplete])
+      assert_equal(["Details"], result[:items].map { |item| item[:label] })
+      assert_equal({range: {start: {line: 5, character: 3}, end: {line: 5, character: 5}}, newText: "Details"}, result.dig(:items, 0, :textEdit))
     end
   end
 
@@ -111,10 +139,10 @@ class Klenod::LSP::Server::Test < Minitest::Test
   def test_unknown_requests_are_rejected_and_unknown_notifications_ignored
     with_server do |client|
       client.notify("workspace/somethingNew", {})
-      error = client.request("textDocument/hover", {}).fetch(:error)
+      error = client.request("textDocument/rename", {}).fetch(:error)
 
       assert_equal(-32601, error[:code])
-      assert_includes(error[:message], "textDocument/hover")
+      assert_includes(error[:message], "textDocument/rename")
     end
   end
 
