@@ -62,6 +62,7 @@ class Klenod::LSP::Server::Test < Minitest::Test
       assert_equal(true, result.dig(:capabilities, :definitionProvider))
       assert_equal(true, result.dig(:capabilities, :hoverProvider))
       assert_equal(["%", "/", "\"", "'"], result.dig(:capabilities, :completionProvider, :triggerCharacters))
+      assert_equal({}, result.dig(:capabilities, :documentLinkProvider))
       assert_equal("klenod", result.dig(:serverInfo, :name))
     end
   end
@@ -124,6 +125,19 @@ class Klenod::LSP::Server::Test < Minitest::Test
       result = client.request("textDocument/definition", textDocument: {uri: @page_uri}, position: {line: 5, character: 4}).fetch(:result)
 
       assert_equal(fixture_uri("components/Details.haml"), result[:uri])
+    end
+  end
+
+  def test_document_links_are_returned_for_open_documents
+    with_server do |client|
+      client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
+      client.read
+
+      result = client.request("textDocument/documentLink", textDocument: {uri: @page_uri}).fetch(:result)
+
+      assert_equal(2, result.length)
+      assert_equal(fixture_uri("components/Details.haml"), result.dig(0, :target))
+      assert_equal({line: 1, character: 20}, result.dig(0, :range, :start))
     end
   end
 

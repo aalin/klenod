@@ -129,6 +129,20 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_nil(definition(source, position(4, 3)))
   end
 
+  def test_document_links_cover_resolvable_import_literals
+    links = @language.document_links(@workspace.analyze(@page_id, @page_source), @workspace)
+
+    assert_equal([fixture_uri("components/Details.haml"), fixture_uri("pages/layout.rb")], links.map(&:target))
+    assert_equal(1, links.fetch(0).range.start.line)
+    assert_equal("/components/Details", @page_source.lines[1][links.fetch(0).range.start.character...links.fetch(0).range.end.character])
+  end
+
+  def test_document_links_skip_unresolved_and_glob_imports
+    source = @page_source.sub("/components/Details", "/components/Detials").sub("import(\"./layout\")", "import_glob(\"./*.rb\")")
+
+    assert_empty(@language.document_links(@workspace.analyze(@page_id, source), @workspace))
+  end
+
   def test_hover_on_component_tag_summarizes_the_component
     hover = hover(@page_source, position(5, 4))
 

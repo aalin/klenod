@@ -37,6 +37,7 @@ module Klenod
         "textDocument/definition" => :handle_definition,
         "textDocument/hover" => :handle_hover,
         "textDocument/completion" => :handle_completion,
+        "textDocument/documentLink" => :handle_document_link,
         "workspace/didChangeConfiguration" => :handle_noop,
         "workspace/didChangeWatchedFiles" => :handle_noop,
         "$/cancelRequest" => :handle_noop,
@@ -123,7 +124,8 @@ module Klenod
             ),
             definition_provider: true,
             hover_provider: true,
-            completion_provider: Interface::CompletionOptions.new(trigger_characters: ["%", "/", "\"", "'"])
+            completion_provider: Interface::CompletionOptions.new(trigger_characters: ["%", "/", "\"", "'"]),
+            document_link_provider: Interface::DocumentLinkOptions.new
           ),
           server_info: {name: "klenod", version: VERSION}
         )
@@ -187,17 +189,27 @@ module Klenod
         with_position(message) { |language, analysis, position| language.completion(analysis, position, @workspace) }
       end
 
-      # Position-based requests share the same shape: nothing for documents
-      # the server does not handle, otherwise the language handler answers
-      # from the document's analysis.
-      def with_position(message)
-        params = message[:params]
-        document = @documents.fetch(params.dig(:textDocument, :uri))
+      def handle_document_link(message)
+        with_document(message) { |language, analysis| language.document_links(analysis, @workspace) }
+      end
+
+      # Document requests share the same shape: nothing for documents the
+      # server does not handle, otherwise the language handler answers from
+      # the document's analysis.
+      def with_document(message)
+        document = @documents.fetch(message.dig(:params, :textDocument, :uri))
         language = document && Languages.for(document)
         return nil unless language
 
-        position = Text::Position.new(line: params.dig(:position, :line), character: params.dig(:position, :character))
-        yield language, @documents.analysis_for(document), position
+        yield language, @documents.analysis_for(document)
+      end
+
+      def with_position(message)
+        with_document(message) do |language, analysis|
+          params = message[:params]
+          position = Text::Position.new(line: params.dig(:position, :line), character: params.dig(:position, :character))
+          yield language, analysis, position
+        end
       end
 
       def publish_diagnostics(document)

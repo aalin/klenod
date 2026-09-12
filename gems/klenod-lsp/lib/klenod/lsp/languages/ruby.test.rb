@@ -46,6 +46,13 @@ class Klenod::LSP::Languages::Ruby::Test < Minitest::Test
     assert_nil(@language.definition(analysis(@entry_source), position(0, 0), @workspace))
   end
 
+  def test_document_links_cover_every_import
+    links = @language.document_links(analysis(@entry_source), @workspace)
+
+    assert_equal([2, 3, 4], links.map { |link| link.range.start.line })
+    assert_equal(fixture_uri("pages/layout.rb"), links.fetch(1).target)
+  end
+
   def test_completion_inside_import_literals
     source = @entry_source.sub("import(\"pages/layout\")", "import(\"pages/")
 

@@ -157,6 +157,21 @@ module Klenod
           module_id = target && Imports.resolve(target, analysis, workspace)
           module_id && Imports.hover(target, module_id, workspace)
         end
+
+        # Every import literal that resolves to a file becomes a link.
+        def document_links(analysis, workspace)
+          links = []
+
+          analysis.lines.each_with_index do |line_text, index|
+            Imports.each_target(line_text, index) do |target|
+              module_id = Imports.resolve(target, analysis, workspace)
+              uri = module_id && workspace.uri_for_module_id(module_id)
+              links << Imports::Interface::DocumentLink.new(range: target.span.to_range, target: uri) if uri
+            end
+          end
+
+          links
+        end
       end
     end
   end
