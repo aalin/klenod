@@ -123,6 +123,38 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_includes(result.code, "FakeFramework::H.callback(self, :handle_click)")
   end
 
+  def test_haml_transformer_preserves_parenthesized_event_handler_references_as_symbols
+    result =
+      Klenod::Build::Plugins::HamlPlugin::Transformer.new.call(
+        source: "%Pagination(on-change-per-page=handle_set_per_page)\n",
+        module_id: ModuleId.new("pages/page.haml", nil),
+        component_class_name: "Page",
+        component_base_class: "Object",
+        factory: "FakeFramework::H",
+        styles_source: "{}.freeze",
+        translations_source: "{}.freeze"
+      )
+
+    assert_match(/:"on-change-per-page" => begin.*:handle_set_per_page/m, result.code)
+    refute_match(/SourceMapMark:\d+\n\s+handle_set_per_page/, result.code)
+  end
+
+  def test_haml_transformer_recognizes_hyphenated_configured_event_handlers
+    result =
+      Klenod::Build::Plugins::HamlPlugin::Transformer.new.call(
+        source: "%Pagination(on-change-per-page=handle_set_per_page)\n",
+        module_id: ModuleId.new("pages/page.haml", nil),
+        component_class_name: "Page",
+        component_base_class: "Object",
+        factory: "FakeFramework::H",
+        event_handler: "#{self.class.name}::FakeFramework::H",
+        styles_source: "{}.freeze",
+        translations_source: "{}.freeze"
+      )
+
+    assert_includes(result.code, "FakeFramework::H.callback(self, :handle_set_per_page)")
+  end
+
   def test_haml_transformer_combines_parenthesized_and_brace_attributes_for_event_handlers
     result =
       Klenod::Build::Plugins::HamlPlugin::Transformer.new.call(

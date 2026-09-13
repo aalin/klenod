@@ -491,6 +491,23 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_does_not_evaluate_parenthesized_event_handler_references
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def handle_click
+              raise "should not be called while rendering"
+            end
+
+          %button(on-click=handle_click) Click
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:button, "Click", {on_click: :handle_click}], exports::Default.new.render)
+    end
+  end
+
   def test_haml_transformer_supports_nested_dynamic_attribute_hashes
     evaluate_haml(
       {

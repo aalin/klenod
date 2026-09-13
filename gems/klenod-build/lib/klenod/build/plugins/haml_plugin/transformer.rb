@@ -625,12 +625,15 @@ module Klenod
 
           def dynamic_attributes(node, builder:, props:)
             dynamic_attributes = node.value.fetch(:dynamic_attributes)
-            sources = [dynamic_attributes.new, dynamic_attributes.old].compact
+            sources = [
+              [dynamic_attributes.new, true],
+              [dynamic_attributes.old, false]
+            ].reject { |source, _parenthesized| source.nil? }
             return {} if sources.empty?
 
             measure_compile(:haml_compile_dynamic_attributes) do
               dynamic = {}
-              sources.each do |source|
+              sources.each do |source, parenthesized|
                 source = builder.line_rewritten_source(source, node.line)
                 simple = simple_dynamic_attributes(source, builder: builder) unless @event_handler
                 if simple
@@ -655,7 +658,7 @@ module Klenod
                   end
 
                   key = attribute_key(assoc.key, builder: builder)
-                  value = event_handler_value(key, assoc.value, builder: builder) || attribute_value(assoc, builder: builder)
+                  value = event_handler_value(key, assoc.value, parenthesized: parenthesized, builder: builder) || attribute_value(assoc, builder: builder)
                   dynamic[key] = value
                   props[key] = value
                 end
@@ -784,14 +787,19 @@ module Klenod
             builder.ruby_parse_error(source, line_no: assoc.key.location&.start_line, context: "Could not parse Haml dynamic attributes")
           end
 
-          def event_handler_value(key, value, builder:)
-            return unless @event_handler && key.to_s.match?(/\Aon[a-z]/)
+          def event_handler_value(key, value, parenthesized:, builder:)
+            normalized_key = key.to_s.tr("-", "_")
+            return unless normalized_key.match?(/\Aon(?:[a-z]|_[a-z])/)
             return unless value
 
             method_name = builder.fragment(value).source
             return unless method_name.match?(/\A[a-zA-Z_]\w*[!?=]?\z/)
 
-            builder.expression("#{@event_handler}.callback(self, :#{method_name})")
+            if @event_handler
+              builder.expression("#{@event_handler}.callback(self, :#{method_name})")
+            elsif parenthesized
+              builder.symbol(method_name)
+            end
           end
 
           def omitted_attribute_value_name(node)

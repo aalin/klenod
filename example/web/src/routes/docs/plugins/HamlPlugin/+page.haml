@@ -91,6 +91,14 @@
       %Button{ **button_props, disabled: $disabled } Save
       ```
 
+      A bare method name in a parenthesized event attribute is passed as a symbol instead of being called while the component renders:
+
+      ```haml
+      %Pagination(on-change-per-page=handle_set_per_page)
+      ```
+
+      This produces an `on_change_per_page: :handle_set_per_page` prop. A framework can bind that method reference when it merges or receives the component props. Brace-style attributes remain ordinary Ruby expressions.
+
       `:markdown` filters use `MarkdownPlugin`. `:css` filters add inline styles to the module graph. `:plain` filters render their text unchanged.
 
   %DocsSection{ title: "Companions" }
