@@ -90,7 +90,7 @@ Zed (`.zed/settings.json`) can run it through a generic language server extensio
 
 ## Limitations
 
-- Positions are counted in characters. Clients that offer the `utf-32` position encoding get exact positions; with the `utf-16` default, ranges on lines containing characters outside the Basic Multilingual Plane can be off by one per such character.
+- Positions are converted to the UTF-8, UTF-16, or UTF-32 encoding negotiated with the client.
 - Documents are synchronized with their full text on every change. Diagnostics are published about 100 ms after typing pauses and the graph record follows about 250 ms after; requests in between analyze the current text on demand.
 - References and renames only cover modules under the application source directory; definition and hover also reach files inside installed gems, but virtual modules have no location.
 - References and renames answer from whatever the background index has collected so far; right after startup on a large project they can be incomplete until indexing finishes.

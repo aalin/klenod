@@ -50,6 +50,29 @@ module Klenod
       def zero_range
         Span.new(0, 0, 0).to_range
       end
+
+      def protocol_character(line_text, character, encoding)
+        prefix = line_text.each_char.first(character).join
+        case encoding
+        when "utf-8" then prefix.bytesize
+        when "utf-16" then prefix.encode(Encoding::UTF_16LE).bytesize / 2
+        else character
+        end
+      end
+
+      def ruby_character(line_text, character, encoding)
+        return character if encoding == "utf-32"
+
+        units = 0
+        line_text.each_char.with_index do |char, index|
+          width = (encoding == "utf-8") ? char.bytesize : char.encode(Encoding::UTF_16LE).bytesize / 2
+          return index if units + width > character
+
+          units += width
+          return index + 1 if units == character
+        end
+        line_text.length
+      end
     end
   end
 end

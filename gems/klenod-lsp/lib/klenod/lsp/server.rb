@@ -110,6 +110,7 @@ module Klenod
         @pending_collections = {}
         @closed_diagnostics = {}
         @client_capabilities = {}
+        @position_encoding = Constant::PositionEncodingKind::UTF16
         @next_request_id = 0
         @shutdown_requested = false
         @exit_requested = false
@@ -139,13 +140,13 @@ module Klenod
       end
 
       def notify(method_name, params)
-        @writer.write(method: method_name, params: params)
+        @writer.write(method: method_name, params: encode_positions(params))
       end
 
       # Server-to-client requests. Their responses arrive without a method
       # and are ignored by dispatch, because nothing here depends on them.
       def request(method_name, params)
-        @writer.write(id: "klenod-lsp-#{@next_request_id += 1}", method: method_name, params: params)
+        @writer.write(id: "klenod-lsp-#{@next_request_id += 1}", method: method_name, params: encode_positions(params))
       end
 
       private
@@ -186,21 +187,22 @@ module Klenod
       end
 
       def reply(message, result)
-        @writer.write(id: message[:id], result: result)
+        uri = message.dig(:params, :textDocument, :uri)&.to_s
+        @writer.write(id: message[:id], result: encode_positions(result, uri: uri))
       end
 
       def reply_error(message, code, text)
         @writer.write(id: message[:id], error: Interface::ResponseError.new(code: code, message: text))
       end
 
-      # Positions are counted in characters, which equals UTF-32 code units.
-      # A client that offers utf-32 gets exact positions; the utf-16 default
-      # is only off on lines with characters outside the Basic Multilingual
-      # Plane.
+      # Positions are kept as Ruby character offsets internally and converted
+      # at the protocol boundary to the encoding selected by the client.
       def handle_initialize(message)
         @client_capabilities = message.dig(:params, :capabilities) || {}
         encodings = Array(@client_capabilities.dig(:general, :positionEncodings))
-        position_encoding = Constant::PositionEncodingKind::UTF32 if encodings.include?(Constant::PositionEncodingKind::UTF32)
+        supported = [Constant::PositionEncodingKind::UTF32, Constant::PositionEncodingKind::UTF8, Constant::PositionEncodingKind::UTF16]
+        @position_encoding = supported.find { |encoding| encodings.include?(encoding) } || Constant::PositionEncodingKind::UTF16
+        position_encoding = @position_encoding unless @position_encoding == Constant::PositionEncodingKind::UTF16
 
         Interface::InitializeResult.new(
           capabilities: Interface::ServerCapabilities.new(
@@ -495,9 +497,60 @@ module Klenod
       def with_position(message)
         with_document(message) do |language, analysis|
           params = message[:params]
-          position = Text::Position.new(line: params.dig(:position, :line), character: params.dig(:position, :character))
+          line = params.dig(:position, :line)
+          character = params.dig(:position, :character)
+          line_text = analysis.lines[line].to_s
+          position = Text::Position.new(line: line, character: Text.ruby_character(line_text, character, @position_encoding))
           yield language, analysis, position
         end
+      end
+
+      def encode_positions(value, uri: nil)
+        serialized = JSON.parse(JSON.generate(value), symbolize_names: true)
+        encode_position_nodes(serialized, uri, {})
+      end
+
+      def encode_position_nodes(value, uri, sources)
+        case value
+        when Array
+          value.map { |item| encode_position_nodes(item, uri, sources) }
+        when Hash
+          current_uri = value[:uri]&.to_s || uri
+          if value.key?(:line) && value.key?(:character)
+            line_text = source_line(current_uri, value[:line], sources)
+            return value.merge(character: Text.protocol_character(line_text, value[:character], @position_encoding)) if line_text
+          end
+
+          value.to_h do |key, child|
+            encoded =
+              if key == :changes && child.is_a?(Hash)
+                child.to_h { |change_uri, edits| [change_uri, encode_position_nodes(edits, change_uri.to_s, sources)] }
+              else
+                encode_position_nodes(child, current_uri, sources)
+              end
+            [key, encoded]
+          end
+        else
+          value
+        end
+      end
+
+      def source_line(uri, line, sources)
+        return nil unless uri
+
+        lines = sources.fetch(uri) do
+          document = @documents.fetch(uri)
+          source = document&.text
+          unless source
+            path = @workspace.path_for_uri(uri)
+            source = File.read(path) if path && File.file?(path)
+          end
+          sources[uri] = source&.lines(chomp: true)
+        end
+        lines&.[](line)
+      rescue SystemCallError
+        sources[uri] = nil
+        nil
       end
 
       def publish_diagnostics(document)

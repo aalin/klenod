@@ -94,6 +94,28 @@ class Klenod::LSP::Server::Test < Minitest::Test
     end
   end
 
+  def test_utf16_positions_are_converted_at_the_protocol_boundary
+    uri = fixture_uri("styles/home.css")
+    source = "/* 😀 */ @import \"./base.css\";\n"
+    start_character = source.split("./base.css", 2).first.encode(Encoding::UTF_16LE).bytesize / 2
+
+    with_server do |client|
+      client.request("initialize", capabilities: {general: {positionEncodings: ["utf-16"]}})
+      client.notify("textDocument/didOpen", textDocument: {uri: uri, languageId: "css", version: 1, text: source})
+      client.read
+
+      links = client.request("textDocument/documentLink", textDocument: {uri: uri}).fetch(:result)
+      assert_equal(start_character, links.dig(0, :range, :start, :character))
+
+      definition = client.request(
+        "textDocument/definition",
+        textDocument: {uri: uri},
+        position: {line: 0, character: start_character + 2}
+      ).fetch(:result)
+      assert_equal(fixture_uri("styles/base.css"), definition[:uri])
+    end
+  end
+
   def test_hover_returns_markdown_for_the_component_under_the_cursor
     with_server do |client|
       client.notify("textDocument/didOpen", textDocument: {uri: @page_uri, languageId: "haml", version: 1, text: @page_source})
