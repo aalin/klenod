@@ -2,6 +2,7 @@
 
 require_relative "../asset"
 require_relative "../hashing"
+require_relative "../load_result"
 require_relative "../plugin"
 require_relative "../transform_result"
 
@@ -20,6 +21,13 @@ module Klenod
             ".woff" => "font/woff",
             ".woff2" => "font/woff2"
           }.freeze
+
+          # Analysis never needs the bytes of a font, so the file is not read.
+          def load(module_id, context)
+            return nil unless context.analysis? && CONTENT_TYPES.key?(module_id.extname)
+
+            LoadResult.new("", Hashing.short(module_id.to_s), TransformResult.new("Default = nil\n", [], nil, [], [], {}))
+          end
 
           def transform(module_id, code, context)
             return super unless CONTENT_TYPES.key?(module_id.extname)

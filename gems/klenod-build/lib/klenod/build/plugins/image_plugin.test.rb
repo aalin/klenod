@@ -92,6 +92,28 @@ class Klenod::Build::Plugins::ImagePlugin::Test < Minitest::Test
     end
   end
 
+  def test_analysis_keeps_dimensions_without_variants_or_javascript_metadata
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.binwrite("#{dir}/images/logo.png", png_bytes(width: 2, height: 3))
+      File.write("#{dir}/entry.rb", "Logo = import(\"images/logo.png?width=320,640\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir, analysis: true)
+      context.collect("entry")
+      record = context.graph.records.values.find { |candidate| candidate.id.extname == ".png" }
+
+      assert_equal(1, record.assets.length)
+      assert_equal(2, record.assets.fetch(0).metadata[:width])
+      assert_equal(3, record.assets.fetch(0).metadata[:height])
+      assert_nil(record.metadata[:image_javascript_asset])
+      assert_includes(record.transformed_source, "ImageMetadata.new(")
+      assert_includes(record.transformed_source, "width: 2")
+      assert_equal(["#{record.id}:image_runtime"], record.dependencies.map(&:id))
+      assert_equal(Klenod::Build::Hashing.file_key("#{dir}/images/logo.png"), record.source_hash)
+      assert_empty(context.graph.mods)
+    end
+  end
+
   def test_non_javascript_image_import_does_not_emit_javascript_metadata_asset
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")

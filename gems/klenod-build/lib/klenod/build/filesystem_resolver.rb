@@ -15,6 +15,14 @@ module Klenod
         @root = Pathname.new(root).expand_path
         @extensions = extensions.freeze
         @path_prefix = path_prefix.to_s
+        @spelling_index = nil
+      end
+
+      # Forget the cached file listing behind did-you-mean suggestions. The
+      # owning resolver clears it whenever files change, so a suggestion never
+      # walks the source tree more than once between file events.
+      def clear_cache
+        @spelling_index = nil
       end
 
       def resolve(relative_path)
@@ -101,14 +109,21 @@ module Klenod
         []
       end
 
-      def spelling_corrections(relative_path)
-        aliases = spelling_aliases
-        matches =
-          DidYouMean::TreeSpellChecker
-            .new(dictionary: aliases.keys.sort, separator: "/")
-            .correct(relative_path)
+      SpellingIndex = Data.define(:aliases, :checker)
 
-        matches.flat_map { aliases.fetch(it) }.uniq.first(MAX_CORRECTIONS)
+      def spelling_corrections(relative_path)
+        index = spelling_index
+        matches = index.checker.correct(relative_path)
+
+        matches.flat_map { index.aliases.fetch(it) }.uniq.first(MAX_CORRECTIONS)
+      end
+
+      def spelling_index
+        @spelling_index ||=
+          begin
+            aliases = spelling_aliases
+            SpellingIndex.new(aliases, DidYouMean::TreeSpellChecker.new(dictionary: aliases.keys.sort, separator: "/"))
+          end
       end
 
       def spelling_aliases

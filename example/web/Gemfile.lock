@@ -20,6 +20,13 @@ PATH
       tsort (~> 0.2.0)
 
 PATH
+  remote: ../../gems/klenod-lsp
+  specs:
+    klenod-lsp (0.0.14)
+      klenod-build (= 0.0.14)
+      language_server-protocol (~> 3.17)
+
+PATH
   remote: ../../gems/klenod-plugin-css
   specs:
     klenod-plugin-css (0.0.14)
@@ -127,6 +134,7 @@ GEM
       rexml (>= 3.4.4)
     kramdown-parser-gfm (1.1.0)
       kramdown (~> 2.0)
+    language_server-protocol (3.17.0.6)
     listen (3.10.0)
       logger
       rb-fsevent (~> 0.10, >= 0.10.3)
@@ -209,6 +217,7 @@ DEPENDENCIES
   http-accept (~> 2.2)
   klenod!
   klenod-build!
+  klenod-lsp!
   klenod-plugin-css!
   klenod-plugin-javascript!
   klenod-rack!
@@ -256,6 +265,7 @@ CHECKSUMS
   json (2.21.2) sha256=1f1d3b7cf2b3ba1a69beca0bb6db13d5438b80bff3cd54cdaaa620b9b07c1c6a
   klenod (0.0.14)
   klenod-build (0.0.14)
+  klenod-lsp (0.0.14)
   klenod-plugin-css (0.0.14)
   klenod-plugin-javascript (0.0.14)
   klenod-rack (0.0.14)
@@ -263,6 +273,7 @@ CHECKSUMS
   klenod-test (0.0.14)
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
   kramdown-parser-gfm (1.1.0) sha256=fb39745516427d2988543bf01fc4cf0ab1149476382393e0e9c48592f6581729
+  language_server-protocol (3.17.0.6) sha256=5ef2c0c138f8267e1bc631d3328347d354f96724b0af22f2c79516120443b7f0
   listen (3.10.0) sha256=c6e182db62143aeccc2e1960033bebe7445309c7272061979bb098d03760c9d2
   localhost (1.8.0) sha256=df7ea825b4f64949c588c17efac86bc47ddc4460d723778abe933b71759b2701
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203

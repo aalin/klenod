@@ -63,6 +63,44 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
     end
   end
 
+  def test_analysis_never_fetches_and_keeps_importers_transforming
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n.title { color: red; }\n")
+      plugin = Klenod::Build::Plugins::GoogleFontsPlugin.new(fetcher: ->(url) { raise "unexpected fetch of #{url}" })
+
+      context = context_with(dir, plugin, analysis: true)
+      record = context.collect("styles/home.css").record
+      google_record = context.graph.records.values.find { |candidate| candidate.metadata[:google_fonts_url] }
+      google_css_asset = google_record.assets.find { |asset| asset.metadata[:google_fonts] && asset.metadata[:type] == :css }
+
+      assert_equal(1, google_record.assets.length)
+      assert_equal("", google_css_asset.bytes)
+      assert_includes(google_record.transformed_source, "CSS_ASSET_PATH = \"")
+      assert(record.assets.any? { |asset| asset.metadata[:type] == :css })
+    end
+  end
+
+  def test_analysis_uses_a_warm_css_cache_without_fetching
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/home.css", "@import url(\"#{GOOGLE_CSS_URL}\");\n")
+      cache_path = File.join(dir, "cache")
+      responses = {GOOGLE_CSS_URL => "@font-face { font-family: \"Source Sans 3\"; src: url(\"#{FONT_URL}\") format(\"woff2\"); }\n", FONT_URL => "font bytes"}
+      warm = Klenod::Build::Plugins::GoogleFontsPlugin.new(fetcher: ->(url) { responses.fetch(url) }, cache_path: cache_path)
+      context_with(dir, warm).collect("styles/home.css")
+
+      plugin = Klenod::Build::Plugins::GoogleFontsPlugin.new(fetcher: ->(url) { raise "unexpected fetch of #{url}" }, cache_path: cache_path)
+      context = context_with(dir, plugin, analysis: true)
+      context.collect("styles/home.css")
+      google_record = context.graph.records.values.find { |candidate| candidate.metadata[:google_fonts_url] }
+      css_asset = google_record.assets.find { |asset| asset.metadata[:type] == :css }
+
+      assert_includes(css_asset.bytes, "Source Sans 3")
+      assert(google_record.assets.any? { |asset| asset.metadata[:type] == :font })
+    end
+  end
+
   def test_fallback_calculator_matches_next_style_roboto_metrics
     metrics = Klenod::Build::Plugins::GoogleFontsPlugin::FontMetrics.new
     calculator = Klenod::Build::Plugins::GoogleFontsPlugin::FallbackCalculator.new(metrics)
@@ -433,10 +471,11 @@ class Klenod::Build::Plugins::GoogleFontsPlugin::Test < Minitest::Test
     end
   end
 
-  def context_with(dir, plugin, mode: :development)
+  def context_with(dir, plugin, mode: :development, analysis: false)
     Klenod::Build::Context.new(
       source_dir: dir,
       mode: mode,
+      analysis: analysis,
       plugins: [
         plugin,
         Klenod::Build::Plugins::CSSPlugin.new

@@ -136,6 +136,8 @@ module Klenod
             end
           rescue RubyParseError => error
             raise ParseError.new(error, source: source, module_id: module_id)
+          rescue RubyImportRewriter::ParseError => error
+            raise ParseError.new(RubyParseError.new(error.message, line: error.line), source: source, module_id: module_id)
           ensure
             @profiler = previous_profiler
             @module_id = previous_module_id

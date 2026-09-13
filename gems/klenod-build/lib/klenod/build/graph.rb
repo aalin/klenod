@@ -71,9 +71,11 @@ module Klenod
         asset_generation_concurrency: AssetGenerationQueue::DEFAULT_CONCURRENCY,
         asset_download_concurrency: AssetGenerationQueue::DEFAULT_DOWNLOAD_CONCURRENCY,
         profiler: nil,
-        namespace: Module.new
+        namespace: Module.new,
+        analysis: false
       )
         @profiler = profiler || Profiler.new
+        @analysis = analysis
         @resolver = Resolver.new(source_dir: source_dir, profiler: @profiler)
         @plugins = plugins
         @mode = mode
@@ -90,6 +92,16 @@ module Klenod
         @virtual_metadata = {}
         @virtual_owners = {}
         @loading_tasks = {}
+        @source_overrides = {}
+        @dependents = {}
+      end
+
+      # Analysis mode collects the graph for tooling such as the language
+      # server. Plugins must keep the record shape but skip work whose result
+      # is never used there: network fetches, hashing whole files, compiling
+      # JavaScript, and building asset bytes.
+      def analysis?
+        @analysis
       end
 
       def load(specifier)
@@ -211,8 +223,87 @@ module Klenod
         end
       end
 
+      # Editor buffers take precedence over files on disk for the given
+      # module until cleared. The next collection re-reads and, when the text
+      # changed, re-transforms the module. A caller that already transformed
+      # the same text can pass that `transform` so collection reuses it.
+      def override_source(module_id, source, transform: nil)
+        @source_overrides[module_id] = LoadResult.new(source, nil, transform)
+      end
+
+      def clear_source_override(module_id)
+        @source_overrides.delete(module_id)
+      end
+
+      def source_override?(module_id)
+        @source_overrides.key?(module_id)
+      end
+
+      # Module ids whose collected record imports the given module, eagerly
+      # or lazily.
+      def dependents(module_id)
+        @dependents.fetch(module_id) { [] }.to_a
+      end
+
+      def store_record(module_id, record)
+        previous = @records[module_id]
+        previous&.resolved_dependencies&.each { |dependency| @dependents[dependency.module_id]&.delete(module_id) }
+        record.resolved_dependencies.each { |dependency| (@dependents[dependency.module_id] ||= Set.new) << module_id }
+        @records[module_id] = record
+      end
+
+      def remove_record(module_id)
+        record = @records.delete(module_id)
+        record&.resolved_dependencies&.each { |dependency| @dependents[dependency.module_id]&.delete(module_id) }
+        record
+      end
+
+      # Collect everything reachable from a collected module through eager
+      # and lazy dependencies. Each module the walk collects itself is
+      # yielded with `nil`; a module that fails to collect is yielded with
+      # its error and the walk continues past it.
+      def collect_reachable(module_id)
+        queue = @records.fetch(module_id).resolved_dependencies.dup
+        seen = Set.new([module_id])
+        index = 0
+
+        while index < queue.length
+          dependency_id = queue[index].module_id
+          index += 1
+          next unless seen.add?(dependency_id)
+
+          record = @records[dependency_id]
+          unless record
+            begin
+              record = collect_module(dependency_id)
+            rescue StandardError, ScriptError => error
+              yield dependency_id, error if block_given?
+              next
+            end
+            yield dependency_id, nil if block_given?
+          end
+          queue.concat(record.resolved_dependencies)
+        end
+      end
+
+      # Transform source for a module without collecting it. Editor tooling
+      # such as the language server uses this to analyze unsaved text with the
+      # same plugins as a build, without adding a record or evaluating anything.
+      def transform_source(module_id, source)
+        transform = transform_module_source(module_id, source)
+        assert_supported_transform!(module_id, source, transform)
+        transform
+      end
+
       def absolute_path(module_id)
         @resolver.absolute_path(module_id)
+      end
+
+      # Forget resolved paths so files created, renamed, or deleted outside
+      # a build invalidation are looked up again. Invalidation does this
+      # itself; tooling that only transforms must ask for it.
+      def clear_resolver_cache
+        @resolver.clear_cache
       end
 
       def source_dir
@@ -235,7 +326,7 @@ module Klenod
           @virtual_sources.delete(module_id)
           @virtual_metadata.delete(module_id)
           @virtual_owners.delete(module_id)
-          @records.delete(module_id)
+          remove_record(module_id)
           @mods.delete(module_id)
         end
       end
@@ -290,7 +381,7 @@ module Klenod
           mod = instantiate_module(module_id, transform, resolved_dependencies, dependency_records, cached, source)
           record = build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, mod)
 
-          @records[module_id] = record
+          store_record(module_id, record)
           @mods[module_id] = mod
           record
         end
@@ -345,7 +436,7 @@ module Klenod
           transformed_hash = Hashing.hexdigest(transform.code)
           record = build_module_record(module_id, source, source_hash, transformed_hash, transform, resolved_dependencies, cached)
 
-          @records[module_id] = record
+          store_record(module_id, record)
           @mods.delete(module_id)
           @profiler.progress(:collect_module, module_id: record.id.to_s, total_records: @records.length)
           record
@@ -851,6 +942,11 @@ module Klenod
       end
 
       def load_source(module_id)
+        if (override = @source_overrides[module_id])
+          @profiler.count(:source_override_hit)
+          return override
+        end
+
         @plugins.each do |plugin|
           @profiler.count(:plugin_load_check)
           loaded =

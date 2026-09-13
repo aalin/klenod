@@ -34,6 +34,27 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
     end
   end
 
+  def test_analysis_keeps_the_resolved_class_map_without_source_maps
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write("#{dir}/styles/base.css", ".base { color: red; }\n")
+      File.write("#{dir}/styles/home.css", "@import \"./base.css\";\n.title { composes: base from \"./base.css\"; font-weight: bold; }\n")
+      File.write("#{dir}/pages/home.rb", "Styles = import(\"../styles/home.css\")\n") if FileUtils.mkdir_p("#{dir}/pages")
+
+      context = context_for(dir, analysis: true)
+      context.collect("pages/home")
+      css_record = context.graph.records.fetch(Klenod::Build::ModuleId.new("styles/home.css", nil))
+      classes = css_record.metadata.fetch(:css_classes)
+
+      assert_match(/title/, classes.fetch(:title))
+      assert_match(/base/, classes.fetch(:title))
+      assert_equal([:css], css_record.assets.map { |asset| asset.metadata[:type] })
+      assert_includes(css_record.assets.fetch(0).bytes, "font-weight: bold")
+      assert_includes(css_record.transformed_source, "CSS_ASSET_PATH = \"")
+      assert_empty(context.graph.mods)
+    end
+  end
+
   def test_css_import_resolution_errors_include_the_source_location
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/styles")
@@ -757,10 +778,11 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
 
   private
 
-  def context_for(dir, mode: :development, base: "/assets/", css_plugin: Klenod::Build::Plugins::CSSPlugin.new)
+  def context_for(dir, mode: :development, base: "/assets/", css_plugin: Klenod::Build::Plugins::CSSPlugin.new, analysis: false)
     Klenod::Build::Context.new(
       source_dir: dir,
       mode: mode,
+      analysis: analysis,
       base: base,
       plugins: [
         *Klenod::Build::Context.default_plugins,

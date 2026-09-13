@@ -163,7 +163,9 @@ module Klenod
             return nil unless google_fonts_module?(module_id)
 
             url = google_fonts_url_for(module_id)
-            css = fetch_css(url)
+            css = context.analysis? ? cached_css(url) : fetch_css(url)
+            return analysis_load(module_id, url, context) unless css
+
             font_faces = FontFaceParser.new(css).font_faces_by_url
             font_assets = {}
             rewritten_css =
@@ -218,6 +220,22 @@ module Klenod
             @fetcher.call(url).b
           rescue => error
             raise Error, "Could not download Google Fonts asset #{url.inspect}: #{error.message}"
+          end
+
+          # Analysis never touches the network: a warm cache is used as is,
+          # and a cold one yields an empty stylesheet that keeps importers
+          # transforming.
+          def cached_css(url)
+            return nil unless @css_cache && !@refresh_cache
+
+            @css_cache.read(url)
+          end
+
+          def analysis_load(module_id, url, context)
+            css_asset = css_asset(module_id, url, "", [])
+            css_asset.url = context.asset_url(css_asset.output_path)
+            @assets_by_module_id[module_id] = [css_asset]
+            ruby_module_source(css_asset.url)
           end
 
           def fetch_css(url)

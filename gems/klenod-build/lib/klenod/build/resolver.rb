@@ -64,6 +64,7 @@ module Klenod
       def clear_cache
         @resolved_module_ids.clear
         @absolute_paths.clear
+        @filesystem_resolver.clear_cache
       end
 
       private

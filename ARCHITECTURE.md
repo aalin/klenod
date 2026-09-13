@@ -35,6 +35,10 @@ Runtime must not require build plugins or plugin-only dependencies such as RMagi
 
 The `klenod` meta-gem depends on runtime, build, and test packages and composes their commands under the `klenod` executable. Production bundles still require only `klenod-runtime`.
 
+`klenod-lsp` owns the Language Server Protocol server behind `klenod lsp`. The meta gem does not depend on it; `klenod lsp` explains what to install when the gem is missing. It depends on `klenod-build`, transforms open editor documents with the configured plugins for diagnostics, and keeps a module graph collected in analysis mode for cross-file features such as references and import-preserving renames. It never evaluates application code or watches files itself; file changes reported by the editor go through the build's invalidation. Frameworks start `Klenod::LSP::Server` with their own build context and entrypoints.
+
+`Context.new(..., analysis: true)` collects a graph for tooling. Plugins see `context.analysis?` and must keep the record shape while skipping network fetches, whole-file hashing, compilation, and asset bytes. Analysis records are not suitable for bundling.
+
 `klenod-rack` owns Rack-compatible asset serving helpers and depends only on `klenod-runtime`.
 
 Optional integrations live outside the core graph/runtime boundary.

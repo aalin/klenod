@@ -39,11 +39,11 @@ module Klenod
             raise error.with_resolution_context(dependency: dependency, importer_id: dependency.importer_id)
           end
 
-          def load(module_id, _context)
+          def load(module_id, context)
             return nil unless module_id.scheme == :gem
 
             path = path_for(module_id)
-            LoadResult.new(path.binread, Hashing.file_hexdigest(path), nil)
+            LoadResult.new(path.binread, context.analysis? ? Hashing.file_key(path) : Hashing.file_hexdigest(path), nil)
           end
 
           private

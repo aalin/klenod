@@ -91,6 +91,8 @@ module Klenod
             return nil unless EXTENSIONS.include?(module_id.extname)
 
             source_path = context.absolute_path(module_id)
+            return analysis_load(module_id, source_path, context) if context.analysis?
+
             source_hash = Hashing.file_hexdigest(source_path)
             dimensions = image_dimensions(source_path, module_id)
             image_options = image_options_for(module_id)
@@ -156,6 +158,38 @@ module Klenod
             Dimensions.new(size.width, size.height, size.format)
           rescue ImageSize::FormatError => error
             raise DecodeError.new(error, module_id: module_id)
+          end
+
+          # Analysis keeps the module shape (dimensions, content type, a
+          # single asset reference) without hashing the file, decoding it, or
+          # describing variants nobody will generate.
+          def analysis_load(module_id, source_path, context)
+            source_hash = Hashing.file_key(source_path)
+            dimensions = image_dimensions(source_path, module_id)
+            asset = static_image_asset(module_id, source_path, source_hash, dimensions)
+            asset.url = context.asset_url(asset.output_path)
+            image_runtime_dependency = image_runtime_dependency_for(module_id)
+            transform =
+              TransformResult.new(
+                image_module_source(module_id, [asset], image_runtime_dependency, context, placeholder: nil),
+                [image_runtime_dependency],
+                nil,
+                [asset],
+                [],
+                {}
+              )
+
+            LoadResult.new(image_source(module_id), source_hash, transform)
+          end
+
+          def image_runtime_dependency_for(module_id)
+            Dependency
+              .create(
+                specifier: IMAGE_RUNTIME_SPECIFIER,
+                importer_id: module_id,
+                kind: :image_runtime
+              )
+              .with(id: "#{module_id}:image_runtime")
           end
 
           def default_image_asset(module_id, source_path, source_hash, dimensions, image_options, queue)

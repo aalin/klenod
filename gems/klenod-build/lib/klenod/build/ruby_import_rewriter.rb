@@ -39,6 +39,18 @@ module Klenod
       IMPORT_SOURCE_PATTERN = /(?<![A-Za-z0-9_])(?:import|lazy_import|import_glob)\s*(?:\(|["'])/
       FAST_LITERAL_IMPORT_PATTERN = /(?<![A-Za-z0-9_])(import|lazy_import)\s*\(\s*("(?:\\.|[^"\\#])*")\s*\)/
 
+      # Ruby that does not parse, reported at its line in the enclosing
+      # source. Haml wraps it into its own parse error with a source excerpt.
+      class ParseError < Klenod::Build::Error
+        attr_reader :line, :column
+
+        def initialize(message, line:, column:)
+          @line = line
+          @column = column
+          super(message)
+        end
+      end
+
       def initialize(module_id:, kind:, source_dir: nil, profiler: nil, dependency_id_offset: 0, source_line_offset: 0, source_column_offset: 0)
         @module_id = module_id
         @kind = kind
@@ -54,7 +66,12 @@ module Klenod
         fast_result = rewrite_literal_import_calls(code)
         return fast_result if fast_result
 
-        ast = measure(:ruby_import_parse) { SyntaxTree.parse(code) }
+        ast =
+          begin
+            measure(:ruby_import_parse) { SyntaxTree.parse(code) }
+          rescue SyntaxTree::Parser::ParseError => error
+            raise ParseError.new(error.message, line: error.lineno + @source_line_offset, column: error.column + 1 + @source_column_offset)
+          end
         calls = measure(:ruby_import_scan) { import_calls(ast) }
         expanded = expand_import_calls(calls)
 

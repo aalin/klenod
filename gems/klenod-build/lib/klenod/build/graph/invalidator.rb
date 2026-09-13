@@ -24,7 +24,7 @@ module Klenod
           errors = []
 
           removed_module_ids.each do |module_id|
-            records.delete(module_id)
+            graph.remove_record(module_id)
             mods.delete(module_id)
           end
 
@@ -189,9 +189,7 @@ module Klenod
         end
 
         def direct_dependents(module_id)
-          records.filter_map do |candidate_id, record|
-            candidate_id if record.resolved_dependencies.any? { |dependency| dependency.module_id == module_id }
-          end
+          graph.dependents(module_id)
         end
 
         def mark_module_failed(module_id, error)
@@ -206,7 +204,8 @@ module Klenod
           source_hash = loaded_source.source_hash || Hashing.hexdigest(source)
           version = cached ? cached.version + 1 : 0
 
-          records[module_id] =
+          graph.store_record(
+            module_id,
             ModuleRecord.new(
               module_id,
               source_hash,
@@ -222,6 +221,7 @@ module Klenod
               version,
               :failed
             )
+          )
           mods[module_id] = FailedModule.new(error)
         end
 

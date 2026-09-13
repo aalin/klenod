@@ -108,6 +108,7 @@ module Klenod
             css_result = result.metadata[:css_result]
             javascript_only = result.metadata[:css_javascript_only]
             return result unless css_result || javascript_only
+            return analysis_finalize(module_id, result, resolved_dependencies, dependency_records, context) if context.analysis?
 
             if javascript_only
               javascript_css_edit = finalized_css_edit(
@@ -409,6 +410,38 @@ module Klenod
 
             edited = SourceMap::Editor.new(css_edit.code, css_edit.source_map).apply(edits)
             CssEdit.new(edited.code, edited.source_map)
+          end
+
+          # Analysis keeps the resolved class map and an asset reference for
+          # importers, but skips import rewriting and source maps.
+          def analysis_finalize(module_id, result, resolved_dependencies, dependency_records, context)
+            if result.metadata[:css_javascript_only]
+              asset = analysis_css_asset(module_id, result.metadata.fetch(:css_javascript_result).code, :css_javascript_stylesheet, {})
+              asset.url = context.asset_url(asset.output_path)
+
+              return result.with(
+                code: "Default = #{asset.url.inspect}\n",
+                assets: [asset, *result.assets],
+                metadata: result.metadata.merge(css_javascript_stylesheet_path: asset.url)
+              )
+            end
+
+            css_result = result.metadata.fetch(:css_result)
+            classes = finalized_css_selectors(css_result, resolved_dependencies, dependency_records)
+            asset = analysis_css_asset(module_id, css_result.code, :css, {classes: classes, variables: css_result.variables})
+            asset.url = context.asset_url(asset.output_path)
+
+            result.with(
+              code: ruby_module_source(classes, asset.url, styles_dependency: result.dependencies.fetch(0)),
+              assets: [asset, *result.assets],
+              metadata: result.metadata.merge(css_asset_path: asset.url, css_classes: classes)
+            )
+          end
+
+          def analysis_css_asset(module_id, css, type, metadata)
+            hash = Hashing.short(css)
+            suffix = (type == :css) ? "" : ".javascript"
+            Asset.new(module_id.path, hash, "/#{asset_name(module_id)}#{suffix}.#{hash}.css", nil, css, "text/css", metadata.merge(type: type))
           end
 
           def css_asset_pair(module_id, css_edit, type, metadata, context)

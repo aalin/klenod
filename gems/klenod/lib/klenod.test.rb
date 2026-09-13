@@ -29,6 +29,7 @@ class Klenod::MetaGemTest < Minitest::Test
     assert_includes(dependency_names, "klenod-build")
     assert_includes(dependency_names, "klenod-runtime")
     assert_includes(dependency_names, "klenod-test")
+    refute_includes(dependency_names, "klenod-lsp")
     refute_includes(dependency_names, "klenod-rack")
     assert_equal("= #{Klenod::VERSION}", dependency_requirements.fetch("klenod-build"))
     assert_equal("= #{Klenod::VERSION}", dependency_requirements.fetch("klenod-runtime"))
@@ -44,6 +45,7 @@ class Klenod::MetaGemTest < Minitest::Test
       Gem::Specification.load(File.expand_path("../klenod.gemspec", __dir__)),
       Gem::Specification.load(File.expand_path("../../klenod-build/klenod-build.gemspec", __dir__)),
       Gem::Specification.load(File.expand_path("../../klenod-test/klenod-test.gemspec", __dir__)),
+      Gem::Specification.load(File.expand_path("../../klenod-lsp/klenod-lsp.gemspec", __dir__)),
       Gem::Specification.load(File.expand_path("../../klenod-rack/klenod-rack.gemspec", __dir__)),
       Gem::Specification.load(File.expand_path("../../klenod-runtime/klenod-runtime.gemspec", __dir__))
     ]

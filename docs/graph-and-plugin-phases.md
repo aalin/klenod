@@ -20,6 +20,10 @@ These methods evaluate modules when necessary:
 
 Build mode only needs collected records. It serializes these records as runtime module specifications. Production evaluates the modules through `Klenod::Runtime::Bundle`.
 
+### Analysis Mode
+
+`Klenod::Build::Context.new(..., analysis: true)` collects the graph for tooling such as the language server. Plugins see it as `context.analysis?`. The records must keep their shape, meaning module ids, dependencies, the `Default` export, and the metadata editors read, but plugins must skip work whose result nothing consumes: network fetches, hashing whole files, compiling JavaScript, and building asset bytes. The built-in plugins key images, gem files, and npm files by file stat instead of a digest, never fetch Google Fonts, scan JavaScript imports without compiling, skip font bytes, and keep CSS class maps without source maps. Analysis records are not suitable for bundling.
+
 ## Plugin Hook Phases
 
 Plugin hooks run during different phases:

@@ -23,4 +23,20 @@ class Klenod::Build::Plugins::StaticAssetPlugin::Test < Minitest::Test
       assert_equal("font bytes", asset.bytes)
     end
   end
+
+  def test_analysis_does_not_read_or_emit_the_font
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/fonts")
+      File.binwrite("#{dir}/fonts/example.ttf", "font bytes")
+      File.write("#{dir}/entry.rb", "Font = import(\"fonts/example.ttf\")\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir, analysis: true)
+      context.collect("entry")
+      record = context.graph.records.fetch(Klenod::Build::ModuleId.new("fonts/example.ttf", nil))
+
+      assert_equal("", record.source)
+      assert_equal("Default = nil\n", record.transformed_source)
+      assert_empty(record.assets)
+    end
+  end
 end
