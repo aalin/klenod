@@ -168,6 +168,14 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
     end
   end
 
+  def test_markdown_keeps_soft_line_breaks_as_whitespace
+    with_context("page.md" => "one\ntwo\nthree\n") do |context|
+      component = context.exports(context.evaluate("page.md"))::Default
+
+      assert_equal([:p, "one\ntwo\nthree"], component.new.render)
+    end
+  end
+
   def test_runtime_bundle_preserves_markdown_imports_without_build_plugins
     Dir.mktmpdir do |dir|
       File.write("#{dir}/page.md", "# Hello\n")

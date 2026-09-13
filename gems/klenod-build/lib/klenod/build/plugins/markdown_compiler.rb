@@ -22,7 +22,7 @@ module Klenod
 
         def compile(source, interpolate: false)
           source = protect_escaped_interpolation(source) if interpolate
-          document = Kramdown::Document.new(source, input: "GFM")
+          document = Kramdown::Document.new(source, input: "GFM", hard_wrap: false)
           compile_children(document.root.children, interpolate: interpolate)
         end
 
