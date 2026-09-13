@@ -21,6 +21,12 @@ module Klenod
 
         BINDING = /\A\s*(?<name>[A-Z][A-Za-z0-9_]*)\s*=\s*(?:lazy_)?import\(\s*(?<quote>["'])(?<specifier>[^"']*)\k<quote>/
         PROP_TOKEN = /\$(?<name>[a-z]\w*|\*)/
+        SLOT_TOKEN = /\$children\[:(?<name>\w+)\]/
+
+        # What a Haml component reads through the `$name` mapping: the prop
+        # names, whether it takes every prop with `$*`, and the named slots it
+        # renders through `$children[:name]`.
+        ComponentProps = Data.define(:names, :splat, :slots)
         SKIPPED_FILE = /\A\.|\.test\.rb\z/
 
         # Something in a document that names another module. `resolve_kind`
@@ -80,7 +86,11 @@ module Klenod
           lines << "`#{path.delete_prefix("#{workspace.source_dir}/")}`" if path
 
           props = props_for(path, workspace)
-          lines << "Props: #{props.map { |prop| "`#{prop}`" }.join(", ")}" unless props.empty?
+          if props
+            names = props.names + (props.splat ? ["*"] : [])
+            lines << "Props: #{names.map { |name| "`#{name}`" }.join(", ")}" unless names.empty?
+            lines << "Slots: #{props.slots.map { |slot| "`#{slot}`" }.join(", ")}" unless props.slots.empty?
+          end
 
           Interface::Hover.new(
             contents: Interface::MarkupContent.new(kind: Constant::MarkupKind::MARKDOWN, value: lines.join("\n\n")),
@@ -91,12 +101,22 @@ module Klenod
         # Only lowercase `$name` globals are rewritten to prop reads, and only
         # when the Haml plugin maps global variables at all.
         def props_for(path, workspace)
-          return [] unless path && File.extname(path) == ".haml"
-          return [] unless workspace.haml_variables[:global]
+          return nil unless path && File.extname(path) == ".haml"
 
-          File.read(path).scan(PROP_TOKEN).flatten.uniq.sort.map { |name| "$#{name}" }
+          component_props(File.read(path), workspace)
         rescue SystemCallError
-          []
+          nil
+        end
+
+        def component_props(source, workspace)
+          return nil unless workspace.haml_variables[:global]
+
+          tokens = source.scan(PROP_TOKEN).flatten
+          ComponentProps.new(
+            names: tokens.reject { |name| name == "*" }.uniq.sort,
+            splat: tokens.include?("*"),
+            slots: source.scan(SLOT_TOKEN).flatten.uniq.sort
+          )
         end
 
         # Completion items for the path being typed inside an import literal,

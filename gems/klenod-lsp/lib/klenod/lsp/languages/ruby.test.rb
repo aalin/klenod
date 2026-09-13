@@ -53,7 +53,7 @@ class Klenod::LSP::Languages::Ruby::Test < Minitest::Test
 
     assert_equal(fixture_uri("components/Details.haml"), location.uri)
     assert_includes(hover.contents.value, "**/components/Details.haml** · `app:/components/Details.haml`")
-    assert_includes(hover.contents.value, "Props: `$summary`")
+    assert_includes(hover.contents.value, "Props: `children`, `summary`")
     assert_nil(@language.definition(analysis(@entry_source), position(0, 0), @workspace))
   end
 

@@ -6,7 +6,8 @@ Current support covers Haml modules and the `import("...")` literals of Ruby mod
 
 - Diagnostics: Haml syntax errors, Ruby syntax errors inside Haml, syntax errors in the generated component Ruby, and unresolved imports with the same "did you mean" suggestions the build prints.
 - Go to definition: `import("...")` literals and `%Component` tags jump to the imported file. Component tags are followed through the constant bound in the leading `:ruby` filter, such as `Details = import("/components/Details")`.
-- Hover: the same targets show their module id and path. Haml components also list the `$name` props they read when the Haml plugin maps global variables to props.
+- Hover: the same targets show their module id and path. Haml components also list the props they read through the `$name` mapping and the named slots they render through `$children[:name]`.
+- Prop checks: the keys a `%Component` tag passes, written out as `%Foo(bar="1" open){ baz: 2 }`, are checked against the props the component reads, with a spelling suggestion. Tags with a splat, and components that read every prop with `$*` or none at all, are left alone.
 - Completion: `%` offers the components bound by imports in the file, and the string inside `import("...")` offers directories and files under the source directory, relative to the importing module or to the source root for leading-slash paths.
 - Quick fixes: an unresolved import offers the build's own suggestions, such as a corrected casing or a close filename, as code actions that replace the literal.
 - Document links: every resolvable `import("...")` literal is a clickable link to its file.

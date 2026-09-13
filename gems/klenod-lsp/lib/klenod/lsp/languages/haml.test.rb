@@ -258,7 +258,8 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_equal("markdown", hover.contents.kind)
     assert_includes(hover.contents.value, "**Details** · `app:/components/Details.haml`")
     assert_includes(hover.contents.value, "`components/Details.haml`")
-    assert_includes(hover.contents.value, "Props: `$summary`")
+    assert_includes(hover.contents.value, "Props: `children`, `summary`")
+    assert_includes(hover.contents.value, "Slots: `footer`")
     assert_equal(3, hover.range.start.character)
     assert_equal(10, hover.range.end.character)
   end

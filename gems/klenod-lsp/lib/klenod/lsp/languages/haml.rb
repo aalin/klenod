@@ -6,6 +6,7 @@ require_relative "../text"
 require_relative "imports"
 require_relative "haml/classes"
 require_relative "haml/completion"
+require_relative "haml/props"
 require_relative "haml/rename"
 
 module Klenod
@@ -23,6 +24,7 @@ module Klenod
         def diagnostics(analysis, workspace = nil, index = nil)
           diagnostics = Diagnostics.for_analysis(analysis)
           diagnostics.concat(Classes.diagnostics(analysis, workspace, index)) if workspace && index
+          diagnostics.concat(Props.diagnostics(analysis, workspace, index)) if workspace && index
           diagnostics.concat(unused_binding_diagnostics(analysis))
         end
 

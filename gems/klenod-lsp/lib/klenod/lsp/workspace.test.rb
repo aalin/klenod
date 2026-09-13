@@ -32,6 +32,7 @@ class Klenod::LSP::Workspace::Test < Minitest::Test
       File.write("#{dir}/klenod/components/Button.rb", "Default = 1\n")
       spec = Struct.new(:full_gem_path).new(dir)
       original = Gem::Specification.method(:find_by_name)
+      Gem::Specification.singleton_class.send(:remove_method, :find_by_name)
       Gem::Specification.define_singleton_method(:find_by_name) { |name, *rest| (name == "klenod-ui") ? spec : original.call(name, *rest) }
 
       begin
@@ -42,6 +43,7 @@ class Klenod::LSP::Workspace::Test < Minitest::Test
         assert_equal(workspace.uri_for_path("#{dir}/klenod/components/Button.rb"), workspace.uri_for_module_id(module_id))
         assert_nil(workspace.path_for_module_id(Klenod::Build::ModuleId.new("gem://klenod-ui/components/Missing.rb")))
       ensure
+        Gem::Specification.singleton_class.send(:remove_method, :find_by_name)
         Gem::Specification.define_singleton_method(:find_by_name, original)
       end
     end
