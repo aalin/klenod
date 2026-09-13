@@ -30,6 +30,27 @@ class Klenod::LSP::GraphIndex::Test < Minitest::Test
     end
   end
 
+  class SerialIndex < Klenod::LSP::GraphIndex
+    attr_reader :maximum_active_collections
+
+    def initialize(...)
+      super
+      @active_collections = 0
+      @maximum_active_collections = 0
+    end
+
+    private
+
+    def collect_root(...)
+      @active_collections += 1
+      @maximum_active_collections = [@maximum_active_collections, @active_collections].max
+      sleep(0.001)
+      super
+    ensure
+      @active_collections -= 1
+    end
+  end
+
   def test_start_collects_entrypoints_source_files_and_lazy_dependencies
     with_index(entrypoints: ["/entry.rb"]) do |index, _workspace|
       progress = Progress.new
@@ -67,6 +88,23 @@ class Klenod::LSP::GraphIndex::Test < Minitest::Test
         assert_includes(affected, "app:/missing.rb")
         assert(index.records.key?(Klenod::Build::ModuleId.new("app:/missing.rb")))
       end
+    end
+  end
+
+  def test_start_serializes_with_on_demand_collection
+    Dir.mktmpdir do |dir|
+      FileUtils.cp_r("#{Klenod::LSP::TestSupport::FIXTURE_SOURCE_DIR}/.", dir)
+      workspace = fixture_workspace(source_dir: dir)
+      index = SerialIndex.new(workspace: workspace, logger: Logger.new(StringIO.new))
+
+      Sync do |task|
+        index.start(task)
+        requested = task.async { index.ensure_collected(module_id("pages/Page.haml"), force: true) }
+        index.wait
+        requested.wait
+      end
+
+      assert_equal(1, index.maximum_active_collections)
     end
   end
 

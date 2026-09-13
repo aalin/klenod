@@ -40,7 +40,7 @@ module Klenod
             roots = root_module_ids
             progress&.begin(roots.length)
             roots.each_with_index do |module_id, index|
-              collect_root(module_id)
+              ensure_collected(module_id)
               progress&.report(index + 1, roots.length)
               task.yield
             end
