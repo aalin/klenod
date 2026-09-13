@@ -69,6 +69,24 @@ class Klenod::LSP::Languages::Haml::Props::Test < Minitest::Test
     end
   end
 
+  def test_component_props_only_include_executable_ruby
+    source = <<~HAML
+      :ruby
+        value = $filter_prop
+
+      -# $commented
+      %p Price is $plain_text
+      %div{ title: $attribute_prop }
+        = $printed_prop
+    HAML
+
+    props = Klenod::LSP::Languages::Imports.component_props(source, @workspace)
+
+    assert_equal(%w[attribute_prop filter_prop printed_prop], props.names)
+    refute_includes(props.names, "commented")
+    refute_includes(props.names, "plain_text")
+  end
+
   private
 
   def prop_diagnostics(source)

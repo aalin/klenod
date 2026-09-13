@@ -5,7 +5,7 @@ require "language_server-protocol"
 
 require_relative "../../text"
 require_relative "../imports"
-require_relative "rename"
+require_relative "ruby_regions"
 
 module Klenod
   module LSP
@@ -65,7 +65,7 @@ module Klenod
           # them unknowable.
           def explicit_keys(rest, line_index, offset)
             keys = []
-            Rename.attribute_regions(rest).each do |region_offset, region|
+            RubyRegions.attribute_regions(rest).each do |region_offset, region|
               return nil if region.start_with?("{") && region.match?(SPLAT)
 
               patterns = region.start_with?("(") ? [HTML_KEY] : HASH_KEYS

@@ -6,6 +6,7 @@ require "klenod/build/module_id"
 
 require_relative "../diagnostics"
 require_relative "../text"
+require_relative "haml/ruby_regions"
 require_relative "syntax"
 
 module Klenod
@@ -111,11 +112,17 @@ module Klenod
         def component_props(source, workspace)
           return nil unless workspace.haml_variables[:global]
 
-          tokens = source.scan(PROP_TOKEN).flatten
+          lines = source.lines(chomp: true)
+          tokens = []
+          slots = []
+          Haml::RubyRegions.each(source, lines) do |_line_index, _start_character, ruby_source|
+            tokens.concat(ruby_source.scan(PROP_TOKEN).flatten)
+            slots.concat(ruby_source.scan(SLOT_TOKEN).flatten)
+          end
           ComponentProps.new(
             names: tokens.reject { |name| name == "*" }.uniq.sort,
             splat: tokens.include?("*"),
-            slots: source.scan(SLOT_TOKEN).flatten.uniq.sort
+            slots: slots.uniq.sort
           )
         end
 
