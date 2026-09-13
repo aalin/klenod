@@ -9,6 +9,7 @@ require "shellwords"
 ROOT = File.expand_path("..", __dir__)
 VERSION_FILE = File.join(ROOT, "KLENOD_VERSION")
 VERSION_PATTERN = /\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\z/
+BUMP_LEVELS = %w[major minor patch].freeze
 VERSION_FILES = Dir.glob("gems/*/lib/**/version.rb", base: ROOT).sort.freeze
 GEMFILES = %w[
   Gemfile
@@ -42,12 +43,37 @@ def restore_files(originals)
   end
 end
 
-unless ARGV.length == 1 && VERSION_PATTERN.match?(ARGV.fetch(0))
-  abort "Usage: bin/bump-version VERSION\nVERSION must use the numeric MAJOR.MINOR.PATCH format."
+def bump_version(version, level)
+  major, minor, patch = version.split(".").map { Integer(it) }
+
+  case level
+  when "major" then "#{major + 1}.0.0"
+  when "minor" then "#{major}.#{minor + 1}.0"
+  when "patch" then "#{major}.#{minor}.#{patch + 1}"
+  end
 end
 
-new_version = ARGV.fetch(0)
+USAGE = <<~TEXT.chomp
+  Usage: bin/bump-version major|minor|patch
+         bin/bump-version VERSION
+
+  VERSION must use the numeric MAJOR.MINOR.PATCH format.
+TEXT
+
+abort USAGE unless ARGV.length == 1
+
+argument = ARGV.fetch(0)
 current_version = File.read(VERSION_FILE).strip
+
+new_version =
+  if BUMP_LEVELS.include?(argument)
+    bump_version(current_version, argument)
+  elsif VERSION_PATTERN.match?(argument)
+    argument
+  else
+    abort USAGE
+  end
+
 unless Gem::Version.new(new_version) > Gem::Version.new(current_version)
   abort "VERSION must be newer than #{current_version}."
 end

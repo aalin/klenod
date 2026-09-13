@@ -22,8 +22,10 @@ Use `release` as the environment name in each RubyGems.org publisher configurati
 Prepare the version bump from a clean worktree:
 
 ```sh
-bin/bump-version 0.1.0
+bin/bump-version patch   # or minor, major
 ```
+
+You can also pass an explicit version, such as `bin/bump-version 0.1.0`.
 
 The script updates `KLENOD_VERSION`, generated version constants, and the root
 and example lockfiles. It validates the result and prints the commands for
