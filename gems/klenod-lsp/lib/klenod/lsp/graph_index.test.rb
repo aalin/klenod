@@ -94,6 +94,27 @@ class Klenod::LSP::GraphIndex::Test < Minitest::Test
     end
   end
 
+  def test_forced_collection_follows_source_overrides_and_disk
+    with_index do |index, workspace|
+      id = module_id("pages/Page.haml")
+      disk_source = File.read(File.join(workspace.source_dir, "pages/Page.haml"))
+      buffer_source = disk_source.sub("/components/Details", "./LazyPage")
+
+      Sync do
+        index.ensure_collected(id)
+        workspace.context.graph.override_source(id, buffer_source)
+        index.ensure_collected(id, force: true)
+
+        assert_equal(buffer_source, index.record(id).source)
+
+        workspace.context.graph.clear_source_override(id)
+        index.ensure_collected(id, force: true)
+
+        assert_equal(disk_source, index.record(id).source)
+      end
+    end
+  end
+
   private
 
   def with_index(entrypoints: [])

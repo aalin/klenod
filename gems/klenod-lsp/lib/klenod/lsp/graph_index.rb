@@ -78,8 +78,8 @@ module Klenod
 
       # Collect one module and everything reachable from it, remembering
       # failures so they can be retried when files change.
-      def ensure_collected(module_id)
-        @semaphore.acquire { collect_root(module_id) }
+      def ensure_collected(module_id, force: false)
+        @semaphore.acquire { collect_root(module_id, force: force) }
       end
 
       # Apply file changes through the build's own invalidation, collect new

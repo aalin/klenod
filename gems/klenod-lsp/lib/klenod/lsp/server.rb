@@ -353,7 +353,7 @@ module Klenod
         document = @documents.open(uri: text_document[:uri], text: text_document[:text], version: text_document[:version])
         publish_diagnostics(document)
         overlay(document)
-        collect_document(document)
+        collect_document(document, force: true)
       end
 
       # Editors send a change per keystroke; diagnostics wait for a short
@@ -375,7 +375,7 @@ module Klenod
             overlay(document)
             task.sleep(COLLECTION_DEBOUNCE - DIAGNOSTICS_DEBOUNCE)
             @pending_collections.delete(document.uri)
-            @index.ensure_collected(document.module_id)
+            @index.ensure_collected(document.module_id, force: true)
           end
       end
 
@@ -387,7 +387,7 @@ module Klenod
 
         @documents.invalidate(document.uri)
         publish_diagnostics(document)
-        collect_document(document)
+        collect_document(document, force: true)
       end
 
       # The record follows disk again once the editor lets go of the buffer.
@@ -398,7 +398,7 @@ module Klenod
 
         @pending_collections.delete(uri)&.stop
         @workspace.context.graph.clear_source_override(document.module_id)
-        collect_document(document)
+        collect_document(document, force: true)
         notify("textDocument/publishDiagnostics", Interface::PublishDiagnosticsParams.new(uri: uri, diagnostics: []))
         publish_workspace_diagnostics
       end
@@ -414,11 +414,11 @@ module Klenod
         @workspace.context.graph.override_source(document.module_id, document.text, transform: transform)
       end
 
-      def collect_document(document)
+      def collect_document(document, force: false)
         return unless Languages.for(document)
 
         @pending_collections.delete(document.uri)&.stop
-        @index.ensure_collected(document.module_id)
+        @index.ensure_collected(document.module_id, force: force)
       end
 
       def handle_definition(message)
