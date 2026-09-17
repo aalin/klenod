@@ -97,7 +97,9 @@ module Klenod
 
             return nil unless module_id.scheme == :virtual && module_id == HAML_HELPER_MODULE_ID
 
-            LoadResult.new(haml_helper_source, nil, TransformResult.new(haml_helper_source, [], nil, [], [], {}))
+            # Loaded with a ready transform, so the Ruby plugin never scans it: declare
+            # the Default export it defines.
+            LoadResult.new(haml_helper_source, nil, TransformResult.new(haml_helper_source, [], nil, [], [], {ruby_constants: [:Default]}))
           end
 
           def transform(module_id, code, context)
@@ -136,7 +138,7 @@ module Klenod
                       specifier: "/markdown-components",
                       importer_id: module_id,
                       kind: :markdown_components,
-                      metadata: {optional: true}
+                      metadata: {optional: true, import_name: :Default}
                     )
                     .with(id: "#{module_id}:markdown_components")
                 dependencies << markdown_components_dependency
@@ -205,11 +207,11 @@ module Klenod
                 styles_source: styles_source,
                 translations_source: translations_source,
                 i18n_source: i18n_source_for(builder),
-                haml_helper_source: haml_helper_dependency && builder.constant_assignment("HamlHelper", "#{builder.import_call(haml_helper_dependency.id).source}::Default"),
+                haml_helper_source: haml_helper_dependency && builder.constant_assignment("HamlHelper", builder.import_call(haml_helper_dependency.id).source),
                 styleable: !style_dependencies.empty?,
                 profiler: context.profiler,
                 import_rewriter: import_rewriter,
-                markdown_components_source: markdown_components_dependency ? "__klenod_import__(#{markdown_components_dependency.id.inspect})::Default" : "{}",
+                markdown_components_source: markdown_components_dependency ? "__klenod_import__(#{markdown_components_dependency.id.inspect})" : "{}",
                 variables: @variables,
                 event_handler: @event_handler,
                 cache_static_subtrees: @cache_static_subtrees
@@ -246,17 +248,24 @@ module Klenod
           def import_value(resolved_dependency, record, context)
             styles_import = class_names_runtime_import_value(resolved_dependency, record, context)
             return styles_import if styles_import
-            return nil unless record.id.extname == ".haml"
+            return nil unless default_export?(record)
 
-            context.mods.fetch(record.id).const_get(:Exports)::Default
+            context.mods.fetch(record.id).const_get(:Exports).const_get(:Default, false)
           end
 
           def runtime_import_value(resolved_dependency, record, _context)
             styles_import = class_names_runtime_runtime_import_value(resolved_dependency, record)
             return styles_import if styles_import
-            return Runtime::DefaultImport.new(:Default) if record.id.extname == ".haml"
+            return Runtime::DefaultImport.new(:Default) if default_export?(record)
 
             super
+          end
+
+          # Components and the helper module both export Default. The helper is
+          # unwrapped here as well as by the Ruby plugin, so a context built
+          # without the Ruby plugin still renders.
+          def default_export?(record)
+            record.id.extname == ".haml" || record.id == HAML_HELPER_MODULE_ID
           end
 
           def invalidate_module_ids(paths, context)

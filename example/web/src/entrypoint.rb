@@ -9,7 +9,7 @@ ROUTE_TRANSLATIONS = {
 App = Example::Framework::RouterApp.new(
   root: Root,
   root_module_id: "app:/root.haml",
-  router: Router::Default,
+  router: Router,
   translations: ROUTE_TRANSLATIONS,
   default_locale: "en"
 )

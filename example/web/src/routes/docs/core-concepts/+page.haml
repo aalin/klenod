@@ -42,6 +42,8 @@
       Icons = import_glob("./icons/*.svg")
       ```
 
+      A Ruby import returns the file's top-level `Default` when it defines one, otherwise the file's `Exports` module. `import("./x", :Bar)` returns one named constant.
+
       Relative imports resolve from the importing module. Leading slash imports resolve from the current scheme root, which is the configured source root for normal app files. Virtual modules use explicit schemes such as `virtual:router`.
 
   %DocsSection{ title: "Plugins Define File Meaning" }

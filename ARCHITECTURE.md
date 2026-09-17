@@ -91,6 +91,8 @@ Use `app:/...` explicitly when code inside another scheme needs to import from t
 
 `import("...")` creates an eager dependency. `lazy_import("...")` records the dependency but returns a lazy runtime value that loads when called.
 
+A Ruby import returns the file's `Default` when the file defines one at its top level, otherwise the file's `Exports` module. `import("./x", :Bar)` returns one named constant instead. The check is static: constants defined with `const_set` or inside conditionals are not exports. The Ruby plugin records each file's top-level constants as `ruby_constants` in its transform metadata; the graph checks named imports against that list while collecting, and the bundle carries a `DefaultImport` instruction only for names on the list.
+
 Eager cycles are errors. Lazy imports are the intended way to defer cyclic or expensive branches.
 
 ## Plugin Pipeline
@@ -116,7 +118,7 @@ Each collected module is evaluated as a `Klenod::Runtime::Mod`.
 
 Runtime modules get stable generated constant names so instances can be marshaled and unmarshaled. Each runtime bundle and development graph owns a separate generated-module namespace, so module IDs can overlap across contexts without replacing one another. Transformed source is evaluated inside the generated runtime module, and exported values live under `Exports`.
 
-Ruby and Haml modules generally assign `Default` for the default export. Importing a Haml file from Haml/Ruby returns the component class.
+Ruby and Haml modules assign `Default` for the default export. Importing a Haml file returns the component class; importing a Ruby file returns its `Default` when it defines one.
 
 `__FILE__` is rewritten through runtime source-root handling so bundles can be built in one path and loaded in another. Source maps and backtrace rewriting handle transformed sources such as Haml. They are runtime-owned because production error pages need them without loading build plugins.
 

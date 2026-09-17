@@ -168,13 +168,13 @@ module Klenod
                 specifier: "/markdown-components",
                 importer_id: module_id,
                 kind: :markdown_components,
-                metadata: {optional: true}
+                metadata: {optional: true, import_name: :Default}
               )
               .with(id: dependency_id(module_id))
           end
 
           def components_source_for(dependency)
-            dependency ? "__klenod_import__(#{dependency.id.inspect})::Default" : "{}"
+            dependency ? "__klenod_import__(#{dependency.id.inspect})" : "{}"
           end
 
           def dependency_id(module_id)

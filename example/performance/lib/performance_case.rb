@@ -140,7 +140,7 @@ module KlenodPerformance
           Router = import("virtual:router")
 
           def self.call(path = "/")
-            match = Router::Default.match(path)
+            match = Router.match(path)
             match&.route&.path
           end
         RUBY

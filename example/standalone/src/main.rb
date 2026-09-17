@@ -2,7 +2,7 @@
 
 Report = import("./report")
 
-output = Report::Default.call
+output = Report.call
 
 if (path = ENV["REPORT_OUTPUT"])
   File.binwrite(path, output)

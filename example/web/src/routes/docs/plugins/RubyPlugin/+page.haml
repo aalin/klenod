@@ -24,9 +24,23 @@
 
   %DocsSection{ title: "Import Helpers" }
     :markdown
-      - `import(...)` records and loads an eager dependency.
-      - `lazy_import(...)` records a dependency but returns a callable import that loads when used.
+      - `import(...)` records and loads an eager dependency. For a Ruby module it returns the file's top-level `Default` when there is one, otherwise the file's `Exports` module.
+      - `import("./x", :Bar)` returns one named constant. The name must be a symbol literal, and it must appear in the target's static constant list, or collection fails with an excerpt of the import.
+      - `lazy_import(...)` records a dependency but returns a callable import that loads when used. It accepts the same optional name.
       - `import_glob(...)` expands matching files during collection and returns a hash of matched specifiers to imported values.
+
+      The constant list is static. `const_set`, constants inside conditionals, `A::B = 1`, and `class ::A` are not exports.
+
+      ```ruby
+      # GithubModelsChat.rb
+      class GithubModelsChat
+      end
+      Default = GithubModelsChat
+
+      # elsewhere
+      GithubModelsChat = import("./GithubModelsChat")
+      Helpers = import("./helpers", :Helpers)
+      ```
 
       Query strings are part of the module id, so `import("./photo.jpg?width=320")` and `import("./photo.jpg?width=640")` can produce different asset metadata while still sharing generated work where possible.
 

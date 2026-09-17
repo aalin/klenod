@@ -12,6 +12,6 @@ def test_builds_release_report_from_imported_data
       Maintainers: Build, Runtime
       Notes: Generated from plain text
     REPORT
-    Report::Default.call
+    Report.call
   )
 end

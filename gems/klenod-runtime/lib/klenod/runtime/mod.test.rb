@@ -131,6 +131,38 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_equal(41, bundle.mod("dep.rb").const_get(:Exports)::VALUE)
   end
 
+  def test_default_imports_do_not_resolve_inherited_constants
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"entry" => "entry.rb"},
+        {
+          "dep.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "dep.rb",
+              "dep.rb",
+              "",
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("dep.rb")
+            ),
+          "entry.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              "Dep = __klenod_import__(\"dep\")",
+              {"dep" => Klenod::Runtime::ImportSpec.new("dep.rb", Klenod::Runtime::DefaultImport.new(:String), true)},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("entry.rb")
+            )
+        },
+        []
+      )
+
+    assert_raises(NameError) { bundle.load("entry") }
+  end
+
   def test_bundles_with_the_same_module_ids_use_separate_namespaces
     module_spec = lambda do |value|
       Klenod::Runtime::ModuleSpec.new(

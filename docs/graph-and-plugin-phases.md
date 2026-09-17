@@ -94,6 +94,8 @@ A `nil` return value means that the plugin does not supply an import value. Klen
 
 If no plugin supplies a value, Klenod returns the target module's `Exports` module.
 
+The Ruby plugin supplies a value for `.rb` modules: the constant named by `import("./x", :Bar)`, or `Default` when the file defines one at its top level. It decides from the `ruby_constants` list it records in transform metadata, never by evaluating the module, so development and production agree.
+
 ## `runtime_import_value`
 
 Klenod uses `runtime_import_value` when it builds a runtime bundle.
@@ -133,7 +135,7 @@ Some plugins return plain serializable data from both hooks. Data-format plugins
 - `import_value` returns the evaluated `Exports::Default` value.
 - `runtime_import_value` returns the same parsed value from collected metadata.
 
-Other plugins return a live value from `import_value`. They return a `Klenod::Runtime::DefaultImport` marker from `runtime_import_value`.
+Other plugins, including the Ruby plugin, return a live value from `import_value`. They return a `Klenod::Runtime::DefaultImport` marker from `runtime_import_value`.
 
 ## Rule of Thumb
 

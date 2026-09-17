@@ -52,13 +52,31 @@ Router = import("virtual:router")
 
 Internally, source files use canonical module ids such as `app:/layouts/App.rb`, while virtual modules use ids such as `virtual:/router.rb`. Plugins can own other schemes, for example `gem://some-gem/components/Button.rb`.
 
+A Ruby import returns the file's `Default` when the file defines one at its top level, otherwise the file's `Exports` module. `import("./x", :Bar)` returns one named constant instead. The check is static: constants defined with `const_set` or inside conditionals are not exports.
+
+```ruby
+# GithubModelsChat.rb
+class GithubModelsChat
+end
+Default = GithubModelsChat
+
+# elsewhere
+GithubModelsChat = import("./GithubModelsChat")
+Helpers = import("./helpers", :Helpers)
+
+class Chat < import("./GithubModelsChat")
+end
+```
+
+A named import of a constant the target does not define fails while collecting, with an excerpt of the import.
+
 Use `lazy_import("...")` to record a dependency and defer loading its value:
 
 ```ruby
 Details = lazy_import("./details")
 
 def self.render_details
-  Details.call::Default.new.render
+  Details.call.new.render
 end
 ```
 

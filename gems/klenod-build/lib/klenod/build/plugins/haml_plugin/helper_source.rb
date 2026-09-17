@@ -12,7 +12,8 @@ module Klenod
               .create(
                 specifier: HAML_HELPER_SPECIFIER,
                 importer_id: module_id,
-                kind: :haml_helper
+                kind: :haml_helper,
+                metadata: {import_name: :Default}
               )
               .with(id: "#{module_id}:haml_helper")
           end

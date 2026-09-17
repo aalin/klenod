@@ -864,7 +864,7 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
         <<~RUBY
           Router = import("virtual:router")
           NAME = :routes
-          ROUTE_COUNT = Router::Default.routes.length
+          ROUTE_COUNT = Router.routes.length
         RUBY
       )
       output = "#{dir}/bundle.dump"

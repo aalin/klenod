@@ -260,6 +260,210 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
     end
   end
 
+  def test_named_imports_record_the_constant_name
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        "Bar = import(\"../dep\", :Bar)\n",
+        transform_context
+      )
+
+    dependency = result.dependencies.fetch(0)
+    assert_equal("../dep", dependency.specifier)
+    assert_equal({import_name: :Bar}, dependency.metadata)
+    assert(dependency.eager)
+    assert_equal(Klenod::Build::SourceLocation.new("app:/pages/page.rb", 1, 7), dependency.loc)
+    assert_equal("Bar = __klenod_import__(\"app:/pages/page.rb:dependency:0\")\n", result.code)
+  end
+
+  def test_named_lazy_imports_record_the_constant_name
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        "Bar = lazy_import(\"../dep\", :Bar)\n",
+        transform_context
+      )
+
+    dependency = result.dependencies.fetch(0)
+    assert_equal({import_name: :Bar}, dependency.metadata)
+    refute(dependency.eager)
+    assert_equal("Bar = __klenod_lazy_import__(\"app:/pages/page.rb:dependency:0\")\n", result.code)
+  end
+
+  def test_rejects_import_names_that_are_not_constant_symbols
+    ["import(\"../dep\", \"Bar\")", "import(\"../dep\", name)", "import(\"../dep\", :bar)", "import(\"../dep\", :\"Bar\")", "import_glob(\"./x/*.rb\", :Bar)"].each do |call|
+      error =
+        assert_raises(Klenod::Build::DynamicImportError, call) do
+          RubyPlugin.new.transform(ModuleId.new("pages/page.rb", nil), "Bar = #{call}\n", transform_context)
+        end
+
+      assert_includes(error.message, "Only literal")
+    end
+  end
+
+  def test_records_the_top_level_constants_a_module_defines
+    source = <<~RUBY_SOURCE
+      Default = 1
+      class Foo; end
+      module Bar; end
+      A, B = 1, 2
+      Baz::Qux = 1
+      class ::Glob; end
+      if true
+        Hidden = 1
+      end
+      const_set(:Dyn, 1)
+      Default = 2
+    RUBY_SOURCE
+
+    result = RubyPlugin.new.transform(ModuleId.new("pages/page.rb", nil), source, transform_context)
+
+    assert_equal({ruby_constants: [:Default, :Foo, :Bar, :A, :B]}, result.metadata)
+  end
+
+  def test_records_an_empty_constant_list_for_a_module_without_constants
+    result = RubyPlugin.new.transform(ModuleId.new("pages/page.rb", nil), "def self.call = 1\n", transform_context)
+
+    assert_equal({ruby_constants: []}, result.metadata)
+  end
+
+  def test_importing_a_module_with_a_default_returns_the_default
+    with_files(
+      "dep.rb" => "class Dep\n  def hi = \"hi\"\nend\nDefault = Dep\n",
+      "page.rb" => "Dep = import(\"./dep\")\nVALUE = Dep.new.hi\n"
+    ) do |dir|
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("page.rb")
+
+      assert_equal("hi", context.exports("page.rb")::VALUE)
+      assert_kind_of(Klenod::Runtime::Mod::Exports, context.exports("dep.rb"))
+      assert_same(context.exports("dep.rb")::Default, context.exports("page.rb")::Dep)
+    end
+  end
+
+  def test_importing_a_module_without_a_default_returns_its_exports
+    with_files(
+      "dep.rb" => "VALUE = 1\n",
+      "page.rb" => "Dep = import(\"./dep\")\n"
+    ) do |dir|
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("page.rb")
+      dep = context.exports("page.rb")::Dep
+
+      assert_kind_of(Klenod::Runtime::Mod::Exports, dep)
+      assert_equal(1, dep::VALUE)
+    end
+  end
+
+  def test_named_imports_return_the_named_constant
+    with_files(
+      "dep.rb" => "Default = 1\nBar = 2\n",
+      "page.rb" => "Bar = import(\"./dep\", :Bar)\n"
+    ) do |dir|
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      context.evaluate("page.rb")
+
+      assert_equal(2, context.exports("page.rb")::Bar)
+    end
+  end
+
+  def test_a_default_export_can_be_a_superclass
+    with_files(
+      "dep.rb" => "class Dep\n  def hi = \"hi\"\nend\nDefault = Dep\n",
+      "page.rb" => "class Foo < import(\"./dep\")\n  def hi = super + \"!\"\nend\n"
+    ) do |dir|
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      context.evaluate("page.rb")
+
+      assert_equal("hi!", context.exports("page.rb")::Foo.new.hi)
+    end
+  end
+
+  def test_lazy_default_and_named_imports_resolve_when_called
+    with_files(
+      "dep.rb" => "Default = 1\nBar = 2\n",
+      "page.rb" => "Dep = lazy_import(\"./dep\")\nBar = lazy_import(\"./dep\", :Bar)\n"
+    ) do |dir|
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("page.rb")
+      exports = context.exports("page.rb")
+
+      assert_equal(1, exports::Dep.call)
+      assert_equal(2, exports::Bar.call)
+    end
+  end
+
+  def test_dynamically_defined_constants_are_not_exports
+    with_files(
+      "dep.rb" => "const_set(:Default, 1)\n",
+      "page.rb" => "Dep = import(\"./dep\")\n"
+    ) do |dir|
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      context.evaluate("page.rb")
+
+      assert_kind_of(Klenod::Runtime::Mod::Exports, context.exports("page.rb")::Dep)
+    end
+  end
+
+  def test_a_named_import_of_a_missing_constant_fails_collection
+    with_files(
+      "dep.rb" => "Default = 1\nFoo = 2\n",
+      "page.rb" => "Bar = import(\"./dep\", :Bar)\n"
+    ) do |dir|
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      error = assert_raises(Klenod::Build::MissingExportError) { context.collect("page.rb") }
+
+      assert_equal("Missing export", error.kind)
+      assert_equal(1, error.line)
+      assert_equal(7, error.column)
+      assert_equal("app:/dep.rb does not define Bar", error.detail)
+      assert_equal(["It defines Default, Foo"], error.hints)
+      assert_includes(error.message, "> 1 | Bar = import(\"./dep\", :Bar)")
+      assert_raises(Klenod::Build::MissingExportError) { context.evaluate("page.rb") }
+    end
+  end
+
+  def test_a_lazy_named_import_of_a_missing_constant_fails_when_called
+    with_files(
+      "dep.rb" => "Default = 1\n",
+      "page.rb" => "Bar = lazy_import(\"./dep\", :Bar)\n"
+    ) do |dir|
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("page.rb")
+      exports = context.exports("page.rb")
+
+      error = assert_raises(Klenod::Build::MissingExportError) { exports::Bar.call }
+
+      assert_includes(error.message, "> 1 | Bar = lazy_import(\"./dep\", :Bar)")
+    end
+  end
+
+  def test_a_named_import_of_a_non_ruby_module_fails_collection
+    with_files(
+      "note.txt" => "hello\n",
+      "page.rb" => "Foo = import(\"./note.txt\", :Foo)\n"
+    ) do |dir|
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      error = assert_raises(Klenod::Build::MissingExportError) { context.collect("page.rb") }
+
+      assert_equal(["Named imports need a Ruby module; app:/note.txt is not one"], error.hints)
+    end
+  end
+
+  def test_analysis_mode_still_records_constants
+    with_files("dep.rb" => "Default = 1\n") do |dir|
+      context = Klenod::Build::Context.new(source_dir: dir, analysis: true)
+      record = context.collect("dep.rb").record
+
+      assert_equal([:Default], record.metadata.fetch(:ruby_constants))
+    end
+  end
+
   def with_files(files)
     Dir.mktmpdir do |dir|
       files.each do |path, source|

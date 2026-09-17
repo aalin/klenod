@@ -1121,6 +1121,63 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_build_bundle_unwraps_ruby_default_and_named_imports
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/dep.rb", "Default = 10\nBar = 20\n")
+      File.write("#{dir}/plain.rb", "VALUE = 30\n")
+      File.write(
+        "#{dir}/page.rb",
+        <<~RUBY_SOURCE
+          Dep = import("./dep")
+          Bar = import("./dep", :Bar)
+          Plain = import("./plain")
+          LazyBar = lazy_import("./dep", :Bar)
+          RESULT = Dep + Bar + Plain::VALUE + LazyBar.call
+        RUBY_SOURCE
+      )
+      output = "#{dir}/bundle.mpk"
+      context = Klenod::Build::Context.new(source_dir: dir)
+      bundle = context.build(entrypoints: ["page.rb"], output: output)
+      imports = bundle.modules.fetch("app:/page.rb").imports
+
+      assert_equal(Klenod::Runtime::DefaultImport.new(:Default), imports.fetch("app:/page.rb:dependency:0").value)
+      assert_equal(Klenod::Runtime::DefaultImport.new(:Bar), imports.fetch("app:/page.rb:dependency:1").value)
+      assert_nil(imports.fetch("app:/page.rb:dependency:2").value)
+      assert_equal(Klenod::Runtime::DefaultImport.new(:Bar), imports.fetch("app:/page.rb:dependency:3").value)
+      refute(imports.fetch("app:/page.rb:dependency:3").eager)
+
+      script = <<~RUBY_SOURCE
+        require "klenod/runtime"
+
+        bundle = Klenod::Runtime.load_bundle(#{output.inspect})
+        result = bundle.exports("page.rb")::RESULT
+        abort "unexpected result \#{result.inspect}" unless result == 80
+      RUBY_SOURCE
+
+      stdout, stderr, status =
+        Open3.capture3(
+          RbConfig.ruby,
+          "-I#{File.expand_path("../../../../klenod-runtime/lib", __dir__)}",
+          "-e",
+          script
+        )
+
+      assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
+    end
+  end
+
+  def test_build_refuses_to_ship_a_bundle_with_a_missing_lazy_named_import
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/dep.rb", "Default = 10\n")
+      File.write("#{dir}/page.rb", "Bar = lazy_import(\"./dep\", :Bar)\n")
+      context = Klenod::Build::Context.new(source_dir: dir)
+
+      error = assert_raises(Klenod::Build::MissingExportError) { context.build(entrypoints: ["page.rb"], output: "#{dir}/bundle.mpk") }
+
+      assert_includes(error.message, "> 1 | Bar = lazy_import(\"./dep\", :Bar)")
+    end
+  end
+
   def test_runtime_only_process_loads_bundle_with_haml_component_imports
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/components")

@@ -146,6 +146,8 @@ Development invalidation must preserve that split:
 - `import("/foo")` resolves from the current scheme root.
 - Use `app:/foo` when a non-app scheme needs the configured application source root.
 - Plugins must resolve non-app schemes before filesystem resolution.
+- Importing a Ruby module returns its top-level `Default` when it defines one, otherwise its `Exports` module. `import("./x", :Bar)` returns one named constant.
+- The Ruby plugin records each file's top-level constants as `metadata[:ruby_constants]`; named imports are checked against it while collecting and raise `MissingExportError`. Dynamically defined constants are not exports.
 - `lazy_import("...")` records a dependency and defers loading/evaluation until called.
 - `import_glob("...")` returns deterministic matches and supports lazy values.
 - Eager import cycles should report the cycle chain. Lazy imports are the escape hatch.
@@ -194,7 +196,7 @@ Routing is optional and owned by `RouterPlugin`; core Klenod must not assume a w
 - Route files include pages, handlers, layouts, error views, and not-found views.
 - Supported segments include dynamic, catch-all, optional catch-all, route groups, parallel routes, and intercepted routes.
 - Generated router modules use lazy imports so development does not evaluate every page at startup.
-- `Router::Default.match(path)` exposes page, handler, layouts, slots, params, and route metadata.
+- `Router.match(path)` exposes page, handler, layouts, slots, params, and route metadata.
 - Missing pages resolve the closest not-found module. Rendering failures use the closest error module, with layouts selected relative to the special view being rendered.
 - HTTP content negotiation and hybrid page/handler dispatch are example-server policy, not router policy.
 

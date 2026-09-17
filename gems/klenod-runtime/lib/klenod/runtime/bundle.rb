@@ -333,7 +333,7 @@ module Klenod
 
         case import_spec.value
         when DefaultImport
-          exports.const_get(import_spec.value.name)
+          exports.const_get(import_spec.value.name, false)
         else
           import_spec.value || exports
         end

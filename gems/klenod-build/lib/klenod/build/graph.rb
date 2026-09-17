@@ -374,6 +374,7 @@ module Klenod
           transform = loaded_source.transform || transform_module_source(module_id, source)
           resolved_dependencies = resolve_transform_dependencies(module_id, transform)
           dependency_records = load_eager_dependency_records(resolved_dependencies)
+          assert_eager_import_names!(module_id, source, resolved_dependencies, dependency_records)
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
           assert_supported_transform!(module_id, source, transform)
           assert_generated_ruby_parses!(module_id, transform)
@@ -430,6 +431,7 @@ module Klenod
           transform = loaded_source.transform || transform_module_source(module_id, source)
           resolved_dependencies = resolve_transform_dependencies(module_id, transform)
           dependency_records = collect_eager_dependency_records(resolved_dependencies)
+          assert_eager_import_names!(module_id, source, resolved_dependencies, dependency_records)
           transform = finalize_transform_result(module_id, transform, resolved_dependencies, dependency_records)
           assert_supported_transform!(module_id, source, transform)
           assert_generated_ruby_parses!(module_id, transform)
@@ -462,7 +464,7 @@ module Klenod
             Runtime::Mod.new(
               module_id.to_s,
               record.transformed_source,
-              imports: imports_for(record.resolved_dependencies, dependency_records),
+              imports: imports_for(module_id, record.source, record.resolved_dependencies, dependency_records),
               source_map: record.source_map,
               version: record.version,
               eval_path: eval_path_for(module_id),
@@ -659,7 +661,7 @@ module Klenod
           Runtime::Mod.new(
             module_id.to_s,
             transform.code,
-            imports: imports_for(resolved_dependencies, dependency_records),
+            imports: imports_for(module_id, source, resolved_dependencies, dependency_records),
             source_map: transform.source_map,
             version: cached ? cached.version + 1 : 0,
             eval_path: eval_path_for(module_id),
@@ -690,7 +692,7 @@ module Klenod
         source_dir.join(module_id.path).to_s
       end
 
-      def imports_for(resolved_dependencies, dependency_records)
+      def imports_for(module_id, source, resolved_dependencies, dependency_records)
         resolved_dependencies.to_h do |resolved_dependency|
           value =
             if resolved_dependency.dependency.eager
@@ -702,6 +704,7 @@ module Klenod
                 evaluate_module(resolved_dependency.module_id)
                 record = @records.fetch(resolved_dependency.module_id)
                 raise_failed_module!(record)
+                assert_import_name!(module_id, source, resolved_dependency, record)
                 import_value(resolved_dependency, record)
               end
             end
@@ -898,10 +901,9 @@ module Klenod
         @records.to_h do |module_id, record|
           imports =
             record.resolved_dependencies.to_h do |resolved_dependency|
-              [
-                resolved_dependency.dependency.id,
-                runtime_import_spec(resolved_dependency, @records.fetch(resolved_dependency.module_id))
-              ]
+              target = @records.fetch(resolved_dependency.module_id)
+              assert_import_name!(module_id, record.source, resolved_dependency, target)
+              [resolved_dependency.dependency.id, runtime_import_spec(resolved_dependency, target)]
             end
 
           [
@@ -988,6 +990,35 @@ module Klenod
             plugin.finalize(module_id, current, resolved_dependencies, dependency_records, self)
           end
         end
+      end
+
+      # Lazy targets are not collected until bundle or call time, so only the
+      # eager imports can be checked while the importer is collected.
+      def assert_eager_import_names!(module_id, source, resolved_dependencies, dependency_records)
+        resolved_dependencies.each do |resolved_dependency|
+          next unless resolved_dependency.dependency.eager
+
+          record = dependency_records.fetch(resolved_dependency.dependency.id)
+          assert_import_name!(module_id, source, resolved_dependency, record)
+        end
+      end
+
+      # A named import (`import("./x", :Bar)`) is checked against the constants
+      # the target defines statically, recorded by the Ruby plugin as
+      # metadata[:ruby_constants]. A missing Default is not an error: the
+      # import then returns the Exports module.
+      def assert_import_name!(module_id, source, resolved_dependency, record)
+        name = resolved_dependency.dependency.metadata[:import_name]
+        return unless name
+
+        constants = record.metadata[:ruby_constants]
+        return if constants&.include?(name)
+
+        raise MissingExportError.new(
+          MissingExportError::Report.new(resolved_dependency.dependency, record.id, name, constants),
+          source: source,
+          module_id: module_id
+        )
       end
 
       def import_value(resolved_dependency, record)

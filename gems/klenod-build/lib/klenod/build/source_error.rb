@@ -110,6 +110,43 @@ module Klenod
       end
     end
 
+    # A named import (`import("./x", :Bar)`) of a constant the target module
+    # does not define at its top level.
+    #
+    # The check uses the constants the Ruby plugin recorded statically, so a
+    # typo fails while collecting, with an excerpt of the import, instead of
+    # surfacing as a NameError from inside module evaluation -- or, worse, at
+    # runtime, since a production build never evaluates application modules.
+    class MissingExportError < SourceError
+      Report = Data.define(:dependency, :target_id, :name, :constants)
+
+      def kind
+        "Missing export"
+      end
+
+      private
+
+      def location(report)
+        Location.new(
+          line: report.dependency.loc&.line,
+          column: report.dependency.loc&.column,
+          detail: "#{report.target_id} does not define #{report.name}",
+          hints: [hint_for(report)]
+        )
+      end
+
+      def hint_for(report)
+        case report.constants
+        when nil
+          "Named imports need a Ruby module; #{report.target_id} is not one"
+        when []
+          "#{report.target_id} defines no top-level constants; import it without a name to get its Exports module"
+        else
+          "It defines #{report.constants.join(", ")}"
+        end
+      end
+    end
+
     # Ruby generated from another format that does not parse.
     #
     # This is a bug in the plugin that generated it rather than in anything the

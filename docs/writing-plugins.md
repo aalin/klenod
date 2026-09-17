@@ -257,7 +257,7 @@ Use `dependency.id` in generated calls to `__klenod_import__`. Do not use the so
 
 ## Import Values
 
-The default import value is the target module's `Exports` module. A plugin can supply a different value.
+The default import value is the target module's `Exports` module. A plugin can supply a different value. Ruby modules need no plugin work: the Ruby plugin returns their top-level `Default`, or the constant named in `import("./x", :Bar)`, based on the `ruby_constants` list it records in transform metadata. A generated Ruby module that is loaded with a ready-made transform should declare its exports in that metadata, for example `{ruby_constants: [:Default]}`.
 
 For example, a generated module can export a `Default` value:
 

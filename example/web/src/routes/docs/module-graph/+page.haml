@@ -37,13 +37,13 @@
 
   %DocsSection{ title: "Eager, Lazy, And Glob Imports" }
     :markdown
-      `import("...")` creates an eager dependency. `lazy_import("...")` records a dependency but loads the value only when called.
+      `import("...")` creates an eager dependency. `lazy_import("...")` records a dependency but loads the value only when called. Both return a Ruby file's top-level `Default` when it defines one, otherwise its `Exports` module, and both accept a constant name as a second argument: `import("./x", :Bar)`.
 
       ```ruby
       Details = lazy_import("./details")
 
       def self.render_details
-        Details.call::Default.new.render
+        Details.call.new.render
       end
       ```
 

@@ -56,7 +56,7 @@
 
   %DocsSection{ title: "Import Files" }
     :markdown
-      Ruby modules can import other modules with literal `import("...")` calls. Relative imports resolve from the importer. In normal app files, leading slash imports resolve from the configured source root.
+      Ruby modules can import other modules with literal `import("...")` calls. Importing a Ruby file returns its top-level `Default` when it defines one, otherwise its `Exports` module. Relative imports resolve from the importer. In normal app files, leading slash imports resolve from the configured source root.
 
       ```ruby
       Shared = import("../shared")

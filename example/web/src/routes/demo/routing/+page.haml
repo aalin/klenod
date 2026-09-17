@@ -8,11 +8,11 @@
   def initialize
     super
 
-    @routes = Router::Default.routes
+    @routes = Router.routes
     @main_routes = @routes.reject(&:slot_layout_module_id).sort_by(&:path)
     @slot_routes = @routes.select(&:slot_layout_module_id).sort_by { [it.path, it.slot_layout_module_id.to_s] }
-    @special_views = [*Router::Default.not_found_views, *Router::Default.error_views].sort_by { [it.path, it.kind.to_s] }
-    @route_tree = route_tree_entries(Router::Default.tree)
+    @special_views = [*Router.not_found_views, *Router.error_views].sort_by { [it.path, it.kind.to_s] }
+    @route_tree = route_tree_entries(Router.tree)
   end
 
   def route_tree_entries(root)

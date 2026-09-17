@@ -22,7 +22,7 @@ module Klenod
           return nil unless module_id.scheme == :virtual && module_id == CLASS_NAMES_MODULE_ID
 
           source = class_names_runtime_source
-          LoadResult.new(source, nil, TransformResult.new(source, [], nil, [], [], {}))
+          LoadResult.new(source, nil, TransformResult.new(source, [], nil, [], [], {ruby_constants: [:Default]}))
         end
 
         def class_names_runtime_dependency(module_id)

@@ -11,7 +11,7 @@ module Klenod
   module Build
     class RubyImportRewriter
       ImportCall =
-        Data.define(:specifier, :location, :dynamic, :method_name, :eager_override) do
+        Data.define(:specifier, :location, :dynamic, :method_name, :eager_override, :import_name) do
           def eager
             eager_override.nil? ? RubyImportRewriter::IMPORT_METHODS.fetch(method_name).fetch(:eager) : eager_override
           end
@@ -213,19 +213,31 @@ module Klenod
 
         first = unwrap_paren(parts.first)
         string_parts = first&.instance_variable_get(:@parts)
-        literal =
-          (parts.length == 1) &&
+        literal_specifier =
           first&.class&.name == "SyntaxTree::StringLiteral" &&
           string_parts&.length == 1 &&
           string_parts.first.instance_of?(::SyntaxTree::TStringContent)
+        import_name = (parts.length == 2) ? constant_symbol_value(parts.fetch(1)) : nil
+        literal = literal_specifier && (parts.length == 1 || !import_name.nil?)
 
         ImportCall.new(
           literal ? string_parts.first.value : nil,
           node.instance_variable_get(:@location),
           !literal,
           node.instance_variable_get(:@message).value,
-          nil
+          nil,
+          literal ? import_name : nil
         )
+      end
+
+      # The optional second argument of `import`: a symbol literal spelled like
+      # a constant, such as `:Bar`. Anything else (`:bar`, `:"Bar"`, a string,
+      # a variable) is reported as a dynamic import.
+      def constant_symbol_value(node)
+        return unless node.instance_of?(::SyntaxTree::SymbolLiteral)
+
+        value = node.instance_variable_get(:@value)
+        value.instance_of?(::SyntaxTree::Const) ? value.value.to_sym : nil
       end
 
       def build_import_glob_from_parts(node, parts)
@@ -250,7 +262,8 @@ module Klenod
           node.instance_variable_get(:@location),
           !literal || !valid_options,
           node.instance_variable_get(:@message).value,
-          eager
+          eager,
+          nil
         )
       end
 
@@ -304,20 +317,29 @@ module Klenod
       end
 
       def raise_dynamic_import!(call)
-        expected = (call.method_name == "import_glob") ? "import_glob(\"...\")" : "import(\"...\")"
+        expected =
+          if call.method_name == "import_glob"
+            "import_glob(\"...\")"
+          else
+            "#{call.method_name}(\"...\") or #{call.method_name}(\"...\", :Constant)"
+          end
         raise DynamicImportError, "Only literal #{expected} calls are supported in #{@module_id}"
       end
 
       def build_dependency(call, dependency_index)
-        Dependency
-          .create(
-            specifier: call.specifier,
-            importer_id: @module_id,
-            kind: @kind,
-            loc: source_location(call.location)
-          )
-          .with(eager: call.eager)
-          .with(id: "#{@module_id}:dependency:#{dependency_index}")
+        dependency =
+          Dependency
+            .create(
+              specifier: call.specifier,
+              importer_id: @module_id,
+              kind: @kind,
+              loc: source_location(call.location)
+            )
+            .with(eager: call.eager)
+            .with(id: "#{@module_id}:dependency:#{dependency_index}")
+        return dependency unless call.import_name
+
+        dependency.with(metadata: {import_name: call.import_name}.freeze)
       end
 
       def expand_glob_import(call, dependency_index)
