@@ -23,6 +23,7 @@ module Klenod
 
         def diagnostics(analysis, workspace = nil, index = nil)
           diagnostics = Diagnostics.for_analysis(analysis)
+          diagnostics.concat(Diagnostics.index_failure(analysis, index))
           diagnostics.concat(Classes.diagnostics(analysis, workspace, index)) if workspace && index
           diagnostics.concat(Props.diagnostics(analysis, workspace, index)) if workspace && index
           diagnostics.concat(unused_binding_diagnostics(analysis))

@@ -100,6 +100,30 @@ class Klenod::LSP::Languages::Ruby::Test < Minitest::Test
 
   private
 
+  def test_a_named_import_of_a_missing_constant_is_reported_from_the_index
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/dep.rb", "Default = 1\nFoo = 2\n")
+      source = <<~RUBY_SOURCE
+        Foo = import("./dep", :Foo)
+        Bar = import("./dep", :Bar)
+      RUBY_SOURCE
+      File.write("#{dir}/page.rb", source)
+      workspace = fixture_workspace(source_dir: dir)
+      page_id = module_id("page.rb")
+      index = fixture_index(workspace, page_id)
+
+      diagnostic = @language.diagnostics(workspace.analyze(page_id, source), workspace, index).fetch(0)
+
+      assert_equal(1, diagnostic.range.start.line)
+      assert_equal("./dep", source[diagnostic.range.start.character...diagnostic.range.end.character])
+      assert_includes(diagnostic.message, "Missing export: app:/dep.rb does not define Bar")
+      assert_includes(diagnostic.message, "It defines Default, Foo")
+
+      fixed = "Foo = import(\"./dep\", :Foo)\n"
+      assert_empty(@language.diagnostics(workspace.analyze(page_id, fixed), workspace, index))
+    end
+  end
+
   def analysis(source)
     @workspace.analyze(@entry_id, source)
   end

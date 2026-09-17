@@ -58,6 +58,29 @@ module Klenod
         }.uniq { |diagnostic| [diagnostic.range.start.line, diagnostic.message] }
       end
 
+      # A failure the graph index recorded while collecting this module that
+      # analysis alone cannot see, such as a named import of a constant the
+      # target does not define: analysis only transforms and resolves, it never
+      # collects the target's record. The index refreshes on save, so the
+      # diagnostic is only shown while the document still contains the import
+      # it refers to.
+      def index_failure(analysis, index, syntax: Languages::Syntax::Ruby)
+        error = index&.failed&.[](analysis.module_id.to_s)
+        return [] unless error.is_a?(Klenod::Build::MissingExportError)
+        return [] unless error.module_id.to_s == analysis.module_id.to_s
+
+        lines = analysis.lines
+        report = error.cause
+        span = literal_spans(report.dependency.specifier.to_s, lines, syntax: syntax).find do |candidate|
+          named_import_span?(candidate, report.name, lines)
+        end
+        return [] unless span
+
+        message = "#{error.kind}: #{error.detail}"
+        message = "#{message}\n#{error.hints.join("\n")}" unless error.hints.empty?
+        [diagnostic(span, message)]
+      end
+
       def resolve_errors(analysis, lines, syntax)
         analysis.resolve_errors.map do |error|
           diagnostic(resolve_error_span(error, lines, syntax), error.message)
@@ -91,6 +114,14 @@ module Klenod
           end
         end
         spans
+      end
+
+      # The same module can be imported more than once with different names.
+      # Match the name immediately following this literal rather than selecting
+      # the first matching specifier and inspecting its whole line.
+      def named_import_span?(span, name, lines)
+        suffix = lines[span.start.line].to_s[span.end.character..]
+        suffix&.match?(%r{\A["']\s*,\s*:#{Regexp.escape(name.to_s)}(?=\s*\))})
       end
 
       def diagnostic(span, message)
