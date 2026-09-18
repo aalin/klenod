@@ -47,13 +47,14 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_match(/syntax error/i, diagnostic.message)
   end
 
-  def test_generated_ruby_error_maps_back_to_the_ruby_filter_line
+  def test_ruby_parse_error_in_a_filter_is_reported_on_the_haml_line
     source = @page_source.sub("  Layout = import(\"./layout\")", "  Layout = import(\"./layout\")\n  broken = = 1")
 
     diagnostics = diagnostics(source)
 
     refute_empty(diagnostics)
-    assert(diagnostics.all? { |diagnostic| diagnostic.message.start_with?("Generated Ruby syntax error") })
+    assert(diagnostics.all? { |diagnostic| diagnostic.message.start_with?("Haml parse error") })
+    assert_includes(diagnostics.fetch(0).message, "Could not parse Ruby filter")
     assert_equal(3, diagnostics.fetch(0).range.start.line)
   end
 

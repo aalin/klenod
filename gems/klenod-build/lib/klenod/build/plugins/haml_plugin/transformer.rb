@@ -549,6 +549,9 @@ module Klenod
               source_column_offset = source.lines.fetch(node.line, "").match(/\A\s*/).to_s.length
               text = import_rewriter.call(text, source_line_offset: node.line, source_column_offset: source_column_offset)
             end
+            unless builder.statements(text).node?
+              builder.ruby_parse_error(text, line_no: node.line + 1, context: "Could not parse Ruby filter")
+            end
             heredoc_body_lines = ruby_heredoc_body_lines(text)
             source = +""
             text.each_line.with_index(node.line + 1) do |line, line_no|

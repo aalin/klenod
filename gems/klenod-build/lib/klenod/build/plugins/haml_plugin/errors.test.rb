@@ -31,4 +31,24 @@ class Klenod::Build::Plugins::HamlPlugin::ErrorsTest < Klenod::Build::Plugins::H
       assert_includes(error.message, "unterminated string")
     end
   end
+
+  def test_an_unclosed_method_in_a_ruby_filter_fails_during_transformation
+    source = <<~HAML
+      :ruby
+        def initialize
+          @count = $initial_count
+
+      %p Count: #{@count}
+    HAML
+
+    with_haml_context({"pages/page.haml" => source}) do |_dir, context|
+      error = assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.collect("pages/page.haml") }
+
+      assert_equal("Haml parse error", error.kind)
+      assert_equal(4, error.line)
+      assert_includes(error.detail, "Could not parse Ruby filter")
+      assert_includes(error.message, "Unmatched keyword, missing `end'")
+      refute_includes(error.message, "Generated Ruby")
+    end
+  end
 end
