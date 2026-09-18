@@ -196,6 +196,23 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_supports_index_expressions_in_parenthesized_attributes
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def link
+              {href: "/docs"}
+            end
+
+          %a(href=link[:href]) Docs
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:a, "Docs", {href: "/docs"}], exports::Default.new.render)
+    end
+  end
+
   def test_haml_plugin_exposes_validated_variables
     plugin = haml_plugin(variables: {global: "@__props"})
 

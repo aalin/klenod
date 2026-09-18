@@ -35,6 +35,20 @@ module Klenod
             result
           end
 
+          # Haml's parenthesized-attribute parser accepts only a bare variable
+          # after `=`. For example, it reads `video_id=video.id` as the value
+          # `video` plus a `.id` class. Extend that form to ordinary Ruby
+          # member and index expressions while leaving all other attributes on
+          # Haml's native parsing path.
+          def parse_new_attributes(text)
+            balanced, rest = ::Haml::Util.balance(text, "(", ")")
+            pairs = balanced && extended_attribute_pairs(balanced[1...-1])
+            return super unless pairs&.any? { |_name, value| value.match?(/[.\[]/) }
+
+            dynamic = pairs.reduce("{") { |source, (name, value)| "#{source}#{::Haml::Util.inspect_obj(name)} => #{value}," } << "}"
+            [[{}, dynamic], rest, @line.index + 1]
+          end
+
           def annotate_tag_nodes(root)
             queue = root.children.dup
             until queue.empty?
@@ -60,6 +74,59 @@ module Klenod
             end
 
             {shorthand: shorthand, literal: literal}
+          end
+
+          def extended_attribute_pairs(source)
+            pairs = []
+            index = 0
+
+            loop do
+              index += 1 while source[index]&.match?(/\s/)
+              break if index >= source.length
+
+              name = source[index..].match(/\A[-:@#\w.]+/)&.to_s
+              return nil unless name
+
+              index += name.length
+              index += 1 while source[index]&.match?(/\s/)
+              return nil unless source[index] == "="
+
+              index += 1
+              index += 1 while source[index]&.match?(/\s/)
+              value_start = index
+              depth = 0
+              quote = nil
+              escaped = false
+
+              while index < source.length
+                character = source[index]
+                if quote
+                  if escaped
+                    escaped = false
+                  elsif character == "\\"
+                    escaped = true
+                  elsif character == quote
+                    quote = nil
+                  end
+                else
+                  case character
+                  when "'", '"' then quote = character
+                  when "(", "[", "{" then depth += 1
+                  when ")", "]", "}" then depth -= 1
+                  when " ", "\t"
+                    break if depth.zero? && source[index..].match?(/\A\s+[-:@#\w.]+\s*=/)
+                  end
+                end
+                index += 1
+              end
+
+              value = source[value_start...index].strip
+              return nil if value.empty? || depth.negative? || quote
+
+              pairs << [name, value]
+            end
+
+            pairs
           end
 
           def literal_class_names_from_old_attributes(source)

@@ -93,6 +93,13 @@
       %Button{ **button_props, disabled: $disabled } Save
       ```
 
+      Parenthesized attributes also accept Ruby member and index expressions without braces:
+
+      ```haml
+      %YouTubeVideo[key](video_id=video.id title=video.title)
+      %a(href=link[:href]) Watch
+      ```
+
       A bare method name in a parenthesized event attribute is passed as a symbol instead of being called while the component renders:
 
       ```haml

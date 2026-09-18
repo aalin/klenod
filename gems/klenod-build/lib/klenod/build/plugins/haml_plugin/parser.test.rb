@@ -19,6 +19,23 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
     assert_equal({shorthand: ["image"], literal: []}, image.value.fetch(:klenod_class_metadata))
   end
 
+  def test_parse_haml_supports_member_expressions_in_parenthesized_attributes
+    tag =
+      Klenod::Build::Plugins::HamlPlugin.parse_haml(
+        "%YouTubeVideo[key](video_id=video.id title=video.title)\n"
+      ).children.fetch(0)
+
+    assert_equal({}, tag.value.fetch(:attributes))
+    assert_equal("{\"video_id\" => video.id,\"title\" => video.title,}", tag.value.fetch(:dynamic_attributes).new)
+    assert_equal("[key]", tag.value.fetch(:object_ref))
+  end
+
+  def test_parse_haml_supports_index_expressions_in_parenthesized_attributes
+    tag = Klenod::Build::Plugins::HamlPlugin.parse_haml("%a(href=link[:href])\n").children.fetch(0)
+
+    assert_equal("{\"href\" => link[:href],}", tag.value.fetch(:dynamic_attributes).new)
+  end
+
   def test_parse_haml_wraps_haml_syntax_errors_with_source_context
     error =
       assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
@@ -44,7 +61,7 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
     module_id = ModuleId.new("pages/page.haml", nil)
     source = <<~HAML
       %h1 Hello
-      %time(datetime=post.fetch("date"))= post.fetch("date")
+      %time(datetime=post.fetch("date")= post.fetch("date")
     HAML
     error =
       assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
@@ -53,7 +70,7 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
 
     assert_equal(2, error.line)
     assert_includes(error.message, "pages/page.haml:2: Haml parse error")
-    assert_includes(error.message, "> 2 | %time(datetime=post.fetch(\"date\"))= post.fetch(\"date\")")
+    assert_includes(error.message, "> 2 | %time(datetime=post.fetch(\"date\")= post.fetch(\"date\")")
   end
 
   def test_inline_css_sources_include_haml_origin_offsets
