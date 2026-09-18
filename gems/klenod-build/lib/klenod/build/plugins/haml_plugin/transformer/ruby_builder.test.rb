@@ -21,6 +21,16 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_equal("\"\#{(@__props)[:title]} \#@@request \#@count\"", source)
   end
 
+  def test_ruby_builder_raises_for_an_unparseable_render_ruby_filter
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+
+    error = assert_raises(Klenod::Build::Plugins::HamlPlugin::RubyParseError) do
+      builder.render_ruby_filter("things = {\n  foo: \"Foo\"\n  bar: \"Bar\"\n}\n")
+    end
+
+    assert_includes(error.message, "Could not parse Ruby filter")
+  end
+
   def test_ruby_builder_builds_unmarked_factory_calls_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =

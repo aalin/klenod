@@ -51,4 +51,26 @@ class Klenod::Build::Plugins::HamlPlugin::ErrorsTest < Klenod::Build::Plugins::H
       refute_includes(error.message, "Generated Ruby")
     end
   end
+
+  def test_an_invalid_render_ruby_filter_fails_during_transformation
+    source = <<~HAML
+      :ruby
+        VALUE = true
+      :ruby
+        things = {
+          foo: "Foo",
+          bar: "Bar"
+          baz: "Baz"
+        }
+      %pre= JSON.pretty_generate(things)
+    HAML
+
+    with_haml_context({"pages/page.haml" => source}) do |_dir, context|
+      error = assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.collect("pages/page.haml") }
+
+      assert_equal("Haml parse error", error.kind)
+      assert_equal(7, error.line)
+      assert_includes(error.detail, "Could not parse Ruby filter")
+    end
+  end
 end

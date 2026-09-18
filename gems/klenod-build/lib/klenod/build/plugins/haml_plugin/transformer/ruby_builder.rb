@@ -489,7 +489,9 @@ module Klenod
             def render_ruby_filter(node)
               source = to_source(node)
               parsed = (node if node.is_a?(Fragment) && node.node?) || statements(source)
-              return statements("begin\n#{indent(source, 2)}\n  nil\nend") unless parsed
+              unless parsed&.node?
+                raise_ruby_parse_error(source, line_no: nil, context: "Could not parse Ruby filter")
+              end
 
               fragment(
                 ast_begin([
@@ -497,8 +499,6 @@ module Klenod
                   nil_node
                 ])
               )
-            rescue SyntaxTree::Parser::ParseError
-              statements("begin\n#{indent(source, 2)}\n  nil\nend")
             end
 
             def format_node(node)
