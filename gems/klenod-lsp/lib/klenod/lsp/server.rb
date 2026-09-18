@@ -371,11 +371,11 @@ module Klenod
 
         @pending_collections.delete(document.uri)&.stop
         @pending_collections[document.uri] =
-          @task.async do |task|
-            task.sleep(DIAGNOSTICS_DEBOUNCE)
+          @task.async do
+            Kernel.sleep(DIAGNOSTICS_DEBOUNCE)
             publish_diagnostics(document)
             overlay(document)
-            task.sleep(COLLECTION_DEBOUNCE - DIAGNOSTICS_DEBOUNCE)
+            Kernel.sleep(COLLECTION_DEBOUNCE - DIAGNOSTICS_DEBOUNCE)
             @pending_collections.delete(document.uri)
             @index.ensure_collected(document.module_id, force: true)
           end
