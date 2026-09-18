@@ -8,7 +8,7 @@ require_relative "text"
 module Klenod
   module LSP
     # Turns the errors in an Analysis into LSP diagnostics on the original
-    # document. Every diagnostic is an error: Klenod has no warnings yet.
+    # document.
     module Diagnostics
       Interface = LanguageServer::Protocol::Interface
       Constant = LanguageServer::Protocol::Constant
@@ -125,9 +125,17 @@ module Klenod
       end
 
       def diagnostic(span, message)
+        diagnostic_with_severity(span, message, Constant::DiagnosticSeverity::ERROR)
+      end
+
+      def warning(span, message)
+        diagnostic_with_severity(span, message, Constant::DiagnosticSeverity::WARNING)
+      end
+
+      def diagnostic_with_severity(span, message, severity)
         Interface::Diagnostic.new(
           range: span.to_range,
-          severity: Constant::DiagnosticSeverity::ERROR,
+          severity: severity,
           source: SOURCE,
           message: message
         )

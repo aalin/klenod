@@ -16,6 +16,46 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_empty(diagnostics(@page_source))
   end
 
+  def test_printed_each_block_warns_that_it_returns_the_collection
+    source = <<~HAML
+      %ul
+        = @items.each do |item|
+          %li= item
+    HAML
+
+    diagnostic = diagnostics(source).fetch(0)
+
+    assert_equal(1, diagnostic.range.start.line)
+    assert_equal(".each", source.lines[1][diagnostic.range.start.character...diagnostic.range.end.character])
+    assert_equal(LanguageServer::Protocol::Constant::DiagnosticSeverity::WARNING, diagnostic.severity)
+    assert_includes(diagnostic.message, "use `map` instead")
+  end
+
+  def test_silent_map_block_warns_that_it_discards_the_haml_children
+    source = <<~HAML
+      %ul
+        - @items.map do |item|
+          %li= item
+    HAML
+
+    diagnostic = diagnostics(source).fetch(0)
+
+    assert_equal(1, diagnostic.range.start.line)
+    assert_equal(".map", source.lines[1][diagnostic.range.start.character...diagnostic.range.end.character])
+    assert_equal(LanguageServer::Protocol::Constant::DiagnosticSeverity::WARNING, diagnostic.severity)
+    assert_includes(diagnostic.message, "use `=` instead")
+  end
+
+  def test_the_preferred_printed_map_block_does_not_warn
+    source = <<~HAML
+      %ul
+        = @items.map do |item|
+          %li= item
+    HAML
+
+    assert_empty(diagnostics(source))
+  end
+
   def test_unused_bindings_are_warned_about_but_tag_and_ruby_uses_count
     source = @page_source.sub("%Layout\n", "%section\n")
 
