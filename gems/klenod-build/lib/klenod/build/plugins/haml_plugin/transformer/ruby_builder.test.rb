@@ -3,6 +3,24 @@
 require_relative "../test_support"
 
 class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugins::HamlPlugin::TestSupport
+  def test_ruby_builder_wraps_configured_variables_in_braces_when_interpolated
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new(
+      variables: {global: "@__props", class: "context", instance: "@__state"}
+    )
+
+    source = builder.line_rewritten_source("\"\#$title \#@@request \#@count\"", nil)
+
+    assert_equal("\"\#{(@__props)[:title]} \#{(context)[:request]} \#{(@__state)[:count]}\"", source)
+  end
+
+  def test_ruby_builder_only_rewrites_interpolated_variable_kinds_that_are_configured
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new(variables: {global: "@__props"})
+
+    source = builder.line_rewritten_source("\"\#$title \#@@request \#@count\"", nil)
+
+    assert_equal("\"\#{(@__props)[:title]} \#@@request \#@count\"", source)
+  end
+
   def test_ruby_builder_builds_unmarked_factory_calls_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =

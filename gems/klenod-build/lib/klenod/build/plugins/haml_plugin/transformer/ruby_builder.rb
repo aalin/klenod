@@ -575,16 +575,20 @@ module Klenod
               line_offsets = [0]
               source.each_line(chomp: false) { |line| line_offsets << line_offsets.last + line.length }
 
-              Ripper
-                .lex(source)
-                .filter_map do |(line, column), type, token, _state|
+              tokens = Ripper.lex(source)
+
+              tokens
+                .each_with_index
+                .filter_map do |((line, column), type, token, _state), index|
                   kind, prefix, pattern = VARIABLE_TOKEN_KINDS[type]
                   receiver = @variables[kind]
                   if type == :on_gvar && token == "$*" && receiver
                     [offset_for(line_offsets, line, column), token.length, receiver]
                   elsif receiver && token.match?(pattern)
                     name = token.delete_prefix(prefix)
-                    [offset_for(line_offsets, line, column), token.length, "(#{receiver})[#{symbol_source(name)}]"]
+                    replacement = "(#{receiver})[#{symbol_source(name)}]"
+                    replacement = "{#{replacement}}" if tokens[index - 1]&.fetch(1) == :on_embvar
+                    [offset_for(line_offsets, line, column), token.length, replacement]
                   end
                 end
                 .reverse_each

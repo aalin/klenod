@@ -220,6 +220,31 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_rewrites_configured_variables_in_short_string_interpolation
+    plugin = haml_plugin(
+      component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
+      variables: {global: "@__props", class: "@__props", instance: "@__state"}
+    )
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~'HAML'
+          :ruby
+            def initialize(**)
+              super
+              @__state = @__props
+            end
+
+          %p= "#$title #@@title #@title"
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      assert_equal([:p, "Hello Hello Hello"], exports::Default.new(title: "Hello").render)
+      assert_includes(record.transformed_source, "\"\#{(@__props)[:title]} \#{(@__props)[:title]} \#{(@__state)[:title]}\"")
+    end
+  end
+
   def test_haml_transformer_rewrites_configured_global_splat_to_props
     plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
 

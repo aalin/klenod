@@ -53,6 +53,8 @@
 
       With the configuration above, these read `(@__props)[:title]`, `(Example::Framework::Context.current)[:request]`, and `(@__state)[:count]`.
 
+      Variable mappings also work in Ruby's short string interpolation form. Klenod expands the interpolation braces while rewriting, so `"Hello #$title"` becomes `"Hello #{(@__props)[:title]}"` when `global` is configured.
+
       `$*` is the complete configured global receiver rather than an indexed lookup, so `%Button{ **$* }` forwards all props. No separate splat option is needed.
 
       The mappings also apply to assignments. For an indexed state store, reassign mutable values to trigger its assignment method. Use `@items = [*@items, item]` instead of `@items << item`.
