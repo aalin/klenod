@@ -4,10 +4,10 @@ module Klenod
   module LSP
     module Languages
       class Haml
-        # Detects iterator blocks whose Haml bodies are either discarded or
-        # whose result is not the rendered collection. Haml's parser retains
-        # the body as children of the script node, which avoids guessing from
-        # indentation or warning about ordinary Ruby source in a filter.
+        # Detects scripts whose nested Haml will not produce output. Haml's
+        # parser retains the body as children of the script node, which avoids
+        # guessing from indentation or warning about ordinary Ruby source in
+        # a filter.
         module Iteration
           module_function
 
@@ -21,16 +21,13 @@ module Klenod
             until nodes.empty?
               node = nodes.shift
               nodes.concat(node.children)
-              next unless node.children.any?
-              next unless [:script, :silent_script].include?(node.type)
-
-              match = ITERATOR.match(node.value.fetch(:text))
-              next unless match
-
-              misuse = (node.type == :script && match[:method] == "each") || (node.type == :silent_script && match[:method] == "map")
-              next unless misuse
-
-              diagnostics << diagnostic_for(node, match, analysis.lines)
+              case node.type
+              when :script
+                match = ITERATOR.match(node.value.fetch(:text))
+                diagnostics << each_diagnostic(node, match, analysis.lines) if match&.[](:method) == "each" && rendered_content?(node)
+              when :silent_script
+                diagnostics << silent_script_diagnostic(node, analysis.lines) if rendered_content?(node)
+              end
             end
 
             diagnostics
@@ -38,19 +35,28 @@ module Klenod
             []
           end
 
-          def diagnostic_for(node, match, lines)
+          def rendered_content?(node)
+            node.children.any? do |child|
+              [:plain, :script, :tag].include?(child.type) || (child.type == :filter && child.value.fetch(:name) != "ruby") || rendered_content?(child)
+            end
+          end
+
+          def each_diagnostic(node, match, lines)
             line = node.line - 1
             line_text = lines.fetch(line, "")
             method_start = line_text.index(".#{match[:method]}") || 0
             span = Text::Span.new(line, method_start, method_start + match[:method].length + 1)
 
-            message = if node.type == :script
-              "`= ...each do` returns the original collection, not the rendered Haml children; use `map` instead"
-            else
-              "`- ...map do` discards the rendered Haml children; use `=` instead"
-            end
+            Diagnostics.warning(span, "`= ...each do` returns the original collection, not the rendered Haml children; use `map` instead")
+          end
 
-            Diagnostics.warning(span, message)
+          def silent_script_diagnostic(node, lines)
+            line = node.line - 1
+            line_text = lines.fetch(line, "")
+            start_character = line_text.index("-") || 0
+            span = Text::Span.new(line, start_character, start_character + 1)
+
+            Diagnostics.warning(span, "A silent `-` script discards its nested Haml content; use `=` when it should render")
           end
         end
       end

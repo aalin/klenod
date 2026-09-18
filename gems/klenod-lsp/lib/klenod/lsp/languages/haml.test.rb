@@ -31,7 +31,7 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_includes(diagnostic.message, "use `map` instead")
   end
 
-  def test_silent_map_block_warns_that_it_discards_the_haml_children
+  def test_silent_script_with_rendered_haml_warns_that_it_discards_the_content
     source = <<~HAML
       %ul
         - @items.map do |item|
@@ -41,9 +41,31 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     diagnostic = diagnostics(source).fetch(0)
 
     assert_equal(1, diagnostic.range.start.line)
-    assert_equal(".map", source.lines[1][diagnostic.range.start.character...diagnostic.range.end.character])
+    assert_equal("-", source.lines[1][diagnostic.range.start.character...diagnostic.range.end.character])
     assert_equal(LanguageServer::Protocol::Constant::DiagnosticSeverity::WARNING, diagnostic.severity)
-    assert_includes(diagnostic.message, "use `=` instead")
+    assert_includes(diagnostic.message, "silent `-` script")
+  end
+
+  def test_silent_conditional_with_rendered_haml_warns_that_it_discards_the_content
+    source = <<~HAML
+      - if @enabled
+        %p Enabled!
+    HAML
+
+    diagnostic = diagnostics(source).fetch(0)
+
+    assert_equal(0, diagnostic.range.start.line)
+    assert_equal("-", source.lines[0][diagnostic.range.start.character...diagnostic.range.end.character])
+    assert_includes(diagnostic.message, "use `=` when it should render")
+  end
+
+  def test_silent_script_without_rendered_haml_does_not_warn
+    source = <<~HAML
+      - @items.map(&:upcase)
+      %p Done
+    HAML
+
+    assert_empty(diagnostics(source))
   end
 
   def test_the_preferred_printed_map_block_does_not_warn
@@ -63,7 +85,11 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
 
     assert_equal(["Layout is imported but never used"], diagnostics.map(&:message))
     assert_equal(2, diagnostics.fetch(0).range.start.line)
-    assert_empty(diagnostics(@page_source.sub("%Layout\n", "- helper = Layout\n")))
+
+    diagnostics = diagnostics(@page_source.sub("%Layout\n", "- helper = Layout\n"))
+
+    refute(diagnostics.any? { |diagnostic| diagnostic.message == "Layout is imported but never used" })
+    assert_includes(diagnostics.map(&:message), "A silent `-` script discards its nested Haml content; use `=` when it should render")
   end
 
   def test_haml_syntax_error_is_reported_on_its_line
