@@ -77,7 +77,7 @@ class Klenod::ExampleTest < Minitest::Test
       Example::Framework::H[
         :button,
         "Save",
-        "data-foo": "foo123",
+        data_foo: "foo123",
         data: {bar: "bar456"},
         aria: {label: "Save changes"}
       ]

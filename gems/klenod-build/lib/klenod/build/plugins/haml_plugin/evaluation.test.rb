@@ -546,11 +546,11 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
         HAML
       }
     ) do |_dir, _context, _record, exports|
-      assert_equal([:button, "Click", {"on-click": :handle_click}], exports::Default.new.render)
+      assert_equal([:button, "Click", {on_click: :handle_click}], exports::Default.new.render)
     end
   end
 
-  def test_haml_transformer_preserves_parenthesized_hyphenated_attribute_names
+  def test_haml_transformer_normalizes_parenthesized_hyphenated_attribute_names
     plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
 
     evaluate_haml(
@@ -561,11 +561,11 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       },
       plugin: plugin
     ) do |_dir, _context, _record, exports|
-      assert_equal([:li, "User", {"data-role": "admin"}], exports::Default.new(role: "admin").render)
+      assert_equal([:li, "User", {data_role: "admin"}], exports::Default.new(role: "admin").render)
     end
   end
 
-  def test_haml_transformer_preserves_parenthesized_aria_attribute_names
+  def test_haml_transformer_normalizes_parenthesized_aria_attribute_names
     evaluate_haml(
       {
         "pages/page.haml" => <<~HAML
@@ -573,7 +573,29 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
         HAML
       }
     ) do |_dir, _context, _record, exports|
-      assert_equal([:li, "User", {"aria-label": "Name"}], exports::Default.new.render)
+      assert_equal([:li, "User", {aria_label: "Name"}], exports::Default.new.render)
+    end
+  end
+
+  def test_haml_component_reads_hyphenated_parenthesized_props_with_ruby_underscores
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
+
+    evaluate_haml(
+      {
+        "components/item.haml" => <<~HAML,
+          %span= $icon_color
+        HAML
+        "pages/page.haml" => <<~HAML
+          :ruby
+            Item = import("/components/item.haml")
+
+          %Item(icon-color="#f0f")
+        HAML
+      },
+      plugin: plugin,
+      plugins: [Klenod::Build::Plugins::RubyPlugin.new, plugin]
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:span, "#f0f"], exports::Default.new.render)
     end
   end
 
@@ -633,8 +655,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
           "2026-08-05",
           {
             is: "intl-time",
-            "date-style": "full",
-            "time-style": "short",
+            date_style: "full",
+            time_style: "short",
             datetime: "2026-08-05T12:10:39-05:00"
           }
         ],

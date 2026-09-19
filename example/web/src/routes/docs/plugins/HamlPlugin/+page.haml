@@ -101,7 +101,7 @@
       %button(data-foo="foo123"){ data: { bar: "bar456" } } Save
       ```
 
-      Parenthesized attributes preserve explicit Haml/HTML spelling, so `data-foo` and `aria-label` reach the factory as hyphenated prop keys. Ruby hash attributes keep Ruby spelling, so `data_foo:` remains a Ruby keyword-style prop and grouped values such as `data: { bar: "bar456" }` are left for the rendering framework to flatten to `data-bar`.
+      Haml normalizes every prop name to Ruby-style underscores before it calls the factory. Thus both `data-foo` and `data_foo` become `data_foo`, and both `on-change-per-page` and `on_change_per_page` become `on_change_per_page`. Components can consistently read these as `$data_foo` and `$on_change_per_page`. Ruby hash attributes keep their nested Ruby shape, so grouped values such as `data: { bar: "bar456" }` are left for the rendering framework to flatten to `data-bar` when it writes HTML.
 
       A bare method name in a parenthesized event attribute is passed as a symbol instead of being called while the component renders:
 

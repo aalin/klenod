@@ -311,7 +311,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       rendered = context.graph.mods.fetch(record.id).const_get(:Exports)::Default.new.render
 
       assert_equal([styles.fetch(:__button), "caller"].join(" "), rendered.fetch(2).fetch(:class))
-      assert_equal("example", rendered.fetch(2).fetch(:"data-id"))
+      assert_equal("example", rendered.fetch(2).fetch(:data_id))
       assert_includes(record.transformed_source, "HamlHelper.merge_props(self.class")
       assert_includes(record.transformed_source, ":__button")
     end

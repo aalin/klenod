@@ -39,13 +39,13 @@
       %button{ type: "button", **button_props } Save
       ```
 
-      Parenthesized attributes preserve explicit HTML spelling:
+      Haml normalizes prop names to Ruby-style underscores before it calls a component or element factory:
 
       ```haml
       %button(data-foo="foo123"){ data: { bar: "bar456" } } Save
       ```
 
-      The Haml plugin keeps `data-foo` as a hyphenated prop key. It also keeps Ruby hash attributes, such as `data: { bar: "bar456" }`, in their Ruby shape. The example renderer then writes these values as `data-foo="foo123" data-bar="bar456"`. When you pass props to another Haml component, use Ruby-style underscore names such as `data_foo:` or `on_change_per_page:`. The receiving component can read these props as `$data_foo` or `$on_change_per_page`. Do not use `$data-foo`; Ruby reads it as subtraction, not as one prop name.
+      Both `data-foo` and `data_foo` become the Ruby prop `data_foo`. This means a component can always read `$data_foo` or forward `data_foo:` regardless of the Haml spelling used at its call site. Ruby hash attributes, such as `data: { bar: "bar456" }`, keep their nested Ruby shape. The example renderer serializes element props with HTML spelling, producing `data-foo="foo123" data-bar="bar456"`. Do not use `$data-foo`; Ruby reads it as subtraction, not as one prop name.
 
       Silent conditional blocks support both `if` and `unless`, so `- unless hidden` renders its nested Haml only when the condition is false.
 

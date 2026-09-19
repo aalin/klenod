@@ -10,14 +10,14 @@ class Klenod::Build::Plugins::HamlPlugin::HelperSourceTest < Klenod::Build::Plug
     assert_includes(plugin.send(:haml_helper_source), "def self.merge_props")
   end
 
-  def test_haml_helper_preserves_explicit_hyphenated_prop_keys
+  def test_haml_helper_normalizes_hyphenated_prop_keys_to_ruby_names
     props =
       FakeFramework::HamlPluginHelper.merge_props(
         FakeFramework::ComponentBase,
         {"data-role" => "admin", :"aria-label" => "Name"}
       )
 
-    assert_equal({"data-role" => "admin", :"aria-label" => "Name"}, props)
+    assert_equal({data_role: "admin", aria_label: "Name"}, props)
   end
 
   def test_haml_helper_keeps_component_prop_merging_behavior
