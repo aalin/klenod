@@ -537,7 +537,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_stylesheet_paths_unique(paths)
     paths.each { |path| assert_includes(head_html(html), path) }
     assert_linked_stylesheets_do_not_import_linked_stylesheets(context, paths)
-    assert_stylesheet_order(paths, "root_css", "routes_layout_css", "components_Button_css", "routes_page_css")
+    assert_stylesheet_order(paths, "root_css", "components_Button_css", "routes_layout_css", "routes_page_css")
     refute(paths.any? { |path| path.include?("routes_demo_dashboard") })
     refute(paths.any? { |path| path.include?("routes_demo_assets") })
   end
@@ -615,8 +615,8 @@ class Klenod::ExampleTest < Minitest::Test
       "routes_layout_css",
       "routes_demo_layout_css",
       "routes_demo_dashboard_layout_css",
-      "routes_demo_dashboard_page_css",
-      "components_MetricCard_css"
+      "components_MetricCard_css",
+      "routes_demo_dashboard_page_css"
     )
   end
 
