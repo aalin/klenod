@@ -36,6 +36,54 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
     assert_equal("{\"href\" => link[:href],}", tag.value.fetch(:dynamic_attributes).new)
   end
 
+  def test_parse_haml_preserves_boolean_attributes_with_extended_parenthesized_attributes
+    tag =
+      Klenod::Build::Plugins::HamlPlugin.parse_haml(
+        "%Input(name=\"password\" type=\"password\" label=\"Password (8+ characters)\" required pattern=\".{8,}\" autocomplete=\"off\")\n"
+      ).children.fetch(0)
+
+    assert_equal(
+      "{\"name\" => \"password\",\"type\" => \"password\",\"label\" => \"Password (8+ characters)\",\"required\" => true,\"pattern\" => \".{8,}\",\"autocomplete\" => \"off\",}",
+      tag.value.fetch(:dynamic_attributes).new
+    )
+  end
+
+  def test_parse_haml_supports_a_trailing_boolean_attribute_with_an_extended_parenthesized_attribute
+    tag = Klenod::Build::Plugins::HamlPlugin.parse_haml("%Input(pattern=value.match required)\n").children.fetch(0)
+
+    assert_equal("{\"pattern\" => value.match,\"required\" => true,}", tag.value.fetch(:dynamic_attributes).new)
+  end
+
+  def test_parse_haml_supports_consecutive_boolean_attributes_with_an_extended_parenthesized_attribute
+    tag = Klenod::Build::Plugins::HamlPlugin.parse_haml("%Input(title=user.name disabled required)\n").children.fetch(0)
+
+    assert_equal(
+      "{\"title\" => user.name,\"disabled\" => true,\"required\" => true,}",
+      tag.value.fetch(:dynamic_attributes).new
+    )
+  end
+
+  def test_parse_haml_supports_compound_expressions_and_regex_values_in_parenthesized_attributes
+    tag =
+      Klenod::Build::Plugins::HamlPlugin.parse_haml(
+        "%Input(title=(user.name ? user.name : fallback.name) pattern=/a b/ required)\n"
+      ).children.fetch(0)
+
+    assert_equal(
+      "{\"title\" => (user.name ? user.name : fallback.name),\"pattern\" => /a b/,\"required\" => true,}",
+      tag.value.fetch(:dynamic_attributes).new
+    )
+  end
+
+  def test_parse_haml_rejects_ambiguous_unparenthesized_ternary_attributes
+    error =
+      assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
+        Klenod::Build::Plugins::HamlPlugin.parse_haml("%Input(title=condition ? a : b class=styles.field)\n")
+      end
+
+    assert_includes(error.message, "Invalid attribute list")
+  end
+
   def test_parse_haml_wraps_haml_syntax_errors_with_source_context
     error =
       assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do

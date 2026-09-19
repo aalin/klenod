@@ -89,7 +89,10 @@ module Klenod
 
               index += name.length
               index += 1 while source[index]&.match?(/\s/)
-              return nil unless source[index] == "="
+              unless source[index] == "="
+                pairs << [name, "true"]
+                next
+              end
 
               index += 1
               index += 1 while source[index]&.match?(/\s/)
@@ -114,19 +117,36 @@ module Klenod
                   when "(", "[", "{" then depth += 1
                   when ")", "]", "}" then depth -= 1
                   when " ", "\t"
-                    break if depth.zero? && source[index..].match?(/\A\s+[-:@#\w.]+\s*=/)
+                    break if depth.zero? && attribute_boundary?(source[index..])
                   end
                 end
                 index += 1
               end
 
               value = source[value_start...index].strip
-              return nil if value.empty? || depth.negative? || quote
+              return nil if value.empty? || depth.negative? || quote || !Ripper.sexp(value)
 
               pairs << [name, value]
             end
 
             pairs
+          end
+
+          def attribute_boundary?(remaining_source)
+            attribute_sequence?(remaining_source)
+          end
+
+          def attribute_sequence?(source)
+            source = source.lstrip
+            name = source.match(/\A[-:@#\w.]*\w[-:@#\w.]*/)&.to_s
+            return false unless name
+            return false if %w[true false nil].include?(name)
+
+            rest = source[name.length..]
+            return true if rest.empty? || rest.lstrip.start_with?("=")
+            return false unless rest.start_with?(" ", "\t")
+
+            attribute_sequence?(rest)
           end
 
           def literal_class_names_from_old_attributes(source)
