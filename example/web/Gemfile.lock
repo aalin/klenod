@@ -3,7 +3,7 @@ PATH
   specs:
     klenod-build (0.0.19)
       async (~> 2.42)
-      async-http (>= 0.95.1, < 0.104.0)
+      async-http (>= 0.95.1, < 0.106.0)
       base64 (~> 0.3)
       brotli (~> 0.8)
       image_size (~> 3.6)
@@ -71,16 +71,16 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    async (2.45.1)
+    async (2.46.0)
       console (~> 1.29)
       fiber-annotation
       io-event (~> 1.21)
-    async-http (0.103.0)
+    async-http (0.105.0)
       async (>= 2.35.1)
       async-pool (~> 0.12)
       io-endpoint (~> 0.18)
       io-stream (~> 0.14)
-      protocol-http (~> 0.66)
+      protocol-http (~> 0.72)
       protocol-http1 (~> 0.41)
       protocol-http2 (~> 0.28)
       protocol-url (~> 0.2)
@@ -95,7 +95,7 @@ GEM
     bigdecimal (4.1.2)
     brotli (0.8.0)
     citrus (3.0.2)
-    console (1.37.0)
+    console (1.38.0)
       fiber-annotation
       fiber-local (~> 1.1)
       json
@@ -126,10 +126,10 @@ GEM
     image_size (3.6.0)
     io-endpoint (0.18.0)
       openssl (>= 3.3.0)
-    io-event (1.21.1)
+    io-event (1.22.0)
     io-stream (0.14.0)
       openssl (>= 3.3)
-    json (2.21.2)
+    json (3.0.2)
     kramdown (2.5.2)
       rexml (>= 3.4.4)
     kramdown-parser-gfm (1.1.0)
@@ -157,7 +157,7 @@ GEM
     prettier_print (1.2.1)
     prism (1.9.0)
     protocol-hpack (1.5.1)
-    protocol-http (0.71.0)
+    protocol-http (0.72.0)
     protocol-http1 (0.41.0)
       protocol-http (~> 0.68)
     protocol-http2 (0.28.0)
@@ -213,7 +213,7 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
-  async-http (~> 0.103.0)
+  async-http (~> 0.105.0)
   http-accept (~> 2.2)
   klenod!
   klenod-build!
@@ -231,8 +231,8 @@ DEPENDENCIES
   vernier
 
 CHECKSUMS
-  async (2.45.1) sha256=95849f7432eca535146c69f3078dab3c7228d0075ed71f48733f3e585dd7c267
-  async-http (0.103.0) sha256=137e3d5d419f7d72d5fa33cf04f30232e79c57b690025a650b8f9e48ece8bc41
+  async (2.46.0) sha256=34f984733dbf63a997376346451ec995e858cacc3105e86ccfeaf8877b4f490b
+  async-http (0.105.0) sha256=55191969d5cf61be5fbc2e0aadd51d77085318ba192a5ff5e12e3aba0826906a
   async-pool (0.12.0) sha256=5580493dc024bd704dab2ed0bf1307100722e49cbb825c7965f8501194f58506
   async-process (1.4.0) sha256=859c2901b9047b6b8843e9a21ec7f3c626eb04efdcff66185a05ede99257f590
   bake (0.25.0) sha256=a47bdc6a26addc048827debc36fe27bb4d5d71ac2958ad910b5386e9baf49869
@@ -240,7 +240,7 @@ CHECKSUMS
   bigdecimal (4.1.2) sha256=53d217666027eab4280346fba98e7d5b66baaae1b9c3c1c0ffe89d48188a3fbd
   brotli (0.8.0) sha256=0c5a42046b3b603fb109656881147fd76064c034b7d19c1b4fcc32a093a4d55d
   citrus (3.0.2) sha256=4ec2412fc389ad186735f4baee1460f7900a8e130ffe3f216b30d4f9c684f650
-  console (1.37.0) sha256=8093b286c2595a063849c098594fee5155ecc7967d36f3aa8cbe7569c8f3efd7
+  console (1.38.0) sha256=35b82f59130e95e9be6b832d9e539c8b3988fc192e4a8e9a86ab4922f44ad5de
   covered (0.30.0) sha256=93b1bf881812dd4f52e1c3330bf7fe0dcb6bc9bb72a200cbe5d282e902e947c5
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
   ffi (1.17.4-aarch64-linux-gnu) sha256=b208f06f91ffd8f5e1193da3cae3d2ccfc27fc36fba577baf698d26d91c080df
@@ -260,9 +260,9 @@ CHECKSUMS
   http-accept (2.2.2) sha256=c439ead5671a2a648f754460d4fedb8af61086dc09f8d4465e2f78144bc6adf0
   image_size (3.6.0) sha256=1b9c4196cb658bf503a887920543a3991e927a4b767a5c770fb9665bce0dcb28
   io-endpoint (0.18.0) sha256=720d186bcd584e8ba490bfc91dab332cc3c5ffee848b5b03894555cb275151aa
-  io-event (1.21.1) sha256=b3088f89ad67edf9be9fc2f48a5fae0790e92862487551eeb337b49098eb99e6
+  io-event (1.22.0) sha256=4936d38dfcf2291d897707fd94690f1a63fdb1ea3ab4fa63c6739fc6c61e1534
   io-stream (0.14.0) sha256=07d9b13ea2066ccbbc761fff8d69ad5a31e47561d31e02cc271f3ed9c1a8f1cd
-  json (2.21.2) sha256=1f1d3b7cf2b3ba1a69beca0bb6db13d5438b80bff3cd54cdaaa620b9b07c1c6a
+  json (3.0.2) sha256=8e6d7e7b11384c21230430cef90b71f14849a34a1f4452796670f7c981bd19df
   klenod (0.0.19)
   klenod-build (0.0.19)
   klenod-lsp (0.0.19)
@@ -290,7 +290,7 @@ CHECKSUMS
   prettier_print (1.2.1) sha256=a72838b5f23facff21f90a5423cdcdda19e4271092b41f4ea7f50b83929e6ff9
   prism (1.9.0) sha256=7b530c6a9f92c24300014919c9dcbc055bf4cdf51ec30aed099b06cd6674ef85
   protocol-hpack (1.5.1) sha256=6feca238b8078da1cd295677d6f306c6001af92d75fe0643d33e6956cbc3ad91
-  protocol-http (0.71.0) sha256=38577bf3df0bf0c3f7ee7e21b43fcb4bd7624e36f697dbe9c3eea344f14bd9ba
+  protocol-http (0.72.0) sha256=b153474785979495b9f2df78f0fdc2e02edc7e92c1f7ea00425eed73bd02194c
   protocol-http1 (0.41.0) sha256=9863874a1228948a896c3e7ea16d13a680c8f3ed50706007c78b7033018b0ea3
   protocol-http2 (0.28.0) sha256=b7c6195dcfa80ec2484670e9fd8fc21024cc654a391aa0792433aff1188c1691
   protocol-url (0.19.0) sha256=3f6b9f6aa742a259a0b3610fbbd9685dcd9506adf6734f428ff96259faabfb21
