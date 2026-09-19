@@ -39,6 +39,14 @@
       %button{ type: "button", **button_props } Save
       ```
 
+      Parenthesized attributes preserve explicit HTML spelling:
+
+      ```haml
+      %button(data-foo="foo123"){ data: { bar: "bar456" } } Save
+      ```
+
+      The Haml plugin keeps `data-foo` as a hyphenated prop key. It also keeps Ruby hash attributes, such as `data: { bar: "bar456" }`, in their Ruby shape. The example renderer then writes these values as `data-foo="foo123" data-bar="bar456"`. When you pass props to another Haml component, use Ruby-style underscore names such as `data_foo:` or `on_change_per_page:`. The receiving component can read these props as `$data_foo` or `$on_change_per_page`. Do not use `$data-foo`; Ruby reads it as subtraction, not as one prop name.
+
       Silent conditional blocks support both `if` and `unless`, so `- unless hidden` renders its nested Haml only when the condition is false.
 
       Haml also supports inline `:css`, `:markdown`, and `:plain` filters. Markdown filters are handled by `MarkdownPlugin` and use `/markdown-components.rb` when that map exists; `:plain` renders its text unchanged.

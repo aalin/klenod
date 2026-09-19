@@ -72,6 +72,22 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal(Example::Framework::H.render(node), Example::Framework::HTMLRenderer.render(node))
   end
 
+  def test_example_h_flattens_grouped_data_and_aria_attributes
+    node =
+      Example::Framework::H[
+        :button,
+        "Save",
+        "data-foo": "foo123",
+        data: {bar: "bar456"},
+        aria: {label: "Save changes"}
+      ]
+
+    assert_equal(
+      %(<button data-foo="foo123" data-bar="bar456" aria-label="Save changes">Save</button>),
+      Example::Framework::H.render(node)
+    )
+  end
+
   def test_example_h_uses_authored_class_names_for_test_rendering
     node =
       Example::Framework::H[:section,

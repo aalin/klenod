@@ -546,7 +546,55 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
         HAML
       }
     ) do |_dir, _context, _record, exports|
-      assert_equal([:button, "Click", {on_click: :handle_click}], exports::Default.new.render)
+      assert_equal([:button, "Click", {"on-click": :handle_click}], exports::Default.new.render)
+    end
+  end
+
+  def test_haml_transformer_preserves_parenthesized_hyphenated_attribute_names
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %li(data-role=$role) User
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:li, "User", {"data-role": "admin"}], exports::Default.new(role: "admin").render)
+    end
+  end
+
+  def test_haml_transformer_preserves_parenthesized_aria_attribute_names
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %li(aria-label="Name") User
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:li, "User", {"aria-label": "Name"}], exports::Default.new.render)
+    end
+  end
+
+  def test_haml_transformer_preserves_ruby_style_attribute_shapes
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %ul
+            %li{data_role: "user"} Underscore
+            %li{data: {role: "user"}} Nested
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal(
+        [
+          :ul,
+          [:li, "Underscore", {data_role: "user"}],
+          [:li, "Nested", {data: {role: "user"}}]
+        ],
+        exports::Default.new.render
+      )
     end
   end
 
@@ -585,8 +633,8 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
           "2026-08-05",
           {
             is: "intl-time",
-            date_style: "full",
-            time_style: "short",
+            "date-style": "full",
+            "time-style": "short",
             datetime: "2026-08-05T12:10:39-05:00"
           }
         ],

@@ -98,15 +98,18 @@
       ```haml
       %YouTubeVideo[key](video_id=video.id title=video.title)
       %a(href=link[:href]) Watch
+      %button(data-foo="foo123"){ data: { bar: "bar456" } } Save
       ```
+
+      Parenthesized attributes preserve explicit Haml/HTML spelling, so `data-foo` and `aria-label` reach the factory as hyphenated prop keys. Ruby hash attributes keep Ruby spelling, so `data_foo:` remains a Ruby keyword-style prop and grouped values such as `data: { bar: "bar456" }` are left for the rendering framework to flatten to `data-bar`.
 
       A bare method name in a parenthesized event attribute is passed as a symbol instead of being called while the component renders:
 
       ```haml
-      %Pagination(on-change-per-page=handle_set_per_page)
+      %Pagination(on_change_per_page=handle_set_per_page)
       ```
 
-      This produces an `on_change_per_page: :handle_set_per_page` prop. A framework can bind that method reference when it merges or receives the component props. Brace-style attributes remain ordinary Ruby expressions.
+      This produces an `on_change_per_page: :handle_set_per_page` prop, which a Haml component can read as `$on_change_per_page`. A framework can bind that method reference when it merges or receives the component props. Brace-style attributes remain ordinary Ruby expressions.
 
       `:markdown` filters use `MarkdownPlugin`. `:css` filters add inline styles to the module graph. `:plain` filters render their text unchanged.
 

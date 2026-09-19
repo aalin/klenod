@@ -187,17 +187,32 @@ module Example
         output = +""
         props.each do |name, value|
           value = authored_class_names(value) if class_names == :authored && name.to_sym == :class
-          next if value.nil? || value == false
-
-          output << " "
-          output << escape_html(name.to_s.tr("_", "-"))
-          next if value == true
-
-          output << '="'
-          output << escape_html(attribute_value(name, value))
-          output << '"'
+          append_attribute(output, name, value)
         end
         output
+      end
+
+      def append_attribute(output, name, value)
+        return if value.nil? || value == false
+
+        if grouped_attribute?(name, value)
+          value.each do |child_name, child_value|
+            append_attribute(output, "#{name}-#{child_name}", child_value)
+          end
+          return
+        end
+
+        output << " "
+        output << escape_html(name.to_s.tr("_", "-"))
+        return if value == true
+
+        output << '="'
+        output << escape_html(attribute_value(name, value))
+        output << '"'
+      end
+
+      def grouped_attribute?(name, value)
+        value.is_a?(Hash) && %i[data aria].include?(name.to_sym)
       end
 
       def authored_class_names(value)

@@ -46,9 +46,12 @@ module Klenod
                 end
 
                 def self.normalize_prop_key(key)
-                  return key if key.is_a?(Symbol) && !key.to_s.include?("-")
+                  return key if key.is_a?(Symbol)
 
-                  key.to_s.tr("-", "_").to_sym
+                  name = key.to_s
+                  return key if name.include?("-")
+
+                  name.to_sym
                 end
 
                 def self.collect_class_values(classes, value)
