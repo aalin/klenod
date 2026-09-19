@@ -556,7 +556,11 @@ module Klenod
           record
             .resolved_dependencies
             .reject { skip_asset_dependency?(it, type:) }
-            .map(&:module_id)
+        if type == :css
+          regular_dependencies, companion_styles = dependency_ids.partition { |dependency| dependency.dependency.kind != :companion_style }
+          dependency_ids = [*regular_dependencies, *companion_styles]
+        end
+        dependency_ids = dependency_ids.map(&:module_id)
 
         if module_id.extname == ".css"
           dependency_ids.flat_map { |dependency_id| ordered_module_ids_for_assets(dependency_id, seen, type: type) } + [module_id]

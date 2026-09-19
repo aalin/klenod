@@ -36,7 +36,7 @@
     :markdown
       CSS imported from Ruby or Haml returns a class map. CSS imported from CSS records stylesheet dependencies and returns transformed asset paths.
 
-      The same stylesheet should appear once in a rendered document. Routed frameworks can use route-scoped asset traversal so root and layout CSS appear before page and component CSS.
+      The same stylesheet should appear once in a rendered document. Routed frameworks can use route-scoped asset traversal to order stylesheets by graph dependencies. A Haml module's companion CSS is emitted after CSS imported by that module, so page or component styles can customize imported component styles.
 
       CSS imported from JavaScript uses a separate graph module and emits an unscoped stylesheet asset for native browser CSS module imports:
 

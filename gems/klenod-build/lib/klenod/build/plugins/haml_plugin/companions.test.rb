@@ -54,6 +54,35 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
     end
   end
 
+  def test_companion_css_follows_imported_css
+    plugin = haml_plugin
+    with_haml_context(
+      {
+        "pages/page.haml" => "- styles = import(\"../components/button.css\")\n%button Click\n",
+        "pages/page.css" => "button { color: red; }\n",
+        "components/button.css" => ".button { color: blue; }\n"
+      },
+      plugin:,
+      plugins: [*default_plugins_with(plugin), Klenod::Build::Plugins::CSSPlugin.new]
+    ) do |dir, context|
+      record = context.evaluate("pages/page.haml")
+
+      assert_equal(
+        ["components/button.css", "pages/page.css"],
+        context.assets_for_module(record, type: :css).map(&:logical_name)
+      )
+
+      output = File.join(dir, "bundle.mpk")
+      context.build(entrypoints: ["pages/page.haml"], output: output)
+      bundle = Klenod::Runtime.load_bundle(output)
+
+      assert_equal(
+        ["components/button.css", "pages/page.css"],
+        bundle.assets_for_module("pages/page.haml", type: :css).map(&:logical_name)
+      )
+    end
+  end
+
   def test_haml_loads_companion_intl_files_into_translations
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

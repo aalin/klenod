@@ -269,7 +269,9 @@ module Klenod
           @modules
             .fetch(module_id)
             .imports
-            .values
+            .partition { |import_id, _import| import_id.to_s.end_with?(":companion_style") }
+            .then { |companion_styles, regular_imports| [regular_imports, companion_styles] }
+            .flat_map { |imports| imports.map { |_import_id, import_spec| import_spec } }
             .map { |import_spec| import_spec.is_a?(ImportSpec) ? import_spec.target_id : import_spec }
 
         if File.extname(module_id) == ".css"
