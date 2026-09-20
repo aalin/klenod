@@ -37,11 +37,11 @@
       If `/markdown-components.rb` exists, Markdown rendering uses its `Default` hash to map tags to components. Markdown files and Haml files with `:markdown` filters watch the map, so updates reload affected modules.
 
       ```ruby
-      Heading = import("/components/markdown/Heading.haml")
+      MarkdownHeading = import("/components/markdown/Heading.rb")
       Link = import("/components/markdown/Link.haml")
 
       Default = {
-        h1: Heading,
+        h1: MarkdownHeading::H1,
         a: Link
       }.freeze
       ```

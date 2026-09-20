@@ -8,7 +8,7 @@ MARKDOWN_LIST_ITEM = import("/components/markdown/ListItem.haml")
 MARKDOWN_INLINE_CODE = import("/components/markdown/InlineCode.haml")
 MARKDOWN_STRONG = import("/components/markdown/Strong.haml")
 MARKDOWN_EMPHASIS = import("/components/markdown/Emphasis.haml")
-MARKDOWN_HEADING = import("/components/markdown/Heading.haml")
+MarkdownHeading = import("/components/markdown/Heading.rb")
 
 # rubocop:disable Naming/ConstantName
 Default = {
@@ -16,12 +16,12 @@ Default = {
   blockquote: MARKDOWN_CALLOUT,
   code: MARKDOWN_INLINE_CODE,
   em: MARKDOWN_EMPHASIS,
-  h1: MARKDOWN_HEADING,
-  h2: MARKDOWN_HEADING,
-  h3: MARKDOWN_HEADING,
-  h4: MARKDOWN_HEADING,
-  h5: MARKDOWN_HEADING,
-  h6: MARKDOWN_HEADING,
+  h1: MarkdownHeading::H1,
+  h2: MarkdownHeading::H2,
+  h3: MarkdownHeading::H3,
+  h4: MarkdownHeading::H4,
+  h5: MarkdownHeading::H5,
+  h6: MarkdownHeading::H6,
   li: MARKDOWN_LIST_ITEM,
   ol: MARKDOWN_ORDERED_LIST,
   p: MARKDOWN_PARAGRAPH,
