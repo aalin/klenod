@@ -45,6 +45,27 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
     end
   end
 
+  def test_svg_metadata_rounds_dimensions_without_rounding_aspect_ratio
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/images")
+      File.write("#{dir}/images/logo.svg", svg(width: "24.4", height: "32.6"))
+      File.write(
+        "#{dir}/entry.rb",
+        "Logo = import(\"images/logo.svg\")\nSIZE = [Logo.width, Logo.height]\nASPECT_RATIO = Logo.aspect_ratio\n"
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.evaluate("entry")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+      asset = context.assets_for("images/logo.svg").fetch(0)
+
+      assert_equal([24, 33], exports::SIZE)
+      assert_equal(24.4 / 32.6, exports::ASPECT_RATIO)
+      assert_equal(24.4, asset.metadata[:width])
+      assert_equal(32.6, asset.metadata[:height])
+    end
+  end
+
   def test_non_javascript_svg_import_does_not_emit_javascript_metadata_asset
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")
@@ -93,7 +114,7 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
   def test_runtime_bundle_preserves_svg_import_value_and_metadata
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/images")
-      File.write("#{dir}/images/logo.svg", svg(view_box: "0 0 48 64"))
+      File.write("#{dir}/images/logo.svg", svg(width: "48.4", height: "64.6"))
       File.write("#{dir}/entry.rb", "Logo = import(\"images/logo.svg\")\nSVG = Logo\n")
       output = "#{dir}/bundle.mpk"
 
@@ -107,12 +128,12 @@ class Klenod::Build::Plugins::SvgPlugin::Test < Minitest::Test
       refute_match(/::Exports\z/, svg.inspect)
       assert(loaded.modules.key?("virtual:/klenod/svg.rb"))
       assert_equal(48, svg.width)
-      assert_equal(64, svg.height)
+      assert_equal(65, svg.height)
       assert_equal("image/svg+xml", svg.content_type)
-      assert_equal(0.75, svg.aspect_ratio)
+      assert_equal(48.4 / 64.6, svg.aspect_ratio)
       assert(svg.frozen?)
-      assert_equal(48, asset.metadata[:width])
-      assert_equal(64, asset.metadata[:height])
+      assert_equal(48.4, asset.metadata[:width])
+      assert_equal(64.6, asset.metadata[:height])
       assert_equal(bundle.assets.keys, loaded.assets.keys)
     end
   end

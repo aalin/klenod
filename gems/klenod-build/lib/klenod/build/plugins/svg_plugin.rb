@@ -126,8 +126,8 @@ module Klenod
               Default =
                 SvgRuntime::SvgMetadata.new(
                   src: #{asset.url.inspect},
-                  width: #{asset.metadata[:width].inspect},
-                  height: #{asset.metadata[:height].inspect},
+                  width: #{rounded_dimension(asset.metadata[:width]).inspect},
+                  height: #{rounded_dimension(asset.metadata[:height]).inspect},
                   content_type: #{asset.content_type.inspect},
                   aspect_ratio: #{AssetJavaScriptMetadata.aspect_ratio(asset.metadata[:width], asset.metadata[:height]).inspect}
                 )
@@ -152,8 +152,8 @@ module Klenod
           def javascript_svg_module_source(asset, context)
             metadata = {
               src: asset.url,
-              width: asset.metadata[:width],
-              height: asset.metadata[:height],
+              width: rounded_dimension(asset.metadata[:width]),
+              height: rounded_dimension(asset.metadata[:height]),
               contentType: asset.content_type,
               aspectRatio: AssetJavaScriptMetadata.aspect_ratio(asset.metadata[:width], asset.metadata[:height])
             }
@@ -173,6 +173,12 @@ module Klenod
             return Dimensions.new(explicit_width, explicit_height) if explicit_width && explicit_height
 
             view_box_dimensions(attributes["viewBox"] || attributes["viewbox"])
+          end
+
+          # Keep intrinsic dimensions precise in asset metadata so the aspect
+          # ratio is accurate, but expose pixel dimensions as whole numbers.
+          def rounded_dimension(dimension)
+            dimension&.round
           end
 
           # Malformed markup is tolerated: no <svg> match just means unknown

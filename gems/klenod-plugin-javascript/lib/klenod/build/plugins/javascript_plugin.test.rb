@@ -161,7 +161,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
   def test_default_svg_import_is_rewritten_to_javascript_metadata_asset
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(["#{dir}/scripts", "#{dir}/images"])
-      File.write("#{dir}/images/logo.svg", %(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32"><path d="M0 0h24v32H0z"/></svg>\n))
+      File.write("#{dir}/images/logo.svg", %(<svg xmlns="http://www.w3.org/2000/svg" width="24.4" height="32.6"><path d="M0 0h24v32H0z"/></svg>\n))
       File.write("#{dir}/scripts/app.js", "import logo from '../images/logo.svg';\nconsole.log(logo.src, logo.width);\n")
       File.write("#{dir}/entry.rb", "Default = import(\"scripts/app.js\")\n")
 
@@ -177,9 +177,9 @@ class Klenod::Build::Plugins::JavaScriptPlugin::Test < Minitest::Test
       assert_import_from(svg_module_asset.bytes, metadata_runtime_asset.output_path)
       assert_includes(svg_module_asset.bytes, %(src:"#{svg_asset.url}"))
       assert_includes(svg_module_asset.bytes, "width:24")
-      assert_includes(svg_module_asset.bytes, "height:32")
+      assert_includes(svg_module_asset.bytes, "height:33")
       assert_includes(svg_module_asset.bytes, %(contentType:"image/svg+xml"))
-      assert_includes(svg_module_asset.bytes, "aspectRatio:0.75")
+      assert_includes(svg_module_asset.bytes, "aspectRatio:#{24.4 / 32.6}")
       assert_includes(svg_module_asset.bytes, "new SvgMetadata(")
       assert_includes(metadata_runtime_asset.bytes, "export class SvgMetadata")
     end
