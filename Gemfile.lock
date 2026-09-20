@@ -1,13 +1,13 @@
 PATH
   remote: gems/klenod-build
   specs:
-    klenod-build (0.0.21)
+    klenod-build (0.0.22)
       async (~> 2.42)
       async-http (>= 0.95.1, < 0.106.0)
       base64 (~> 0.3)
       brotli (~> 0.8)
       image_size (~> 3.6)
-      klenod-runtime (= 0.0.21)
+      klenod-runtime (= 0.0.22)
       kramdown (~> 2.5)
       kramdown-parser-gfm (~> 1.1)
       listen (~> 3.10)
@@ -22,51 +22,51 @@ PATH
 PATH
   remote: gems/klenod-lsp
   specs:
-    klenod-lsp (0.0.21)
-      klenod-build (= 0.0.21)
+    klenod-lsp (0.0.22)
+      klenod-build (= 0.0.22)
       language_server-protocol (~> 3.17)
 
 PATH
   remote: gems/klenod-plugin-css
   specs:
-    klenod-plugin-css (0.0.21)
-      klenod-build (= 0.0.21)
+    klenod-plugin-css (0.0.22)
+      klenod-build (= 0.0.22)
       rb_sys (~> 0.9.124)
 
 PATH
   remote: gems/klenod-plugin-javascript
   specs:
-    klenod-plugin-javascript (0.0.21)
-      klenod-build (= 0.0.21)
+    klenod-plugin-javascript (0.0.22)
+      klenod-build (= 0.0.22)
       rb_sys (~> 0.9.124)
 
 PATH
   remote: gems/klenod-rack
   specs:
-    klenod-rack (0.0.21)
+    klenod-rack (0.0.22)
       http-accept (~> 2.2)
-      klenod-runtime (= 0.0.21)
+      klenod-runtime (= 0.0.22)
 
 PATH
   remote: gems/klenod-runtime
   specs:
-    klenod-runtime (0.0.21)
+    klenod-runtime (0.0.22)
 
 PATH
   remote: gems/klenod-test
   specs:
-    klenod-test (0.0.21)
+    klenod-test (0.0.22)
       async-process (~> 1.4)
       covered (~> 0.30)
-      klenod-build (= 0.0.21)
+      klenod-build (= 0.0.22)
 
 PATH
   remote: gems/klenod
   specs:
-    klenod (0.0.21)
-      klenod-build (= 0.0.21)
-      klenod-runtime (= 0.0.21)
-      klenod-test (= 0.0.21)
+    klenod (0.0.22)
+      klenod-build (= 0.0.22)
+      klenod-runtime (= 0.0.22)
+      klenod-test (= 0.0.22)
 
 GEM
   remote: https://rubygems.org/
@@ -302,14 +302,14 @@ CHECKSUMS
   io-event (1.22.0) sha256=4936d38dfcf2291d897707fd94690f1a63fdb1ea3ab4fa63c6739fc6c61e1534
   io-stream (0.14.0) sha256=07d9b13ea2066ccbbc761fff8d69ad5a31e47561d31e02cc271f3ed9c1a8f1cd
   json (2.21.2) sha256=1f1d3b7cf2b3ba1a69beca0bb6db13d5438b80bff3cd54cdaaa620b9b07c1c6a
-  klenod (0.0.21)
-  klenod-build (0.0.21)
-  klenod-lsp (0.0.21)
-  klenod-plugin-css (0.0.21)
-  klenod-plugin-javascript (0.0.21)
-  klenod-rack (0.0.21)
-  klenod-runtime (0.0.21)
-  klenod-test (0.0.21)
+  klenod (0.0.22)
+  klenod-build (0.0.22)
+  klenod-lsp (0.0.22)
+  klenod-plugin-css (0.0.22)
+  klenod-plugin-javascript (0.0.22)
+  klenod-rack (0.0.22)
+  klenod-runtime (0.0.22)
+  klenod-test (0.0.22)
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
   kramdown-parser-gfm (1.1.0) sha256=fb39745516427d2988543bf01fc4cf0ab1149476382393e0e9c48592f6581729
   language_server-protocol (3.17.0.6) sha256=5ef2c0c138f8267e1bc631d3328347d354f96724b0af22f2c79516120443b7f0
