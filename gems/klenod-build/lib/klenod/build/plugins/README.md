@@ -358,3 +358,8 @@ Klenod::Build::Plugins::RouterPlugin.new(
 - `pages_dir`: source-root-relative directory to scan.
 - `extensions`: page/layout/route implementation extensions.
 - `route_base_class`: optional Ruby constant path used for generated route metadata classes.
+
+Route-adjacent tests may use any `+*.test.rb` filename, such as
+`+page.test.rb`. They are ignored by route discovery and remain normal
+`klenod-test` entrypoints, so they can import the neighboring page with
+`Page = import("./+page.haml")`.

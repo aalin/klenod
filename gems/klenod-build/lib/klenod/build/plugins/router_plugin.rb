@@ -184,6 +184,7 @@ module Klenod
 
           def supported_plus_file?(path)
             basename = path.basename.to_s
+            return true if basename.match?(/\A\+.*\.test\.rb\z/)
             return true if basename == "+route.rb"
 
             ROUTE_FILE_BASENAMES.any? do |route_basename|

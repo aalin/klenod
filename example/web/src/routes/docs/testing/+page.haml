@@ -12,7 +12,7 @@
 
   %DocsSection{ title: "Colocated Tests" }
     :markdown
-      Test files live anywhere under `src` and end in `.test.rb`. They are test entrypoints, not application dependencies. A test can import the component or module beside it:
+      Test files live anywhere under `src` and end in `.test.rb`. They are test entrypoints, not application dependencies. Route directories may use `+page.test.rb` (or another `+*.test.rb` name); RouterPlugin ignores those files as routes. A test can import the component or module beside it:
 
       ```ruby
       Button = import("./Button.haml")
@@ -23,6 +23,12 @@
 
         assert_equal("submit", button["type"])
       end
+      ```
+
+      A page test uses the same rules:
+
+      ```ruby
+      Page = import("./+page.haml")
       ```
 
       The example adapter turns each test module into a Minitest test case. Top-level `test_*`, `setup`, `teardown`, and helper methods become instance methods on that case. Assertions come from Minitest, so test files do not need a class or a Minitest require.

@@ -184,6 +184,31 @@ class Klenod::Test::PluginTest < Minitest::Test
     end
   end
 
+  def test_route_adjacent_test_imports_its_haml_page_without_becoming_a_route
+    with_files(
+      "pages/+page.haml" => "%p Page\n",
+      "pages/+page.test.rb" => "Page = import(\"./+page.haml\")\n"
+    ) do |dir|
+      plugin = Plugin.new
+      router_plugin = Klenod::Build::Plugins::RouterPlugin.new
+      context = Klenod::Build::Context.new(
+        source_dir: dir,
+        plugins: [plugin, router_plugin, *Klenod::Build::Context.default_plugins]
+      )
+
+      assert_equal(["pages/+page.test.rb"], Suite.new(context: context, plugin: plugin).collect.test_paths)
+      assert_equal("pages/+page.haml", context.entry("virtual:router").exports::Default.match("/").route.page_module_id)
+      assert_equal(context.entry("pages/+page.haml").exports::Default, context.entry("pages/+page.test.rb").exports::Page)
+
+      application_context = Klenod::Build::Context.new(
+        source_dir: dir,
+        plugins: [Plugin.new, Klenod::Build::Plugins::RouterPlugin.new, *Klenod::Build::Context.default_plugins]
+      )
+      bundle = application_context.graph.bundle(entrypoints: ["virtual:router"])
+      refute_includes(bundle.modules.keys, "app:/pages/+page.test.rb")
+    end
+  end
+
   def test_normal_bundles_do_not_include_discovered_tests
     with_files(
       "entry.rb" => "VALUE = 1\n",

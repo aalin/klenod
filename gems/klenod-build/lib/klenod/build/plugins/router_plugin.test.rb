@@ -192,6 +192,20 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
+  def test_ignores_plus_test_files
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write("#{dir}/pages/+page.haml", "")
+      File.write("#{dir}/pages/+page.test.rb", "")
+      File.write("#{dir}/pages/+layout.test.rb", "")
+      File.write("#{dir}/pages/+custom.test.rb", "")
+
+      manifest = RouterPlugin.new.discover(source_dir: dir)
+
+      assert_equal(["pages/+page.haml"], manifest.entrypoints)
+    end
+  end
+
   def test_raises_for_ambiguous_page_route_files
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")
