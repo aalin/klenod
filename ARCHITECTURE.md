@@ -202,8 +202,8 @@ Source maps are represented with `SourceMapMark` comments in generated Ruby. Bac
 Haml semantics:
 
 - `=` prints.
-- `-` is silent.
-- Silent blocks must evaluate to `nil`.
+- `-` runs Ruby silently when it has no nested Haml.
+- Childless silent scripts evaluate to `nil`; silent scripts with nested Haml return their nested output.
 - Printed blocks such as `= if ...` should render their body.
 - Object references like `%div[@user, :greeting]` are treated as a key-style prop rather than HTML id/class generation.
 - Whitespace handling should use Haml parser node flags such as `nuke_inner_whitespace` and `nuke_outer_whitespace`; avoid source-line based marker detection in later transform phases.

@@ -1,0 +1,6 @@
+= begin
+  %p Loading your request.
+= rescue StandardError => error
+  %p(role="alert")= error.message
+= ensure
+  %p Request complete.

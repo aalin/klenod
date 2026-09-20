@@ -1,0 +1,15 @@
+:ruby
+  def initialize(items:)
+    @items = items
+    @index = 0
+  end
+
+= while @index < @items.length
+  %p= @items.fetch(@index)
+  - @index += 1
+
+- until @index.zero?
+  - @index -= 1
+
+- for item in @items
+  %p= item

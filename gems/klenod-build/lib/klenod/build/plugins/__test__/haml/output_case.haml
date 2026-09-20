@@ -1,0 +1,12 @@
+:ruby
+  def initialize(request_status:)
+    @request_status = request_status
+  end
+
+= case @request_status
+= when "received"
+  %p(role="status")
+    Thanks — we received your request.
+= when "invalid"
+  %p(role="alert")
+    Enter a valid email address and try again.

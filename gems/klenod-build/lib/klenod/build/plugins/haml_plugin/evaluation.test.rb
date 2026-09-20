@@ -1188,7 +1188,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     ) do |_dir, context, record, _exports|
       component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default.new
 
-      assert_equal([:ul, nil], component.render)
+      assert_equal([:ul, [[nil, [:li, "A"]], [nil, [:li, "B"]]]], component.render)
       assert_equal(["A", "B"], component.seen)
       assert_match(/SourceMapMark:12/, record.transformed_source)
       assert_match(/SourceMapMark:13/, record.transformed_source)
@@ -1224,10 +1224,83 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     ) do |_dir, context, record, _exports|
       component = context.graph.mods.fetch(record.id).const_get(:Exports)::Default.new
 
-      assert_equal([:ul, nil], component.render)
+      assert_equal([:ul, [[nil, [:li, "A"]], [nil, [:li, "B"]]]], component.render)
       assert_equal(["A", "B"], component.seen)
       assert_match(/SourceMapMark:12/, record.transformed_source)
       assert_match(/SourceMapMark:13/, record.transformed_source)
+    end
+  end
+
+  def test_silent_iterator_capture_preserves_next_and_break
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/list.haml" => <<~HAML
+          :ruby
+            def initialize
+              @items = ["A", "skip", "B", "stop", "C"]
+            end
+
+          %ul
+            - @items.each do |item|
+              - next if item == "skip"
+              - break if item == "stop"
+              %li= item
+        HAML
+      },
+      entry: "pages/list.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:ul, [[nil, nil, [:li, "A"]], [nil, nil, [:li, "B"]]]], exports::Default.new.render)
+    end
+  end
+
+  def test_silent_iterator_capture_preserves_return_with_nested_haml
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/list.haml" => <<~HAML
+          :ruby
+            def initialize(stop:)
+              @stop = stop
+            end
+
+          %section
+            - ["A", "stop"].each do |item|
+              - return if @stop && item == "stop"
+                %p Stopped
+              %p= item
+        HAML
+      },
+      entry: "pages/list.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:p, "Stopped"], exports::Default.new(stop: true).render)
+      assert_equal([:section, [[nil, [:p, "A"]], [nil, [:p, "stop"]]]], exports::Default.new(stop: false).render)
+    end
+  end
+
+  def test_childless_silent_script_runs_side_effects_without_rendering
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/setup.haml" => <<~HAML
+          :ruby
+            def initialize
+              @count = 0
+            end
+
+          - @count += 1
+          %p= @count
+        HAML
+      },
+      entry: "pages/setup.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, _context, _record, exports|
+      assert_equal([nil, [:p, 1]], exports::Default.new.render)
     end
   end
 
@@ -1251,10 +1324,36 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       plugin: plugin,
       plugins: [plugin]
     ) do |_dir, _context, record, exports|
-      assert_nil(exports::Default.new(show: true).render)
-      assert_nil(exports::Default.new(show: false).render)
+      assert_equal([:p, "Visible"], exports::Default.new(show: true).render)
+      assert_equal([:p, "Empty"], exports::Default.new(show: false).render)
       assert_match(/SourceMapMark:7/, record.transformed_source)
       assert_match(/SourceMapMark:9/, record.transformed_source)
+    end
+  end
+
+  def test_haml_transformer_returns_children_from_silent_case_branches
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/status.haml" => <<~HAML
+          :ruby
+            def initialize(status:)
+              @status = status
+            end
+
+          - case @status
+          - when :ready
+            %p Ready
+          - else
+            %p Waiting
+        HAML
+      },
+      entry: "pages/status.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:p, "Ready"], exports::Default.new(status: :ready).render)
+      assert_equal([:p, "Waiting"], exports::Default.new(status: :waiting).render)
     end
   end
 
@@ -1298,6 +1397,100 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     assert_equal([:section, [:p, "Visible"]], exports::Default.new(show: true).render)
     assert_equal([:section, nil], exports::Default.new(show: false).render)
     assert_match(/SourceMapMark:8/, record.transformed_source)
+  end
+
+  def test_haml_transformer_supports_case_pattern_matching
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/request_status.haml" => <<~HAML
+          :ruby
+            def initialize(result:)
+              @result = result
+            end
+
+          = case @result
+          = in { status: :received, message: } if message
+            %p(role="status")= message
+          = in { status: :invalid, errors: [first, *] }
+            %p(role="alert")= first
+          = else
+            %p Unknown request
+        HAML
+      },
+      entry: "pages/request_status.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, _context, record, exports|
+      component = exports::Default
+
+      assert_equal([:p, "Received", {role: "status"}], component.new(result: {status: :received, message: "Received"}).render)
+      assert_equal([:p, "Email is invalid", {role: "alert"}], component.new(result: {status: :invalid, errors: ["Email is invalid"]}).render)
+      assert_equal([:p, "Unknown request"], component.new(result: {status: :pending}).render)
+      assert_match(/in \{ status: :received, message: \} if message/, record.transformed_source)
+    end
+  end
+
+  def test_haml_transformer_supports_begin_rescue_and_ensure
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/recover.haml" => <<~HAML
+          :ruby
+            attr_reader :ensured
+
+          = begin
+            - raise "Request failed"
+          = rescue RuntimeError => error
+            %p(role="alert")= error.message
+          = ensure
+            - @ensured = true
+        HAML
+      },
+      entry: "pages/recover.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, _context, _record, exports|
+      component = exports::Default.new
+
+      assert_equal([:p, "Request failed", {role: "alert"}], component.render)
+      assert(component.ensured)
+    end
+  end
+
+  def test_haml_transformer_supports_while_until_and_for_blocks
+    plugin = haml_plugin
+    evaluate_haml(
+      {
+        "pages/loops.haml" => <<~HAML
+          :ruby
+            attr_reader :index, :seen
+
+            def initialize(values:)
+              @values = values
+              @index = 0
+              @seen = []
+            end
+
+          - while @index < @values.length
+            - @seen << @values.fetch(@index)
+            - @index += 1
+          - until @index.zero?
+            - @index -= 1
+          - for value in @values
+            - @seen << value * 2
+        HAML
+      },
+      entry: "pages/loops.haml",
+      plugin: plugin,
+      plugins: [plugin]
+    ) do |_dir, _context, _record, exports|
+      component = exports::Default.new(values: [1, 2])
+
+      assert_equal([[[nil, nil], [nil, nil]], [nil, nil], [nil, nil]], component.render)
+      assert_equal(0, component.index)
+      assert_equal([1, 2, 2, 4], component.seen)
+    end
   end
 
   def test_haml_imports_haml_component_classes_for_capitalized_tags

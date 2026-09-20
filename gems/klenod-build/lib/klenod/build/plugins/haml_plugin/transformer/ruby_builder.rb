@@ -355,7 +355,9 @@ module Klenod
             def parenthesized_expression(source, line_no: nil)
               source = rewrite_ruby_source(source, line_no)
               node = parse_expression(source, context: :parenthesized_expression)
-              return expression("(#{source})") unless node
+              unless node
+                raise_ruby_parse_error(source, line_no: line_no, context: "Could not parse Haml output script", syntax_error: true)
+              end
 
               fragment(Paren(LParen("("), Statements([node])))
             end
@@ -438,15 +440,18 @@ module Klenod
 
             def silent_script_block(source, body, line_no: nil)
               source = rewrite_ruby_source(source, nil)
-              ast_silent_script_block(source, body) || raise_ruby_parse_error(source, line_no: line_no, context: "Could not build Ruby block from Haml script")
+              ast_silent_script_block(source, body) || raise_ruby_parse_error(source, line_no: line_no, context: "Could not build Ruby block from Haml script", syntax_error: true)
             end
 
-            def silent_script(source)
+            def silent_script(source, line_no: nil)
               source = rewrite_ruby_source(source, nil)
-              ast_silent_script(source) || raise(ArgumentError, "Could not build Ruby begin block from Haml script: #{source.inspect}")
+              fragment = ast_silent_script(source)
+              return fragment if fragment
+
+              raise_ruby_parse_error(source, line_no: line_no, context: "Could not parse Haml silent script", syntax_error: true)
             end
 
-            def silent_script_with_children(source, body)
+            def silent_script_with_children(source, body, line_no: nil)
               source = rewrite_ruby_source(source, nil)
               return_with_children = false
 
@@ -464,7 +469,9 @@ module Klenod
               end
 
               statements = parse_statements(source)
-              return raise(ArgumentError, "Could not parse Haml silent script: #{source.inspect}") unless statements
+              unless statements
+                raise_ruby_parse_error(source, line_no: line_no, context: "Could not parse Haml silent script", syntax_error: true)
+              end
 
               return Fragment.new(source, statements) if return_with_children
 
@@ -472,12 +479,39 @@ module Klenod
               Fragment.new(["begin", indent(source, 2), indent(to_source(body), 2), "end"].join("\n"), node)
             end
 
-            def branches(branches)
-              ast_branches(branches) || raise(ArgumentError, "Could not build Ruby branch from Haml scripts: #{branches.map(&:first).inspect}")
+            def keyword_script?(source)
+              source.start_with?("while ", "until ", "for ")
             end
 
-            def silent_branches(branches)
-              ast_silent_branches(branches) || raise(ArgumentError, "Could not build Ruby branch from Haml scripts: #{branches.map(&:first).inspect}")
+            def keyword_script(source, body, line_no: nil)
+              source = rewrite_ruby_source(source, nil)
+              source = block_source(source, body)
+              node = parse_expression(source, context: :keyword_script)
+              return Fragment.new(source, node) if node
+
+              raise_ruby_parse_error(source, line_no: line_no, context: "Could not build Ruby control-flow block from Haml script", syntax_error: true)
+            end
+
+            def silent_keyword_script(source, body, line_no: nil)
+              captured_script = captured_block_source(source, body)
+              node = parse_expression(captured_script, context: :keyword_script)
+              return Fragment.new(captured_script, node) if node
+
+              raise_ruby_parse_error(captured_script, line_no: line_no, context: "Could not build Ruby control-flow block from Haml script", syntax_error: true)
+            end
+
+            def branches(branches, line_no: nil)
+              fragment = ast_branches(branches)
+              return fragment if fragment
+
+              raise_ruby_parse_error(branch_source(branches), line_no: line_no, context: "Could not parse Haml output branches", syntax_error: true)
+            end
+
+            def silent_branches(branches, line_no: nil)
+              fragment = ast_silent_branches(branches)
+              return fragment if fragment
+
+              raise_ruby_parse_error(branch_source(branches), line_no: line_no, context: "Could not parse Haml silent branches", syntax_error: true)
             end
 
             def ruby_filters(nodes)
@@ -631,12 +665,23 @@ module Klenod
             end
 
             def ast_silent_script(source)
-              statements = parse_statements(source)
+              statements = parse_statements(source) || control_flow_statements(source)
               return nil unless statements
 
               node = ast_begin([*statement_body_for(statements), nil_node])
 
               Fragment.new(["begin", indent(source, 2), "  nil", "end"].join("\n"), node)
+            end
+
+            # SyntaxTree rejects `next` and `break` at top level even though a
+            # silent script can be nested in an iterator or keyword loop. Parse
+            # those statements inside a harmless temporary loop, then retain
+            # only its body for the surrounding generated block.
+            def control_flow_statements(source)
+              return unless source.match?(/\A(?:next|break)\b/)
+
+              wrapper = parse_expression(["loop do", indent(source, 2), "end"].join("\n"), context: :control_flow_statement)
+              wrapper&.block&.bodystmt&.statements
             end
 
             def ast_script_block(source, body)
@@ -647,28 +692,30 @@ module Klenod
             end
 
             def ast_silent_script_block(source, body)
-              node = block_script_node(source, body)
+              source = captured_block_source(source, body)
+              node = parse_expression(source, context: :block_script)
               return nil unless node
 
-              node = ast_begin([node, nil_node])
-
-              Fragment.new(["begin", indent(block_source(source, body), 2), "  nil", "end"].join("\n"), node)
+              Fragment.new(source, node)
             end
 
             def ast_branches(branches)
-              node = branch_node(branches)
+              source = branch_source(branches)
+              node = parse_expression(source, context: :branches)
               return nil unless node
 
-              Fragment.new(branch_source(branches), node)
+              Fragment.new(source, node)
             end
 
             def ast_silent_branches(branches)
               node = branch_node(branches)
               return nil unless node
 
-              node = ast_begin([node, nil_node])
+              Fragment.new(branch_source(branches), node)
+            end
 
-              Fragment.new(["begin", indent(branch_source(branches), 2), "  nil", "end"].join("\n"), node)
+            def branch_node(branches)
+              parse_expression(branch_source(branches), context: :branches)
             end
 
             def ast_ruby_filters(nodes)
@@ -712,11 +759,24 @@ module Klenod
               end
             end
 
+            # Ruby iterators and keyword loops return their control value rather
+            # than the values produced by their bodies. Capture each compiled
+            # Haml child explicitly, while leaving `return`, `next`, and `break`
+            # in their original Ruby block/loop context.
+            def captured_block_source(source, body)
+              captured_body = "HamlHelper.append_capture(#{argument_source(body)})"
+              script = block_source(source, Fragment.new(captured_body, nil))
+              ["HamlHelper.capture do", indent(script, 2), "end"].join("\n")
+            end
+
             def branch_source(branches)
               body =
                 branches
-                  .map do |source, body|
-                    if source == "else"
+                  .each_with_index
+                  .map do |(source, body), index|
+                    if index.zero? && source.match?(/\Acase\b/)
+                      source
+                    elsif source == "else"
                       ["else", indent(to_source(body), 2)].join("\n")
                     else
                       [source, indent(to_source(body), 2)].join("\n")
@@ -735,78 +795,6 @@ module Klenod
                 nil,
                 nil
               )
-            end
-
-            def branch_node(branches)
-              first_source, first_body = branches.fetch(0)
-              if first_source.match?(/\Acase\b/) && nil_fragment?(first_body)
-                case_node(first_source, branches.drop(1))
-              else
-                if_node(branches)
-              end
-            end
-
-            def if_node(branches)
-              source, body = branches.fetch(0)
-              return else_node(source, body) if source == "else"
-
-              predicate_source =
-                case source
-                when /\Aif\s+(.+)\z/ then $1
-                when /\Aelsif\s+(.+)\z/ then $1
-                when /\Aunless\s+(.+)\z/ then "!(#{$1})"
-                else return nil
-                end
-              predicate = parse_expression(predicate_source, context: :branch_predicate)
-              return nil unless predicate
-
-              consequent =
-                if branches.length > 1
-                  if_node(branches.drop(1))
-                end
-
-              if source.start_with?("elsif")
-                Elsif(predicate, Statements(statement_body_for(body)), consequent)
-              else
-                IfNode(predicate, Statements(statement_body_for(body)), consequent)
-              end
-            end
-
-            def else_node(source, body)
-              return nil unless source == "else"
-
-              Else(Kw("else"), Statements(statement_body_for(body)))
-            end
-
-            def case_node(source, branches)
-              value_source = source[/\Acase\s*(.*)\z/, 1]
-              return nil unless value_source
-
-              value = value_source.empty? ? nil : parse_expression(value_source, context: :case_value)
-              consequent = when_node(branches)
-              return nil unless consequent
-
-              Case(Kw("case"), value, consequent)
-            end
-
-            def when_node(branches)
-              source, body = branches.fetch(0)
-              return else_node(source, body) if source == "else"
-              return nil unless source.start_with?("when ")
-
-              arguments =
-                source
-                  .delete_prefix("when ")
-                  .split(",")
-                  .map { |argument| parse_expression(argument.strip, context: :when_argument) }
-              return nil if arguments.any?(&:nil?)
-
-              consequent =
-                if branches.length > 1
-                  when_node(branches.drop(1))
-                end
-
-              When(Args(arguments), Statements(statement_body_for(body)), consequent)
             end
 
             def block_script_node(source, body)
@@ -956,10 +944,6 @@ module Klenod
               Comment(value, false)
             end
 
-            def nil_fragment?(value)
-              value.is_a?(Fragment) && value.node.is_a?(SyntaxTree::VarRef) && to_source(value) == "nil"
-            end
-
             def node_for(value)
               return value.node if value.is_a?(Fragment)
 
@@ -1060,7 +1044,7 @@ module Klenod
               [source, *left_right.missing].join("\n")
             end
 
-            def raise_ruby_parse_error(source, line_no:, context:)
+            def raise_ruby_parse_error(source, line_no:, context:, syntax_error: false)
               parse_error = syntax_tree_parse_error(source)
               explain =
                 SyntaxSuggest::ExplainSyntax.new(
@@ -1070,6 +1054,7 @@ module Klenod
               missing = explain.missing.map { |item| explain.why(item) } - errors
 
               message = [context]
+              message[0] += " (Ruby syntax error)" if syntax_error
               message << "Errors:\n  #{errors.join("\n  ")}" unless errors.empty?
               message << "Missing:\n  #{missing.join("\n  ")}" unless missing.empty?
 

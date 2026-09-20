@@ -1,144 +1,15 @@
 :ruby
   PageHeader = import("/components/PageHeader.haml")
   DocsPage = import("/components/DocsPage.haml")
-  DocsSection = import("/components/DocsSection.haml")
+  HamlReference = import("./reference.md")
 
 %DocsPage
   %PageHeader{
     kicker: "Plugin Reference",
     title: "HamlPlugin",
-    summary: "HamlPlugin turns `.haml` files into components for your rendering framework."
+    summary: "A complete reference for Klenod Haml components, Ruby, props, children, filters, and companion files."
   }
 
-  %DocsSection{ title: "Configuration" }
-    :markdown
-      Configure the component class, element factory, children, variables, and translations:
-
-      ```ruby
-      Klenod::Build::Plugins::HamlPlugin.new(
-        component_base_class: "Example::Framework::Component",
-        factory: "Example::Framework::H",
-        component_children: :lazy,
-        variables: {
-          global: "@__props",
-          class: "Example::Framework::Context.current",
-          instance: "@__state"
-        },
-        i18n: {
-          class: "Example::Framework::Translator",
-          constant: "I18n"
-        },
-        cache_static_subtrees: false
-      )
-      ```
-
-  %DocsSection{ title: "Options" }
-    :markdown
-      - `component_base_class` sets the superclass of each generated component.
-      - `factory` receives every HTML tag and component call.
-      - `component_children` controls how component children are passed. Use `:eager` for positional arguments or `:lazy` for a block.
-      - `variables` maps Haml variables to framework-owned objects. It accepts `global`, `class`, and `instance`; `$*` uses the configured `global` receiver directly.
-      - `i18n` configures translations. `class` creates the helper. `constant` names it.
-      - `cache_static_subtrees` reuses frozen element trees that contain no dynamic values. This is an experimental optimization.
-
-  %DocsSection{ title: "Variables" }
-    :markdown
-      Each variable becomes indexed access on its configured receiver:
-
-      ```haml
-      %h1= $title
-      %p= @@request.path
-      %button= @count
-      ```
-
-      With the configuration above, these read `(@__props)[:title]`, `(Example::Framework::Context.current)[:request]`, and `(@__state)[:count]`.
-
-      Variable mappings also work in Ruby's short string interpolation form. Klenod expands the interpolation braces while rewriting, so `"Hello #$title"` becomes `"Hello #{(@__props)[:title]}"` when `global` is configured.
-
-      `$*` is the complete configured global receiver rather than an indexed lookup, so `%Button{ **$* }` forwards all props. No separate splat option is needed.
-
-      The mappings also apply to assignments. For an indexed state store, reassign mutable values to trigger its assignment method. Use `@items = [*@items, item]` instead of `@items << item`.
-
-      Unconfigured variable kinds keep their normal Ruby behavior. Special globals such as `$!`, `$1`, and `$LOAD_PATH` are never remapped. Neither are underscore-prefixed instance variables such as `@__state`.
-
-  %DocsSection{ title: "Component Children" }
-    :markdown
-      Eager children are positional factory arguments:
-
-      ```ruby
-      Example::Framework::H[Card, Example::Framework::H[:p, "Body"], title: "Hello"]
-      ```
-
-      Lazy children are passed as a block:
-
-      ```ruby
-      Example::Framework::H[Card, title: "Hello"] do
-        [Example::Framework::H[:p, "Body"]]
-      end
-      ```
-
-      Lazy children let components defer work, provide context, or collect slots. The factory should memoize the block if it may read the children more than once.
-
-  %DocsSection{ title: "Components, Ruby, And Filters" }
-    :markdown
-      Imported constants can be used as tags. For example, `%Button` passes the imported `Button` class to the factory. Custom elements imported through `JavaScriptPlugin` work the same way.
-
-      Top-level `:ruby` defines imports, constants, and methods. Other Ruby blocks run while the component renders.
-
-      `=` prints a value, `-` runs code silently, and printed Ruby blocks such as `= if condition` render their Haml body. Silent conditional blocks also support `- unless condition`. An empty `:ruby` filter is valid and emits no declarations.
-
-      Dynamic brace-style attributes accept Ruby keyword splats, so a component can forward a props hash while adding or overriding values:
-
-      ```haml
-      %Button{ **button_props, disabled: $disabled } Save
-      ```
-
-      Parenthesized attributes also accept Ruby member and index expressions without braces:
-
-      ```haml
-      %YouTubeVideo[key](video_id=video.id title=video.title)
-      %a(href=link[:href]) Watch
-      %button(data-foo="foo123"){ data: { bar: "bar456" } } Save
-      ```
-
-      Haml normalizes every prop name to Ruby-style underscores before it calls the factory. Thus both `data-foo` and `data_foo` become `data_foo`, and both `on-change-per-page` and `on_change_per_page` become `on_change_per_page`. Components can consistently read these as `$data_foo` and `$on_change_per_page`. Ruby hash attributes keep their nested Ruby shape, so grouped values such as `data: { bar: "bar456" }` are left for the rendering framework to flatten to `data-bar` when it writes HTML.
-
-      A bare method name in a parenthesized event attribute is passed as a symbol instead of being called while the component renders:
-
-      ```haml
-      %Pagination(on_change_per_page=handle_set_per_page)
-      ```
-
-      This produces an `on_change_per_page: :handle_set_per_page` prop, which a Haml component can read as `$on_change_per_page`. A framework can bind that method reference when it merges or receives the component props. Brace-style attributes remain ordinary Ruby expressions.
-
-      `:markdown` filters use `MarkdownPlugin`. `:css` filters add inline styles to the module graph. `:plain` filters render their text unchanged.
-
-  %DocsSection{ title: "Companions" }
-    :markdown
-      A matching `.css` file adds scoped class and tag names through `CSSPlugin`:
-
-      ```text
-      components/Card.haml
-      components/Card.css
-      ```
-
-      Matching translation files are loaded through `IntlPlugin`:
-
-      ```text
-      components/Card.intl.en.toml
-      components/Card.intl.sv.toml
-      ```
-
-      With `i18n`, the plugin creates the configured helper constant:
-
-      ```ruby
-      I18n = Example::Framework::Translator.new(self)
-      ```
-
-      The example translator provides `I18n.t(...)` and `I18n.lang`. Haml also works without `IntlPlugin` or a translation helper.
-
-  %DocsSection{ title: "Errors" }
-    :markdown
-      Source maps point runtime errors back to Haml. Parse errors include the original source. Companion and inline CSS keep their own source maps.
+  %HamlReference
 
 %title= "HamlPlugin"

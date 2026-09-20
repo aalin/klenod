@@ -473,30 +473,28 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_equal("items.map { |item| H[:li, item] }", formatted_source(builder, fragment))
   end
 
-  def test_ruby_builder_builds_silent_script_blocks_with_nil_result
+  def test_ruby_builder_captures_silent_script_block_children
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.expression("H[:li, item]")
     fragment = builder.silent_script_block("items.each do |item|", body)
 
-    assert_kind_of(SyntaxTree::Begin, fragment.node)
+    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
     assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
-      begin
-        items.each { |item| H[:li, item] }
-        nil
+      HamlHelper.capture do
+        items.each { |item| HamlHelper.append_capture(H[:li, item]) }
       end
     RUBY
   end
 
-  def test_ruby_builder_builds_silent_brace_script_blocks_with_nil_result
+  def test_ruby_builder_captures_silent_brace_script_block_children
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.expression("H[:li, item]")
     fragment = builder.silent_script_block("items.each { |item|", body)
 
-    assert_kind_of(SyntaxTree::Begin, fragment.node)
+    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
     assert_equal(<<~RUBY.chomp, fragment.source)
-      begin
-        items.each { |item| H[:li, item] }
-        nil
+      HamlHelper.capture do
+        items.each { |item| HamlHelper.append_capture(H[:li, item]) }
       end
     RUBY
   end
@@ -534,6 +532,31 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_match(/Errors:|Missing:/, error.message)
   end
 
+  def test_ruby_builder_reports_parse_errors_for_output_scripts
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    error = assert_raises(Klenod::Build::Plugins::HamlPlugin::RubyParseError) { builder.parenthesized_expression("raise \"foo'", line_no: 12) }
+
+    assert_equal(12, error.line)
+    assert_includes(error.message, "Could not parse Haml output script")
+    assert_includes(error.message, "Ruby syntax error")
+  end
+
+  def test_ruby_builder_reports_parse_errors_for_silent_scripts_with_children
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    error = assert_raises(Klenod::Build::Plugins::HamlPlugin::RubyParseError) { builder.silent_script_with_children("raise \"foo'", builder.expression("H[:p]"), line_no: 12) }
+
+    assert_equal(12, error.line)
+    assert_includes(error.message, "Could not parse Haml silent script")
+  end
+
+  def test_ruby_builder_reports_parse_errors_for_branches
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    error = assert_raises(Klenod::Build::Plugins::HamlPlugin::RubyParseError) { builder.silent_branches([["if ready )", builder.expression("H[:p]")]], line_no: 12) }
+
+    assert_equal(12, error.line)
+    assert_includes(error.message, "Could not parse Haml silent branches")
+  end
+
   def test_ruby_builder_builds_if_branches_from_syntax_tree_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
@@ -568,11 +591,10 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     node = builder.send(:branch_node, [["unless hidden", builder.expression("H[:p]")]])
 
-    assert_kind_of(SyntaxTree::IfNode, node)
-    assert_kind_of(SyntaxTree::Unary, node.predicate)
+    assert_kind_of(SyntaxTree::UnlessNode, node)
   end
 
-  def test_ruby_builder_builds_silent_branches_with_nil_result
+  def test_ruby_builder_returns_silent_branch_children
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.silent_branches([
@@ -580,12 +602,9 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         ["else", builder.expression("H[:span]")]
       ])
 
-    assert_kind_of(SyntaxTree::Begin, fragment.node)
+    assert_kind_of(SyntaxTree::IfNode, fragment.node)
     assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
-      begin
-        show ? H[:p] : H[:span]
-        nil
-      end
+      show ? H[:p] : H[:span]
     RUBY
   end
 
@@ -596,7 +615,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         ["if show", builder.silent_script("return")]
       ])
 
-    assert_kind_of(SyntaxTree::Begin, fragment.node)
+    assert_kind_of(SyntaxTree::IfNode, fragment.node)
     formatted = formatted_source(builder, fragment)
     assert_includes(formatted, "return")
     assert_includes(formatted, "nil")

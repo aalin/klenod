@@ -28,35 +28,26 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     assert_equal(1, diagnostic.range.start.line)
     assert_equal(".each", source.lines[1][diagnostic.range.start.character...diagnostic.range.end.character])
     assert_equal(LanguageServer::Protocol::Constant::DiagnosticSeverity::WARNING, diagnostic.severity)
-    assert_includes(diagnostic.message, "use `map` instead")
+    assert_includes(diagnostic.message, "use `- ...each do` instead")
   end
 
-  def test_silent_script_with_rendered_haml_warns_that_it_discards_the_content
+  def test_silent_script_with_rendered_haml_does_not_warn
     source = <<~HAML
       %ul
         - @items.map do |item|
           %li= item
     HAML
 
-    diagnostic = diagnostics(source).fetch(0)
-
-    assert_equal(1, diagnostic.range.start.line)
-    assert_equal("-", source.lines[1][diagnostic.range.start.character...diagnostic.range.end.character])
-    assert_equal(LanguageServer::Protocol::Constant::DiagnosticSeverity::WARNING, diagnostic.severity)
-    assert_includes(diagnostic.message, "silent `-` script")
+    assert_empty(diagnostics(source))
   end
 
-  def test_silent_conditional_with_rendered_haml_warns_that_it_discards_the_content
+  def test_silent_conditional_with_rendered_haml_does_not_warn
     source = <<~HAML
       - if @enabled
         %p Enabled!
     HAML
 
-    diagnostic = diagnostics(source).fetch(0)
-
-    assert_equal(0, diagnostic.range.start.line)
-    assert_equal("-", source.lines[0][diagnostic.range.start.character...diagnostic.range.end.character])
-    assert_includes(diagnostic.message, "use `=` when it should render")
+    assert_empty(diagnostics(source))
   end
 
   def test_silent_script_without_rendered_haml_does_not_warn
@@ -89,7 +80,7 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     diagnostics = diagnostics(@page_source.sub("%Layout\n", "- helper = Layout\n"))
 
     refute(diagnostics.any? { |diagnostic| diagnostic.message == "Layout is imported but never used" })
-    assert_includes(diagnostics.map(&:message), "A silent `-` script discards its nested Haml content; use `=` when it should render")
+    refute(diagnostics.any? { |diagnostic| diagnostic.message.include?("silent `-` script") })
   end
 
   def test_haml_syntax_error_is_reported_on_its_line

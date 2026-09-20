@@ -36,27 +36,30 @@ class SilentScriptBlock < TestFramework::ComponentBase
       :ul,
       begin
         # SourceMapMark:10
-        begin
+        HamlHelper.capture do
           @items.each do |item|
-            [
+            HamlHelper.append_capture(
               begin
-                # SourceMapMark:11
-                begin
-                  @seen << item.name
-                  nil
-                end
-              end,
-              begin
-                # SourceMapMark:12
-                TestFramework::H[
-                  :li,
-                  (item.name),
-                  **HamlHelper.merge_props(self.class, {})
+                [
+                  begin
+                    # SourceMapMark:11
+                    begin
+                      @seen << item.name
+                      nil
+                    end
+                  end,
+                  begin
+                    # SourceMapMark:12
+                    TestFramework::H[
+                      :li,
+                      (item.name),
+                      **HamlHelper.merge_props(self.class, {})
+                    ]
+                  end
                 ]
               end
-            ]
+            )
           end
-          nil
         end
       end,
       **HamlHelper.merge_props(self.class, {})

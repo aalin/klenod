@@ -2,7 +2,7 @@
 KlenodImport = method(:__klenod_import__)
 HamlHelper =
   Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
-class SilentConditional < TestFramework::ComponentBase
+class OutputCaseWhenExpression < TestFramework::ComponentBase
   def self.module_path
     __FILE__
   end
@@ -15,26 +15,32 @@ class SilentConditional < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   ClassNames = __klenod_import__("virtual:klenod/class_names").new({}.freeze)
-  begin
-    # SourceMapMark:2
-    def initialize(show:)
-      # SourceMapMark:3
-      @show = show
-      # SourceMapMark:4
-    end
-    # SourceMapMark:5
-  end
   public def render
-    # SourceMapMark:6
-    if @show
-      # SourceMapMark:7
-      TestFramework::H[:p, "Visible", **HamlHelper.merge_props(self.class, {})]
+    case @result
+    when [:legacy, { code: 1 }]
+      # SourceMapMark:3
+      TestFramework::H[
+        :p,
+        "Legacy request",
+        **HamlHelper.merge_props(self.class, {})
+      ]
+    when request_type(1, 2)
+      # SourceMapMark:5
+      TestFramework::H[
+        :p,
+        "Typed request",
+        **HamlHelper.merge_props(self.class, {})
+      ]
     else
-      # SourceMapMark:9
-      TestFramework::H[:p, "Empty", **HamlHelper.merge_props(self.class, {})]
+      # SourceMapMark:7
+      TestFramework::H[
+        :p,
+        "Unknown request",
+        **HamlHelper.merge_props(self.class, {})
+      ]
     end
   end
 end
-Default = SilentConditional
+Default = OutputCaseWhenExpression
 ClassNames = Default::ClassNames
 Translations = Default::Translations

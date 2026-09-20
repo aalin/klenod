@@ -23,6 +23,21 @@ module Klenod
               # frozen_string_literal: true
 
               module Default
+                def self.capture
+                  captures = (Thread.current[:__klenod_haml_captures__] ||= [])
+                  output = []
+                  captures << output
+                  yield
+                  output
+                ensure
+                  captures&.pop
+                end
+
+                def self.append_capture(value)
+                  Thread.current.fetch(:__klenod_haml_captures__).last << value
+                  value
+                end
+
                 def self.merge_props(component_class, *sources)
                   result = {}
                   classes = []

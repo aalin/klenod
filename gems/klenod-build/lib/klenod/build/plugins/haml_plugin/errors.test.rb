@@ -73,4 +73,41 @@ class Klenod::Build::Plugins::HamlPlugin::ErrorsTest < Klenod::Build::Plugins::H
       assert_includes(error.detail, "Could not parse Ruby filter")
     end
   end
+
+  def test_an_invalid_silent_script_reports_its_haml_line
+    with_haml_context({"pages/page.haml" => "%p Before\n- raise \"foo'\n%p After\n"}) do |_dir, context|
+      error = assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.collect("pages/page.haml") }
+
+      assert_equal("Haml parse error", error.kind)
+      assert_equal(2, error.line)
+      assert_includes(error.detail, "Could not parse Haml silent script")
+      assert_includes(error.message, "pages/page.haml:2: Haml parse error")
+      refute_includes(error.message, "Generated Ruby syntax error")
+    end
+  end
+
+  def test_an_invalid_output_script_reports_its_haml_line
+    with_haml_context({"pages/page.haml" => "%p Before\n= raise \"foo'\n%p After\n"}) do |_dir, context|
+      error = assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.collect("pages/page.haml") }
+
+      assert_equal(2, error.line)
+      assert_includes(error.detail, "Could not parse Haml output script")
+      refute_includes(error.message, "Generated Ruby syntax error")
+    end
+  end
+
+  def test_an_invalid_silent_branch_reports_its_haml_line
+    source = <<~HAML
+      - if ready )
+        %p Ready
+    HAML
+
+    with_haml_context({"pages/page.haml" => source}) do |_dir, context|
+      error = assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.collect("pages/page.haml") }
+
+      assert_equal(1, error.line)
+      assert_includes(error.detail, "Could not parse Haml silent branches")
+      refute_includes(error.message, "Generated Ruby syntax error")
+    end
+  end
 end

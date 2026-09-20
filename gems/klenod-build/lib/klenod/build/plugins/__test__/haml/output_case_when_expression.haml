@@ -1,0 +1,7 @@
+= case @result
+= when [:legacy, { code: 1 }]
+  %p Legacy request
+= when request_type(1, 2)
+  %p Typed request
+= else
+  %p Unknown request

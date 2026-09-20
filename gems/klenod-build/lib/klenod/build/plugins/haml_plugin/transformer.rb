@@ -352,7 +352,7 @@ module Klenod
             return compile_node(nodes[0], factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler) if nodes.length == 1
 
             compile_branches(
-              nodes.map { |node| [script_source(node, builder: builder), node.children] },
+              nodes.map { |node| [script_source(node, builder: builder), node.children, node.line] },
               factory: factory,
               styleable: styleable,
               builder: builder,
@@ -362,7 +362,15 @@ module Klenod
 
           def compile_script(node, factory:, builder:, markdown_compiler:, styleable: false)
             source = script_source(node, builder: builder)
-            return builder.parenthesized_expression(source) if node.children.empty?
+            return builder.parenthesized_expression(source, line_no: node.line) if node.children.empty?
+
+            if builder.keyword_script?(source)
+              return builder.keyword_script(
+                source,
+                compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler),
+                line_no: node.line
+              )
+            end
 
             builder.script_block(
               source,
@@ -373,7 +381,7 @@ module Klenod
 
           def compile_script_branch(node, factory:, builder:, markdown_compiler:, styleable: false)
             compile_branches(
-              [[script_source(node, builder: builder), node.children]],
+              [[script_source(node, builder: builder), node.children, node.line]],
               factory: factory,
               styleable: styleable,
               builder: builder,
@@ -383,7 +391,7 @@ module Klenod
 
           def compile_silent_script(node, factory:, builder:, markdown_compiler:, styleable: false)
             source = script_source(node, builder: builder)
-            return builder.silent_script(source) if node.children.empty?
+            return builder.silent_script(source, line_no: node.line) if node.children.empty?
             if builder.block_script?(source)
               return builder.silent_script_block(
                 source,
@@ -392,10 +400,19 @@ module Klenod
               )
             end
 
-            unless source.start_with?("if ", "unless ", "case ")
+            if builder.keyword_script?(source)
+              return builder.silent_keyword_script(
+                source,
+                compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler),
+                line_no: node.line
+              )
+            end
+
+            unless source.start_with?("if ", "unless ", "case ", "begin")
               return builder.silent_script_with_children(
                 source,
-                compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)
+                compile_nodes(node.children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler),
+                line_no: node.line
               )
             end
 
@@ -410,17 +427,19 @@ module Klenod
 
           def compile_branches(branches, factory:, builder:, markdown_compiler:, styleable: false)
             builder.branches(
-              branches.map do |source, children|
+              branches.map do |source, children, _line_no|
                 [source, compile_nodes(children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)]
-              end
+              end,
+              line_no: branches.first.fetch(2)
             )
           end
 
           def compile_silent_branches(branches, factory:, builder:, markdown_compiler:, styleable: false)
             builder.silent_branches(
-              branches.map do |source, children|
+              branches.map do |source, children, _line_no|
                 [source, compile_nodes(children, factory: factory, styleable: styleable, builder: builder, markdown_compiler: markdown_compiler)]
-              end
+              end,
+              line_no: branches.first.fetch(2)
             )
           end
 
@@ -428,18 +447,20 @@ module Klenod
             branches = []
             current_source = script_source(node, builder: builder)
             current_children = []
+            current_line = node.line
 
             node.children.each do |child|
               if continuation?(child)
-                branches << [current_source, current_children]
+                branches << [current_source, current_children, current_line]
                 current_source = script_source(child, builder: builder)
                 current_children = child.children.dup
+                current_line = child.line
               else
                 current_children << child
               end
             end
 
-            branches << [current_source, current_children]
+            branches << [current_source, current_children, current_line]
           end
 
           def script_node?(node)

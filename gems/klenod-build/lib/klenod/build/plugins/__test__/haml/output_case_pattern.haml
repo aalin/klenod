@@ -1,0 +1,12 @@
+:ruby
+  def initialize(result:)
+    @result = result
+  end
+
+= case @result
+= in { status: :received, message: } if message
+  %p(role="status")= message
+= in { status: :invalid, errors: [first, *] }
+  %p(role="alert")= first
+= else
+  %p Unknown request

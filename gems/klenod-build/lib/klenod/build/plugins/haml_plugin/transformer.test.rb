@@ -106,6 +106,31 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
     assert_includes(result.code, "FakeFramework::H[:p, \"Last\", **HamlHelper.merge_props")
   end
 
+  def test_haml_transformer_compiles_output_case_when_branches
+    result =
+      Klenod::Build::Plugins::HamlPlugin::Transformer.new.call(
+        source: <<~HAML,
+          = case request_status
+          = when "received"
+            %p(role="status") Thanks — we received your request.
+          = when "invalid"
+            %p(role="alert") Enter a valid email address and try again.
+        HAML
+        module_id: ModuleId.new("pages/request-status.haml", nil),
+        component_class_name: "RequestStatus",
+        component_base_class: "Object",
+        factory: "FakeFramework::H",
+        styles_source: "{}.freeze",
+        translations_source: "{}.freeze"
+      )
+
+    assert(Ripper.sexp(result.code), "Expected generated component Ruby to parse")
+    assert_includes(result.code, "case request_status")
+    assert_includes(result.code, 'when "received"')
+    assert_includes(result.code, 'when "invalid"')
+    refute_match(/case request_status\n\s+nil\n\s+when/, result.code)
+  end
+
   def test_haml_transformer_can_compile_event_handler_references
     transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     result =

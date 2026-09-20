@@ -25,8 +25,6 @@ module Klenod
               when :script
                 match = ITERATOR.match(node.value.fetch(:text))
                 diagnostics << each_diagnostic(node, match, analysis.lines) if match&.[](:method) == "each" && rendered_content?(node)
-              when :silent_script
-                diagnostics << silent_script_diagnostic(node, analysis.lines) if rendered_content?(node)
               end
             end
 
@@ -47,16 +45,7 @@ module Klenod
             method_start = line_text.index(".#{match[:method]}") || 0
             span = Text::Span.new(line, method_start, method_start + match[:method].length + 1)
 
-            Diagnostics.warning(span, "`= ...each do` returns the original collection, not the rendered Haml children; use `map` instead")
-          end
-
-          def silent_script_diagnostic(node, lines)
-            line = node.line - 1
-            line_text = lines.fetch(line, "")
-            start_character = line_text.index("-") || 0
-            span = Text::Span.new(line, start_character, start_character + 1)
-
-            Diagnostics.warning(span, "A silent `-` script discards its nested Haml content; use `=` when it should render")
+            Diagnostics.warning(span, "`= ...each do` returns the original collection, not the rendered Haml children; use `- ...each do` instead")
           end
         end
       end
