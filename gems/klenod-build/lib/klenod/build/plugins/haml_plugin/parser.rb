@@ -43,17 +43,18 @@ module Klenod
           #
           # Haml also continues a parenthesized list onto following lines only
           # after the first attribute, so `%a(` followed by a line break is an
-          # invalid attribute list. Join those lines first.
+          # invalid attribute list. Join the lines of an unclosed list first so
+          # both forms work across lines.
           def parse_new_attributes(text)
             joined_lines = 0
-            while text.match?(/\A\(\s*\z/)
+            until (close_index = attribute_list_close_index(text)) || @next_line.eod?
               text = "#{text} #{@next_line.text}"
               joined_lines += 1
               next_line
             end
 
-            balanced, rest = ::Haml::Util.balance(text, "(", ")")
-            pairs = balanced && extended_attribute_pairs(balanced[1...-1])
+            pairs = close_index && extended_attribute_pairs(text[1...close_index])
+            rest = close_index && text[(close_index + 1)..]
             unless pairs&.any? { |_name, value| value.match?(/[.\[]/) }
               attributes, rest, last_line = super
               return [attributes, rest, last_line + joined_lines]
@@ -144,6 +145,36 @@ module Klenod
             end
 
             pairs
+          end
+
+          # Returns the index of the `)` that closes the list opened at index 0,
+          # ignoring brackets inside quoted values.
+          def attribute_list_close_index(source)
+            depth = 0
+            quote = nil
+            escaped = false
+
+            source.each_char.with_index do |character, index|
+              if quote
+                if escaped
+                  escaped = false
+                elsif character == "\\"
+                  escaped = true
+                elsif character == quote
+                  quote = nil
+                end
+              else
+                case character
+                when "'", '"' then quote = character
+                when "(", "[", "{" then depth += 1
+                when ")", "]", "}"
+                  depth -= 1
+                  return index if depth.zero?
+                end
+              end
+            end
+
+            nil
           end
 
           def attribute_boundary?(remaining_source)

@@ -123,6 +123,67 @@ class Klenod::Build::Plugins::HamlPlugin::BacktraceTest < Klenod::Build::Plugins
     end
   end
 
+  def test_haml_transformer_rewrites_multiline_parenthesized_attribute_errors_to_the_tag_line
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          %main
+            %a(
+              title="Link"
+              href=[].fetch(0)
+            ) Link
+        HAML
+      )
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      record = context.evaluate("pages/page.haml")
+      mod = context.graph.mods.fetch(record.id)
+      exports = mod.const_get(:Exports)
+
+      error = assert_raises(IndexError) { exports::Default.new.render }
+      Klenod::Runtime::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
+
+      assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:2:in /, error.backtrace.grep(/page\.haml/).fetch(0))
+    end
+  end
+
+  def test_haml_transformer_rewrites_errors_after_multiline_parenthesized_attributes_to_haml_lines
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          %main
+            %a(
+              title="Link"
+              href=[:a].fetch(0)
+            ) Link
+            %p= raise "after boom"
+        HAML
+      )
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: default_plugins_with(plugin))
+      record = context.evaluate("pages/page.haml")
+      mod = context.graph.mods.fetch(record.id)
+      exports = mod.const_get(:Exports)
+
+      error = assert_raises(RuntimeError) { exports::Default.new.render }
+      Klenod::Runtime::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
+
+      assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:6:in /, error.backtrace.fetch(0))
+    end
+  end
+
   def test_haml_transformer_rewrites_ruby_filter_method_called_from_markup
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

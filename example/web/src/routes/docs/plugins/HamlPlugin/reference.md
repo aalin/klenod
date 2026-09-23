@@ -77,14 +77,16 @@ Use `%tag.class#id` shortcuts and brace or parenthesized props. Both forms end u
 
 Brace props are ordinary Ruby hash expressions and are the right form for conditionals, keyword splats, and nested values. Parenthesized props accept literals, bare attributes such as `open`, and ordinary member or index expressions such as `video_id=video.id` and `href=link[:href]`.
 
-Long parenthesized prop lists can span lines. Unlike upstream Haml, Klenod also accepts a list whose first prop starts on the line after the opening parenthesis:
+Long parenthesized prop lists can span lines, including member and index expressions. Unlike upstream Haml, Klenod also accepts a list whose first prop starts on the line after the opening parenthesis:
 
 ```haml
 %a(
-  href="/docs"
+  href=link[:href]
   target="_blank"
 ) Docs
 ```
+
+Runtime errors in any prop map to the tag's first line.
 
 Klenod normalizes every prop name to Ruby-style underscores before calling the factory. `data-foo` and `data_foo` both become `data_foo`; `on-change-per-page` and `on_change_per_page` both become `on_change_per_page`. Nested Ruby values keep their shape for the framework to serialize:
 

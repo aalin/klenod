@@ -112,6 +112,35 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
     assert_includes(error.message, "Illegal nesting")
   end
 
+  def test_parse_haml_supports_member_expressions_in_multiline_parenthesized_attributes
+    root =
+      Klenod::Build::Plugins::HamlPlugin.parse_haml(
+        <<~HAML
+          %a(href=link.href
+            title="Close (x)"
+            data-id=link[:id]) Foo
+          %p After
+        HAML
+      )
+
+    link, after = root.children
+
+    assert_equal(
+      "{\"href\" => link.href,\"title\" => \"Close (x)\",\"data-id\" => link[:id],}",
+      link.value.fetch(:dynamic_attributes).new
+    )
+    assert_equal("Foo", link.value.fetch(:value))
+    assert_equal(1, link.line)
+    assert_equal(4, after.line)
+  end
+
+  def test_parse_haml_ignores_parentheses_inside_quoted_parenthesized_attribute_values
+    tag = Klenod::Build::Plugins::HamlPlugin.parse_haml("%a(title=\")\" href=link.href) Foo\n").children.fetch(0)
+
+    assert_equal("{\"title\" => \")\",\"href\" => link.href,}", tag.value.fetch(:dynamic_attributes).new)
+    assert_equal("Foo", tag.value.fetch(:value))
+  end
+
   def test_parse_haml_rejects_ambiguous_unparenthesized_ternary_attributes
     error =
       assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
