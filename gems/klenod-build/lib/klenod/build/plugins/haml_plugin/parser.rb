@@ -40,13 +40,27 @@ module Klenod
           # `video` plus a `.id` class. Extend that form to ordinary Ruby
           # member and index expressions while leaving all other attributes on
           # Haml's native parsing path.
+          #
+          # Haml also continues a parenthesized list onto following lines only
+          # after the first attribute, so `%a(` followed by a line break is an
+          # invalid attribute list. Join those lines first.
           def parse_new_attributes(text)
+            joined_lines = 0
+            while text.match?(/\A\(\s*\z/)
+              text = "#{text} #{@next_line.text}"
+              joined_lines += 1
+              next_line
+            end
+
             balanced, rest = ::Haml::Util.balance(text, "(", ")")
             pairs = balanced && extended_attribute_pairs(balanced[1...-1])
-            return super unless pairs&.any? { |_name, value| value.match?(/[.\[]/) }
+            unless pairs&.any? { |_name, value| value.match?(/[.\[]/) }
+              attributes, rest, last_line = super
+              return [attributes, rest, last_line + joined_lines]
+            end
 
             dynamic = pairs.reduce("{") { |source, (name, value)| "#{source}#{::Haml::Util.inspect_obj(name)} => #{value}," } << "}"
-            [[{}, dynamic], rest, @line.index + 1]
+            [[{}, dynamic], rest, @line.index + 1 + joined_lines]
           end
 
           def annotate_tag_nodes(root)

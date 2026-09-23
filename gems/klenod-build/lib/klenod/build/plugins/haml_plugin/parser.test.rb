@@ -75,6 +75,43 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
     )
   end
 
+  def test_parse_haml_supports_parenthesized_attributes_starting_on_the_next_line
+    root =
+      Klenod::Build::Plugins::HamlPlugin.parse_haml(
+        <<~HAML
+          %a(
+            href="/foo"
+            target="_blank"
+          ) Foo
+          %p After
+        HAML
+      )
+
+    link, after = root.children
+
+    assert_equal({"href" => "/foo", "target" => "_blank"}, link.value.fetch(:attributes))
+    assert_equal("Foo", link.value.fetch(:value))
+    assert_equal(1, link.line)
+    assert_equal(5, after.line)
+  end
+
+  def test_parse_haml_reports_nesting_errors_after_multiline_parenthesized_attributes_on_the_nested_line
+    error =
+      assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
+        Klenod::Build::Plugins::HamlPlugin.parse_haml(
+          <<~HAML
+            %a(
+              href="/foo"
+            ) Foo
+              %b Nested
+          HAML
+        )
+      end
+
+    assert_equal(4, error.line)
+    assert_includes(error.message, "Illegal nesting")
+  end
+
   def test_parse_haml_rejects_ambiguous_unparenthesized_ternary_attributes
     error =
       assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
