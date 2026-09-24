@@ -294,6 +294,26 @@ class Klenod::Build::Plugins::CSSPlugin::Test < Minitest::Test
     end
   end
 
+  def test_minified_css_keeps_class_names_for_empty_rules
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/styles")
+      File.write(
+        "#{dir}/styles/home.css",
+        ".title { color: red; }\n.empty {}\n.composed { composes: title; }\nfigure {}\n"
+      )
+
+      context = context_for(dir, css_plugin: Klenod::Build::Plugins::CSSPlugin.new(minify: true))
+      record = context.collect("styles/home.css").record
+      classes = record.metadata.fetch(:css_classes)
+      css_asset = record.assets.find { |asset| asset.metadata[:type] == :css }
+
+      assert_match(/empty/, classes.fetch(:empty))
+      assert_match(/figure/, classes.fetch(:__figure))
+      assert_equal(classes.fetch(:title), classes.fetch(:composed).split.last)
+      refute_includes(css_asset.bytes, "empty")
+    end
+  end
+
   def test_css_source_is_read_as_utf_8
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

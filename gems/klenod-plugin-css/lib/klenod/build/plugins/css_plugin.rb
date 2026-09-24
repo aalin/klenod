@@ -582,10 +582,12 @@ module Klenod
                 end
 
                 generated_name = css_result.classes.fetch(name)
-                export = css_result.exports.fetch(generated_name)
-                values = [export.name]
+                # Minification drops empty rules and their exports, but the
+                # class stays addressable from markup.
+                export = css_result.exports[generated_name]
+                values = [generated_name]
 
-                export.composes.each do |compose|
+                export&.composes&.each do |compose|
                   case compose
                   when ComposeLocal
                     values.concat(resolve_class.call(compose.name, [*resolving, name]).split)
