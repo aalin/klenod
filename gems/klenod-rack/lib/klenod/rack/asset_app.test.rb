@@ -189,6 +189,35 @@ class Klenod::Rack::AssetApp::Test < Minitest::Test
     end
   end
 
+  def test_protocol_response_leaves_content_length_to_the_body
+    Dir.mktmpdir do |dir|
+      assets_dir = "#{dir}/public"
+      FileUtils.mkdir_p(assets_dir)
+      File.binwrite("#{assets_dir}/home.abc123.css", "runtime bytes")
+      File.binwrite("#{assets_dir}/home.abc123.css.br", "brotli bytes")
+      asset =
+        Klenod::Runtime::AssetSpec.new(
+          "styles/home.css",
+          "abc123",
+          "/home.abc123.css",
+          "text/css",
+          {type: :css}
+        )
+      bundle = Klenod::Runtime::Bundle.new({}, {}, {asset.output_path => asset})
+      app = Klenod::Rack::AssetApp.new(bundle, assets_dir: assets_dir)
+
+      response = app.response_for("/assets/home.abc123.css", {"HTTP_ACCEPT_ENCODING" => "br"}).protocol_response
+
+      assert_equal(200, response.status)
+      refute(response.headers.include?("content-length"))
+      assert_equal("text/css", response.headers["content-type"])
+      assert_equal(["public", "max-age=31536000", "immutable"], response.headers["cache-control"])
+      assert_equal(["br"], response.headers["content-encoding"])
+      assert_equal(12, response.body.length)
+      assert_equal("brotli bytes", response.body.join)
+    end
+  end
+
   def test_serves_original_asset_when_brotli_is_not_accepted
     Dir.mktmpdir do |dir|
       assets_dir = "#{dir}/public"

@@ -13,7 +13,9 @@ module Klenod
       def protocol_response
         require "protocol/http/response"
 
-        Protocol::HTTP::Response[status, headers, [body]]
+        # Protocol servers derive content-length from the body. Keeping ours
+        # sends it twice, which HTTP/2 clients reject.
+        Protocol::HTTP::Response[status, headers.except("content-length"), [body]]
       end
     end
 
