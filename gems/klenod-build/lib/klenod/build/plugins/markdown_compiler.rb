@@ -15,6 +15,8 @@ module Klenod
   module Build
     module Plugins
       class MarkdownCompiler
+        TYPOGRAPHIC_TEXT = Kramdown::Converter::Html::TYPOGRAPHIC_SYMS.transform_values { |entities| entities.map(&:char).join }.freeze
+
         def initialize(factory:, components_source: "{}")
           @factory = factory
           @components_source = components_source
@@ -39,7 +41,31 @@ module Klenod
         end
 
         def compile_child_expressions(children, parent:, table_section: nil)
-          children.flat_map { |child| compile_node(child, parent: parent, table_section: table_section) }.compact
+          merge_text_nodes(children).flat_map { |child| compile_node(child, parent: parent, table_section: table_section) }.compact
+        end
+
+        # Kramdown splits typographic replacements and entities out of text.
+        # Fold them back into neighboring text so "it's" stays one string.
+        def merge_text_nodes(children)
+          children.each_with_object([]) do |child, merged|
+            text = inline_text(child)
+            if text.nil?
+              merged << child
+            elsif merged.last&.type == :text
+              merged[-1] = Kramdown::Element.new(:text, merged.last.value + text)
+            else
+              merged << Kramdown::Element.new(:text, text)
+            end
+          end
+        end
+
+        def inline_text(node)
+          case node.type
+          when :text then node.value
+          when :smart_quote then Kramdown::Utils::Entities.entity(node.value.to_s).char
+          when :typographic_sym then TYPOGRAPHIC_TEXT.fetch(node.value)
+          when :entity then node.value.char
+          end
         end
 
         def compile_node(node, parent: nil, table_section: nil)

@@ -176,6 +176,14 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
     end
   end
 
+  def test_markdown_renders_typographic_replacements_and_entities_as_text
+    with_context("page.md" => "He said \"hi\" -- it's &copy; << x >> *fine*...\n") do |context|
+      component = context.exports(context.evaluate("page.md"))::Default
+
+      assert_equal([:p, "He said “hi” – it’s © «\u00A0x\u00A0» ", [:em, "fine"], "…"], component.new.render)
+    end
+  end
+
   def test_runtime_bundle_preserves_markdown_imports_without_build_plugins
     Dir.mktmpdir do |dir|
       File.write("#{dir}/page.md", "# Hello\n")
