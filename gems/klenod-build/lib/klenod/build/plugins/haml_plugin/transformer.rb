@@ -620,11 +620,10 @@ module Klenod
           end
 
           def compile_plain_filter(text, builder:)
-            text = TextInterpolation.protect_escapes(text)
-            segments = TextInterpolation.segments(text)
-            return builder.literal(segments.first&.last || "") if segments.none? { |kind, _| kind == :ruby }
+            source = TextInterpolation::Source.new(text)
+            return builder.literal(source.literal(source.text)) unless source.interpolated?
 
-            builder.expression("[#{TextInterpolation.expressions(text).join(", ")}]")
+            builder.expression("[#{source.expressions(source.text).join(", ")}]")
           end
 
           def ruby_filter?(node)

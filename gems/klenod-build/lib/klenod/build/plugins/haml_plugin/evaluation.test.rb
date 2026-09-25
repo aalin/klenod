@@ -862,6 +862,35 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_markdown_filters_do_not_parse_markdown_inside_interpolation
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~'HAML'
+          :ruby
+            def items = %w[a b]
+
+          :markdown
+            # Items: #{items.size}
+
+            | Joined | Product |
+            |---|---|
+            | #{items.map { |i| i.upcase }.join("|")} | #{items.size * 2 * 3} _#{items.first}_ |
+
+            `#{ items.first }`
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal(
+        [
+          [:h1, "Items: ", 2, {id: "items"}],
+          [:table, [:thead, [:tr, [:th, "Joined"], [:th, "Product"]]], [:tbody, [:tr, [:td, "A|B"], [:td, 12, " ", [:em, "a"]]]]],
+          [:p, [:code, "\#{ items.first }"]]
+        ],
+        exports::Default.new.render
+      )
+    end
+  end
+
   def test_haml_markdown_filters_interpolate_link_and_image_attributes
     evaluate_haml(
       {
