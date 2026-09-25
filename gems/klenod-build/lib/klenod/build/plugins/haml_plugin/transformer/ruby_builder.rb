@@ -585,7 +585,7 @@ module Klenod
               return source unless source.include?("__LINE__")
 
               line_offsets = [0]
-              source.each_line(chomp: false) { |line| line_offsets << line_offsets.last + line.length }
+              source.each_line(chomp: false) { |line| line_offsets << line_offsets.last + line.bytesize }
 
               Ripper
                 .lex(source)
@@ -593,7 +593,7 @@ module Klenod
                 .reverse_each
                 .each_with_object(source.dup) do |((line, column), _type, token, _state), rewritten|
                   offset = line_offsets.fetch(line - 1) + column
-                  rewritten[offset, token.length] = line_no.to_s
+                  rewritten.bytesplice(offset, token.bytesize, line_no.to_s)
                 end
             end
 
@@ -607,7 +607,7 @@ module Klenod
               return source if @variables.empty?
 
               line_offsets = [0]
-              source.each_line(chomp: false) { |line| line_offsets << line_offsets.last + line.length }
+              source.each_line(chomp: false) { |line| line_offsets << line_offsets.last + line.bytesize }
 
               tokens = Ripper.lex(source)
 
@@ -617,17 +617,17 @@ module Klenod
                   kind, prefix, pattern = VARIABLE_TOKEN_KINDS[type]
                   receiver = @variables[kind]
                   if type == :on_gvar && token == "$*" && receiver
-                    [offset_for(line_offsets, line, column), token.length, receiver]
+                    [offset_for(line_offsets, line, column), token.bytesize, receiver]
                   elsif receiver && token.match?(pattern)
                     name = token.delete_prefix(prefix)
                     replacement = "(#{receiver})[#{symbol_source(name)}]"
                     replacement = "{#{replacement}}" if tokens[index - 1]&.fetch(1) == :on_embvar
-                    [offset_for(line_offsets, line, column), token.length, replacement]
+                    [offset_for(line_offsets, line, column), token.bytesize, replacement]
                   end
                 end
                 .reverse_each
                 .each_with_object(source.dup) do |(offset, length, replacement), rewritten|
-                  rewritten[offset, length] = replacement
+                  rewritten.bytesplice(offset, length, replacement)
                 end
             end
 

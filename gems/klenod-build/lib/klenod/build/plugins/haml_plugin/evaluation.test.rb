@@ -367,6 +367,36 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_rewrites_instance_variables_after_multibyte_characters
+    plugin = haml_plugin(
+      component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",
+      variables: {instance: "@__state"}
+    )
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def initialize(text)
+              @__state = {}
+              @dash = "–"
+              @text = text
+            end
+
+            def label = @text.empty? ? "–" : @text
+
+          %p= (@text.empty? ? "–" : @text)
+          %span= label
+          %em= @dash
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, _record, exports|
+      assert_equal([[:p, "–"], [:span, "–"], [:em, "–"]], exports::Default.new("").render)
+      assert_equal([[:p, "Hi"], [:span, "Hi"], [:em, "–"]], exports::Default.new("Hi").render)
+    end
+  end
+
   def test_haml_transformer_does_not_rewrite_generated_variable_receivers
     plugin = haml_plugin(
       component_base_class: "#{self.class.name}::FakeFramework::ComponentBase",

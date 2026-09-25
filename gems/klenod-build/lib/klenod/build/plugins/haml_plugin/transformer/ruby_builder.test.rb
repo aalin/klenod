@@ -21,6 +21,30 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_equal("\"\#{(@__props)[:title]} \#@@request \#@count\"", source)
   end
 
+  def test_ruby_builder_rewrites_variables_after_multibyte_characters
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new(variables: {instance: "@__state"})
+
+    source = builder.line_rewritten_source("(@text.empty? ? \"–\" : @text)", nil)
+
+    assert_equal("((@__state)[:text].empty? ? \"–\" : (@__state)[:text])", source)
+  end
+
+  def test_ruby_builder_rewrites_variables_after_multibyte_characters_on_earlier_lines
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new(variables: {instance: "@__state"})
+
+    source = builder.line_rewritten_source("dash = \"–\"\n@text || dash", nil)
+
+    assert_equal("dash = \"–\"\n(@__state)[:text] || dash", source)
+  end
+
+  def test_ruby_builder_rewrites_line_constant_after_multibyte_characters
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+
+    source = builder.line_rewritten_source("[\"–\", __LINE__]", 7)
+
+    assert_equal("[\"–\", 7]", source)
+  end
+
   def test_ruby_builder_raises_for_an_unparseable_render_ruby_filter
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
 
