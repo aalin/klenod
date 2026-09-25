@@ -9,19 +9,19 @@ ensure
   $VERBOSE = previous_verbose
 end
 
+require_relative "text_interpolation"
+
 module Klenod
   module Build
     module Plugins
       class MarkdownCompiler
-        ESCAPED_INTERPOLATION_SENTINEL = "\uE000klenod_escaped_interpolation\uE000"
-
         def initialize(factory:, components_source: "{}")
           @factory = factory
           @components_source = components_source
         end
 
         def compile(source, interpolate: false)
-          source = protect_escaped_interpolation(source) if interpolate
+          source = TextInterpolation.protect_escapes(source) if interpolate
           document = Kramdown::Document.new(source, input: "GFM", hard_wrap: false)
           compile_children(document.root.children, interpolate: interpolate)
         end
@@ -87,7 +87,7 @@ module Klenod
             end
           tag_source = tag_source(tag)
           parts = [tag_source, *child_sources]
-          parts << "**#{attrs_source(attrs)}" unless attrs.empty?
+          parts << "**#{attrs_source(attrs, interpolate: interpolate)}" unless attrs.empty?
 
           "#{@factory}[#{parts.join(", ")}]"
         end
@@ -96,83 +96,28 @@ module Klenod
           "#{@components_source}.fetch(#{tag.inspect}, #{tag.inspect})"
         end
 
-        def attrs_source(attrs)
-          attrs.transform_keys(&:to_sym).inspect
+        def attrs_source(attrs, interpolate: false)
+          pairs = attrs.map do |name, value|
+            value_source =
+              if value.is_a?(String)
+                interpolate ? TextInterpolation.string_source(value) : restore_escaped_interpolation(value).inspect
+              else
+                value.inspect
+              end
+            "#{name.to_sym.inspect} => #{value_source}"
+          end
+
+          "{#{pairs.join(", ")}}"
         end
 
         def text_expressions(text, interpolate:)
-          return [restore_escaped_interpolation(text).inspect] unless interpolate && text.include?("\#{")
+          return [restore_escaped_interpolation(text).inspect] unless interpolate
 
-          expressions = []
-          buffer = +""
-          index = 0
-
-          while index < text.length
-            if text[index, 2] == "\#{"
-              expression, next_index = read_interpolation(text, index + 2)
-              if expression
-                expressions << restore_escaped_interpolation(buffer).inspect unless buffer.empty?
-                buffer.clear
-                expressions << "(#{expression})"
-                index = next_index
-              else
-                buffer << text[index]
-                index += 1
-              end
-            else
-              buffer << text[index]
-              index += 1
-            end
-          end
-
-          expressions << restore_escaped_interpolation(buffer).inspect unless buffer.empty?
-          expressions
-        end
-
-        def read_interpolation(text, index)
-          expression = +""
-          depth = 1
-          quote = nil
-          escaped = false
-
-          while index < text.length
-            char = text[index]
-
-            if quote
-              expression << char
-              if escaped
-                escaped = false
-              elsif char == "\\"
-                escaped = true
-              elsif char == quote
-                quote = nil
-              end
-            else
-              case char
-              when "\"", "'", "`"
-                quote = char
-              when "{"
-                depth += 1
-              when "}"
-                depth -= 1
-                return [expression.strip, index + 1] if depth.zero?
-              end
-
-              expression << char
-            end
-
-            index += 1
-          end
-
-          nil
-        end
-
-        def protect_escaped_interpolation(source)
-          source.gsub("\\\#{", ESCAPED_INTERPOLATION_SENTINEL)
+          TextInterpolation.expressions(text)
         end
 
         def restore_escaped_interpolation(text)
-          text.gsub(ESCAPED_INTERPOLATION_SENTINEL, "\#{")
+          TextInterpolation.restore_escapes(text)
         end
       end
     end

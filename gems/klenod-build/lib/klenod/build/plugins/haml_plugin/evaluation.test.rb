@@ -862,6 +862,50 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_markdown_filters_interpolate_link_and_image_attributes
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~'HAML'
+          :ruby
+            def slug = "abc"
+
+          :markdown
+            [Post](/posts/#{slug}) ![Cover](/covers/#{slug}.png) [Raw](/raw/\#{slug})
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal(
+        [
+          :p,
+          [:a, "Post", {href: "/posts/abc"}],
+          " ",
+          [:img, {src: "/covers/abc.png", alt: "Cover"}],
+          " ",
+          [:a, "Raw", {href: "/raw/\#{slug}"}]
+        ],
+        exports::Default.new.render
+      )
+    end
+  end
+
+  def test_haml_plain_filters_support_ruby_interpolation
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~'HAML'
+          :ruby
+            def name = "Ada"
+
+          %p
+            :plain
+              Hello #{name.upcase}!
+              Escaped: \#{name}
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([:p, ["Hello ", "ADA", "!\nEscaped: \#{name}\n"]], exports::Default.new.render)
+    end
+  end
+
   def test_haml_markdown_filters_use_markdown_components_file
     evaluate_haml(
       {

@@ -219,14 +219,15 @@ Klenod supports three rendering filters:
   Markdown uses the configured component map.
 
 :plain
-  This text is rendered unchanged.
+  Rendered as text, with #{Ruby} interpolation.
 
 :css
   .notice { color: rebeccapurple; }
 ```
 
 - `:markdown` uses `MarkdownPlugin` and `/markdown-components.rb` when that map exists.
-- `:plain` yields its text unchanged.
+- `:plain` yields its text without markup parsing.
+- `:markdown` and `:plain` interpolate `#{...}` Ruby expressions at render time. In Markdown, interpolation applies to text and to attribute values such as link and image URLs; code spans and code blocks stay literal. Write `\#{` for a literal `#{`. `:css` does not interpolate.
 - `:css` creates inline stylesheet dependencies in the module graph.
 - `:ruby` is also supported for Ruby declarations or render-time Ruby, as described above. An empty `:ruby` filter is valid.
 

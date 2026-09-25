@@ -51,7 +51,7 @@
 
       Silent conditional blocks support both `if` and `unless`, so `- unless hidden` renders its nested Haml only when the condition is false.
 
-      Haml also supports inline `:css`, `:markdown`, and `:plain` filters. Markdown filters are handled by `MarkdownPlugin` and use `/markdown-components.rb` when that map exists; `:plain` renders its text unchanged.
+      Haml also supports inline `:css`, `:markdown`, and `:plain` filters. Markdown filters are handled by `MarkdownPlugin` and use `/markdown-components.rb` when that map exists; `:plain` renders its text without markup parsing. Both `:markdown` and `:plain` interpolate `#{...}`; `:css` does not.
 
   %DocsSection{ title: "Children And Slots" }
     :markdown

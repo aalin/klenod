@@ -5,6 +5,7 @@ require "ripper"
 
 require "klenod/runtime/source_map"
 require_relative "../markdown_compiler"
+require_relative "../text_interpolation"
 require_relative "parser"
 
 module Klenod
@@ -613,9 +614,17 @@ module Klenod
           def compile_filter_node(node, builder:, markdown_compiler:)
             return builder.render_ruby_filter(compile_ruby_filter(node, builder: builder)) if ruby_filter?(node)
             return builder.expression(markdown_compiler.compile(node.value.fetch(:text), interpolate: true)) if markdown_filter?(node)
-            return builder.literal(node.value.fetch(:text).to_s) if plain_filter?(node)
+            return compile_plain_filter(node.value.fetch(:text).to_s, builder: builder) if plain_filter?(node)
 
             raise ArgumentError, "Only :ruby, :markdown, and :plain Haml filters are supported"
+          end
+
+          def compile_plain_filter(text, builder:)
+            text = TextInterpolation.protect_escapes(text)
+            segments = TextInterpolation.segments(text)
+            return builder.literal(segments.first&.last || "") if segments.none? { |kind, _| kind == :ruby }
+
+            builder.expression("[#{TextInterpolation.expressions(text).join(", ")}]")
           end
 
           def ruby_filter?(node)
