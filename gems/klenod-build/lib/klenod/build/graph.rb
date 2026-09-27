@@ -386,6 +386,18 @@ module Klenod
           @mods[module_id] = mod
           record
         end
+      rescue SourceError => error
+        error.path ||= source_path_for(error.module_id)
+        raise
+      end
+
+      # The file behind an app module, so error reports can link to it.
+      def source_path_for(module_id)
+        return nil unless module_id.is_a?(ModuleId) && module_id.scheme == :app
+
+        absolute_path(module_id).to_s
+      rescue ResolveError
+        nil
       end
 
       def collect_module(module_id, force: false)
@@ -443,6 +455,9 @@ module Klenod
           @profiler.progress(:collect_module, module_id: record.id.to_s, total_records: @records.length)
           record
         end
+      rescue SourceError => error
+        error.path ||= source_path_for(error.module_id)
+        raise
       end
 
       def evaluate_module(module_id)

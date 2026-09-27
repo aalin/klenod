@@ -50,21 +50,14 @@ module Example
       def format_parse_update_error(error)
         reset = "\e[0;48;5;52m"
         lines = error.message.lines
-        title = lines.shift&.chomp || "#{error.class}: #{error.message}"
-        body = strip_ansi(lines.join)
+        title = strip_ansi(lines.shift&.chomp || "#{error.class}: #{error.message}")
+        body = strip_ansi(lines.join).sub(/\A\n+/, "")
 
         [
           "\e[1;31;47m ERROR \e[3;31;47m #{title} #{reset}",
-          body.empty? ? nil : color_parse_error_body(body),
+          body.empty? ? nil : body,
           "\e[0m"
         ].compact.join("\n")
-      end
-
-      def color_parse_error_body(body)
-        body
-          .sub(/\A\n+/, "")
-          .sub(/\A(.+?)(\n\n|\z)/m) { "\e[1;31m#{$1}\e[0;48;5;52m#{$2}" }
-          .sub(/^Source:/, "\e[1;34mSource:\e[0;48;5;52m")
       end
 
       def strip_ansi(value)

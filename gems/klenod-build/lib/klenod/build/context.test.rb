@@ -1174,7 +1174,7 @@ class Klenod::Build::Context::Test < Minitest::Test
 
       error = assert_raises(Klenod::Build::MissingExportError) { context.build(entrypoints: ["page.rb"], output: "#{dir}/bundle.mpk") }
 
-      assert_includes(error.message, "> 1 | Bar = lazy_import(\"./dep\", :Bar)")
+      assert_includes(error.message, "> 1 │ Bar = lazy_import(\"./dep\", :Bar)")
     end
   end
 
@@ -1788,7 +1788,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       # A plugin bug rather than anything the developer wrote, so the excerpt
       # shows the generated source.
       assert_equal("Generated Ruby syntax error", error.kind)
-      assert_includes(error.message, "> 1 | Default = (")
+      assert_includes(error.message, "> 1 │ Default = (")
       refute(File.exist?(output))
     end
   end

@@ -27,7 +27,7 @@ module Klenod
         def initialize(line: nil, column: nil, detail: nil, hints: []) = super
       end
 
-      attr_reader :module_id, :source, :line, :column, :cause, :detail, :hints
+      attr_reader :module_id, :source, :line, :column, :cause, :detail, :hints, :path
 
       def initialize(error, source:, module_id:)
         @cause = error
@@ -40,19 +40,31 @@ module Klenod
         @detail = found.detail || message_for(error)
         @hints = Array(found.hints).map(&:to_s).reject(&:empty?).freeze
 
-        super(
-          SourceExcerpt.message(
-            module_id:,
-            line: @line,
-            column: @column,
-            kind:,
-            source:,
-            message: @detail,
-            hints: @hints
-          )
-        )
+        super(@detail)
 
         set_backtrace(backtrace_for(error))
+      end
+
+      # The file the module was read from, when it has one. The graph sets it
+      # as the error leaves the module, since plugins only know the module ID,
+      # and the message links the location to it.
+      def path=(path)
+        @path = path
+        @message = nil
+      end
+
+      def to_s
+        @message ||=
+          SourceExcerpt.message(
+            module_id:,
+            line:,
+            column:,
+            kind:,
+            source:,
+            message: detail,
+            hints:,
+            path:
+          )
       end
 
       # "JavaScript parse error". Used as the label in the browser error dialog,

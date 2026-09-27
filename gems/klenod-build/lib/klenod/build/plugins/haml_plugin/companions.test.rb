@@ -574,7 +574,7 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
       assert_kind_of(Klenod::Build::Plugins::IntlPlugin::ParseError, error)
       assert_equal("app:/pages/page.intl.en-US.toml", error.module_id.to_s)
       assert_equal(2, error.line)
-      assert_includes(error.message, "> 2 | invalid =")
+      assert_includes(error.message, "> 2 │ invalid =")
     end
   end
 

@@ -151,7 +151,7 @@ module Example
         excerpt = Klenod::Build::SourceExcerpt.excerpt(source: source, line: line, column: column, ansi: false)
         return "" unless excerpt
 
-        pre_section_html("Source", excerpt.delete_prefix("Source:\n"))
+        pre_section_html("Source", excerpt)
       end
 
       def pre_section_html(title, content)

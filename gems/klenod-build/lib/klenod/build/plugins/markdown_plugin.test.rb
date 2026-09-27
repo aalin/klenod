@@ -248,7 +248,7 @@ class Klenod::Build::Plugins::MarkdownPlugin::Test < Minitest::Test
     assert_equal(6, error.column)
     assert_equal("did not find expected ',' or ']'", error.detail)
     assert_equal(["While parsing a flow sequence"], error.hints)
-    assert_includes(error.message, "> 3 | bad: [1, 2")
+    assert_includes(error.message, "> 3 │ bad: [1, 2")
   end
 
   def test_frontmatter_that_is_not_a_mapping_reports_the_file

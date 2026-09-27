@@ -1100,8 +1100,8 @@ class Klenod::ExampleTest < Minitest::Test
     )
     formatted = Example::Server::ServerErrors.format_exception(error, nil)
 
-    assert_includes(formatted, "components/DataTable.haml:2: Haml parse error")
-    assert_includes(formatted, "> 2 |   = @columns.map { |column| )")
+    assert_includes(formatted, "╭─[app:/components/DataTable.haml:2]")
+    assert_includes(formatted, "> 2 │   = @columns.map { |column| )")
     refute_includes(formatted, "Backtrace:")
   end
 
@@ -1161,7 +1161,7 @@ class Klenod::ExampleTest < Minitest::Test
     refute_includes(formatted, "Backtrace:")
     assert_includes(update_formatted, "Imported by: entrypoint.rb:1")
     assert_includes(update_formatted, "Source root: #{source_root}")
-    assert_includes(Example::Server::ServerFormatting.strip_ansi(update_formatted), "Source:\n> 1 | # frozen_string_literal: true")
+    assert_includes(Example::Server::ServerFormatting.strip_ansi(update_formatted), "╭────\n> 1 │ # frozen_string_literal: true")
     refute_includes(update_formatted, "haml_import")
     assert_includes(html, "Incorrect import path casing")
     assert_includes(html, "<dt>Import</dt><dd><code>/components/Docssection.haml</code></dd>")
@@ -1170,7 +1170,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "<strong>Use</strong>")
     assert_includes(html, "<code>/components/DocsSection.haml</code>")
     assert_includes(html, "<h2>Source</h2>")
-    assert_includes(html, "&gt; 1 | # frozen_string_literal: true")
+    assert_includes(html, "&gt; 1 │ # frozen_string_literal: true")
     refute_includes(html, "<h2>Backtrace</h2>")
     refute_includes(html, "haml_import")
 
@@ -1228,7 +1228,7 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Could not build Ruby block from Haml script:")
     assert_includes(html, "<li>Unmatched `}&#39;, missing `{&#39; ?</li>")
     assert_includes(html, "<h2>Source</h2>")
-    assert_includes(html, "&gt; 2 |   = @columns.map do |column| }")
+    assert_includes(html, "&gt; 2 │   = @columns.map do |column| }")
     refute_includes(html, "<h2>Backtrace</h2>")
     refute_includes(html, "ERROR  components/DataTable.haml")
   end
@@ -1261,8 +1261,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "src/data/config.json:3:7: JSON parse error")
     assert_includes(html, "expected &#39;:&#39; after object key")
     assert_includes(html, "<h2>Source</h2>")
-    assert_includes(html, "&gt; 3 |   &quot;b&quot; 2")
-    assert_includes(html, "|       ^")
+    assert_includes(html, "&gt; 3 │   &quot;b&quot; 2")
+    assert_includes(html, "·       ^")
     refute_includes(html, "<h2>Backtrace</h2>")
   end
 

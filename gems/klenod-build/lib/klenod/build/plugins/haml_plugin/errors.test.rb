@@ -27,7 +27,7 @@ class Klenod::Build::Plugins::HamlPlugin::ErrorsTest < Klenod::Build::Plugins::H
       # of the filter, which includes its trailing blank line.
       assert_includes([3, 4], error.line)
       assert_equal("Haml parse error", error.kind)
-      assert_match(/pages\/page\.haml:[34]/, error.message)
+      assert_match(/pages\/page\.haml:[34]/, Klenod::Build::SourceExcerpt.strip(error.message))
       assert_includes(error.message, "unterminated string")
     end
   end
@@ -81,7 +81,7 @@ class Klenod::Build::Plugins::HamlPlugin::ErrorsTest < Klenod::Build::Plugins::H
       assert_equal("Haml parse error", error.kind)
       assert_equal(2, error.line)
       assert_includes(error.detail, "Could not parse Haml silent script")
-      assert_includes(error.message, "pages/page.haml:2: Haml parse error")
+      assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "╭─[app:/pages/page.haml:2]")
       refute_includes(error.message, "Generated Ruby syntax error")
     end
   end

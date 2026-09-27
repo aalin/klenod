@@ -255,9 +255,9 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
 
     assert_equal(ModuleId.new("pages/demo/blog/page.haml", nil), error.module_id)
     assert_equal(2, error.line)
-    assert_includes(error.message, "pages/demo/blog/page.haml:2: Haml parse error")
+    assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "╭─[app:/pages/demo/blog/page.haml:2]")
     assert_includes(error.message, "Invalid attribute list")
-    assert_includes(error.message, "> 2 | %time(datetime=post.fetch(\"date\")= post.fetch(\"date\")")
+    assert_includes(error.message, "> 2 │ %time(datetime=post.fetch(\"date\")= post.fetch(\"date\")")
     assert_kind_of(::Haml::SyntaxError, error.cause)
   end
 
@@ -282,8 +282,8 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
       end
 
     assert_equal(2, error.line)
-    assert_includes(error.message, "components/DataTable.haml:2: Haml parse error")
-    assert_includes(error.message, "> 2 |   = @columns.map { |column| )")
+    assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "╭─[app:/components/DataTable.haml:2]")
+    assert_includes(error.message, "> 2 │   = @columns.map { |column| )")
   end
 
   def test_haml_transformer_compiles_ruby_filter_to_source_fragment

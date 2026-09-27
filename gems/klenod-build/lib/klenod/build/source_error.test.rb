@@ -51,10 +51,11 @@ class Klenod::Build::SourceError::Test < Minitest::Test
   def test_renders_title_detail_excerpt_and_hint_into_the_message
     error = LocatedError.new(RuntimeError.new("raw"), source: SOURCE, module_id: "app:/a.ex")
 
-    assert_includes(error.message, "app:/a.ex:2:3: Example parse error")
+    assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "× Example parse error: bad token\n\n")
     assert_includes(error.message, "bad token")
-    assert_includes(error.message, "> 2 | bravo")
-    assert_includes(error.message, "Hint:\n  Did you mean bravo?")
+    assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "╭─[app:/a.ex:2:3]")
+    assert_includes(error.message, "> 2 │ bravo")
+    assert_includes(error.message, "\e[1;36mhint:\e[0m \e[36mDid you mean bravo?\e[0m")
   end
 
   def test_backtrace_points_at_the_module
@@ -75,13 +76,13 @@ class Klenod::Build::SourceError::Test < Minitest::Test
     assert_equal("something went wrong", error.detail)
     assert_same(cause, error.cause)
     assert_equal(SOURCE, error.source)
-    assert_equal("app:/a.png: Example decode error\n\nsomething went wrong", error.message)
+    assert_equal("× Example decode error: something went wrong\n  at app:/a.png", Klenod::Build::SourceExcerpt.strip(error.message))
     refute_includes(error.message, "Source:")
   end
 
   def test_a_subclass_that_declares_nothing_still_reports_the_file
     error = SourceError.new(RuntimeError.new("boom"), source: SOURCE, module_id: "app:/a.ex")
 
-    assert_equal("app:/a.ex: Parse error\n\nboom", error.message)
+    assert_equal("× Parse error: boom\n  at app:/a.ex", Klenod::Build::SourceExcerpt.strip(error.message))
   end
 end

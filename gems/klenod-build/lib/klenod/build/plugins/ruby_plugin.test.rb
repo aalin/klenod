@@ -422,7 +422,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
       assert_equal(7, error.column)
       assert_equal("app:/dep.rb does not define Bar", error.detail)
       assert_equal(["It defines Default, Foo"], error.hints)
-      assert_includes(error.message, "> 1 | Bar = import(\"./dep\", :Bar)")
+      assert_includes(error.message, "> 1 │ Bar = import(\"./dep\", :Bar)")
       assert_raises(Klenod::Build::MissingExportError) { context.evaluate("page.rb") }
     end
   end
@@ -438,7 +438,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
 
       error = assert_raises(Klenod::Build::MissingExportError) { exports::Bar.call }
 
-      assert_includes(error.message, "> 1 | Bar = lazy_import(\"./dep\", :Bar)")
+      assert_includes(error.message, "> 1 │ Bar = lazy_import(\"./dep\", :Bar)")
     end
   end
 
@@ -489,7 +489,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
     assert_equal(1, error.column)
     assert_equal("unexpected 'end'", error.detail)
     assert_equal(["Expected a `)` to close the arguments"], error.hints)
-    assert_includes(error.message, "> 3 | end")
+    assert_includes(error.message, "> 3 │ end")
   end
 
   def test_a_syntax_error_fails_collection_without_evaluating_the_module

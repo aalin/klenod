@@ -76,7 +76,14 @@ class Klenod::Build::Plugins::DataPlugin::Test < Minitest::Test
     assert_equal(BROKEN_JSON, error.source)
     # The parser repeats the location in its message; the title and caret carry it.
     assert_equal("expected ':' after object key, got: '2'", error.detail)
-    assert_includes(error.message, "app:/config.json:3:7: JSON parse error")
+    assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "╭─[app:/config.json:3:7]")
+  end
+
+  def test_a_parse_error_knows_the_file_it_came_from
+    error = parse_error("config.json", BROKEN_JSON, Klenod::Build::Plugins::JsonPlugin::ParseError)
+
+    assert_equal("config.json", File.basename(error.path))
+    assert(File.absolute_path?(error.path))
   end
 
   def test_invalid_yaml_raises_a_located_parse_error_with_the_parser_context_as_a_hint

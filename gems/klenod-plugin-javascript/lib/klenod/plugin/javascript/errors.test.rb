@@ -55,7 +55,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::ErrorsTest < Minitest::Test
   def test_parse_error_message_includes_location_and_source_excerpt
     error = ParseError.new(syntax_error, source: BROKEN_TSX, module_id: "app:/Thing.tsx")
 
-    assert_includes(error.message, "app:/Thing.tsx:#{BROKEN_LINE}:#{error.column}: JavaScript parse error")
+    assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "╭─[app:/Thing.tsx:#{BROKEN_LINE}:#{error.column}]")
     assert_includes(error.message, "Expected '</', got ':'")
     assert_includes(error.message, "#root { color: red; }")
   end
@@ -82,7 +82,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::ErrorsTest < Minitest::Test
     assert_nil(error.line)
     assert_nil(error.column)
     assert_equal(BROKEN_TSX, error.source)
-    assert_includes(error.message, "app:/Thing.tsx: JavaScript parse error")
+    assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "× JavaScript parse error: no location here\n  at app:/Thing.tsx")
     assert_includes(error.message, "no location here")
   end
 

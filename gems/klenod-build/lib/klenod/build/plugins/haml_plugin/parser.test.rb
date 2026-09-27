@@ -185,9 +185,9 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
 
     assert_equal(ModuleId.new("pages/demo/page.haml", nil), error.module_id)
     assert_equal(2, error.line)
-    assert_includes(error.message, "pages/demo/page.haml:2: Haml parse error")
+    assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "╭─[app:/pages/demo/page.haml:2]")
     assert_includes(error.message, "Invalid tag")
-    assert_includes(error.message, "> 2 | %*")
+    assert_includes(error.message, "> 2 │ %*")
   end
 
   def test_haml_plugin_wraps_inline_css_parse_errors_with_source_context
@@ -203,8 +203,8 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
       end
 
     assert_equal(2, error.line)
-    assert_includes(error.message, "pages/page.haml:2: Haml parse error")
-    assert_includes(error.message, "> 2 | %time(datetime=post.fetch(\"date\")= post.fetch(\"date\")")
+    assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "╭─[app:/pages/page.haml:2]")
+    assert_includes(error.message, "> 2 │ %time(datetime=post.fetch(\"date\")= post.fetch(\"date\")")
   end
 
   def test_inline_css_sources_include_haml_origin_offsets
