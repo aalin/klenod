@@ -5,7 +5,7 @@ Update them to the latest Capsize revision from the Klenod repository root:
     bundle exec rake google_fonts:metrics:update
 
 Project: https://github.com/seek-oss/capsize
-Commit: b0eb891c39e2ecd8b680f550bcda6f5fe9e38326
+Commit: 8df97f098adc19d8a6d33df301757d7e9670bae6
 Source: packages/metrics/src/entireMetricsCollection.json
 
 MIT License

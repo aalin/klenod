@@ -7,6 +7,9 @@ on:
 
   pull_request:
 
+  # Lets workflows using GITHUB_TOKEN run the required check on their own branches.
+  workflow_dispatch:
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true

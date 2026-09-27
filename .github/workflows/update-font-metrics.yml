@@ -1,0 +1,57 @@
+name: Update font metrics
+
+on:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: update-font-metrics
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: Update font metrics
+    runs-on: ubuntu-latest
+    permissions:
+      # Pull requests opened with GITHUB_TOKEN do not trigger pull_request
+      # workflows, so this job dispatches the required Ruby check itself.
+      actions: write
+      contents: write
+      pull-requests: write
+    env:
+      BRANCH: automation/font-metrics
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+      - name: Update Capsize font metrics
+        run: ruby tools/update_google_font_metrics.rb
+      - name: Open pull request
+        run: |
+          if git diff --quiet; then
+            echo "Font metrics are current."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --create "$BRANCH"
+          git commit --all --message "Update Capsize font metrics"
+          git push --force origin "$BRANCH"
+
+          if [ "$(gh pr list --head "$BRANCH" --state open --json number --jq length)" = "0" ]; then
+            gh pr create \
+              --head "$BRANCH" \
+              --title "Update Capsize font metrics" \
+              --body "Updates the vendored Capsize metrics with \`bundle exec rake google_fonts:metrics:update\`. Merges automatically when the Ruby check passes."
+          fi
+
+          gh workflow run main.yml --ref "$BRANCH"
+          gh pr merge "$BRANCH" --auto --squash

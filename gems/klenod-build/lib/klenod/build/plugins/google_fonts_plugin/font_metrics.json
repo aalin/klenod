@@ -1106,6 +1106,15 @@
     "unitsPerEm": 1000,
     "xWidthAvg": 362
   },
+  "Asap Sharp": {
+    "familyName": "Asap Sharp",
+    "category": "sans-serif",
+    "ascent": 934,
+    "descent": -212,
+    "lineGap": 0,
+    "unitsPerEm": 1000,
+    "xWidthAvg": 442
+  },
   "Asar": {
     "familyName": "Asar",
     "category": "serif",
@@ -2536,6 +2545,15 @@
     "lineGap": 0,
     "unitsPerEm": 16,
     "xWidthAvg": 8
+  },
+  "Caacupe One": {
+    "familyName": "Caacupe One",
+    "category": "display",
+    "ascent": 960,
+    "descent": -340,
+    "lineGap": 0,
+    "unitsPerEm": 1000,
+    "xWidthAvg": 309
   },
   "Cabin": {
     "familyName": "Cabin",
@@ -8187,7 +8205,7 @@
     "descent": -120,
     "lineGap": 0,
     "unitsPerEm": 1000,
-    "xWidthAvg": 311
+    "xWidthAvg": 313
   },
   "Macondo": {
     "familyName": "Macondo",
@@ -14993,6 +15011,15 @@
     "unitsPerEm": 1000,
     "xWidthAvg": 457
   },
+  "Scoutie Sans": {
+    "familyName": "Scoutie Sans",
+    "category": "sans-serif",
+    "ascent": 2000,
+    "descent": -600,
+    "lineGap": 0,
+    "unitsPerEm": 2000,
+    "xWidthAvg": 920
+  },
   "Seaweed Script": {
     "familyName": "Seaweed Script",
     "category": "display",
@@ -16846,6 +16873,15 @@
     "lineGap": 0,
     "unitsPerEm": 1000,
     "xWidthAvg": 400
+  },
+  "Valley Sans": {
+    "familyName": "Valley Sans",
+    "category": "sans-serif",
+    "ascent": 960,
+    "descent": -240,
+    "lineGap": 0,
+    "unitsPerEm": 1000,
+    "xWidthAvg": 487
   },
   "Vampiro One": {
     "familyName": "Vampiro One",

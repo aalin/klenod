@@ -6,8 +6,8 @@ require "net/http"
 
 module GoogleFontMetricsUpdater
   REPOSITORY = "https://github.com/seek-oss/capsize"
-  LATEST_COMMIT_URL = "https://api.github.com/repos/seek-oss/capsize/commits/master"
   METRICS_PATH = "packages/metrics/src/entireMetricsCollection.json"
+  LATEST_COMMIT_URL = "https://api.github.com/repos/seek-oss/capsize/commits?sha=master&per_page=1&path=#{METRICS_PATH}"
   LICENSE_PATH = "LICENSE"
   REQUIRED_FIELDS = %w[familyName category ascent descent lineGap unitsPerEm xWidthAvg].freeze
   REQUIRED_FAMILIES = ["Arial", "Courier New", "Times New Roman"].freeze
@@ -33,8 +33,8 @@ module GoogleFontMetricsUpdater
   end
 
   def latest_ref
-    ref = JSON.parse(read(LATEST_COMMIT_URL)).fetch("sha")
-    raise "GitHub returned an invalid Capsize commit SHA" unless ref.match?(/\A[0-9a-f]{40}\z/)
+    ref = JSON.parse(read(LATEST_COMMIT_URL)).first&.fetch("sha")
+    raise "GitHub returned an invalid Capsize commit SHA" unless ref&.match?(/\A[0-9a-f]{40}\z/)
 
     ref
   end
@@ -55,7 +55,9 @@ module GoogleFontMetricsUpdater
   end
 
   def read(url, redirects: 5)
-    response = Net::HTTP.get_response(URI(url), HTTP_HEADERS)
+    headers = HTTP_HEADERS
+    headers = headers.merge("Authorization" => "Bearer #{ENV["GITHUB_TOKEN"]}") if ENV["GITHUB_TOKEN"] && url.start_with?("https://api.github.com/")
+    response = Net::HTTP.get_response(URI(url), headers)
 
     case response
     when Net::HTTPSuccess
