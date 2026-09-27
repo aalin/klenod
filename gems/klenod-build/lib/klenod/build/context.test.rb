@@ -2007,6 +2007,40 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_invalidate_paths_stops_retrying_failed_module_once_nothing_imports_it
+    Dir.mktmpdir do |dir|
+      page_path = "#{dir}/page.haml"
+      picture_path = "#{dir}/Picture.haml"
+      other_path = "#{dir}/other.haml"
+      File.write(picture_path, "%p picture\n")
+      File.write(page_path, ":ruby\n  Picture = import(\"/Picture\")\n%p hello\n")
+      File.write(other_path, "%p other\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("page.haml")
+      context.evaluate("other.haml")
+
+      File.write(picture_path, "%p(a=\n")
+      failed_result = context.invalidate_paths([picture_path])
+
+      assert_equal(["app:/Picture.haml"], failed_result.errors.map { |module_id, _error| module_id.to_s })
+
+      File.write(page_path, "%p hello\n")
+      dropped_result = context.invalidate_paths([page_path])
+
+      assert_empty(dropped_result.errors)
+      refute(context.graph.records.key?(Klenod::Build::ModuleId.parse("app:/Picture.haml")))
+
+      File.write(other_path, "%p other again\n")
+
+      assert_empty(context.invalidate_paths([other_path]).errors)
+
+      File.write(page_path, ":ruby\n  Picture = import(\"/Picture\")\n%p hello\n")
+
+      assert_equal(["app:/page.haml"], context.invalidate_paths([page_path]).errors.map { |module_id, _error| module_id.to_s })
+    end
+  end
+
   private
 
   def fake_task(&block)

@@ -17,6 +17,7 @@ module Klenod
           changed_module_ids = module_ids_for_paths(changed_paths)
           removed_module_ids = module_ids_for_paths(removed_paths)
           failed_retry_ids = failed_module_ids - removed_module_ids
+          imported_module_ids = records.each_key.select { |module_id| graph.dependents(module_id).any? }
           pattern_owner_ids = module_ids_for_watched_paths(changed_paths + removed_paths)
           plugin_owner_ids = plugin_invalidated_module_ids(changed_paths + removed_paths)
           reload_module_ids = (changed_module_ids + failed_retry_ids + pattern_owner_ids + plugin_owner_ids).uniq
@@ -31,6 +32,12 @@ module Klenod
           failed_reload_ids = []
           reloaded_module_ids =
             reload_module_ids.filter_map do |module_id|
+              if orphaned_failure?(module_id, imported_module_ids)
+                graph.remove_record(module_id)
+                mods.delete(module_id)
+                next
+              end
+
               if evaluated_module_ids.include?(module_id)
                 graph.load_module(module_id, force: true)
               else
@@ -130,6 +137,16 @@ module Klenod
         # that fails again reports its error again.
         def failed_module_ids
           records.filter_map { |module_id, record| module_id if record.status == :failed }
+        end
+
+        # A failed module whose last importer dropped it earlier in this update.
+        # Nothing can demand it any more, so retrying it would report its error
+        # on every change. Its record goes; importing it again collects it anew.
+        # A failed entry never had an importer and keeps being retried.
+        def orphaned_failure?(module_id, imported_module_ids)
+          records[module_id]&.status == :failed &&
+            imported_module_ids.include?(module_id) &&
+            graph.dependents(module_id).empty?
         end
 
         def plugin_invalidated_module_ids(paths)
