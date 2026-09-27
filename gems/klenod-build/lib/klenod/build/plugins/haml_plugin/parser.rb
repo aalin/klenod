@@ -46,6 +46,7 @@ module Klenod
           # invalid attribute list. Join the lines of an unclosed list first so
           # both forms work across lines.
           def parse_new_attributes(text)
+            tag_prefix = @line.text.strip[/\A[^(]*/]
             joined_lines = 0
             until (close_index = attribute_list_close_index(text)) || @next_line.eod?
               text = "#{text} #{@next_line.text}"
@@ -56,7 +57,13 @@ module Klenod
             pairs = close_index && extended_attribute_pairs(text[1...close_index])
             rest = close_index && text[(close_index + 1)..]
             unless pairs&.any? { |_name, value| value.match?(/[.\[]/) }
-              attributes, rest, last_line = super
+              begin
+                attributes, rest, last_line = super
+              rescue ::Haml::SyntaxError => error
+                raise unless pairs && error.message.start_with?("Invalid attribute list")
+
+                raise ::Haml::SyntaxError.new("#{error.message}\n\n#{hash_attributes_hint(tag_prefix, pairs)}", error.line)
+              end
               return [attributes, rest, last_line + joined_lines]
             end
 
@@ -145,6 +152,19 @@ module Klenod
             end
 
             pairs
+          end
+
+          # Every value is valid Ruby, but some are neither Haml's bare variables
+          # nor the member and index expressions handled above. Suggest the
+          # equivalent hash attributes, which accept any Ruby expression.
+          def hash_attributes_hint(tag_prefix, pairs)
+            entries = pairs.map do |name, value|
+              key = name.match?(/\A[a-z_]\w*\z/i) ? name : name.inspect
+              "#{key}: #{value}"
+            end
+            tag_prefix = "" unless tag_prefix.match?(/\A[%.#][-:\w.#]*\z/)
+
+            "Hint:\n  Use {} attributes for Ruby expressions: #{tag_prefix}{#{entries.join(", ")}}"
           end
 
           # Returns the index of the `)` that closes the list opened at index 0,

@@ -150,6 +150,26 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
     assert_includes(error.message, "Invalid attribute list")
   end
 
+  def test_parse_haml_suggests_hash_attributes_for_other_ruby_expressions
+    error =
+      assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
+        Klenod::Build::Plugins::HamlPlugin.parse_haml(
+          <<~HAML,
+            .delta
+              %AnimatedNumber.big(value=delta(:count) format="signed" data-x=@y hidden)
+          HAML
+          module_id: "app:/pages/page.haml"
+        )
+      end
+
+    assert_equal(2, error.line)
+    assert_includes(error.detail, "Invalid attribute list")
+    assert_equal(
+      ['Use {} attributes for Ruby expressions: %AnimatedNumber.big{value: delta(:count), format: "signed", "data-x": @y, hidden: true}'],
+      error.hints
+    )
+  end
+
   def test_parse_haml_wraps_haml_syntax_errors_with_source_context
     error =
       assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) do
