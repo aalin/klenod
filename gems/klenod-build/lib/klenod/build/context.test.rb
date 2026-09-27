@@ -1982,6 +1982,31 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_invalidate_paths_retries_failed_importer_when_new_dependency_is_fixed
+    Dir.mktmpdir do |dir|
+      page_path = "#{dir}/page.haml"
+      picture_path = "#{dir}/Picture.haml"
+      File.write(page_path, "%p hello\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.evaluate("page.haml")
+
+      File.write(picture_path, "%source[type](type=type srcset=srcset(variants) sizes=sizes)\n")
+      File.write(page_path, ":ruby\n  Picture = import(\"/Picture\")\n%p hello\n")
+      failed_result = context.invalidate_paths([page_path, picture_path])
+
+      assert_equal(["app:/page.haml"], failed_result.errors.map { |module_id, _error| module_id.to_s })
+      assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.evaluate("page.haml") }
+
+      File.write(picture_path, "%p picture\n")
+      recovered_result = context.invalidate_paths([picture_path])
+
+      assert_empty(recovered_result.errors)
+      assert_equal(["app:/page.haml"], recovered_result.reloaded_module_ids.map(&:to_s))
+      assert_kind_of(Class, context.exports("page.haml")::Default)
+    end
+  end
+
   private
 
   def fake_task(&block)

@@ -16,7 +16,7 @@ module Klenod
           evaluated_module_ids = mods.keys
           changed_module_ids = module_ids_for_paths(changed_paths)
           removed_module_ids = module_ids_for_paths(removed_paths)
-          failed_retry_ids = failed_module_ids_for_created_paths(changed_paths)
+          failed_retry_ids = failed_module_ids - removed_module_ids
           pattern_owner_ids = module_ids_for_watched_paths(changed_paths + removed_paths)
           plugin_owner_ids = plugin_invalidated_module_ids(changed_paths + removed_paths)
           reload_module_ids = (changed_module_ids + failed_retry_ids + pattern_owner_ids + plugin_owner_ids).uniq
@@ -124,28 +124,12 @@ module Klenod
           end
         end
 
-        def failed_module_ids_for_created_paths(paths)
-          relative_paths = relative_paths_for(paths)
-          return [] if relative_paths.empty?
-
-          records.filter_map do |module_id, record|
-            next unless record.status == :failed
-
-            unresolved_path = record.metadata.fetch(:error).unresolved_path if record.metadata.fetch(:error).respond_to?(:unresolved_path)
-            module_id if unresolved_path && relative_paths.any? { |path| path_satisfies_unresolved_path?(path, unresolved_path) }
-          end
-        end
-
-        def relative_paths_for(paths)
-          paths.filter_map do |path|
-            Pathname.new(path).expand_path.relative_path_from(resolver.source_dir).to_s
-          rescue ArgumentError
-            nil
-          end
-        end
-
-        def path_satisfies_unresolved_path?(path, unresolved_path)
-          path == unresolved_path || path.start_with?("#{unresolved_path}.")
+        # A failed record keeps no dependency links, so nothing ties it to the file
+        # that broke it: a missing import, or a new dependency that fails to parse.
+        # Retry every failed module on each change. Failures are rare, and a retry
+        # that fails again reports its error again.
+        def failed_module_ids
+          records.filter_map { |module_id, record| module_id if record.status == :failed }
         end
 
         def plugin_invalidated_module_ids(paths)
