@@ -60,9 +60,14 @@ module Klenod
               begin
                 attributes, rest, last_line = super
               rescue ::Haml::SyntaxError => error
-                raise unless pairs && error.message.start_with?("Invalid attribute list")
+                raise unless error.message.start_with?("Invalid attribute list")
 
-                raise ::Haml::SyntaxError.new("#{error.message}\n\n#{hash_attributes_hint(tag_prefix, pairs)}", error.line)
+                # Haml quotes the list with String#inspect, which escapes every
+                # `"` in it. Show the source as written instead.
+                attribute_list = ::Haml::Util.balance(text, "(", ")")&.first || text
+                message = "Invalid attribute list: `#{attribute_list}`."
+                message = "#{message}\n\n#{hash_attributes_hint(tag_prefix, pairs)}" if pairs
+                raise ::Haml::SyntaxError.new(message, error.line)
               end
               return [attributes, rest, last_line + joined_lines]
             end

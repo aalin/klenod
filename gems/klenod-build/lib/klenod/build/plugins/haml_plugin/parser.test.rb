@@ -163,7 +163,7 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
       end
 
     assert_equal(2, error.line)
-    assert_includes(error.detail, "Invalid attribute list")
+    assert_equal('Invalid attribute list: `(value=delta(:count) format="signed" data-x=@y hidden)`.', error.detail)
     assert_equal(
       ['Use {} attributes for Ruby expressions: %AnimatedNumber.big{value: delta(:count), format: "signed", "data-x": @y, hidden: true}'],
       error.hints
