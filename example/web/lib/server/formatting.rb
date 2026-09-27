@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../framework/constants"
+
 module Example
   module Server
     module ServerFormatting
@@ -12,7 +14,7 @@ module Example
       # Colors and OSC 8 links. The production server loads this too, so it
       # cannot lean on Klenod::Build::SourceExcerpt.strip.
       def strip_ansi(value)
-        value.gsub(/\e\[[0-9;]*m|\e\]8;[^\e\a]*(?:\e\\|\a)/, "")
+        value.gsub(Framework::ANSI_ESCAPE, "")
       end
 
       def duration_ms(start_time)

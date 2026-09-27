@@ -181,7 +181,7 @@ module Example
       end
 
       def strip_ansi(value)
-        value.gsub(/\e\[[0-9;]*m|\e\]8;[^\e\a]*(?:\e\\|\a)/, "")
+        value.gsub(ANSI_ESCAPE, "")
       end
 
       def resolution_error?(error)

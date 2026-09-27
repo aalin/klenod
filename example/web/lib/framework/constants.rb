@@ -7,6 +7,8 @@ module Example
     SESSION_SECRET = ENV.fetch("KLENOD_EXAMPLE_SESSION_SECRET", "klenod example development session secret")
     CSRF_TOKEN_KEY = "_csrf_token"
     CONTEXT_KEY = :example_web_context
+    # Terminal colors and OSC 8 links, stripped from error reports shown as text.
+    ANSI_ESCAPE = /\e\[[0-9;]*m|\e\]8;[^\e\a]*(?:\e\\|\a)/
 
     class NotFoundError < StandardError; end
   end
