@@ -2,14 +2,6 @@
   PageHeader = import("../components/PageHeader.haml")
   Panel = import("../components/Panel.haml")
 
-  def split_error_details(details)
-    _, separator, body = details.to_s.partition("\nBacktrace:\n")
-    body = details.to_s if separator.empty?
-    backtrace, _source_separator, sources = body.partition("\nSources:\n")
-
-    [backtrace.strip, sources.strip]
-  end
-
   def source_excerpt(source, line)
     lines = source.lines
     index = line - 1
@@ -25,13 +17,12 @@
   end
 
 :ruby
-  error_details = $error_details || $error.full_message
-  backtrace_details, source_details = split_error_details(error_details)
   resolution_error = $error.respond_to?(:resolution_failure?) && $error.resolution_failure?
+  error_details = resolution_error ? "" : ($error_details || $error.full_message).to_s.strip
+  source_details = ""
   if resolution_error && $error_source
     source_details = "#{$error_source.fetch(:path)}\n#{source_excerpt($error_source.fetch(:source), $error_source.fetch(:line))}"
   end
-  backtrace_details = "" if resolution_error
 
 %article
   %PageHeader{
@@ -78,10 +69,10 @@
           %div
             %dt Path
             %dd= $path
-    = if !backtrace_details.empty?
-      %Panel{ title: "Backtrace" }
+    = if !error_details.empty?
+      %Panel{ title: "Details" }
         %pre.trace-block
-          %code= backtrace_details
+          %code= error_details
     = if !source_details.empty?
       %Panel{ title: "Source context" }
         %pre.source-block

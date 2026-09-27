@@ -1085,8 +1085,8 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Rendering /demo/error raised NameError.")
     assert_includes(html, "undefined local variable or method")
     assert_includes(html, "NameError")
-    assert_includes(html, "Backtrace")
-    assert_includes(stderr, "NameError: undefined local variable or method")
+    assert_includes(html, "at app:/routes/demo/error/+page.haml")
+    assert_includes(Klenod::Build::SourceExcerpt.strip(stderr), "× NameError: undefined local variable or method")
     assert_includes(stderr, "routes/demo/error/+page.haml")
     assert(paths.any? { |path| path.include?("routes_layout_css") })
     refute(paths.any? { |path| path.include?("routes_demo_layout_css") })
@@ -1100,7 +1100,7 @@ class Klenod::ExampleTest < Minitest::Test
     )
     formatted = Example::Server::ServerErrors.format_exception(error, nil)
 
-    assert_includes(formatted, "╭─[app:/components/DataTable.haml:2]")
+    assert_includes(Klenod::Build::SourceExcerpt.strip(formatted), "╭─[app:/components/DataTable.haml:2]")
     assert_includes(formatted, "> 2 │   = @columns.map { |column| )")
     refute_includes(formatted, "Backtrace:")
   end

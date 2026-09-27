@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
+require "klenod/build/exception_formatter"
 require "klenod/build/resolution_error_formatter"
 require "klenod/build/source_excerpt"
+
+require_relative "formatting"
 
 module Example
   module Server
@@ -9,59 +12,36 @@ module Example
       module_function
 
       def format_exception(error, context)
-        return format_parse_update_error(error) if parse_error?(error)
-        if resolution_error?(error)
-          return Klenod::Build::ResolutionErrorFormatter.format(
-            error,
-            source_root: source_root(context),
-            source_context: source_context_for_resolution_error(error, context),
-            ansi: ansi?
-          )
-        end
-
-        mods =
-          context.graph.mods.each_with_object({}) do |(module_id, mod), index|
-            index[module_id.to_s] = mod
-            index[module_id.path] = mod
-          end
-
-        Klenod::Runtime::BacktraceRewriter.new(mods).format_exception(error)
+        format_build_error(error, context) ||
+          Klenod::Build::ExceptionFormatter.format(error, mods: mods(context), ansi: ansi?)
       end
 
       def format_update_error(module_id, error, context)
-        return format_parse_update_error(error) if parse_error?(error)
+        format_build_error(error, context) ||
+          [
+            "#{module_id}: #{error.class}",
+            error.message,
+            source_context_for_update_error(module_id, error, context)
+          ].compact.join("\n\n")
+      end
 
-        if resolution_error?(error)
-          return Klenod::Build::ResolutionErrorFormatter.format(
+      # A SourceError renders its own report, and a resolution failure lists
+      # the import and the files it could have meant.
+      def format_build_error(error, context)
+        if parse_error?(error)
+          ansi? ? error.message : ServerFormatting.strip_ansi(error.message)
+        elsif resolution_error?(error)
+          Klenod::Build::ResolutionErrorFormatter.format(
             error,
             source_root: source_root(context),
             source_context: source_context_for_resolution_error(error, context),
             ansi: ansi?
           )
         end
-
-        [
-          "#{module_id}: #{error.class}",
-          error.message,
-          source_context_for_update_error(module_id, error, context)
-        ].compact.join("\n\n")
       end
 
-      def format_parse_update_error(error)
-        reset = "\e[0;48;5;52m"
-        lines = error.message.lines
-        title = strip_ansi(lines.shift&.chomp || "#{error.class}: #{error.message}")
-        body = strip_ansi(lines.join).sub(/\A\n+/, "")
-
-        [
-          "\e[1;31;47m ERROR \e[3;31;47m #{title} #{reset}",
-          body.empty? ? nil : body,
-          "\e[0m"
-        ].compact.join("\n")
-      end
-
-      def strip_ansi(value)
-        value.gsub(/\e\[[0-9;]*m/, "")
+      def mods(context)
+        context.respond_to?(:graph) ? context.graph.mods : {}
       end
 
       def resolution_error?(error)

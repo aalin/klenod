@@ -48,10 +48,7 @@ module Klenod
       # With `path`, the file the module was read from, the location links to
       # that file when `links` is on.
       def message(module_id:, line:, kind:, source:, message:, column: nil, hints: [], context: 2, ansi: true, path: nil, links: ansi && hyperlinks?)
-        location = location(module_id:, line:, column:)
-        location = bold_file_name(location, module_id) if ansi && location && module_id
-        location = file_link(location, path:, line:, column:) if links && location && path && File.file?(path.to_s)
-        location = "#{LOCATION}#{location}#{RESET}" if ansi && location
+        location = styled_location(module_id:, line:, column:, path:, ansi:, links:)
         excerpt = excerpt(source:, line:, column:, context:, ansi:, location:)
         hints = hint_section(hints, ansi:)&.gsub(/^/, "  ")
         header = header(kind, message, ansi:)
@@ -76,6 +73,17 @@ module Klenod
           "#{label} #{detail(first, ansi:)}",
           *rest.map { it.empty? ? it : "  #{detail(it, ansi:)}" }
         ].join("\n")
+      end
+
+      # The location in blue with the file name in bold, linked to `path` when
+      # `links` is on and the file exists.
+      def styled_location(module_id:, line: nil, column: nil, path: nil, ansi: true, links: ansi && hyperlinks?)
+        location = location(module_id:, line:, column:)
+        return location unless ansi && location
+
+        location = bold_file_name(location, module_id) if module_id
+        location = file_link(location, path:, line:, column:) if links && path && File.file?(path.to_s)
+        "#{LOCATION}#{location}#{RESET}"
       end
 
       # "app:\e[1m/pages/thing.tsx\e[22m:33:9": the file name stands out from its

@@ -3,6 +3,8 @@
 require_relative "build/version"
 require "klenod/runtime"
 require_relative "build/context"
+require_relative "build/exception_formatter"
+require_relative "build/resolution_error_formatter"
 
 module Klenod
   class Error < StandardError; end unless const_defined?(:Error, false)

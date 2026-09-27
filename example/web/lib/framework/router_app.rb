@@ -159,34 +159,29 @@ module Example
         H.render_document(document_node)
       end
 
+      # Development has klenod-build loaded and gets its full report. A
+      # production bundle only has the runtime, which rewrites the backtrace so
+      # Ruby's own report points at the original sources.
       def format_render_error(error, context)
-        if defined?(Klenod::Runtime::BacktraceRewriter)
-          mods =
-            if context.respond_to?(:graph)
-              context.graph.mods.each_with_object({}) do |(module_id, mod), index|
-                index[module_id.to_s] = mod
-                index[module_id.path] = mod
-              end
-            elsif context.respond_to?(:modules)
-              context.modules
-            end
+        ansi = !ENV.key?("NO_COLOR")
 
-          if resolution_error?(error) && defined?(Klenod::Build::ResolutionErrorFormatter)
-            return Klenod::Build::ResolutionErrorFormatter.format(
-              error,
-              source_root: resolution_source_root(context),
-              ansi: !ENV.key?("NO_COLOR")
-            )
+        if context.respond_to?(:graph) && defined?(Klenod::Build::ExceptionFormatter)
+          if resolution_error?(error)
+            return Klenod::Build::ResolutionErrorFormatter.format(error, source_root: resolution_source_root(context), ansi:)
           end
 
-          return Klenod::Runtime::BacktraceRewriter.new(mods || {}).format_exception(error)
+          return Klenod::Build::ExceptionFormatter.format(error, mods: context.graph.mods, ansi:)
         end
 
-        error.full_message
+        if context.respond_to?(:modules) && defined?(Klenod::Runtime::BacktraceRewriter)
+          Klenod::Runtime::BacktraceRewriter.new(context.modules).rewrite_exception(error)
+        end
+
+        error.full_message(highlight: ansi)
       end
 
       def strip_ansi(value)
-        value.gsub(/\e\[[0-9;]*m/, "")
+        value.gsub(/\e\[[0-9;]*m|\e\]8;[^\e\a]*(?:\e\\|\a)/, "")
       end
 
       def resolution_error?(error)

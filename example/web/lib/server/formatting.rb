@@ -9,8 +9,10 @@ module Example
         value.lines.map { |line| "#{indent}#{line}" }.join
       end
 
+      # Colors and OSC 8 links. The production server loads this too, so it
+      # cannot lean on Klenod::Build::SourceExcerpt.strip.
       def strip_ansi(value)
-        value.gsub(/\e\[[0-9;]*m/, "")
+        value.gsub(/\e\[[0-9;]*m|\e\]8;[^\e\a]*(?:\e\\|\a)/, "")
       end
 
       def duration_ms(start_time)
