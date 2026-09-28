@@ -303,10 +303,44 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
   end
 
   def test_rejects_import_names_that_are_not_constant_symbols
-    ["import(\"../dep\", \"Bar\")", "import(\"../dep\", name)", "import(\"../dep\", :bar)", "import(\"../dep\", :\"Bar\")", "import_glob(\"./x/*.rb\", :Bar)"].each do |call|
+    ["import(\"../dep\", \"Bar\")", "import(\"../dep\", :Bar?)", "import(\"../dep\", name)", "import(\"../dep\", :bar)", "import(\"../dep\", :\"Bar\")", "import_glob(\"./x/*.rb\", :Bar)"].each do |call|
       error =
         assert_raises(Klenod::Build::DynamicImportError, call) do
           RubyPlugin.new.transform(ModuleId.new("pages/page.rb", nil), "Bar = #{call}\n", transform_context)
+        end
+
+      assert_includes(error.message, "Only literal")
+    end
+  end
+
+  def test_ignores_bare_import_identifiers_during_the_parsed_scan
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        "def import\nend\nimport\nDep = import(\"../dep\", :Dep)\n",
+        transform_context
+      )
+
+    assert_equal(1, result.dependencies.length)
+    assert_equal("def import\nend\nimport\nDep = __klenod_import__(\"app:/pages/page.rb:dependency:0\")\n", result.code)
+  end
+
+  def test_keeps_a_block_attached_to_a_rewritten_import
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        "Dep = import(\"../dep\", :Dep) do |dep|\n  dep\nend\n",
+        transform_context
+      )
+
+    assert_equal("Dep = __klenod_import__(\"app:/pages/page.rb:dependency:0\") do |dep|\n  dep\nend\n", result.code)
+  end
+
+  def test_rejects_heredoc_and_empty_specifiers
+    ["import(<<~SPEC, :Dep)\n  ../dep\nSPEC", "import(\"\", :Dep)"].each do |call|
+      error =
+        assert_raises(Klenod::Build::DynamicImportError, call) do
+          RubyPlugin.new.transform(ModuleId.new("pages/page.rb", nil), "Dep = #{call}\n", transform_context)
         end
 
       assert_includes(error.message, "Only literal")

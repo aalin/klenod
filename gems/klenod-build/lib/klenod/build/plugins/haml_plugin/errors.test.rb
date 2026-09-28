@@ -74,6 +74,24 @@ class Klenod::Build::Plugins::HamlPlugin::ErrorsTest < Klenod::Build::Plugins::H
     end
   end
 
+  def test_an_invalid_ruby_filter_with_imports_reports_the_offending_line
+    source = <<~HAML
+      :ruby
+        Card = import("./Card.haml", :Card)
+        things = {
+          foo: "Foo"
+          bar: "Bar"
+        }
+      %p Hello
+    HAML
+
+    with_haml_context({"pages/page.haml" => source}) do |_dir, context|
+      error = assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.collect("pages/page.haml") }
+
+      assert_equal(5, error.line)
+    end
+  end
+
   def test_an_invalid_silent_script_reports_its_haml_line
     with_haml_context({"pages/page.haml" => "%p Before\n- raise \"foo'\n%p After\n"}) do |_dir, context|
       error = assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.collect("pages/page.haml") }
