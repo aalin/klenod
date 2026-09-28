@@ -116,7 +116,7 @@ Object references are a Klenod key convention, not conventional Haml's generated
 
 The bracket expression is passed as the element's key-style prop; the rendering framework decides what keys mean.
 
-Children are adjacent by default: indentation and source-line breaks do not add text spaces. Like JSX, write a space explicitly when the rendered content needs one. `<` inserts one space to the left of a tag and `>` inserts one space to its right; `<>` does both. Markers only add a space when a neighboring child exists, so they do not create leading or trailing edge whitespace.
+Children are adjacent by default: indentation and source-line breaks do not add text spaces. Like JSX, write a space explicitly when the rendered content needs one. `<` inserts one space to the left of a tag and `>` inserts one space to its right; `<>` does both. Markers only add a space when a neighboring child exists, so they do not create leading or trailing edge whitespace. The same rules apply to `%code`, `%pre`, and `%textarea`; unlike standard Haml, Klenod does not treat them as preserved tags.
 
 ```haml
 %p

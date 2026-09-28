@@ -1083,6 +1083,26 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_does_not_add_space_around_preserve_tags_without_markers
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          %p
+            before
+            %code code
+            %pre pre
+            %textarea textarea
+            after
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal(
+        [:p, "before", [:code, "code"], [:pre, "pre"], [:textarea, "textarea"], "after"],
+        exports::Default.new.render
+      )
+    end
+  end
+
   def test_haml_transformer_joins_adjacent_plain_text_children_with_spaces
     evaluate_haml(
       {

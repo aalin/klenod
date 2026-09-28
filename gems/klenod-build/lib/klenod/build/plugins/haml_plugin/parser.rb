@@ -8,7 +8,10 @@ module Klenod
     module Plugins
       module HamlPlugin
         def self.parse_haml(source, module_id: nil)
-          parser = ParserWithMetadata.new({})
+          # Haml's default preserve list (`textarea`, `pre`, `code`) sets
+          # `nuke_inner_whitespace` as if the tag used `<`. Klenod reads that
+          # flag as an explicit whitespace marker, so disable the list.
+          parser = ParserWithMetadata.new(preserve: [])
           parser.call(source)
         rescue ::Haml::SyntaxError => error
           raise ParseError.new(error, source: source, module_id: module_id)
