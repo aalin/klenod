@@ -317,6 +317,23 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_destructures_props_with_a_hash_pattern
+    plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
+
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~'HAML'
+          - $* => title:, count:
+          %p= "#{title} #{count}"
+        HAML
+      },
+      plugin: plugin
+    ) do |_dir, _context, record, exports|
+      assert_equal([nil, [:p, "Hello 2"]], exports::Default.new(title: "Hello", count: 2).render)
+      assert_includes(record.transformed_source, "@__props => title:, count:")
+    end
+  end
+
   def test_haml_transformer_uses_rewritten_source_for_dynamic_attribute_values
     plugin = haml_plugin(component_base_class: "#{self.class.name}::FakeFramework::ComponentBase", variables: {global: "@__props"})
 

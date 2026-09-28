@@ -437,6 +437,13 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_includes(builder.silent_script("yield").source, "yield")
   end
 
+  def test_ruby_builder_accepts_hash_patterns_with_several_keys_at_the_end_of_a_script
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+
+    assert_includes(builder.silent_script("props => title:, count:").source, "props => title:, count:")
+    assert_equal("(props in title:, count:)", builder.parenthesized_expression("props in title:, count:").source)
+  end
+
   def test_ruby_builder_builds_ruby_filters
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =

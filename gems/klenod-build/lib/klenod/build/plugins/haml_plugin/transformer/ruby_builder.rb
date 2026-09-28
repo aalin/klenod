@@ -686,11 +686,23 @@ module Klenod
               cached_parse(@statements_cache, source, :haml_parse_statements) { parse_result(source)&.value&.statements }
             end
 
+            def parse_result(source)
+              result = prism_parse(source)
+              result if result.success?
+            end
+
             # Haml scripts are fragments of a larger render method, so accept
             # `yield`, `next`, and `break` outside of a block or loop.
-            def parse_result(source)
-              result = Prism.parse(source.to_s, partial_script: true)
-              result if result.success?
+            #
+            # Parse each fragment as the line it came from. Haml strips script
+            # text, and Prism 1.9 rejects a hash pattern with several keys at
+            # the very end of its input (`props => title:, count:`) while
+            # accepting the same line followed by a newline.
+            def prism_parse(source)
+              source = source.to_s
+              source = "#{source}\n" unless source.end_with?("\n")
+
+              Prism.parse(source, partial_script: true)
             end
 
             def cached_parse(cache, source, event_name)
@@ -732,7 +744,7 @@ module Klenod
             # Prism first reports an unclosed `{` or `(` at the line that opens
             # it. The unexpected token that broke it is the line to show.
             def parse_error_line(source)
-              errors = Prism.parse(source.to_s, partial_script: true).errors
+              errors = prism_parse(source).errors
               error = errors.reject { it.type.end_with?("_term") }.min_by { it.location.start_offset } || errors.first
               error&.location&.start_line
             end
