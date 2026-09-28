@@ -31,6 +31,39 @@ class Klenod::Build::Plugins::HamlPlugin::BacktraceTest < Klenod::Build::Plugins
     end
   end
 
+  def test_haml_transformer_maps_prop_merging_errors_to_the_tag_after_its_children
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages")
+      File.write(
+        "#{dir}/pages/page.haml",
+        <<~HAML
+          :ruby
+            def broken
+              1
+            end
+
+          %div{**broken}
+            %p Child
+        HAML
+      )
+
+      plugin =
+        Klenod::Build::Plugins::HamlPlugin.new(
+          factory: "#{self.class.name}::FakeFramework::H"
+        )
+      context = Klenod::Build::Context.new(source_dir: dir, plugins: [plugin])
+      record = context.evaluate("pages/page.haml")
+      mod = context.graph.mods.fetch(record.id)
+      exports = mod.const_get(:Exports)
+
+      error = assert_raises(NoMethodError) { exports::Default.new.render }
+      Klenod::Runtime::BacktraceRewriter.new({"pages/page.haml" => mod}).rewrite_exception(error)
+
+      page_frame = error.backtrace.find { it.start_with?("#{dir}/pages/page.haml:") }
+      assert_match(/\A#{Regexp.escape("#{dir}/pages/page.haml")}:6:in /, page_frame)
+    end
+  end
+
   def test_haml_transformer_rewrites_ruby_filter_errors_to_haml_lines
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages")

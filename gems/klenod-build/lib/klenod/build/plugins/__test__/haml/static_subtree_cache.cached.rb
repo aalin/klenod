@@ -30,7 +30,9 @@ class StaticSubtreeCache < TestFramework::ComponentBase
     end, begin
       # SourceMapMark:4
       STATIC_SUBTREE_1
-    end, **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:2
+    **HamlHelper.merge_props(self.class, {})]
   end)
   public def render
     # SourceMapMark:1
@@ -42,8 +44,12 @@ class StaticSubtreeCache < TestFramework::ComponentBase
       TestFramework::H[:section, begin
         # SourceMapMark:6
         TestFramework::H[:p, (dynamic_message), **HamlHelper.merge_props(self.class, {})]
-      end, **HamlHelper.merge_props(self.class, {})]
-    end, **HamlHelper.merge_props(self.class, {})]
+      end,
+      # SourceMapMark:5
+      **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:1
+    **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = StaticSubtreeCache

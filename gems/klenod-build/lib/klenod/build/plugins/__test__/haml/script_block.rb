@@ -36,7 +36,9 @@ class ScriptBlock < TestFramework::ComponentBase
         # SourceMapMark:10
         TestFramework::H[:li, (item.name), **HamlHelper.merge_props(self.class, {})]
       end
-    end, **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:8
+    **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = ScriptBlock

@@ -29,7 +29,9 @@ class OutputConditionalWithoutElse < TestFramework::ComponentBase
     TestFramework::H[:section, if @show
       # SourceMapMark:8
       TestFramework::H[:p, "Visible", **HamlHelper.merge_props(self.class, {})]
-    end, **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:6
+    **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = OutputConditionalWithoutElse

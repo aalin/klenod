@@ -31,7 +31,9 @@ class StyleClasses < TestFramework::ComponentBase
         # SourceMapMark:3
         :__figcaption
       end})]
-    end, **HamlHelper.merge_props(self.class, {class: begin
+    end,
+    # SourceMapMark:1
+    **HamlHelper.merge_props(self.class, {class: begin
       # SourceMapMark:1
       [:__figure, :card]
     end})]

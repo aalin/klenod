@@ -32,7 +32,9 @@ class OutputConditional < TestFramework::ComponentBase
     else
       # SourceMapMark:10
       TestFramework::H[:p, "Empty", **HamlHelper.merge_props(self.class, {})]
-    end, **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:6
+    **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = OutputConditional

@@ -533,12 +533,17 @@ module Klenod
               attribute_splats = props.delete(:__klenod_attribute_splats__) || []
               prop_sources = ["{#{keyword_props_source(props, mark: mark).join(", ")}}", *attribute_splats.map { |value| argument_source(value) }]
 
-              source_parts = [
-                to_source(tag),
-                *children.map { |child| argument_source(child) },
-                "**HamlHelper.merge_props(self.class, #{prop_sources.join(", ")})"
-              ].compact
-              Fragment.new("#{to_source(factory)}[#{source_parts.join(", ")}]")
+              leading_source = [to_source(tag), *children.map { |child| argument_source(child) }].join(", ")
+              props_source = "**HamlHelper.merge_props(self.class, #{prop_sources.join(", ")})"
+
+              # Multi-line children carry their own source marks. Repeat the
+              # tag's mark so errors raised while merging props map to the tag
+              # rather than to its last child.
+              if mark && leading_source.include?("\n")
+                Fragment.new("#{to_source(factory)}[#{leading_source},\n#{mark}\n#{props_source}]")
+              else
+                Fragment.new("#{to_source(factory)}[#{leading_source}, #{props_source}]")
+              end
             end
 
             def ast_silent_script(source)

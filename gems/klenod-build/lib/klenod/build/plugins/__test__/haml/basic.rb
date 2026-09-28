@@ -22,7 +22,9 @@ class Basic < TestFramework::ComponentBase
     end, begin
       # SourceMapMark:3
       TestFramework::H[:p, ("From Ruby"), **HamlHelper.merge_props(self.class, {})]
-    end, **HamlHelper.merge_props(self.class, {class: begin
+    end,
+    # SourceMapMark:1
+    **HamlHelper.merge_props(self.class, {class: begin
       # SourceMapMark:1
       [:__main, "shell".upcase]
     end})]

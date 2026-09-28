@@ -25,7 +25,9 @@ class Spacing3 < TestFramework::ComponentBase
         # SourceMapMark:3
         "asd"
       end})]
-    end, **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:1
+    **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = Spacing3

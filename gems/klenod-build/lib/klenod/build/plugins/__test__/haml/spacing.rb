@@ -28,7 +28,9 @@ class Spacing < TestFramework::ComponentBase
     end, begin
       # SourceMapMark:5
       ". Was there?"
-    end, **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:1
+    **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = Spacing

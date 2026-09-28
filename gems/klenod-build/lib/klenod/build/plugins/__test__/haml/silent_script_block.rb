@@ -50,7 +50,9 @@ class SilentScriptBlock < TestFramework::ComponentBase
           end)
         end
       end
-    end, **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:9
+    **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = SilentScriptBlock

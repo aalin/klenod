@@ -28,7 +28,9 @@ class WhitespaceMarkers < TestFramework::ComponentBase
     end, " ", begin
       # SourceMapMark:4
       "after"
-    end, **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:1
+    **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = WhitespaceMarkers

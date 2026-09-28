@@ -25,7 +25,9 @@ class ComponentImport < TestFramework::ComponentBase
     TestFramework::H[Details, begin
       # SourceMapMark:5
       TestFramework::H[:p, "Lorem ipsum", **HamlHelper.merge_props(self.class, {})]
-    end, **HamlHelper.merge_props(self.class, {summary: begin
+    end,
+    # SourceMapMark:4
+    **HamlHelper.merge_props(self.class, {summary: begin
       # SourceMapMark:4
       "More information"
     end})]

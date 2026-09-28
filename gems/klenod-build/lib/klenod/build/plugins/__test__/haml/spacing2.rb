@@ -24,20 +24,28 @@ class Spacing2 < TestFramework::ComponentBase
       TestFramework::H[:p, begin
         # SourceMapMark:4
         "Hello World"
-      end, **HamlHelper.merge_props(self.class, {})]
+      end,
+      # SourceMapMark:3
+      **HamlHelper.merge_props(self.class, {})]
     end, begin
       # SourceMapMark:5
       TestFramework::H[:p, begin
         # SourceMapMark:6
         "Hello World"
-      end, **HamlHelper.merge_props(self.class, {})]
+      end,
+      # SourceMapMark:5
+      **HamlHelper.merge_props(self.class, {})]
     end, begin
       # SourceMapMark:8
       TestFramework::H[:p, begin
         # SourceMapMark:10
         "Hello World"
-      end, **HamlHelper.merge_props(self.class, {})]
-    end, **HamlHelper.merge_props(self.class, {})]
+      end,
+      # SourceMapMark:8
+      **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:1
+    **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = Spacing2

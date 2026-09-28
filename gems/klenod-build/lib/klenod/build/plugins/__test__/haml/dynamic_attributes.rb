@@ -19,7 +19,9 @@ class DynamicAttributes < TestFramework::ComponentBase
     TestFramework::H[:dialog, begin
       # SourceMapMark:2
       TestFramework::H[:p, "Hello", **HamlHelper.merge_props(self.class, {})]
-    end, **HamlHelper.merge_props(self.class, {:"data-state" => begin
+    end,
+    # SourceMapMark:1
+    **HamlHelper.merge_props(self.class, {:"data-state" => begin
       # SourceMapMark:1
       "ready"
     end, open: begin

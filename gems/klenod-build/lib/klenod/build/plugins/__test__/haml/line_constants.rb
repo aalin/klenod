@@ -44,7 +44,9 @@ class LineConstants < TestFramework::ComponentBase
         # SourceMapMark:11
         11
       end})]
-    end, **HamlHelper.merge_props(self.class, {data_line: begin
+    end,
+    # SourceMapMark:6
+    **HamlHelper.merge_props(self.class, {data_line: begin
       # SourceMapMark:6
       6
     end})]

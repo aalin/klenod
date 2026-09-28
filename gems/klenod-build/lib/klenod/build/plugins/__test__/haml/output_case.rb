@@ -31,7 +31,9 @@ class OutputCase < TestFramework::ComponentBase
       TestFramework::H[:p, begin
         # SourceMapMark:9
         "Thanks — we received your request."
-      end, **HamlHelper.merge_props(self.class, {role: begin
+      end,
+      # SourceMapMark:8
+      **HamlHelper.merge_props(self.class, {role: begin
         # SourceMapMark:8
         "status"
       end})]
@@ -40,7 +42,9 @@ class OutputCase < TestFramework::ComponentBase
       TestFramework::H[:p, begin
         # SourceMapMark:12
         "Enter a valid email address and try again."
-      end, **HamlHelper.merge_props(self.class, {role: begin
+      end,
+      # SourceMapMark:11
+      **HamlHelper.merge_props(self.class, {role: begin
         # SourceMapMark:11
         "alert"
       end})]
