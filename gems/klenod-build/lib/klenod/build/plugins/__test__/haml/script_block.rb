@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class ScriptBlock < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -19,32 +18,27 @@ class ScriptBlock < TestFramework::ComponentBase
     # SourceMapMark:2
     Item = Data.define(:name)
     # SourceMapMark:3
-
+    
     # SourceMapMark:4
     def initialize
-      # SourceMapMark:5
+    # SourceMapMark:5
       @items = [Item.new("A"), Item.new("B")]
-      # SourceMapMark:6
+    # SourceMapMark:6
     end
     # SourceMapMark:7
+  
   end
   public def render
     # SourceMapMark:8
-    TestFramework::H[
-      :ul,
-      begin
-        # SourceMapMark:9
-        @items.map do |item|
-          # SourceMapMark:10
-          TestFramework::H[
-            :li,
-            (item.name),
-            **HamlHelper.merge_props(self.class, {})
-          ]
-        end
-      end,
-      **HamlHelper.merge_props(self.class, {})
-    ]
+    TestFramework::H[:ul, begin
+      # SourceMapMark:9
+      @items.map do |item|
+        # SourceMapMark:10
+        TestFramework::H[:li, (item.name), **HamlHelper.merge_props(self.class, {})]
+      end
+    end,
+    # SourceMapMark:8
+    **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = ScriptBlock

@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class InlineCssFilter < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -14,26 +13,13 @@ class InlineCssFilter < TestFramework::ComponentBase
   def __klenod_import__(dependency_id)
     self.class.__klenod_import__(dependency_id)
   end
-  ClassNames =
-    __klenod_import__("virtual:klenod/class_names").new(
-      { title: "title_hash" }.freeze
-    )
+  ClassNames = __klenod_import__("virtual:klenod/class_names").new({title: "title_hash"}.freeze)
   public def render
     # SourceMapMark:6
-    TestFramework::H[
-      :h1,
-      "Hello",
-      **HamlHelper.merge_props(
-        self.class,
-        {
-          class:
-            begin
-              # SourceMapMark:6
-              %i[__h1 title]
-            end
-        }
-      )
-    ]
+    TestFramework::H[:h1, "Hello", **HamlHelper.merge_props(self.class, {class: begin
+      # SourceMapMark:6
+      [:__h1, :title]
+    end})]
   end
 end
 Default = InlineCssFilter

@@ -93,9 +93,8 @@ module Klenod
       rescue Klenod::Build::Error => error
         failed_analysis(module_id, source, error)
       rescue => error
-        # Plugins can raise their parser's own errors on half-typed source,
-        # e.g. SyntaxTree on an unterminated import string. Report them
-        # rather than dropping the document's diagnostics.
+        # Plugins can raise their parser's own errors on half-typed source.
+        # Report them rather than dropping the document's diagnostics.
         failed_analysis(module_id, source, error)
       end
 

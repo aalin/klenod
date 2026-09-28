@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class DynamicAttributes < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -17,28 +16,18 @@ class DynamicAttributes < TestFramework::ComponentBase
   ClassNames = __klenod_import__("virtual:klenod/class_names").new({}.freeze)
   public def render
     # SourceMapMark:1
-    TestFramework::H[
-      :dialog,
-      begin
-        # SourceMapMark:2
-        TestFramework::H[:p, "Hello", **HamlHelper.merge_props(self.class, {})]
-      end,
-      **HamlHelper.merge_props(
-        self.class,
-        {
-          "data-state":
-            begin
-              # SourceMapMark:1
-              "ready"
-            end,
-          open:
-            begin
-              # SourceMapMark:1
-              true
-            end
-        }
-      )
-    ]
+    TestFramework::H[:dialog, begin
+      # SourceMapMark:2
+      TestFramework::H[:p, "Hello", **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:1
+    **HamlHelper.merge_props(self.class, {:"data-state" => begin
+      # SourceMapMark:1
+      "ready"
+    end, open: begin
+      # SourceMapMark:1
+      true
+    end})]
   end
 end
 Default = DynamicAttributes

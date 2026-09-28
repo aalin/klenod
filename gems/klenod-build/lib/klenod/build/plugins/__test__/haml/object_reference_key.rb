@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class ObjectReferenceKey < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -21,23 +20,14 @@ class ObjectReferenceKey < TestFramework::ComponentBase
     # SourceMapMark:3
     @user = User.new(15)
     # SourceMapMark:4
+  
   end
   public def render
     # SourceMapMark:5
-    TestFramework::H[
-      :div,
-      "Hello",
-      **HamlHelper.merge_props(
-        self.class,
-        {
-          key:
-            begin
-              # SourceMapMark:5
-              [@user, :greeting]
-            end
-        }
-      )
-    ]
+    TestFramework::H[:div, "Hello", **HamlHelper.merge_props(self.class, {key: begin
+      # SourceMapMark:5
+      [@user, :greeting]
+    end})]
   end
 end
 Default = ObjectReferenceKey

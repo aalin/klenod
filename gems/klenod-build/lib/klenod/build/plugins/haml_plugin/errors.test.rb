@@ -5,7 +5,7 @@ require_relative "test_support"
 class Klenod::Build::Plugins::HamlPlugin::ErrorsTest < Klenod::Build::Plugins::HamlPlugin::TestSupport
   def test_haml_transform_result_can_be_built_from_ast
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    ast = builder.program("class Page\nend\n")
+    ast = builder.statements("class Page\nend\n")
     result =
       Klenod::Build::Plugins::HamlPlugin::HamlTransformResult.from_ast(
         ast,
@@ -71,6 +71,24 @@ class Klenod::Build::Plugins::HamlPlugin::ErrorsTest < Klenod::Build::Plugins::H
       assert_equal("Haml parse error", error.kind)
       assert_equal(7, error.line)
       assert_includes(error.detail, "Could not parse Ruby filter")
+    end
+  end
+
+  def test_an_invalid_ruby_filter_with_imports_reports_the_offending_line
+    source = <<~HAML
+      :ruby
+        Card = import("./Card.haml", :Card)
+        things = {
+          foo: "Foo"
+          bar: "Bar"
+        }
+      %p Hello
+    HAML
+
+    with_haml_context({"pages/page.haml" => source}) do |_dir, context|
+      error = assert_raises(Klenod::Build::Plugins::HamlPlugin::ParseError) { context.collect("pages/page.haml") }
+
+      assert_equal(5, error.line)
     end
   end
 

@@ -6,16 +6,16 @@ PATH
       async-http (>= 0.95.1, < 0.106.0)
       base64 (~> 0.3)
       brotli (~> 0.8)
+      haml (~> 7.2)
       image_size (~> 3.6)
       klenod-runtime (= 0.0.26)
       kramdown (~> 2.5)
       kramdown-parser-gfm (~> 1.1)
       listen (~> 3.10)
+      prism (~> 1.9)
       protocol-url (~> 0.4)
       rmagick (~> 7.0)
       samovar (~> 2.5)
-      syntax_tree (~> 6.3)
-      syntax_tree-haml (~> 4.0)
       toml-rb (~> 4.2)
       tsort (~> 0.2.0)
 
@@ -82,7 +82,7 @@ GEM
     observer (0.1.2)
     openssl (4.0.2)
     pkg-config (1.6.5)
-    prettier_print (1.2.1)
+    prism (1.9.0)
     protocol-hpack (1.5.1)
     protocol-http (0.63.0)
     protocol-http1 (0.39.0)
@@ -101,12 +101,6 @@ GEM
       pkg-config (~> 1.4)
     samovar (2.5.1)
       console (~> 1.0)
-    syntax_tree (6.3.0)
-      prettier_print (>= 1.2.0)
-    syntax_tree-haml (4.0.3)
-      haml (>= 5.2)
-      prettier_print (>= 1.2.1)
-      syntax_tree (>= 6.0.0)
     temple (0.10.4)
     thor (1.5.0)
     tilt (2.8.0)
@@ -154,7 +148,7 @@ CHECKSUMS
   observer (0.1.2) sha256=d8a3107131ba661138d748e7be3dbafc0d82e732fffba9fccb3d7829880950ac
   openssl (4.0.2) sha256=1037ad2868ae58df9ad917891c0c0f9815a1172f6846d4bcdd508e4c2ee747c2
   pkg-config (1.6.5) sha256=33f9f81c5322983d22b439b8b672f27777b406fea23bfec74ff14bbeb42ec733
-  prettier_print (1.2.1) sha256=a72838b5f23facff21f90a5423cdcdda19e4271092b41f4ea7f50b83929e6ff9
+  prism (1.9.0) sha256=7b530c6a9f92c24300014919c9dcbc055bf4cdf51ec30aed099b06cd6674ef85
   protocol-hpack (1.5.1) sha256=6feca238b8078da1cd295677d6f306c6001af92d75fe0643d33e6956cbc3ad91
   protocol-http (0.63.0) sha256=7e94958cbdc20e9d9b4ecb1959e1e7824a35f36e082d3d2cd5bd844da643a8e4
   protocol-http1 (0.39.0) sha256=e49b3f4cda6f5d94c76a323d2b7f6977cba3ebd082d2da437039594da77ad8eb
@@ -166,8 +160,6 @@ CHECKSUMS
   rexml (3.4.4) sha256=19e0a2c3425dfbf2d4fc1189747bdb2f849b6c5e74180401b15734bc97b5d142
   rmagick (7.0.5) sha256=d159449a0fd560379ca63843c2b5d59b89f6299ba9df3e32201d2458a0cfa7a3
   samovar (2.5.1) sha256=8a9fc41eb8868084f0321eb41678c485cfbc7d282fb306c0be67c3284b1d2394
-  syntax_tree (6.3.0) sha256=56e25a9692c798ec94c5442fe94c5e94af76bef91edc8bb02052cbdecf35f13d
-  syntax_tree-haml (4.0.3) sha256=dcf676677dc28b0f4b908dd414c0e75721fbd6261a2d0f07b378246059196359
   temple (0.10.4) sha256=b7a1e94b6f09038ab0b6e4fe0126996055da2c38bec53a8a336f075748fff72c
   thor (1.5.0) sha256=e3a9e55fe857e44859ce104a84675ab6e8cd59c650a49106a05f55f136425e73
   tilt (2.8.0) sha256=ba472eb2716fe1e04112d6d219a9dae938ec09a6a1e2ad3ecc7922e79bde3721

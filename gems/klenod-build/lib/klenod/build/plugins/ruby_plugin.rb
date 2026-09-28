@@ -23,15 +23,7 @@ module Klenod
           private
 
           def location(error)
-            return prism_location(error) if error.is_a?(Prism::ParseResult)
-            return nil unless error.respond_to?(:lineno)
-
-            Location.new(
-              line: error.lineno,
-              # SyntaxTree reports a zero-based column.
-              column: error.column && error.column + 1,
-              detail: error.message
-            )
+            prism_location(error) if error.is_a?(Prism::ParseResult)
           end
 
           # Prism reports each failure as data rather than a message to scrape,
@@ -56,18 +48,14 @@ module Klenod
             program = parse!(module_id, code)
 
             result =
-              begin
-                RubyImportRewriter
-                  .new(
-                    module_id: module_id,
-                    kind: :ruby_import,
-                    source_dir: context.source_dir,
-                    profiler: context.profiler
-                  )
-                  .rewrite(code)
-              rescue SyntaxTree::Parser::ParseError => error
-                raise ParseError.new(error, source: code, module_id: module_id)
-              end
+              RubyImportRewriter
+                .new(
+                  module_id: module_id,
+                  kind: :ruby_import,
+                  source_dir: context.source_dir,
+                  profiler: context.profiler
+                )
+                .rewrite(code)
             TransformResult.new(
               result.code,
               result.dependencies,

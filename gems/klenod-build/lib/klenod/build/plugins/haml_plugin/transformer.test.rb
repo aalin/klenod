@@ -17,7 +17,7 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
       )
 
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, result.ast)
-    assert_kind_of(SyntaxTree::Program, result.ast.node)
+    assert(Prism.parse_success?(result.ast.source))
     assert_equal(result.code, result.ast.source)
   end
 
@@ -41,7 +41,7 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
 
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, template.ruby)
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, template.render)
-    assert_kind_of(SyntaxTree::Statements, template.ruby.node)
+    assert(template.ruby.statements)
     assert_nil(template.render.node)
   end
 
@@ -289,7 +289,7 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
   def test_haml_transformer_compiles_ruby_filter_to_source_fragment
     transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    parsed = SyntaxTree::Haml.parse(<<~HAML)
+    parsed = Klenod::Build::Plugins::HamlPlugin.parse_haml(<<~HAML)
       :ruby
         def title
           "Hello"
@@ -306,7 +306,7 @@ class Klenod::Build::Plugins::HamlPlugin::TransformerTest < Klenod::Build::Plugi
   def test_haml_transformer_does_not_insert_source_marks_inside_ruby_filter_heredocs
     transformer = Klenod::Build::Plugins::HamlPlugin::Transformer.new
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    parsed = SyntaxTree::Haml.parse(<<~HAML)
+    parsed = Klenod::Build::Plugins::HamlPlugin.parse_haml(<<~HAML)
       :ruby
         ExampleSource = <<~TEXT
           :ruby

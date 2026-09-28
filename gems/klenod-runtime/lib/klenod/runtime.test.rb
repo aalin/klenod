@@ -20,7 +20,7 @@ class Klenod::RuntimeBoundaryTest
       forbidden = {
         "Klenod::Build" => defined?(Klenod::Build),
         "Listen" => defined?(Listen),
-        "SyntaxTree" => defined?(SyntaxTree),
+        "Haml" => defined?(Haml),
         "Mayu::CSS" => defined?(Mayu::CSS),
         "TomlRB" => defined?(TomlRB)
       }.compact
@@ -222,7 +222,7 @@ class Klenod::RuntimeBoundaryTest
     refute(spec.files.any? { |path| path.start_with?("lib/klenod/rack/") })
     refute(spec.files.any? { |path| path.end_with?(".test.rb") })
     refute(spec.dependencies.any? { |dependency| dependency.name == "rmagick" })
-    refute(spec.dependencies.any? { |dependency| dependency.name == "syntax_tree-haml" })
+    refute(spec.dependencies.any? { |dependency| dependency.name == "haml" })
   end
 
   def test_bundle_asset_url_joins_a_normalized_base

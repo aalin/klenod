@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class StaticSubtreeCache < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -15,71 +14,42 @@ class StaticSubtreeCache < TestFramework::ComponentBase
     self.class.__klenod_import__(dependency_id)
   end
   ClassNames = __klenod_import__("virtual:klenod/class_names").new({}.freeze)
-  STATIC_SUBTREE_0 =
-    HamlHelper.freeze_static(
-      begin
-        # SourceMapMark:3
-        TestFramework::H[
-          :h1,
-          "Static title",
-          **HamlHelper.merge_props(self.class, {})
-        ]
-      end
-    )
-  STATIC_SUBTREE_1 =
-    HamlHelper.freeze_static(
-      begin
-        # SourceMapMark:4
-        TestFramework::H[
-          :p,
-          "Static lead",
-          **HamlHelper.merge_props(self.class, {})
-        ]
-      end
-    )
-  STATIC_SUBTREE_2 =
-    HamlHelper.freeze_static(
-      begin
-        # SourceMapMark:2
-        TestFramework::H[
-          :header,
-          begin
-            # SourceMapMark:3
-            STATIC_SUBTREE_0
-          end,
-          begin
-            # SourceMapMark:4
-            STATIC_SUBTREE_1
-          end,
-          **HamlHelper.merge_props(self.class, {})
-        ]
-      end
-    )
+  STATIC_SUBTREE_0 = HamlHelper.freeze_static(begin
+    # SourceMapMark:3
+    TestFramework::H[:h1, "Static title", **HamlHelper.merge_props(self.class, {})]
+  end)
+  STATIC_SUBTREE_1 = HamlHelper.freeze_static(begin
+    # SourceMapMark:4
+    TestFramework::H[:p, "Static lead", **HamlHelper.merge_props(self.class, {})]
+  end)
+  STATIC_SUBTREE_2 = HamlHelper.freeze_static(begin
+    # SourceMapMark:2
+    TestFramework::H[:header, begin
+      # SourceMapMark:3
+      STATIC_SUBTREE_0
+    end, begin
+      # SourceMapMark:4
+      STATIC_SUBTREE_1
+    end,
+    # SourceMapMark:2
+    **HamlHelper.merge_props(self.class, {})]
+  end)
   public def render
     # SourceMapMark:1
-    TestFramework::H[
-      :article,
-      begin
-        # SourceMapMark:2
-        STATIC_SUBTREE_2
+    TestFramework::H[:article, begin
+      # SourceMapMark:2
+      STATIC_SUBTREE_2
+    end, begin
+      # SourceMapMark:5
+      TestFramework::H[:section, begin
+        # SourceMapMark:6
+        TestFramework::H[:p, (dynamic_message), **HamlHelper.merge_props(self.class, {})]
       end,
-      begin
-        # SourceMapMark:5
-        TestFramework::H[
-          :section,
-          begin
-            # SourceMapMark:6
-            TestFramework::H[
-              :p,
-              (dynamic_message),
-              **HamlHelper.merge_props(self.class, {})
-            ]
-          end,
-          **HamlHelper.merge_props(self.class, {})
-        ]
-      end,
-      **HamlHelper.merge_props(self.class, {})
-    ]
+      # SourceMapMark:5
+      **HamlHelper.merge_props(self.class, {})]
+    end,
+    # SourceMapMark:1
+    **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = StaticSubtreeCache

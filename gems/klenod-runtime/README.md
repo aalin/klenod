@@ -10,7 +10,7 @@ It contains only the runtime pieces needed after a bundle has already been built
 - lazy import support
 - source maps and backtrace rewriting
 
-This gem should stay free of build plugins and heavyweight build-time dependencies such as RMagick, Syntax Tree, Haml, CSS processing, or file watching.
+This gem should stay free of build plugins and heavyweight build-time dependencies such as RMagick, Haml, CSS processing, or file watching.
 
 Use this gem in applications that load an existing bundle:
 

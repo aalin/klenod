@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "syntax_tree"
+require "prism"
 
 require_relative "../plugin"
 require_relative "../dependency"
@@ -301,13 +301,13 @@ module Klenod
           def validate_variable_receiver(kind, source)
             raise ArgumentError, "variables[#{kind.inspect}] must be a Ruby expression String" unless source.is_a?(String)
 
-            parsed = SyntaxTree.parse(source)&.statements&.body
-            raise ArgumentError, "variables[#{kind.inspect}] must be a Ruby expression" unless parsed&.length == 1
-            SyntaxTree.parse("(#{source})[:__klenod_variable__]")
+            parsed = Prism.parse(source)
+            expression = parsed.success? && parsed.value.statements.body.length == 1
+            unless expression && Prism.parse_success?("(#{source})[:__klenod_variable__]")
+              raise ArgumentError, "variables[#{kind.inspect}] must be a Ruby expression"
+            end
 
             source
-          rescue SyntaxTree::Parser::ParseError
-            raise ArgumentError, "variables[#{kind.inspect}] must be a Ruby expression"
           end
 
           def validate_i18n_options(i18n)

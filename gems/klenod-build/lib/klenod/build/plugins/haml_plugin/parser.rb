@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "ripper"
-require "syntax_tree/haml"
+require "haml"
 
 module Klenod
   module Build

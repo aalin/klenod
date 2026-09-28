@@ -27,7 +27,7 @@
 
       Haml component references such as `%Button` compile to factory calls using the imported component class as the tag.
 
-      When `HamlPlugin` is configured with `variables: { global: "@__props" }`, app-style global variable reads become prop lookups. In the example above, `$title` compiles to `(@__props)[:title]`; `$*` compiles to `@__props` itself, which is useful for forwarding props with `**$*`. This keeps templates concise while leaving the props storage object under framework control.
+      When `HamlPlugin` is configured with `variables: { global: "@__props" }`, app-style global variable reads become prop lookups. In the example above, `$title` compiles to `(@__props)[:title]`; `$*` compiles to the receiver itself, `(@__props)`, which is useful for forwarding props with `**$*`. This keeps templates concise while leaving the props storage object under framework control.
 
       The example also configures `class: "Example::Framework::Context.current"`. Context reads use `@@name`, so `@@request` compiles to `(Example::Framework::Context.current)[:request]`. Context values inherit through nested providers and through default or named slots.
 
