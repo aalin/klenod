@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class OutputConditionalWithoutElse < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -18,26 +17,19 @@ class OutputConditionalWithoutElse < TestFramework::ComponentBase
   begin
     # SourceMapMark:2
     def initialize(show:)
-      # SourceMapMark:3
+    # SourceMapMark:3
       @show = show
-      # SourceMapMark:4
+    # SourceMapMark:4
     end
     # SourceMapMark:5
+  
   end
   public def render
     # SourceMapMark:6
-    TestFramework::H[
-      :section,
-      if @show
-        # SourceMapMark:8
-        TestFramework::H[
-          :p,
-          "Visible",
-          **HamlHelper.merge_props(self.class, {})
-        ]
-      end,
-      **HamlHelper.merge_props(self.class, {})
-    ]
+    TestFramework::H[:section, if @show
+      # SourceMapMark:8
+      TestFramework::H[:p, "Visible", **HamlHelper.merge_props(self.class, {})]
+    end, **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = OutputConditionalWithoutElse

@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class OutputCaseWhenExpression < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -19,25 +18,13 @@ class OutputCaseWhenExpression < TestFramework::ComponentBase
     case @result
     when [:legacy, { code: 1 }]
       # SourceMapMark:3
-      TestFramework::H[
-        :p,
-        "Legacy request",
-        **HamlHelper.merge_props(self.class, {})
-      ]
+      TestFramework::H[:p, "Legacy request", **HamlHelper.merge_props(self.class, {})]
     when request_type(1, 2)
       # SourceMapMark:5
-      TestFramework::H[
-        :p,
-        "Typed request",
-        **HamlHelper.merge_props(self.class, {})
-      ]
+      TestFramework::H[:p, "Typed request", **HamlHelper.merge_props(self.class, {})]
     else
       # SourceMapMark:7
-      TestFramework::H[
-        :p,
-        "Unknown request",
-        **HamlHelper.merge_props(self.class, {})
-      ]
+      TestFramework::H[:p, "Unknown request", **HamlHelper.merge_props(self.class, {})]
     end
   end
 end

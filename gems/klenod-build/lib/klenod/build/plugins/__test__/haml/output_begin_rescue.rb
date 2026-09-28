@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class OutputBeginRescue < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -18,34 +17,16 @@ class OutputBeginRescue < TestFramework::ComponentBase
   public def render
     begin
       # SourceMapMark:2
-      TestFramework::H[
-        :p,
-        "Loading your request.",
-        **HamlHelper.merge_props(self.class, {})
-      ]
+      TestFramework::H[:p, "Loading your request.", **HamlHelper.merge_props(self.class, {})]
     rescue StandardError => error
       # SourceMapMark:4
-      TestFramework::H[
-        :p,
-        (error.message),
-        **HamlHelper.merge_props(
-          self.class,
-          {
-            role:
-              begin
-                # SourceMapMark:4
-                "alert"
-              end
-          }
-        )
-      ]
+      TestFramework::H[:p, (error.message), **HamlHelper.merge_props(self.class, {role: begin
+        # SourceMapMark:4
+        "alert"
+      end})]
     ensure
       # SourceMapMark:6
-      TestFramework::H[
-        :p,
-        "Request complete.",
-        **HamlHelper.merge_props(self.class, {})
-      ]
+      TestFramework::H[:p, "Request complete.", **HamlHelper.merge_props(self.class, {})]
     end
   end
 end

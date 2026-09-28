@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class SilentScriptBlock < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -19,51 +18,39 @@ class SilentScriptBlock < TestFramework::ComponentBase
     # SourceMapMark:2
     Item = Data.define(:name)
     # SourceMapMark:3
-
+    
     # SourceMapMark:4
     def initialize
-      # SourceMapMark:5
+    # SourceMapMark:5
       @items = [Item.new("A"), Item.new("B")]
-      # SourceMapMark:6
+    # SourceMapMark:6
       @seen = []
-      # SourceMapMark:7
+    # SourceMapMark:7
     end
     # SourceMapMark:8
+  
   end
   public def render
     # SourceMapMark:9
-    TestFramework::H[
-      :ul,
-      begin
-        # SourceMapMark:10
-        HamlHelper.capture do
-          @items.each do |item|
-            HamlHelper.append_capture(
+    TestFramework::H[:ul, begin
+      # SourceMapMark:10
+      HamlHelper.capture do
+        @items.each do |item|
+          HamlHelper.append_capture(begin
+            [begin
+              # SourceMapMark:11
               begin
-                [
-                  begin
-                    # SourceMapMark:11
-                    begin
-                      @seen << item.name
-                      nil
-                    end
-                  end,
-                  begin
-                    # SourceMapMark:12
-                    TestFramework::H[
-                      :li,
-                      (item.name),
-                      **HamlHelper.merge_props(self.class, {})
-                    ]
-                  end
-                ]
+                @seen << item.name
+                nil
               end
-            )
-          end
+            end, begin
+              # SourceMapMark:12
+              TestFramework::H[:li, (item.name), **HamlHelper.merge_props(self.class, {})]
+            end]
+          end)
         end
-      end,
-      **HamlHelper.merge_props(self.class, {})
-    ]
+      end
+    end, **HamlHelper.merge_props(self.class, {})]
   end
 end
 Default = SilentScriptBlock

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "syntax_tree"
+require "prism"
 require "ripper"
 
 require "klenod/runtime/source_map"
@@ -681,16 +681,15 @@ module Klenod
                   builder.ruby_parse_error(source, line_no: node.line, context: "Could not parse Haml dynamic attributes")
                 end
 
-                hash.node.assocs.each do |assoc|
-                  if assoc.is_a?(SyntaxTree::AssocSplat)
-                    splat_source = hash.source[assoc.value.location.start_char...assoc.value.location.end_char]
+                hash.node.elements.each do |assoc|
+                  if assoc.is_a?(Prism::AssocSplatNode)
                     props[ATTRIBUTE_SPLATS_KEY] ||= []
-                    props[ATTRIBUTE_SPLATS_KEY] << builder.expression(splat_source)
+                    props[ATTRIBUTE_SPLATS_KEY] << builder.expression(assoc.value.slice)
                     next
                   end
 
                   key = attribute_key(assoc.key, builder: builder)
-                  value = event_handler_value(key, assoc.value, parenthesized: parenthesized, builder: builder) || attribute_value(assoc, builder: builder)
+                  value = event_handler_value(key, explicit_attribute_value(assoc), parenthesized: parenthesized, builder: builder) || attribute_value(assoc, builder: builder)
                   dynamic[key] = value
                   props[key] = value
                 end
@@ -799,8 +798,8 @@ module Klenod
             measure_compile(:haml_compile_object_ref_attributes) do
               expression = builder.expression(source, line_no: node.line)
               key =
-                if expression.node.is_a?(SyntaxTree::ArrayLiteral) && expression.node.contents&.parts&.length == 1
-                  builder.fragment(expression.node.contents.parts.fetch(0))
+                if expression.node.is_a?(Prism::ArrayNode) && expression.node.elements.length == 1
+                  builder.fragment(expression.node.elements.fetch(0))
                 else
                   expression
                 end
@@ -810,13 +809,19 @@ module Klenod
           end
 
           def attribute_value(assoc, builder:)
-            value = assoc.value
+            value = explicit_attribute_value(assoc)
             return builder.fragment(value) if value
 
             key = omitted_attribute_value_name(assoc.key)
             return builder.expression(key) if key
 
             builder.ruby_parse_error(source, line_no: assoc.key.location&.start_line, context: "Could not parse Haml dynamic attributes")
+          end
+
+          # `{title:}` omits the value, which Prism represents as an implicit
+          # node that slices back to the `title:` label.
+          def explicit_attribute_value(assoc)
+            assoc.value unless assoc.value.is_a?(Prism::ImplicitNode)
           end
 
           def event_handler_value(key, value, parenthesized:, builder:)
@@ -836,34 +841,21 @@ module Klenod
 
           def omitted_attribute_value_name(node)
             case node
-            when SyntaxTree::Label
-              name = node.value.delete_suffix(":")
+            when Prism::SymbolNode
+              name = node.unescaped
               name if name.match?(/\A[a-zA-Z_]\w*\z/)
             end
           end
 
+          # Static keys (`title:`, `"data-id":`, `:title =>`, `"title" =>`) use
+          # their value. Interpolated keys keep their source.
           def attribute_key(node, builder:)
             case node
-            when SyntaxTree::Label
-              node.value.delete_suffix(":").to_sym
-            when SyntaxTree::DynaSymbol
-              static_dyna_symbol_value(node)&.to_sym || builder.fragment(node).source.to_sym
-            when SyntaxTree::StringLiteral
-              node.parts.map(&:value).join.to_sym
+            when Prism::SymbolNode, Prism::StringNode
+              node.unescaped.to_sym
             else
               builder.fragment(node).source.to_sym
             end
-          end
-
-          def static_dyna_symbol_value(node)
-            values =
-              node.parts.map do |part|
-                return nil unless part.is_a?(SyntaxTree::TStringContent)
-
-                part.value
-              end
-
-            values.join
           end
 
           def source_mark(node, builder:)

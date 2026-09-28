@@ -213,6 +213,45 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_haml_transformer_uses_static_values_of_symbol_and_string_attribute_keys
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~'HAML'
+          :ruby
+            def title
+              "Docs"
+            end
+
+          %a{:href => "/docs", "data-id" => 7, :"aria-label" => title, "say\"hi" => 1, title:} Docs
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal(
+        [:a, "Docs", {href: "/docs", data_id: 7, aria_label: "Docs", 'say"hi': 1, title: "Docs"}],
+        exports::Default.new.render
+      )
+    end
+  end
+
+  def test_haml_transformer_closes_output_scripts_after_trailing_comments
+    evaluate_haml(
+      {
+        "pages/page.haml" => <<~HAML
+          :ruby
+            def title
+              "hello"
+            end
+
+          %p= title.upcase # shout
+          %p
+            = title # quiet
+        HAML
+      }
+    ) do |_dir, _context, _record, exports|
+      assert_equal([[:p, "HELLO"], [:p, "hello"]], exports::Default.new.render)
+    end
+  end
+
   def test_haml_plugin_exposes_validated_variables
     plugin = haml_plugin(variables: {global: "@__props"})
 

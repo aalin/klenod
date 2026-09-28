@@ -287,11 +287,7 @@ class Klenod::Build::Plugins::HamlPlugin::TestSupport < Minitest::Test
         haml_helper_source: "HamlHelper = #{self.class.name}::FakeFramework::HamlHelper",
         cache_static_subtrees: cache_static_subtrees
       )
-      .then { |result| format_generated_ruby(result.code) }
-  end
-
-  def format_generated_ruby(source)
-    SyntaxTree::Formatter.format(+"", SyntaxTree.parse(source), 0)
+      .code
   end
 
   def default_plugins_with(plugin)

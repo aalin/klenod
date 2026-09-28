@@ -31,7 +31,7 @@ class Klenod::Build::CLI::Application::Test < Minitest::Test
     refute(spec.files.any? { |path| path.end_with?("/test_support.rb") })
     assert(spec.dependencies.any? { |dependency| dependency.name == "klenod-runtime" })
     assert(spec.dependencies.any? { |dependency| dependency.name == "rmagick" })
-    assert(spec.dependencies.any? { |dependency| dependency.name == "syntax_tree-haml" })
+    assert(spec.dependencies.any? { |dependency| dependency.name == "haml" })
   end
 
   def test_build_command_writes_runtime_bundle

@@ -5,7 +5,7 @@ require_relative "test_support"
 class Klenod::Build::Plugins::HamlPlugin::ErrorsTest < Klenod::Build::Plugins::HamlPlugin::TestSupport
   def test_haml_transform_result_can_be_built_from_ast
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    ast = builder.program("class Page\nend\n")
+    ast = builder.statements("class Page\nend\n")
     result =
       Klenod::Build::Plugins::HamlPlugin::HamlTransformResult.from_ast(
         ast,

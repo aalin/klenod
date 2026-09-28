@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class SilentConditional < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -18,11 +17,12 @@ class SilentConditional < TestFramework::ComponentBase
   begin
     # SourceMapMark:2
     def initialize(show:)
-      # SourceMapMark:3
+    # SourceMapMark:3
       @show = show
-      # SourceMapMark:4
+    # SourceMapMark:4
     end
     # SourceMapMark:5
+  
   end
   public def render
     # SourceMapMark:6

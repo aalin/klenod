@@ -1091,7 +1091,7 @@ class Klenod::Build::Context::Test < Minitest::Test
           "Klenod::Build" => defined?(Klenod::Build),
           "Magick" => defined?(Magick),
           "ImageSize" => defined?(ImageSize),
-          "SyntaxTree" => defined?(SyntaxTree),
+          "Haml" => defined?(Haml),
           "Mayu::CSS" => defined?(Mayu::CSS),
           "TomlRB" => defined?(TomlRB)
         }.compact
@@ -1223,7 +1223,7 @@ class Klenod::Build::Context::Test < Minitest::Test
 
         forbidden = {
           "Klenod::Build" => defined?(Klenod::Build),
-          "SyntaxTree" => defined?(SyntaxTree),
+          "Haml" => defined?(Haml),
           "Mayu::CSS" => defined?(Mayu::CSS)
         }.compact
         abort "loaded build-only constants: \#{forbidden.inspect}" unless forbidden.empty?

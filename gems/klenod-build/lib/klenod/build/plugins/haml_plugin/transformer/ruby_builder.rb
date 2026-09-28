@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
+require "prism"
 require "ripper"
-require "syntax_tree"
-require "syntax_tree/dsl"
 require "syntax_suggest/api"
 require "syntax_suggest/explain_syntax"
 
@@ -12,15 +11,16 @@ module Klenod
       module HamlPlugin
         class Transformer
           class RubyBuilder
-            include SyntaxTree::DSL
-
-            Fragment = Data.define(:source, :node) do
-              def node?
-                !node.nil?
+            # `node` is the Prism node parsed from user Ruby, for the places
+            # that inspect it. `statements` marks a statement list, which is
+            # wrapped in `begin`/`end` when it is used as an argument.
+            Fragment = Data.define(:source, :node, :statements) do
+              def initialize(source:, node: nil, statements: false)
+                super
               end
 
-              def statement_body
-                node.is_a?(SyntaxTree::Statements) ? node.body : [node].compact
+              def node?
+                !node.nil?
               end
 
               def to_s
@@ -33,7 +33,6 @@ module Klenod
               @variables = variables || {}
               @expression_cache = {}
               @statements_cache = {}
-              @program_cache = {}
               @literal_cache = {}
             end
 
@@ -81,7 +80,7 @@ module Klenod
               haml_helper_source = statements_fragment(haml_helper_source) if haml_helper_source
 
               header = [
-                Fragment.new("# frozen_string_literal: true", comment_node("# frozen_string_literal: true")),
+                Fragment.new("# frozen_string_literal: true"),
                 constant_assignment(
                   "KlenodImport",
                   call(receiver: nil, name: "method", arguments: [symbol("__klenod_import__")])
@@ -118,7 +117,6 @@ module Klenod
               static_constants: [],
               i18n_source: nil
             )
-              skeleton = class_skeleton_fragment(component_class_name, component_base_class)
               body_fragments =
                 [
                   method_definition("module_path", target: "self", body: file_expression),
@@ -141,24 +139,13 @@ module Klenod
                   *static_constants,
                   public_method_definition("render", body: render_source)
                 ]
-              body =
-                body_fragments.flat_map { |fragment| statement_body_for(fragment) }
 
               Fragment.new(
                 [
                   "class #{to_source(component_class_name)} < #{to_source(component_base_class)}",
                   indent(compact_join(body_fragments), 2),
                   "end"
-                ].join("\n"),
-                skeleton.node.copy(
-                  bodystmt: BodyStmt(
-                    Statements(body),
-                    nil,
-                    nil,
-                    nil,
-                    nil
-                  )
-                )
+                ].join("\n")
               )
             end
 
@@ -168,35 +155,24 @@ module Klenod
 
             def expression(source, line_no: nil)
               source = rewrite_ruby_source(source, line_no)
-              return Fragment.new(source, constant_path(source)) if source.match?(VALID_CONST_PATH)
 
-              node = parse_expression(source, context: :expression)
-
-              Fragment.new(source, node)
+              Fragment.new(source, parse_expression(source, context: :expression))
             end
 
             def statements(source, line_no: nil)
               source = rewrite_ruby_source(source, line_no)
               node = parse_statements(source)
 
-              Fragment.new(source, node)
-            end
-
-            def program(source)
-              node = parse_program(source)
-
-              Fragment.new(node ? format_node(node) : source, node)
+              Fragment.new(source, node, !node.nil?)
             end
 
             def program_from_fragments(*fragments)
-              fragments = fragments.flatten
-              body = fragments.flat_map { |fragment| statement_body_for(fragment) }
-
-              Fragment.new(compact_join(fragments), Program(Statements(body)))
+              Fragment.new(compact_join(fragments.flatten))
             end
 
+            # Reprints parsed user Ruby exactly as it was written.
             def fragment(node)
-              Fragment.new(format_node(node), node)
+              Fragment.new(node.slice, node)
             end
 
             def node_fragment(source, node)
@@ -224,179 +200,95 @@ module Klenod
             end
 
             def literal_fragment(value)
-              Fragment.new(literal_source(value), literal_node(value))
+              Fragment.new(literal_source(value))
             end
 
             def frozen_literal(value)
-              fragment(frozen_literal_node(value))
+              Fragment.new(frozen_literal_source(value))
             end
 
             def import_call(dependency_id)
-              Fragment.new(
-                "__klenod_import__(#{literal_source(dependency_id)})",
-                CallNode(
-                  nil,
-                  nil,
-                  Ident("__klenod_import__"),
-                  ArgParen(Args([literal_node(dependency_id)]))
-                )
-              )
+              Fragment.new("__klenod_import__(#{literal_source(dependency_id)})")
             end
 
             def constant_assignment(name, value)
               value = expression_fragment(value)
-              node = Assign(VarField(Const(name.to_s)), node_for(value))
-              Fragment.new("#{name} = #{to_source(value)}", node)
+              Fragment.new("#{name} = #{to_source(value)}")
             end
 
             def call(receiver:, name:, arguments:)
               receiver = expression_fragment(receiver) unless receiver.nil?
               arguments = arguments.map { |argument| expression_fragment(argument) }
-              receiver_node = receiver.nil? ? nil : node_for(receiver)
-
-              node =
-                CallNode(
-                  receiver_node,
-                  receiver_node ? Period(".") : nil,
-                  Ident(name.to_s),
-                  ArgParen(Args(arguments.map { |argument| node_for(argument) }))
-                )
               receiver_prefix = receiver ? "#{to_source(receiver)}." : nil
-              source = "#{receiver_prefix}#{name}(#{arguments.map { |argument| to_source(argument) }.join(", ")})"
-              Fragment.new(source, node)
+              Fragment.new("#{receiver_prefix}#{name}(#{arguments.map { |argument| to_source(argument) }.join(", ")})")
             end
 
             def method_definition(name, body:, target: nil, parameters: [])
-              body = Array(body)
-              body_source = compact_join(body)
-              node =
-                DefNode(
-                  target && node_for(expression_fragment(target)),
-                  target ? Period(".") : nil,
-                  Ident(name.to_s),
-                  Params(parameters.map { |parameter| Ident(parameter.to_s) }, [], nil, [], [], nil, nil),
-                  body_statement(body)
-                )
+              body_source = compact_join(Array(body))
               target_source = target ? "#{to_source(expression_fragment(target))}." : ""
               params_source = parameters.empty? ? "" : "(#{parameters.join(", ")})"
-              source = ["def #{target_source}#{name}#{params_source}", indent(body_source, 2), "end"].join("\n")
-              Fragment.new(source, node)
+              Fragment.new(["def #{target_source}#{name}#{params_source}", indent(body_source, 2), "end"].join("\n"))
             end
 
             def public_method_definition(name, body:, parameters: [])
               method = method_definition(name, parameters: parameters, body: body)
-              node =
-                Command(
-                  Ident("public"),
-                  Args([method.node]),
-                  nil
-                )
-              Fragment.new("public #{method.source}", node)
+              Fragment.new("public #{method.source}")
             end
 
             def nil_expression
-              Fragment.new("nil", nil_node)
+              Fragment.new("nil")
             end
 
             def file_expression
-              Fragment.new("__FILE__", VarRef(Kw("__FILE__")))
+              Fragment.new("__FILE__")
             end
 
             def symbol(value)
-              value = value.to_s
-              Fragment.new(symbol_source(value), symbol_node(value))
+              Fragment.new(symbol_source(value.to_s))
             end
 
             def symbol_fragment(value)
-              Fragment.new(symbol_source(value.to_s), nil)
+              Fragment.new(symbol_source(value.to_s))
             end
 
             def styles_lookup(name)
-              name = name.to_s
-
-              Fragment.new(
-                "ClassNames[#{symbol_source(name)}]",
-                ARef(VarRef(Const("ClassNames")), Args([symbol_node(name)]))
-              )
+              Fragment.new("ClassNames[#{symbol_source(name.to_s)}]")
             end
 
             def class_name_lookup(name)
-              name = name.to_s
-
-              Fragment.new(
-                "ClassNames[#{symbol_source(name)}]",
-                ARef(VarRef(Const("ClassNames")), Args([symbol_node(name)]))
-              )
+              Fragment.new("ClassNames[#{symbol_source(name.to_s)}]")
             end
 
             def class_names(values)
               fragments = values.map { |value| expression_fragment(value) }
 
-              Fragment.new(
-                "ClassNames.class_name(#{fragments.map(&:source).join(", ")})",
-                CallNode(
-                  constant_path("ClassNames"),
-                  Period("."),
-                  Ident("class_name"),
-                  ArgParen(Args(fragments.map { |fragment| node_for(fragment) }))
-                )
-              )
+              Fragment.new("ClassNames.class_name(#{fragments.map(&:source).join(", ")})")
             end
 
             def scoped_class_name(values)
               fragments = values.map { |value| expression_fragment(value) }
 
-              Fragment.new(
-                "ClassNames.class_name(#{fragments.map(&:source).join(", ")})",
-                nil
-              )
+              Fragment.new("ClassNames.class_name(#{fragments.map(&:source).join(", ")})")
             end
 
             def parenthesized_expression(source, line_no: nil)
               source = rewrite_ruby_source(source, line_no)
-              node = parse_expression(source, context: :parenthesized_expression)
-              unless node
+              result = parse_result(source)
+              unless result
                 raise_ruby_parse_error(source, line_no: line_no, context: "Could not parse Haml output script", syntax_error: true)
               end
 
-              fragment(Paren(LParen("("), Statements([node])))
+              # A trailing comment would otherwise swallow the closing parenthesis.
+              closing = result.comments.empty? ? ")" : "\n)"
+              Fragment.new("(#{source}#{closing}", result.value.statements.body.first)
             end
 
             def hash_expression(source, line_no: nil)
               source = rewrite_ruby_source(source, line_no)
               node = parse_expression(source, context: :hash_expression)
-              return nil unless node.is_a?(SyntaxTree::HashLiteral)
+              return nil unless node.is_a?(Prism::HashNode)
 
               Fragment.new(source, node)
-            end
-
-            def class_skeleton_fragment(component_class_name, component_base_class)
-              Fragment.new(
-                "",
-                ClassDeclaration(
-                  constant_path(component_class_name, declaration: true),
-                  constant_path(component_base_class),
-                  BodyStmt(
-                    Statements([]),
-                    nil,
-                    nil,
-                    nil,
-                    nil
-                  )
-                )
-              )
-            end
-
-            def constant_path(value, declaration: false)
-              parts = to_source(value).split("::")
-              raise ArgumentError, "Expected constant path: #{to_source(value).inspect}" if parts.empty? || parts.any?(&:empty?)
-
-              return ConstRef(Const(parts.fetch(0))) if declaration && parts.length == 1
-              return VarRef(Const(parts.fetch(0))) if parts.length == 1
-
-              parts.drop(1).reduce(VarRef(Const(parts.fetch(0)))) do |parent, part|
-                ConstPathRef(parent, Const(part))
-              end
             end
 
             def source_mark(line_no, _source)
@@ -404,9 +296,7 @@ module Klenod
             end
 
             def marked_expression(mark, expression)
-              source = to_source(expression)
-
-              source_marked_fragment(mark, source, node_for(expression))
+              Fragment.new("#{mark}\n#{to_source(expression)}", nil, true)
             end
 
             def factory_call(factory:, tag:, children:, props:, mark: nil)
@@ -415,7 +305,7 @@ module Klenod
 
             def component_factory_call(factory:, tag:, children:, props:, mark: nil)
               call = source_factory_call(factory: factory, tag: tag, children: [], props: props, mark: mark)
-              body = Fragment.new("[#{children.map { |child| argument_source(child) }.join(", ")}]", nil)
+              body = Fragment.new("[#{children.map { |child| argument_source(child) }.join(", ")}]")
               script_block("#{call.source} do", body)
             end
 
@@ -435,7 +325,9 @@ module Klenod
 
             def script_block(source, body, line_no: nil)
               source = rewrite_ruby_source(source, nil)
-              ast_script_block(source, body) || raise_ruby_parse_error(source, line_no: line_no, context: "Could not build Ruby block from Haml script")
+              return Fragment.new(block_source(source, body)) if block_script?(source)
+
+              raise_ruby_parse_error(source, line_no: line_no, context: "Could not build Ruby block from Haml script")
             end
 
             def silent_script_block(source, body, line_no: nil)
@@ -473,10 +365,9 @@ module Klenod
                 raise_ruby_parse_error(source, line_no: line_no, context: "Could not parse Haml silent script", syntax_error: true)
               end
 
-              return Fragment.new(source, statements) if return_with_children
+              return Fragment.new(source, statements, true) if return_with_children
 
-              node = ast_begin([*statement_body_for(statements), *statement_body_for(body)])
-              Fragment.new(["begin", indent(source, 2), indent(to_source(body), 2), "end"].join("\n"), node)
+              Fragment.new(["begin", indent(source, 2), indent(to_source(body), 2), "end"].join("\n"))
             end
 
             def keyword_script?(source)
@@ -508,7 +399,7 @@ module Klenod
             end
 
             def silent_branches(branches, line_no: nil)
-              fragment = ast_silent_branches(branches)
+              fragment = ast_branches(branches)
               return fragment if fragment
 
               raise_ruby_parse_error(branch_source(branches), line_no: line_no, context: "Could not parse Haml silent branches", syntax_error: true)
@@ -517,32 +408,17 @@ module Klenod
             def ruby_filters(nodes)
               return "" if nodes.empty?
 
-              ast_ruby_filters(nodes) || statements(nodes.map { |node| "begin\n#{indent(node, 2)}\nend" }.join("\n"))
+              Fragment.new(nodes.map { |node| ["begin", indent(to_source(node), 2), "end"].join("\n") }.join("\n"), nil, true)
             end
 
             def render_ruby_filter(node)
               source = to_source(node)
-              parsed = (node if node.is_a?(Fragment) && node.node?) || statements(source)
-              unless parsed&.node?
+              parsed = node.is_a?(Fragment) && node.node?
+              unless parsed || parse_statements(source)
                 raise_ruby_parse_error(source, line_no: nil, context: "Could not parse Ruby filter")
               end
 
-              fragment(
-                ast_begin([
-                  *statement_body_for(parsed),
-                  nil_node
-                ])
-              )
-            end
-
-            def format_node(node)
-              if @profiler
-                @profiler.measure(:haml_format_node, node: node.class.name) do
-                  SyntaxTree::Formatter.format(+"", node, 0)
-                end
-              else
-                SyntaxTree::Formatter.format(+"", node, 0)
-              end
+              Fragment.new(["begin", indent(source.rstrip, 2), "  nil", "end"].join("\n"))
             end
 
             def indent(value, spaces)
@@ -564,11 +440,12 @@ module Klenod
               raise_ruby_parse_error(source, line_no: line_no, context: context)
             end
 
+            # Whether the script opens a literal block for its Haml children.
+            # Calls, `super`, and zsuper can take one; lambdas cannot.
             def block_script?(source)
-              fixed_source = fix_syntax_by_adding_missing_pairs(source)
-              node = parse_expression(fixed_source, context: :block_script_predicate)
+              node = parse_expression(fix_syntax_by_adding_missing_pairs(source), context: :block_script)
 
-              node.is_a?(SyntaxTree::MethodAddBlock)
+              node.respond_to?(:block) && node.block.is_a?(Prism::BlockNode)
             end
 
             private
@@ -644,7 +521,7 @@ module Klenod
 
                 expression.is_a?(Fragment) ? expression : self.expression(to_source(expression))
               else
-                Fragment.new("[#{expressions.map { |item| argument_source(item) }.join(", ")}]", nil)
+                Fragment.new("[#{expressions.map { |item| argument_source(item) }.join(", ")}]")
               end
             end
 
@@ -661,34 +538,13 @@ module Klenod
                 *children.map { |child| argument_source(child) },
                 "**HamlHelper.merge_props(self.class, #{prop_sources.join(", ")})"
               ].compact
-              Fragment.new("#{to_source(factory)}[#{source_parts.join(", ")}]", nil)
+              Fragment.new("#{to_source(factory)}[#{source_parts.join(", ")}]")
             end
 
             def ast_silent_script(source)
-              statements = parse_statements(source) || control_flow_statements(source)
-              return nil unless statements
+              return nil unless parse_statements(source)
 
-              node = ast_begin([*statement_body_for(statements), nil_node])
-
-              Fragment.new(["begin", indent(source, 2), "  nil", "end"].join("\n"), node)
-            end
-
-            # SyntaxTree rejects `next` and `break` at top level even though a
-            # silent script can be nested in an iterator or keyword loop. Parse
-            # those statements inside a harmless temporary loop, then retain
-            # only its body for the surrounding generated block.
-            def control_flow_statements(source)
-              return unless source.match?(/\A(?:next|break)\b/)
-
-              wrapper = parse_expression(["loop do", indent(source, 2), "end"].join("\n"), context: :control_flow_statement)
-              wrapper&.block&.bodystmt&.statements
-            end
-
-            def ast_script_block(source, body)
-              node = block_script_node(source, body)
-              return nil unless node
-
-              Fragment.new(block_source(source, body), node)
+              Fragment.new(["begin", indent(source, 2), "  nil", "end"].join("\n"))
             end
 
             def ast_silent_script_block(source, body)
@@ -707,48 +563,6 @@ module Klenod
               Fragment.new(source, node)
             end
 
-            def ast_silent_branches(branches)
-              node = branch_node(branches)
-              return nil unless node
-
-              Fragment.new(branch_source(branches), node)
-            end
-
-            def branch_node(branches)
-              parse_expression(branch_source(branches), context: :branches)
-            end
-
-            def ast_ruby_filters(nodes)
-              begins =
-                nodes.map do |node|
-                  statements =
-                    if node.is_a?(Fragment)
-                      node
-                    else
-                      parse_statements(node)
-                    end
-                  return nil unless statements
-
-                  ast_begin(statement_body_for(statements))
-                end
-
-              source = nodes.map { |node| ["begin", indent(to_source(node), 2), "end"].join("\n") }.join("\n")
-
-              Fragment.new(source, Statements(begins))
-            end
-
-            def ast_begin(statement_nodes)
-              Begin(
-                BodyStmt(
-                  Statements(statement_nodes),
-                  nil,
-                  nil,
-                  nil,
-                  nil
-                )
-              )
-            end
-
             def block_source(source, body)
               body_source = to_source(body)
 
@@ -765,7 +579,7 @@ module Klenod
             # in their original Ruby block/loop context.
             def captured_block_source(source, body)
               captured_body = "HamlHelper.append_capture(#{argument_source(body)})"
-              script = block_source(source, Fragment.new(captured_body, nil))
+              script = block_source(source, Fragment.new(captured_body))
               ["HamlHelper.capture do", indent(script, 2), "end"].join("\n")
             end
 
@@ -787,48 +601,6 @@ module Klenod
               "#{body}\nend"
             end
 
-            def body_statement(body)
-              BodyStmt(
-                Statements(Array(body).flat_map { |statement| statement_body_for(statement) }),
-                nil,
-                nil,
-                nil,
-                nil
-              )
-            end
-
-            def block_script_node(source, body)
-              node = parse_expression(fix_syntax_by_adding_missing_pairs(source), context: :block_script)
-              return nil unless node.is_a?(SyntaxTree::MethodAddBlock)
-
-              MethodAddBlock(
-                node.call,
-                SyntaxTree::BlockNode.new(
-                  opening: node.block.opening,
-                  block_var: node.block.block_var,
-                  bodystmt: block_body_for(node.block, body),
-                  location: node.block.location
-                )
-              )
-            end
-
-            def block_body_for(block, body)
-              statements = Statements(Array(body).flat_map { |statement| statement_body_for(statement) })
-
-              block.opening.is_a?(SyntaxTree::LBrace) ? statements : body_statement(body)
-            end
-
-            def ast_keyword_props(props, mark:)
-              return nil if props.empty?
-
-              AssocSplat(
-                HashLiteral(
-                  LBrace("{"),
-                  props.map { |name, value| Assoc(prop_key_node(name), argument_node(value, mark: mark)) }
-                )
-              )
-            end
-
             def keyword_props_source(props, mark:)
               return [] if props.empty?
 
@@ -844,42 +616,14 @@ module Klenod
               "#{symbol_source(name)} =>"
             end
 
-            def frozen_literal_node(value)
+            def frozen_literal_source(value)
               case value
               when Hash
-                freeze_node(
-                  HashLiteral(
-                    LBrace("{"),
-                    value.map { |key, child| Assoc(literal_node(key), frozen_literal_node(child)) }
-                  )
-                )
+                "{#{value.map { |key, child| "#{literal_source(key)} => #{frozen_literal_source(child)}" }.join(", ")}}.freeze"
               when Array
-                freeze_node(ArrayLiteral(LBracket("["), Args(value.map { |child| frozen_literal_node(child) })))
+                "[#{value.map { |child| frozen_literal_source(child) }.join(", ")}].freeze"
               else
-                literal_node(value)
-              end
-            end
-
-            def literal_node(value)
-              case value
-              when String
-                if value.match?(/\\|#[@${]/)
-                  expression_node(value.inspect)
-                else
-                  StringLiteral([TStringContent(value)], "\"")
-                end
-              when Integer
-                Int(value.to_s)
-              when Float
-                FloatLiteral(value.to_s)
-              when true
-                VarRef(Kw("true"))
-              when false
-                VarRef(Kw("false"))
-              when nil
-                nil_node
-              else
-                expression_node(value.inspect)
+                literal_source(value)
               end
             end
 
@@ -900,73 +644,12 @@ module Klenod
               end
             end
 
-            def freeze_node(node)
-              CallNode(node, Period("."), Ident("freeze"), nil)
-            end
-
-            def nil_node
-              VarRef(Kw("nil"))
-            end
-
-            def symbol_node(value)
-              if value.match?(/\A[a-zA-Z_]\w*[!?=]?\z/)
-                SymbolLiteral(Ident(value))
-              else
-                DynaSymbol([TStringContent(value)], ":\"")
-              end
-            end
-
             def symbol_source(value)
               if value.match?(/\A[a-zA-Z_]\w*[!?=]?\z/)
                 ":#{value}"
               else
                 ":#{value.inspect}"
               end
-            end
-
-            def prop_key_node(name)
-              name = name.to_s
-              return Label("#{name}:") if name.match?(/\A[a-zA-Z_]\w*\z/)
-
-              symbol_node(name)
-            end
-
-            def source_marked_fragment(mark, source, node)
-              marked_source = "#{mark}\n#{source}"
-              return Fragment.new(marked_source, nil) unless node
-
-              node = Statements([comment_node(mark), node])
-
-              Fragment.new(marked_source, node)
-            end
-
-            def comment_node(value)
-              Comment(value, false)
-            end
-
-            def node_for(value)
-              return value.node if value.is_a?(Fragment)
-
-              parse_expression(to_source(value), context: :node_for)
-            end
-
-            def argument_node(value, mark: nil)
-              fragment = expression_fragment(value)
-              statements = []
-              statements << comment_node(mark) if mark
-
-              if fragment.node.is_a?(SyntaxTree::Statements)
-                statements.concat(fragment.node.body)
-              elsif mark
-                node = node_for(fragment)
-                return nil unless node
-
-                statements << node
-              else
-                return node_for(fragment)
-              end
-
-              ast_begin(statements)
             end
 
             def argument_source(value, mark: nil)
@@ -977,7 +660,7 @@ module Klenod
                 source = "#{mark}\n#{source}"
               end
 
-              if fragment.node.is_a?(SyntaxTree::Statements) || mark || (source.include?("\n") && !multiline_argument_expression?(source))
+              if fragment.statements || mark || (source.include?("\n") && !multiline_argument_expression?(source))
                 ["begin", indent(source, 2), "end"].join("\n")
               else
                 source
@@ -988,41 +671,21 @@ module Klenod
               source.start_with?("if ", "unless ", "case", "begin")
             end
 
-            def statement_body_for(value)
-              return value.statement_body if value.is_a?(Fragment)
-
-              value.is_a?(SyntaxTree::Statements) ? value.body : [value].compact
-            end
-
-            def expression_node(source)
-              source = source.to_s
-              return constant_path(source) if source.match?(VALID_CONST_PATH)
-
-              parse_expression(source, context: :expression_node) || raise(ArgumentError, "Could not parse Ruby expression: #{source.inspect}")
-            end
-
             def parse_expression(source, context:)
               cached_parse(@expression_cache, source, :"haml_parse_expression:#{context}") do
-                SyntaxTree
-                  .parse(source)
-                  &.statements
-                  &.body
-                  &.find { |node| !node.instance_of?(SyntaxTree::Comment) }
+                parse_result(source)&.value&.statements&.body&.first
               end
-            rescue SyntaxTree::Parser::ParseError
-              nil
             end
 
             def parse_statements(source)
-              cached_parse(@statements_cache, source, :haml_parse_statements) { SyntaxTree.parse(source)&.statements }
-            rescue SyntaxTree::Parser::ParseError
-              nil
+              cached_parse(@statements_cache, source, :haml_parse_statements) { parse_result(source)&.value&.statements }
             end
 
-            def parse_program(source)
-              cached_parse(@program_cache, source, :haml_parse_program) { SyntaxTree.parse(source) }
-            rescue SyntaxTree::Parser::ParseError
-              nil
+            # Haml scripts are fragments of a larger render method, so accept
+            # `yield`, `next`, and `break` outside of a block or loop.
+            def parse_result(source)
+              result = Prism.parse(source.to_s, partial_script: true)
+              result if result.success?
             end
 
             def cached_parse(cache, source, event_name)
@@ -1045,7 +708,7 @@ module Klenod
             end
 
             def raise_ruby_parse_error(source, line_no:, context:, syntax_error: false)
-              parse_error = syntax_tree_parse_error(source)
+              error_line = parse_error_line(source)
               explain =
                 SyntaxSuggest::ExplainSyntax.new(
                   code_lines: SyntaxSuggest::CodeLine.from_source(source)
@@ -1058,20 +721,21 @@ module Klenod
               message << "Errors:\n  #{errors.join("\n  ")}" unless errors.empty?
               message << "Missing:\n  #{missing.join("\n  ")}" unless missing.empty?
 
-              raise RubyParseError.new(message.join("\n\n"), line: source_line_for_parse_error(line_no, parse_error))
+              raise RubyParseError.new(message.join("\n\n"), line: source_line_for_parse_error(line_no, error_line))
             end
 
-            def syntax_tree_parse_error(source)
-              SyntaxTree.parse(source)
-              nil
-            rescue SyntaxTree::Parser::ParseError => error
-              error
+            # Prism first reports an unclosed `{` or `(` at the line that opens
+            # it. The unexpected token that broke it is the line to show.
+            def parse_error_line(source)
+              errors = Prism.parse(source.to_s, partial_script: true).errors
+              error = errors.reject { it.type.end_with?("_term") }.min_by { it.location.start_offset } || errors.first
+              error&.location&.start_line
             end
 
-            def source_line_for_parse_error(line_no, parse_error)
-              return line_no unless line_no && parse_error&.lineno
+            def source_line_for_parse_error(line_no, error_line)
+              return line_no unless line_no && error_line
 
-              line_no + parse_error.lineno - 1
+              line_no + error_line - 1
             end
           end
         end

@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class RubyFilter < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -18,28 +17,19 @@ class RubyFilter < TestFramework::ComponentBase
   begin
     # SourceMapMark:2
     def handle_click
-      # SourceMapMark:3
+    # SourceMapMark:3
       :clicked
-      # SourceMapMark:4
+    # SourceMapMark:4
     end
     # SourceMapMark:5
+  
   end
   public def render
     # SourceMapMark:6
-    TestFramework::H[
-      :button,
-      "Click me",
-      **HamlHelper.merge_props(
-        self.class,
-        {
-          onclick:
-            begin
-              # SourceMapMark:6
-              handle_click
-            end
-        }
-      )
-    ]
+    TestFramework::H[:button, "Click me", **HamlHelper.merge_props(self.class, {onclick: begin
+      # SourceMapMark:6
+      handle_click
+    end})]
   end
 end
 Default = RubyFilter

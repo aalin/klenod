@@ -31,7 +31,7 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
     assert_includes(result.code, "__klenod_import__(\"app:/pages/page.rb:dependency:0\")")
   end
 
-  def test_records_locations_for_imports_that_use_the_syntax_tree_scan
+  def test_records_locations_for_imports_that_need_the_parsed_scan
     result =
       RubyPlugin.new.transform(
         ModuleId.new("pages/page.rb", nil),
@@ -42,7 +42,19 @@ class Klenod::Build::Plugins::RubyPlugin::Test < Minitest::Test
     assert_equal(Klenod::Build::SourceLocation.new("app:/pages/page.rb", 1, 7), result.dependencies.first.loc)
   end
 
-  def test_rewrites_literal_imports_without_syntax_tree_scan
+  def test_parsed_scan_counts_characters_after_multibyte_text
+    result =
+      RubyPlugin.new.transform(
+        ModuleId.new("pages/page.rb", nil),
+        "Label = \"–é\"; Dep = import(\n  \"../dep\"\n)\n",
+        transform_context
+      )
+
+    assert_equal(Klenod::Build::SourceLocation.new("app:/pages/page.rb", 1, 21), result.dependencies.first.loc)
+    assert_equal("Label = \"–é\"; Dep = __klenod_import__(\"app:/pages/page.rb:dependency:0\")\n", result.code)
+  end
+
+  def test_rewrites_literal_imports_without_the_parsed_scan
     profiler = Profiler.new(enabled: true)
     result =
       RubyPlugin.new.transform(

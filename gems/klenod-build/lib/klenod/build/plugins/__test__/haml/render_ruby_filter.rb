@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 KlenodImport = method(:__klenod_import__)
-HamlHelper =
-  Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
+HamlHelper = Klenod::Build::Plugins::HamlPlugin::FixturesTest::FakeFramework::HamlHelper
 class RenderRubyFilter < TestFramework::ComponentBase
   def self.module_path
     __FILE__
@@ -18,34 +17,27 @@ class RenderRubyFilter < TestFramework::ComponentBase
   begin
     # SourceMapMark:2
     def initialize(children: nil)
-      # SourceMapMark:3
+    # SourceMapMark:3
     end
     # SourceMapMark:4
+  
   end
   public def render
-    [
+    [begin
+      # SourceMapMark:5
+      TestFramework::H[:p, "Before", **HamlHelper.merge_props(self.class, {})]
+    end, begin
+      # SourceMapMark:7
       begin
-        # SourceMapMark:5
-        TestFramework::H[:p, "Before", **HamlHelper.merge_props(self.class, {})]
-      end,
-      begin
-        # SourceMapMark:7
-        begin
-          # SourceMapMark:8
-          current_path = request.path
-          # SourceMapMark:9
-          nil
-        end
-      end,
-      begin
-        # SourceMapMark:10
-        TestFramework::H[
-          :p,
-          (current_path),
-          **HamlHelper.merge_props(self.class, {})
-        ]
+        # SourceMapMark:8
+        current_path = request.path
+        # SourceMapMark:9
+        nil
       end
-    ]
+    end, begin
+      # SourceMapMark:10
+      TestFramework::H[:p, (current_path), **HamlHelper.merge_props(self.class, {})]
+    end]
   end
 end
 Default = RenderRubyFilter

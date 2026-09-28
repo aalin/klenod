@@ -55,7 +55,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_includes(error.message, "Could not parse Ruby filter")
   end
 
-  def test_ruby_builder_builds_unmarked_factory_calls_from_syntax_tree_nodes
+  def test_ruby_builder_builds_unmarked_factory_calls
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.factory_call(
@@ -71,6 +71,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_includes(fragment.source, ":p")
     assert_includes(fragment.source, '"Hello"')
     assert_includes(fragment.source, 'class: "intro"')
+    assert_valid_ruby(fragment.source)
   end
 
   def test_ruby_builder_preserves_source_map_marks_when_composing_factory_calls
@@ -91,6 +92,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_includes(fragment.source, "# SourceMapMark:2")
     assert_includes(fragment.source, "class:")
     assert_includes(fragment.source, '"intro"')
+    assert_valid_ruby(fragment.source)
   end
 
   def test_ruby_builder_builds_component_factory_calls_with_lazy_children
@@ -107,21 +109,22 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_includes(fragment.source, '["Title", H[:p, "Body"]]')
   end
 
-  def test_ruby_builder_fragments_keep_parsed_syntax_tree_nodes
+  def test_ruby_builder_fragments_keep_parsed_prism_nodes
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     unmarked = builder.expression('H[:p, **{:class => "intro"}]')
 
-    assert_kind_of(SyntaxTree::ARef, unmarked.node)
+    assert_kind_of(Prism::CallNode, unmarked.node)
     assert_equal('H[:p, **{:class => "intro"}]', unmarked.source)
-    assert_equal('H[:p, **{ class: "intro" }]', builder.fragment(unmarked.node).source)
   end
 
-  def test_ruby_builder_program_fragments_keep_parsed_syntax_tree_nodes
+  def test_ruby_builder_reprints_parsed_nodes_as_written
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    program = builder.program("class Page\nend\n")
+    node = builder.expression('H[:p,  **{:class=>"intro"}]').node
+    fragment = builder.fragment(node)
 
-    assert_kind_of(SyntaxTree::Program, program.node)
-    assert_equal("class Page\nend\n", program.source)
+    assert_same(node, fragment.node)
+    assert(fragment.node?)
+    assert_equal('H[:p,  **{:class=>"intro"}]', fragment.source)
   end
 
   def test_ruby_builder_composes_programs_from_statement_fragments
@@ -133,37 +136,24 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         builder.statements("Default = Page\n")
       )
 
-    assert_kind_of(SyntaxTree::Program, program.node)
     assert_equal(
-      [SyntaxTree::Comment, SyntaxTree::Assign, SyntaxTree::ClassDeclaration, SyntaxTree::Assign],
-      program.node.statements.body.map(&:class)
+      [Prism::ConstantWriteNode, Prism::ClassNode, Prism::ConstantWriteNode],
+      Prism.parse(program.source).value.statements.body.map(&:class)
     )
     assert_includes(program.source, "# frozen_string_literal: true")
     assert_includes(program.source, "class Page")
     assert_includes(program.source, "Default = Page")
   end
 
-  def test_ruby_builder_literals_and_symbols_keep_parsed_syntax_tree_nodes
+  def test_ruby_builder_builds_literals_and_symbols
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    literal = builder.literal("Hello")
-    escaped_literal = builder.literal("\#{title}")
-    integer = builder.literal(123)
-    truthy = builder.literal(true)
-    symbol = builder.symbol("p")
-    dashed_symbol = builder.symbol("article-card")
 
-    assert_kind_of(SyntaxTree::StringLiteral, literal.node)
-    assert_equal('"Hello"', literal.source)
-    assert_kind_of(SyntaxTree::StringLiteral, escaped_literal.node)
-    assert_equal('"\\#{title}"', escaped_literal.source)
-    assert_kind_of(SyntaxTree::Int, integer.node)
-    assert_equal("123", integer.source)
-    assert_kind_of(SyntaxTree::VarRef, truthy.node)
-    assert_equal("true", truthy.source)
-    assert_kind_of(SyntaxTree::SymbolLiteral, symbol.node)
-    assert_equal(":p", symbol.source)
-    assert_kind_of(SyntaxTree::DynaSymbol, dashed_symbol.node)
-    assert_equal(':"article-card"', dashed_symbol.source)
+    assert_equal('"Hello"', builder.literal("Hello").source)
+    assert_equal('"\\#{title}"', builder.literal("\#{title}").source)
+    assert_equal("123", builder.literal(123).source)
+    assert_equal("true", builder.literal(true).source)
+    assert_equal(":p", builder.symbol("p").source)
+    assert_equal(':"article-card"', builder.symbol("article-card").source)
   end
 
   def test_ruby_builder_reuses_short_string_literals
@@ -173,112 +163,95 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     refute_same(builder.literal("Hello"), builder.literal("Hello"))
   end
 
-  def test_ruby_builder_builds_frozen_literals_from_syntax_tree_nodes
+  def test_ruby_builder_builds_frozen_literals
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    literal =
-      builder.frozen_literal(
-        {
-          "en-US" => {
-            "title" => "Hello",
-            "items" => [1, 2]
-          }
-        }
-      )
+    value = {
+      "en-US" => {
+        "title" => "Hello \#{name}",
+        "items" => [1, 2]
+      }
+    }
+    literal = builder.frozen_literal(value)
 
-    assert_kind_of(SyntaxTree::CallNode, literal.node)
-    assert_includes(literal.source, '"en-US"')
-    assert_includes(literal.source, '"title" => "Hello"')
-    assert_includes(literal.source, "[1, 2].freeze")
-    assert_includes(literal.source, ".freeze")
+    assert_equal('{"en-US" => {"title" => "Hello \\#{name}", "items" => [1, 2].freeze}.freeze}.freeze', literal.source)
+
+    evaluated = eval(literal.source) # standard:disable Security/Eval
+    assert_equal(value, evaluated)
+    assert_predicate(evaluated, :frozen?)
+    assert_predicate(evaluated.fetch("en-US").fetch("items"), :frozen?)
   end
 
-  def test_ruby_builder_builds_import_calls_from_syntax_tree_nodes
+  def test_ruby_builder_builds_import_calls
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.import_call("pages/page.haml:companion_style")
 
-    assert_kind_of(SyntaxTree::CallNode, fragment.node)
     assert_equal('__klenod_import__("pages/page.haml:companion_style")', fragment.source)
   end
 
-  def test_ruby_builder_builds_style_lookup_helpers_from_syntax_tree_nodes
+  def test_ruby_builder_builds_style_lookup_helpers
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     tag_lookup = builder.styles_lookup("__p")
     class_lookup = builder.class_name_lookup("article-card")
     class_names = builder.class_names([tag_lookup, class_lookup, builder.expression("dynamic_class")])
 
-    assert_kind_of(SyntaxTree::ARef, tag_lookup.node)
     assert_equal("ClassNames[:__p]", tag_lookup.source)
-    assert_kind_of(SyntaxTree::ARef, class_lookup.node)
     assert_equal('ClassNames[:"article-card"]', class_lookup.source)
-    assert_kind_of(SyntaxTree::CallNode, class_names.node)
-
-    formatted = builder.fragment(class_names.node).source
-    assert_includes(formatted, "ClassNames.class_name(")
-    assert_includes(formatted, "ClassNames[:__p]")
-    assert_includes(formatted, 'ClassNames[:"article-card"]')
-    assert_includes(formatted, "dynamic_class")
+    assert_equal('ClassNames.class_name(ClassNames[:__p], ClassNames[:"article-card"], dynamic_class)', class_names.source)
   end
 
-  def test_ruby_builder_builds_constant_assignments_from_syntax_tree_nodes
+  def test_ruby_builder_builds_constant_assignments
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    fragment = builder.constant_assignment("Default", "Page")
 
-    assert_kind_of(SyntaxTree::Assign, fragment.node)
-    assert_equal("Default = Page", builder.fragment(fragment.node).source)
+    assert_equal("Default = Page", builder.constant_assignment("Default", "Page").source)
   end
 
-  def test_ruby_builder_builds_method_calls_from_syntax_tree_nodes
+  def test_ruby_builder_builds_method_calls
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     bare_call = builder.call(receiver: nil, name: "method", arguments: [builder.symbol("__klenod_import__")])
     receiver_call = builder.call(receiver: "Default", name: "const_set", arguments: [builder.symbol("ClassNames"), "ClassNames"])
 
-    assert_kind_of(SyntaxTree::CallNode, bare_call.node)
-    assert_equal("method(:__klenod_import__)", builder.fragment(bare_call.node).source)
-    assert_kind_of(SyntaxTree::CallNode, receiver_call.node)
-    assert_equal("Default.const_set(:ClassNames, ClassNames)", builder.fragment(receiver_call.node).source)
+    assert_equal("method(:__klenod_import__)", bare_call.source)
+    assert_equal("Default.const_set(:ClassNames, ClassNames)", receiver_call.source)
   end
 
-  def test_ruby_builder_builds_method_definitions_from_syntax_tree_nodes
+  def test_ruby_builder_builds_method_definitions
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.method_definition("title", body: builder.literal("Hello"))
 
-    assert_kind_of(SyntaxTree::DefNode, fragment.node)
-    assert_equal(<<~RUBY.chomp, builder.fragment(fragment.node).source)
+    assert_equal(<<~RUBY.chomp, fragment.source)
       def title
         "Hello"
       end
     RUBY
   end
 
-  def test_ruby_builder_builds_public_method_definitions_from_syntax_tree_nodes
+  def test_ruby_builder_builds_public_method_definitions
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.marked_expression(builder.source_mark(3, "title"), builder.expression("title"))
     fragment = builder.public_method_definition("render", body: body)
 
-    assert_kind_of(SyntaxTree::Command, fragment.node)
-    formatted = builder.fragment(fragment.node).source
-    assert_includes(formatted, "public def render")
-    assert_includes(formatted, "# SourceMapMark:3")
-    assert_includes(formatted, "title")
+    assert_equal(<<~RUBY.chomp, fragment.source)
+      public def render
+        # SourceMapMark:3
+        title
+      end
+    RUBY
   end
 
-  def test_ruby_builder_wraps_existing_syntax_tree_nodes_as_fragments
-    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    node = SyntaxTree.parse("title.upcase").statements.body.first
-    fragment = builder.fragment(node)
-
-    assert_same(node, fragment.node)
-    assert(fragment.node?)
-    assert_equal([node], fragment.statement_body)
-    assert_equal("title.upcase", fragment.source)
-  end
-
-  def test_ruby_builder_statement_fragments_expose_statement_body
+  def test_ruby_builder_statement_fragments_keep_parsed_statements
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.statements("first\nsecond\n")
 
-    assert_kind_of(SyntaxTree::Statements, fragment.node)
-    assert_equal(2, fragment.statement_body.length)
+    assert_kind_of(Prism::StatementsNode, fragment.node)
+    assert_equal(2, fragment.node.body.length)
+    assert(fragment.statements)
+  end
+
+  def test_ruby_builder_statement_fragments_are_wrapped_as_arguments
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    fragment = builder.factory_call(factory: "H", tag: ":p", children: [builder.statements("title")], props: {})
+
+    assert_equal("H[:p, begin\n  title\nend, **HamlHelper.merge_props(self.class, {})]", fragment.source)
   end
 
   def test_ruby_builder_normalizes_values_into_expression_fragments
@@ -290,7 +263,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.expression_fragment("Object")
 
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
-    assert_kind_of(SyntaxTree::VarRef, fragment.node)
+    assert_kind_of(Prism::ConstantReadNode, fragment.node)
     assert_equal("Object", fragment.source)
   end
 
@@ -303,43 +276,49 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     fragment = builder.statements_fragment("first\nsecond\n")
 
     assert_kind_of(Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder::Fragment, fragment)
-    assert_kind_of(SyntaxTree::Statements, fragment.node)
-    assert_equal(2, fragment.statement_body.length)
+    assert_kind_of(Prism::StatementsNode, fragment.node)
+    assert_equal(2, fragment.node.body.length)
   end
 
-  def test_ruby_builder_builds_parenthesized_expressions_from_syntax_tree_nodes
+  def test_ruby_builder_builds_parenthesized_expressions
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.parenthesized_expression("title.upcase")
 
-    assert_kind_of(SyntaxTree::Paren, fragment.node)
+    assert_kind_of(Prism::CallNode, fragment.node)
     assert_equal("(title.upcase)", fragment.source)
   end
 
-  def test_ruby_builder_builds_hash_expressions_from_syntax_tree_nodes
+  def test_ruby_builder_closes_parenthesized_expressions_after_trailing_comments
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    fragment = builder.parenthesized_expression("title.upcase # shout")
+
+    assert_equal("(title.upcase # shout\n)", fragment.source)
+    assert_valid_ruby("H[:p, #{fragment.source}]")
+  end
+
+  def test_ruby_builder_builds_hash_expressions
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.hash_expression("{ title: title.upcase }")
 
-    assert_kind_of(SyntaxTree::HashLiteral, fragment.node)
+    assert_kind_of(Prism::HashNode, fragment.node)
     assert_equal("{ title: title.upcase }", fragment.source)
+    assert_nil(builder.hash_expression("title"))
   end
 
-  def test_ruby_builder_builds_constant_paths_from_syntax_tree_nodes
+  def test_ruby_builder_detects_scripts_that_open_a_block
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
 
-    assert_kind_of(SyntaxTree::ConstRef, builder.constant_path("Page", declaration: true))
-    assert_kind_of(SyntaxTree::VarRef, builder.constant_path("Object"))
-    assert_kind_of(SyntaxTree::ConstPathRef, builder.constant_path("Framework::Component::Base"))
+    assert(builder.block_script?("items.each do |item|"))
+    assert(builder.block_script?("items.each { |item|"))
+    assert(builder.block_script?("render_list(items) do"))
+    assert(builder.block_script?("super do"))
+    assert(builder.block_script?("super(title) do"))
+    refute(builder.block_script?("-> do"))
+    refute(builder.block_script?("items.each(&block)"))
+    refute(builder.block_script?("title"))
   end
 
-  def test_ruby_builder_builds_class_skeletons_from_syntax_tree_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    fragment = builder.class_skeleton_fragment("Page", "Framework::Component::Base")
-
-    assert_kind_of(SyntaxTree::ClassDeclaration, fragment.node)
-    assert_equal("class Page < Framework::Component::Base\nend", builder.fragment(fragment.node).source)
-  end
-
-  def test_ruby_builder_component_program_formats_from_syntax_tree_program
+  def test_ruby_builder_component_program_builds_the_component_source
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     program =
       builder.component_program(
@@ -351,8 +330,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         styles_source: "{}.freeze"
       )
 
-    assert_kind_of(SyntaxTree::Program, program.node)
-    assert_includes(program.node.statements.body.map(&:class), SyntaxTree::ClassDeclaration)
+    assert_includes(Prism.parse(program.source).value.statements.body.map(&:class), Prism::ClassNode)
     assert_includes(program.source, "class Page < Object")
     assert_includes(program.source, "public def render")
   end
@@ -370,15 +348,13 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         render_source: builder.expression_fragment("title")
       )
 
-    assert_kind_of(SyntaxTree::ClassDeclaration, fragment.node)
-    assert_kind_of(SyntaxTree::Assign, fragment.node.bodystmt.statements.body.fetch(1))
-    formatted = builder.fragment(fragment.node).source
-    assert_includes(formatted, "class Page < Object")
-    assert_includes(formatted, "Translations = {}.freeze")
-    assert_includes(formatted, "I18n = Framework::I18n.new(self)")
-    assert_includes(formatted, "ClassNames = { foo: \"foo_hash\" }.freeze")
-    assert_includes(formatted, "def title")
-    assert_includes(formatted, "public def render")
+    assert_valid_ruby(fragment.source)
+    assert_includes(fragment.source, "class Page < Object")
+    assert_includes(fragment.source, "Translations = {}.freeze")
+    assert_includes(fragment.source, "I18n = Framework::I18n.new(self)")
+    assert_includes(fragment.source, "ClassNames = { foo: \"foo_hash\" }.freeze")
+    assert_includes(fragment.source, "def title")
+    assert_includes(fragment.source, "public def render")
   end
 
   def test_ruby_builder_component_source_returns_component_program_source
@@ -395,32 +371,20 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_equal(builder.component_program(**kwargs).source, builder.component_source(**kwargs))
   end
 
-  def test_ruby_builder_marked_expressions_preserve_wrapped_nodes
+  def test_ruby_builder_marked_expressions_prefix_the_source_mark
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     child = builder.expression('"Hello"')
     marked = builder.marked_expression(builder.source_mark(1, "Hello"), child)
 
-    assert_kind_of(SyntaxTree::Statements, marked.node)
-    assert_equal(child.node, marked.node.body.last)
-    assert_kind_of(SyntaxTree::Comment, marked.node.body.first)
-    assert_includes(marked.source, "# SourceMapMark:1")
-    assert_includes(marked.source, '"Hello"')
+    assert_equal("# SourceMapMark:1\n\"Hello\"", marked.source)
+    assert(marked.statements)
   end
 
-  def test_ruby_builder_builds_empty_expression_lists_from_nil_node
+  def test_ruby_builder_builds_empty_expression_lists_as_nil
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    fragment = builder.expressions([])
 
-    assert_kind_of(SyntaxTree::VarRef, fragment.node)
-    assert_equal("nil", fragment.source)
-  end
-
-  def test_ruby_builder_builds_nil_expression_from_syntax_tree_node
-    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    fragment = builder.nil_expression
-
-    assert_kind_of(SyntaxTree::VarRef, fragment.node)
-    assert_equal("nil", fragment.source)
+    assert_equal("nil", builder.expressions([]).source)
+    assert_equal("nil", builder.nil_expression.source)
   end
 
   def test_ruby_builder_reuses_single_expression_list_fragment
@@ -450,14 +414,14 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_nil(fragment.node)
     assert_includes(fragment.source, "# SourceMapMark:1")
     assert_includes(fragment.source, '"World"')
+    assert_valid_ruby(fragment.source)
   end
 
-  def test_ruby_builder_builds_silent_scripts_from_syntax_tree_nodes
+  def test_ruby_builder_builds_silent_scripts
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.silent_script("@visible = true")
 
-    assert_kind_of(SyntaxTree::Begin, fragment.node)
-    assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
+    assert_equal(<<~RUBY.chomp, fragment.source)
       begin
         @visible = true
         nil
@@ -465,36 +429,59 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     RUBY
   end
 
-  def test_ruby_builder_builds_ruby_filters_from_syntax_tree_nodes
+  def test_ruby_builder_accepts_control_flow_in_silent_scripts
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+
+    assert_includes(builder.silent_script("next if hidden").source, "next if hidden")
+    assert_includes(builder.silent_script("break").source, "break")
+    assert_includes(builder.silent_script("yield").source, "yield")
+  end
+
+  def test_ruby_builder_builds_ruby_filters
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.ruby_filters([
         "#{builder.source_mark(2, "def title")}\ndef title\n  \"Hello\"\nend"
       ])
 
-    assert_kind_of(SyntaxTree::Statements, fragment.node)
-    formatted = formatted_source(builder, fragment)
-    assert_includes(formatted, "# SourceMapMark:2")
-    assert_includes(formatted, "begin\n")
-    assert_includes(formatted, "def title")
+    assert_equal(<<~RUBY.chomp, fragment.source)
+      begin
+        # SourceMapMark:2
+        def title
+          "Hello"
+        end
+      end
+    RUBY
+    assert(fragment.statements)
   end
 
-  def test_ruby_builder_builds_script_blocks_from_syntax_tree_nodes
+  def test_ruby_builder_builds_render_ruby_filters
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    fragment = builder.render_ruby_filter("# SourceMapMark:4\ncurrent = request.path\n\n")
+
+    assert_equal(<<~RUBY.chomp, fragment.source)
+      begin
+        # SourceMapMark:4
+        current = request.path
+        nil
+      end
+    RUBY
+  end
+
+  def test_ruby_builder_builds_script_blocks
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.expression("H[:li, item]")
     fragment = builder.script_block("items.map do |item|", body)
 
-    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
-    assert_equal("items.map { |item| H[:li, item] }", formatted_source(builder, fragment))
+    assert_equal("items.map do |item|\n  H[:li, item]\nend", fragment.source)
   end
 
-  def test_ruby_builder_builds_brace_script_blocks_from_syntax_tree_nodes
+  def test_ruby_builder_builds_brace_script_blocks
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.expression("H[:li, item]")
     fragment = builder.script_block("items.map { |item|", body)
 
-    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
-    assert_equal("items.map { |item| H[:li, item] }", formatted_source(builder, fragment))
+    assert_equal("items.map { |item| H[:li, item] }", fragment.source)
   end
 
   def test_ruby_builder_captures_silent_script_block_children
@@ -502,10 +489,12 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     body = builder.expression("H[:li, item]")
     fragment = builder.silent_script_block("items.each do |item|", body)
 
-    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
-    assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
+    assert_kind_of(Prism::CallNode, fragment.node)
+    assert_equal(<<~RUBY.chomp, fragment.source)
       HamlHelper.capture do
-        items.each { |item| HamlHelper.append_capture(H[:li, item]) }
+        items.each do |item|
+          HamlHelper.append_capture(H[:li, item])
+        end
       end
     RUBY
   end
@@ -515,7 +504,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     body = builder.expression("H[:li, item]")
     fragment = builder.silent_script_block("items.each { |item|", body)
 
-    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
+    assert_kind_of(Prism::CallNode, fragment.node)
     assert_equal(<<~RUBY.chomp, fragment.source)
       HamlHelper.capture do
         items.each { |item| HamlHelper.append_capture(H[:li, item]) }
@@ -523,24 +512,14 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     RUBY
   end
 
-  def test_ruby_builder_builds_script_block_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    node = builder.send(:block_script_node, "items.map do |item|", builder.expression("item").node)
-
-    assert_kind_of(SyntaxTree::MethodAddBlock, node)
-    assert_kind_of(SyntaxTree::BlockNode, node.block)
-    assert_equal("do", node.block.opening.value)
-  end
-
   def test_ruby_builder_preserves_source_map_marks_when_composing_script_blocks
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.marked_expression(builder.source_mark(2, "item"), builder.expression("item"))
     fragment = builder.script_block("items.map do |item|", body)
 
-    assert_kind_of(SyntaxTree::MethodAddBlock, fragment.node)
-    formatted = formatted_source(builder, fragment)
-    assert_includes(formatted, "# SourceMapMark:2")
-    assert_includes(formatted, "items.map do |item|")
+    assert_includes(fragment.source, "# SourceMapMark:2")
+    assert_includes(fragment.source, "items.map do |item|")
+    assert_valid_ruby(fragment.source)
   end
 
   def test_ruby_builder_reports_helpful_script_block_parse_errors
@@ -581,7 +560,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_includes(error.message, "Could not parse Haml silent branches")
   end
 
-  def test_ruby_builder_builds_if_branches_from_syntax_tree_nodes
+  def test_ruby_builder_builds_if_branches
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.branches([
@@ -589,33 +568,16 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         ["else", builder.expression("H[:span]")]
       ])
 
-    assert_kind_of(SyntaxTree::IfNode, fragment.node)
-    formatted = formatted_source(builder, fragment)
-    assert_includes(formatted, "show")
-    assert_includes(formatted, "H[:p]")
-    assert_includes(formatted, "H[:span]")
+    assert_kind_of(Prism::IfNode, fragment.node)
+    assert_kind_of(Prism::ElseNode, fragment.node.subsequent)
+    assert_equal("if show\n  H[:p]\nelse\n  H[:span]\nend", fragment.source)
   end
 
-  def test_ruby_builder_builds_branch_nodes
+  def test_ruby_builder_builds_unless_branches
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    node =
-      builder.send(
-        :branch_node,
-        [
-          ["if show", builder.expression("H[:p]")],
-          ["else", builder.expression("H[:span]")]
-        ]
-      )
+    fragment = builder.branches([["unless hidden", builder.expression("H[:p]")]])
 
-    assert_kind_of(SyntaxTree::IfNode, node)
-    assert_kind_of(SyntaxTree::Else, node.consequent)
-  end
-
-  def test_ruby_builder_builds_unless_branch_nodes
-    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    node = builder.send(:branch_node, [["unless hidden", builder.expression("H[:p]")]])
-
-    assert_kind_of(SyntaxTree::UnlessNode, node)
+    assert_kind_of(Prism::UnlessNode, fragment.node)
   end
 
   def test_ruby_builder_returns_silent_branch_children
@@ -626,10 +588,8 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         ["else", builder.expression("H[:span]")]
       ])
 
-    assert_kind_of(SyntaxTree::IfNode, fragment.node)
-    assert_equal(<<~RUBY.chomp, formatted_source(builder, fragment))
-      show ? H[:p] : H[:span]
-    RUBY
+    assert_kind_of(Prism::IfNode, fragment.node)
+    assert_equal("if show\n  H[:p]\nelse\n  H[:span]\nend", fragment.source)
   end
 
   def test_ruby_builder_preserves_returns_inside_silent_branches
@@ -639,10 +599,9 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         ["if show", builder.silent_script("return")]
       ])
 
-    assert_kind_of(SyntaxTree::IfNode, fragment.node)
-    formatted = formatted_source(builder, fragment)
-    assert_includes(formatted, "return")
-    assert_includes(formatted, "nil")
+    assert_kind_of(Prism::IfNode, fragment.node)
+    assert_includes(fragment.source, "return")
+    assert_includes(fragment.source, "nil")
   end
 
   def test_ruby_builder_returns_children_from_modifier_return
@@ -674,7 +633,7 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_equal("return H[:p]", fragment.source)
   end
 
-  def test_ruby_builder_builds_case_branches_from_syntax_tree_nodes
+  def test_ruby_builder_builds_case_branches
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment =
       builder.branches([
@@ -683,13 +642,8 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         ["else", builder.expression("H[:span]")]
       ])
 
-    assert_kind_of(SyntaxTree::Case, fragment.node)
-    formatted = formatted_source(builder, fragment)
-    assert_includes(formatted, "case value")
-    assert_includes(formatted, "when 1")
-    assert_includes(formatted, "H[:p]")
-    assert_includes(formatted, "else")
-    assert_includes(formatted, "H[:span]")
+    assert_kind_of(Prism::CaseNode, fragment.node)
+    assert_equal("case value\nwhen 1\n  H[:p]\nelse\n  H[:span]\nend", fragment.source)
   end
 
   def test_ruby_builder_preserves_source_map_marks_when_composing_branches
@@ -701,15 +655,16 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
         ["else", builder.expression("H[:span]")]
       ])
 
-    assert_kind_of(SyntaxTree::IfNode, fragment.node)
-    formatted = formatted_source(builder, fragment)
-    assert_includes(formatted, "# SourceMapMark:2")
-    assert_includes(formatted, "if show")
+    assert_kind_of(Prism::IfNode, fragment.node)
+    assert_includes(fragment.source, "# SourceMapMark:2")
+    assert_includes(fragment.source, "if show")
   end
 
   private
 
-  def formatted_source(builder, fragment)
-    builder.fragment(fragment.node).source
+  def assert_valid_ruby(source)
+    result = Prism.parse(source, partial_script: true)
+
+    assert(result.success?, "Expected valid Ruby:\n#{source}\n#{result.errors.map(&:message).join("\n")}")
   end
 end

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
+require "prism"
 require "ripper"
-require "syntax_tree"
 
 require_relative "dependency"
 require_relative "errors"
@@ -21,6 +21,8 @@ module Klenod
           end
         end
       Result = Data.define(:code, :dependencies, :watched_patterns)
+      # Character-based, so it indexes the source String directly.
+      CallLocation = Data.define(:start_line, :start_column, :start_char, :end_char)
 
       IMPORT_METHODS = {
         "import" => {
@@ -66,13 +68,20 @@ module Klenod
         fast_result = rewrite_literal_import_calls(code)
         return fast_result if fast_result
 
-        ast =
-          begin
-            measure(:ruby_import_parse) { SyntaxTree.parse(code) }
-          rescue SyntaxTree::Parser::ParseError => error
-            raise ParseError.new(error.message, line: error.lineno + @source_line_offset, column: error.column + 1 + @source_column_offset)
-          end
-        calls = measure(:ruby_import_scan) { import_calls(ast) }
+        # Haml `:ruby` filters are fragments, so accept top-level `yield`,
+        # `next`, and `break` like the rest of the Haml transform.
+        result = measure(:ruby_import_parse) { Prism.parse(code, partial_script: true) }
+        unless result.success?
+          # Prism first reports an unclosed `{` or `(` at the line that opens
+          # it. The unexpected token that broke it is the line to show.
+          error = result.errors.reject { it.type.end_with?("_term") }.min_by { it.location.start_offset } || result.errors.first
+          raise ParseError.new(
+            error.message,
+            line: error.location.start_line + @source_line_offset,
+            column: error.location.start_character_column + 1 + @source_column_offset
+          )
+        end
+        calls = measure(:ruby_import_scan) { import_calls(result.value) }
         expanded = expand_import_calls(calls)
 
         rewritten = measure(:ruby_import_rewrite_source) { rewrite_import_calls(code, expanded) }
@@ -180,121 +189,127 @@ module Klenod
       end
 
       def import_calls(node)
-        calls = []
-        walk(node) do |child|
-          if child.instance_of?(::SyntaxTree::CallNode)
-            next unless child.instance_variable_get(:@receiver).nil?
-            next unless IMPORT_METHODS.key?(child.instance_variable_get(:@message)&.value)
-
-            calls << build_import_call(child)
-          elsif child.instance_of?(::SyntaxTree::Command)
-            next unless IMPORT_METHODS.key?(child.instance_variable_get(:@message)&.value)
-
-            calls << build_import_command(child)
-          end
-        end
-        calls
+        visitor = ImportCallVisitor.new
+        node.accept(visitor)
+        visitor.calls.map { |call| build_import_call(call) }
       end
+
+      class ImportCallVisitor < Prism::Visitor
+        attr_reader :calls
+
+        def initialize
+          @calls = []
+          super
+        end
+
+        def visit_call_node(node)
+          @calls << node if import_call?(node)
+          super
+        end
+
+        private
+
+        # A bare `import` without arguments or parentheses is an ordinary
+        # method call or local variable, not an import.
+        def import_call?(node)
+          node.receiver.nil? &&
+            IMPORT_METHODS.key?(node.name.to_s) &&
+            !(node.arguments.nil? && node.opening_loc.nil?)
+        end
+      end
+      private_constant :ImportCallVisitor
 
       def build_import_call(node)
-        arguments = node.instance_variable_get(:@arguments)
-        parts = arguments&.instance_variable_get(:@arguments)&.instance_variable_get(:@parts) || []
-        build_import_from_parts(node, parts)
-      end
+        arguments = node.arguments&.arguments || []
+        return build_import_glob(node, arguments) if node.name == :import_glob
 
-      def build_import_command(node)
-        arguments = node.instance_variable_get(:@arguments)
-        parts = arguments&.instance_variable_get(:@parts) || []
-        build_import_from_parts(node, parts)
-      end
-
-      def build_import_from_parts(node, parts)
-        return build_import_glob_from_parts(node, parts) if node.instance_variable_get(:@message).value == "import_glob"
-
-        first = unwrap_paren(parts.first)
-        string_parts = first&.instance_variable_get(:@parts)
-        literal_specifier =
-          first&.class&.name == "SyntaxTree::StringLiteral" &&
-          string_parts&.length == 1 &&
-          string_parts.first.instance_of?(::SyntaxTree::TStringContent)
-        import_name = (parts.length == 2) ? constant_symbol_value(parts.fetch(1)) : nil
-        literal = literal_specifier && (parts.length == 1 || !import_name.nil?)
+        specifier = string_literal_value(arguments.first)
+        import_name = (arguments.length == 2) ? constant_symbol_value(arguments.fetch(1)) : nil
+        literal = !specifier.nil? && (arguments.length == 1 || !import_name.nil?)
 
         ImportCall.new(
-          literal ? string_parts.first.value : nil,
-          node.instance_variable_get(:@location),
+          literal ? specifier : nil,
+          call_location(node),
           !literal,
-          node.instance_variable_get(:@message).value,
+          node.name.to_s,
           nil,
           literal ? import_name : nil
         )
+      end
+
+      # A Prism call's location includes an attached block, so the rewritten
+      # range ends at the closing parenthesis or the last argument.
+      def call_location(node)
+        last = node.closing_loc || node.arguments&.location || node.message_loc
+
+        CallLocation.new(
+          node.location.start_line,
+          node.location.start_character_column,
+          node.location.start_character_offset,
+          last.end_character_offset
+        )
+      end
+
+      # A plain string literal without interpolation, such as `"./Card.haml"`.
+      def string_literal_value(node)
+        node = unwrap_parentheses(node)
+        return unless node.is_a?(Prism::StringNode) && !node.heredoc? && !node.unescaped.empty?
+
+        node.unescaped
       end
 
       # The optional second argument of `import`: a symbol literal spelled like
       # a constant, such as `:Bar`. Anything else (`:bar`, `:"Bar"`, a string,
       # a variable) is reported as a dynamic import.
       def constant_symbol_value(node)
-        return unless node.instance_of?(::SyntaxTree::SymbolLiteral)
+        return unless node.is_a?(Prism::SymbolNode) && node.opening_loc&.slice == ":"
 
-        value = node.instance_variable_get(:@value)
-        value.instance_of?(::SyntaxTree::Const) ? value.value.to_sym : nil
+        value = node.unescaped
+        value.match?(/\A[A-Z]\w*\z/) ? value.to_sym : nil
       end
 
-      def build_import_glob_from_parts(node, parts)
-        first = unwrap_paren(parts.first)
-        string_parts = first&.instance_variable_get(:@parts)
-        literal =
-          first&.class&.name == "SyntaxTree::StringLiteral" &&
-          string_parts&.length == 1 &&
-          string_parts.first.instance_of?(::SyntaxTree::TStringContent)
+      def build_import_glob(node, arguments)
+        specifier = string_literal_value(arguments.first)
+        literal = !specifier.nil?
 
         eager = true
         valid_options = true
-        if parts.length == 2
-          eager = eager_option_value(parts.fetch(1))
+        if arguments.length == 2
+          eager = eager_option_value(arguments.fetch(1))
           valid_options = !eager.nil?
-        elsif parts.length != 1
+        elsif arguments.length != 1
           valid_options = false
         end
 
         ImportCall.new(
-          (literal && valid_options) ? string_parts.first.value : nil,
-          node.instance_variable_get(:@location),
+          (literal && valid_options) ? specifier : nil,
+          call_location(node),
           !literal || !valid_options,
-          node.instance_variable_get(:@message).value,
+          node.name.to_s,
           eager,
           nil
         )
       end
 
       def eager_option_value(node)
-        return unless node.instance_of?(::SyntaxTree::BareAssocHash)
+        return unless node.is_a?(Prism::KeywordHashNode) && node.elements.length == 1
 
-        assocs = node.instance_variable_get(:@assocs)
-        return unless assocs.length == 1
+        assoc = node.elements.fetch(0)
+        return unless assoc.is_a?(Prism::AssocNode)
 
-        assoc = assocs.fetch(0)
-        key = assoc.instance_variable_get(:@key)
-        return unless key.instance_of?(::SyntaxTree::Label) && key.value == "eager:"
+        key = assoc.key
+        return unless key.is_a?(Prism::SymbolNode) && key.opening_loc.nil? && key.unescaped == "eager"
 
-        bool_value(assoc.instance_variable_get(:@value))
+        case assoc.value
+        when Prism::TrueNode then true
+        when Prism::FalseNode then false
+        end
       end
 
-      def bool_value(node)
-        return unless node.instance_of?(::SyntaxTree::VarRef)
+      def unwrap_parentheses(node)
+        return node unless node.is_a?(Prism::ParenthesesNode)
 
-        value = node.instance_variable_get(:@value)
-        return true if value.respond_to?(:value) && value.value == "true"
-        return false if value.respond_to?(:value) && value.value == "false"
-
-        nil
-      end
-
-      def unwrap_paren(node)
-        return node unless node.instance_of?(::SyntaxTree::Paren)
-
-        statements = node.instance_variable_get(:@contents)
-        body = statements&.instance_variable_get(:@body) || []
+        body = node.body.is_a?(Prism::StatementsNode) ? node.body.body : []
         (body.length == 1) ? body.first : node
       end
 
@@ -454,21 +469,6 @@ module Klenod
 
             rewritten[location.start_char...location.end_char] = import.replacement_source
           end
-      end
-
-      def walk(value, &block)
-        yield value
-
-        case value
-        when Array
-          value.each { |item| walk(item, &block) }
-        else
-          return unless value.respond_to?(:instance_variables)
-
-          value.instance_variables.each do |ivar|
-            walk(value.instance_variable_get(ivar), &block)
-          end
-        end
       end
     end
   end
