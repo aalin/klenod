@@ -41,7 +41,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "async-http", ">= 0.95.1", "< 0.106.0"
   spec.add_dependency "base64", "~> 0.3"
   spec.add_dependency "brotli", "~> 0.8"
-  spec.add_dependency "haml", "~> 7.5"
+  spec.add_dependency "haml", "~> 7.2"
   spec.add_dependency "image_size", "~> 3.6"
   spec.add_dependency "kramdown", "~> 2.5"
   spec.add_dependency "kramdown-parser-gfm", "~> 1.1"

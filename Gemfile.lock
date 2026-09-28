@@ -6,7 +6,7 @@ PATH
       async-http (>= 0.95.1, < 0.106.0)
       base64 (~> 0.3)
       brotli (~> 0.8)
-      haml (~> 7.5)
+      haml (~> 7.2)
       image_size (~> 3.6)
       klenod-runtime (= 0.0.26)
       kramdown (~> 2.5)
