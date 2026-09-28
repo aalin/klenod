@@ -313,7 +313,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       plugin: plugin
     ) do |_dir, _context, record, exports|
       assert_equal([:h1, "Hello"], exports::Default.new(title: "Hello").render)
-      assert_includes(record.transformed_source, "@__props.fetch(:title)")
+      assert_includes(record.transformed_source, "(@__props).fetch(:title)")
     end
   end
 
@@ -330,7 +330,7 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
       plugin: plugin
     ) do |_dir, _context, record, exports|
       assert_equal([nil, [:p, "Hello 2"]], exports::Default.new(title: "Hello", count: 2).render)
-      assert_includes(record.transformed_source, "@__props => title:, count:")
+      assert_includes(record.transformed_source, "(@__props) => title:, count:")
     end
   end
 

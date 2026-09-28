@@ -21,6 +21,22 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_equal("\"\#{(@__props)[:title]} \#@@request \#@count\"", source)
   end
 
+  def test_ruby_builder_parenthesizes_the_global_splat_receiver
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new(variables: {global: "@__props || {}"})
+    source = builder.line_rewritten_source("$*.fetch(:title)", nil)
+
+    assert_equal("(@__props || {}).fetch(:title)", source)
+
+    @__props = {title: "Hello"}
+    assert_equal("Hello", eval(source)) # standard:disable Security/Eval
+  end
+
+  def test_ruby_builder_rewrites_an_interpolated_global_splat
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new(variables: {global: "@__props"})
+
+    assert_equal("\"\#{(@__props)}\"", builder.line_rewritten_source("\"\#$*\"", nil))
+  end
+
   def test_ruby_builder_rewrites_variables_after_multibyte_characters
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new(variables: {instance: "@__state"})
 

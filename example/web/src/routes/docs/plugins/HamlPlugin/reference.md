@@ -166,7 +166,7 @@ Ruby expressions use normal Ruby interpolation. With a configured global receive
 
 ### Variable Mappings
 
-Variable mappings turn Haml's convenient variable forms into indexed receiver access. With the example configuration, `$title` is `(@__props)[:title]` and `@@request` is `(Example::Framework::Context.current)[:request]`. `$*` is the complete global receiver, which makes prop forwarding concise:
+Variable mappings turn Haml's convenient variable forms into indexed receiver access. With the example configuration, `$title` is `(@__props)[:title]` and `@@request` is `(Example::Framework::Context.current)[:request]`. `$*` is the complete global receiver, `(@__props)`, which makes prop forwarding concise:
 
 ```haml
 %Card{ **$* }

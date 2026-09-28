@@ -493,14 +493,20 @@ module Klenod
                 .filter_map do |((line, column), type, token, _state), index|
                   kind, prefix, pattern = VARIABLE_TOKEN_KINDS[type]
                   receiver = @variables[kind]
-                  if type == :on_gvar && token == "$*" && receiver
-                    [offset_for(line_offsets, line, column), token.bytesize, receiver]
-                  elsif receiver && token.match?(pattern)
-                    name = token.delete_prefix(prefix)
-                    replacement = "(#{receiver})[#{symbol_source(name)}]"
-                    replacement = "{#{replacement}}" if tokens[index - 1]&.fetch(1) == :on_embvar
-                    [offset_for(line_offsets, line, column), token.bytesize, replacement]
-                  end
+                  next unless receiver
+
+                  # Parenthesize the receiver so a low-precedence expression
+                  # such as `a || b` stays one operand, e.g. in `$*.fetch(:x)`.
+                  replacement =
+                    if type == :on_gvar && token == "$*"
+                      "(#{receiver})"
+                    elsif token.match?(pattern)
+                      "(#{receiver})[#{symbol_source(token.delete_prefix(prefix))}]"
+                    end
+                  next unless replacement
+
+                  replacement = "{#{replacement}}" if tokens[index - 1]&.fetch(1) == :on_embvar
+                  [offset_for(line_offsets, line, column), token.bytesize, replacement]
                 end
                 .reverse_each
                 .each_with_object(source.dup) do |(offset, length, replacement), rewritten|
