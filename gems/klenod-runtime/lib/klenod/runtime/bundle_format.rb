@@ -21,16 +21,16 @@ module Klenod
         MAGIC + JSON.generate(payload_for(bundle))
       end
 
-      def load(source, source_root: nil)
-        load_bytes(read_source(source), source_root: source_root)
+      def load(source, source_root: nil, namespace: Module.new)
+        load_bytes(read_source(source), source_root: source_root, namespace: namespace)
       end
 
-      def load_bytes(bytes, source_root: nil)
+      def load_bytes(bytes, source_root: nil, namespace: Module.new)
         raise BundleFormatError, "Invalid Klenod bundle header" unless bytes.start_with?(MAGIC)
 
         body = bytes.byteslice(MAGIC.bytesize, bytes.bytesize - MAGIC.bytesize)
         payload = JSON.parse(body)
-        bundle_from_payload(payload, source_root: source_root)
+        bundle_from_payload(payload, source_root: source_root, namespace: namespace)
       rescue JSON::ParserError => error
         raise BundleFormatError, "Invalid Klenod bundle JSON: #{error.message}"
       end
@@ -47,7 +47,7 @@ module Klenod
         }
       end
 
-      def bundle_from_payload(payload, source_root: nil)
+      def bundle_from_payload(payload, source_root: nil, namespace: Module.new)
         validate_payload!(payload)
 
         bundle =
@@ -56,7 +56,8 @@ module Klenod
             decode_modules(payload.fetch("modules")),
             decode_assets(payload.fetch("assets")),
             source_root: decode_value(payload["source_root"]),
-            base: payload.key?("base") ? payload.fetch("base") : AssetUrl::DEFAULT_BASE
+            base: payload.key?("base") ? payload.fetch("base") : AssetUrl::DEFAULT_BASE,
+            namespace: namespace
           )
         bundle.source_root = source_root if source_root
         bundle

@@ -12,18 +12,18 @@ module Klenod
   module Runtime
     EXECUTABLE_BUNDLE_MARKER = "\n__END__\n".b.freeze
 
-    def self.load_bundle(source, source_root: nil)
-      Bundle.load(source, source_root: source_root)
+    def self.load_bundle(source, source_root: nil, namespace: Module.new)
+      Bundle.load(source, source_root: source_root, namespace: namespace)
     end
 
-    def self.load_bundle_in_box(source, source_root: nil, box: nil)
+    def self.load_bundle_in_box(source, source_root: nil, box: nil, namespace: Module.new)
       unless defined?(Ruby::Box) && Ruby::Box.enabled?
         raise "Ruby::Box is disabled. Set RUBY_BOX=1 environment variable to use Ruby::Box."
       end
 
       bytes = source.respond_to?(:read) ? source.read : File.binread(source)
       box = prepare_box(box)
-      box::Klenod::Runtime::BundleFormat.load_bytes(bytes, source_root: source_root)
+      box::Klenod::Runtime::BundleFormat.load_bytes(bytes, source_root: source_root, namespace: namespace)
     end
 
     def self.prepare_box(box = nil)
@@ -41,13 +41,13 @@ module Klenod
         box::Klenod.const_defined?(:Runtime, false)
     end
 
-    def self.load_executable_bundle(path, source_root: nil)
+    def self.load_executable_bundle(path, source_root: nil, namespace: Module.new)
       bytes = File.binread(path)
       marker_index = bytes.index(EXECUTABLE_BUNDLE_MARKER)
       raise ArgumentError, "Missing __END__ marker in executable bundle: #{path}" unless marker_index
 
       payload = bytes.byteslice(marker_index + EXECUTABLE_BUNDLE_MARKER.bytesize, bytes.bytesize)
-      BundleFormat.load_bytes(payload, source_root: source_root)
+      BundleFormat.load_bytes(payload, source_root: source_root, namespace: namespace)
     end
   end
 end

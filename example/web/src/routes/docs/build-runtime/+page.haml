@@ -54,6 +54,17 @@
 
       Each loaded bundle owns its own runtime namespace. Multiple bundles can therefore run in one Ruby process even when they use the same module IDs. The namespace only isolates Klenod's generated modules; use Ruby::Box when bundles also need isolation from process-wide Ruby state.
 
+      The default namespace is an anonymous module, so classes defined by bundled modules have names that Ruby cannot resolve, and Marshal cannot dump their instances. Pass a named module to give them resolvable names:
+
+      ```ruby
+      module MyApp::Modules
+      end
+
+      bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle", namespace: MyApp::Modules)
+      ```
+
+      Generated constant names derive from module IDs, so they stay the same across builds. Bundles loaded into the same named namespace replace each other's generated modules when their module IDs overlap. Marshaling a bundle keeps a named namespace by reference; an anonymous namespace becomes a new anonymous module. `bundle.namespace = ...` changes the namespace after loading and discards already evaluated modules.
+
       Production deployments that only load prebuilt bundles should depend on `klenod-runtime`.
 
   %DocsSection{ title: "Rack Helpers" }

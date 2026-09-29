@@ -28,12 +28,12 @@ module Klenod
     class Bundle
       attr_reader :entrypoints, :modules, :assets, :source_root, :base, :asset_origin, :namespace
 
-      def self.load(source, source_root: nil)
-        BundleFormat.load(source, source_root: source_root)
+      def self.load(source, source_root: nil, namespace: Module.new)
+        BundleFormat.load(source, source_root: source_root, namespace: namespace)
       end
 
-      def self.load_file(path, source_root: nil)
-        load(path, source_root: source_root)
+      def self.load_file(path, source_root: nil, namespace: Module.new)
+        load(path, source_root: source_root, namespace: namespace)
       end
 
       def initialize(entrypoints, modules, assets, source_root: nil, base: AssetUrl::DEFAULT_BASE, namespace: Module.new)
@@ -147,16 +147,24 @@ module Klenod
         @mods = {}
       end
 
+      def namespace=(namespace)
+        @namespace = namespace
+        @mods = {}
+      end
+
+      # A named namespace is dumped by reference, so the loading process must
+      # define the same constant. Anonymous namespaces cannot be dumped and are
+      # replaced with a fresh anonymous module.
       def marshal_dump
-        [@entrypoints, @modules, @assets, @source_root, @base]
+        [@entrypoints, @modules, @assets, @source_root, @base, (@namespace if @namespace.name)]
       end
 
       def marshal_load(data)
-        @entrypoints, @modules, assets, @source_root, base = data
+        @entrypoints, @modules, assets, @source_root, base, namespace = data
         @base = AssetUrl.normalize(base)
         @asset_origin = AssetUrl.origin(@base)
         @assets = bind_asset_urls(assets)
-        @namespace = Module.new
+        @namespace = namespace || Module.new
         @mods = {}
       end
 

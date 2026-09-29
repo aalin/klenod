@@ -186,6 +186,53 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_same(second.load("entry"), second.namespace.const_get(second.load("entry").constant_name))
   end
 
+  module NamedNamespace
+  end
+
+  def test_runtime_load_bundle_evaluates_modules_in_given_namespace
+    loaded = Klenod::Runtime.load_bundle(StringIO.new(board_bundle_payload), namespace: NamedNamespace)
+    board_class = loaded.exports("entry")::Board
+
+    assert_same(NamedNamespace, loaded.namespace)
+    assert_same(board_class, Object.const_get(board_class.name))
+
+    copy = Marshal.load(Marshal.dump(board_class.new("Todo")))
+
+    assert_instance_of(board_class, copy)
+    assert_equal("Todo", copy.title)
+  end
+
+  def test_runtime_load_bundle_uses_anonymous_namespace_by_default
+    loaded = Klenod::Runtime.load_bundle(StringIO.new(board_bundle_payload))
+    board_class = loaded.exports("entry")::Board
+
+    assert_nil(loaded.namespace.name)
+    assert_raises(TypeError) { Marshal.dump(board_class.new("Todo")) }
+  end
+
+  def test_bundle_namespace_can_change_after_loading
+    loaded = Klenod::Runtime.load_bundle(StringIO.new(board_bundle_payload))
+    anonymous_mod = loaded.load("entry")
+
+    loaded.namespace = NamedNamespace
+    named_mod = loaded.load("entry")
+
+    refute_same(anonymous_mod, named_mod)
+    assert_same(named_mod, NamedNamespace.const_get(named_mod.constant_name))
+  end
+
+  def test_bundle_marshal_keeps_named_namespace
+    named = Klenod::Runtime.load_bundle(StringIO.new(board_bundle_payload), namespace: NamedNamespace)
+    anonymous = Klenod::Runtime.load_bundle(StringIO.new(board_bundle_payload))
+
+    assert_same(NamedNamespace, Marshal.load(Marshal.dump(named)).namespace)
+
+    anonymous_copy = Marshal.load(Marshal.dump(anonymous))
+
+    assert_nil(anonymous_copy.namespace.name)
+    refute_same(anonymous.namespace, anonymous_copy.namespace)
+  end
+
   def test_bundle_load_defers_lazy_imported_modules
     bundle =
       Klenod::Runtime::Bundle.new(
@@ -693,5 +740,38 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
       [google_css_asset, root_css_asset],
       bundle.assets_for_module("root", type: :css)
     )
+  end
+
+  private
+
+  def board_bundle_payload
+    source = <<~RUBY
+      class Board
+        attr_reader :title
+
+        def initialize(title)
+          @title = title
+        end
+      end
+    RUBY
+    bundle =
+      Klenod::Runtime::Bundle.new(
+        {"entry" => "entry.rb"},
+        {
+          "entry.rb" =>
+            Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              source,
+              {},
+              nil,
+              0,
+              Klenod::Runtime::Mod.constant_name_for("entry.rb")
+            )
+        },
+        {}
+      )
+
+    Klenod::Runtime::BundleFormat.dump(bundle)
   end
 end

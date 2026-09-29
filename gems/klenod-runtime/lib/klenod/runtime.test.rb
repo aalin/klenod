@@ -178,6 +178,58 @@ class Klenod::RuntimeBoundaryTest
     assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
   end
 
+  def test_load_bundle_in_box_evaluates_modules_in_given_namespace
+    script = <<~RUBY
+      require "stringio"
+      require "klenod/runtime"
+
+      module AppNamespace
+      end
+
+      constant_name = Klenod::Runtime::Mod.constant_name_for("entry.rb")
+      bundle =
+        Klenod::Runtime::Bundle.new(
+          { "entry" => "entry.rb" },
+          {
+            "entry.rb" => Klenod::Runtime::ModuleSpec.new(
+              "entry.rb",
+              "entry.rb",
+              "class Board\\nend\\nBOX_ID = Ruby::Box.current.object_id",
+              {},
+              nil,
+              0,
+              constant_name
+            )
+          },
+          {}
+        )
+
+      payload = Klenod::Runtime::BundleFormat.dump(bundle)
+      loaded = Klenod::Runtime.load_bundle_in_box(StringIO.new(payload), namespace: AppNamespace)
+      exports = loaded.exports("entry")
+
+      abort "module evaluated in main box" if exports::BOX_ID == Ruby::Box.current.object_id
+      abort "bad namespace" unless loaded.namespace.equal?(AppNamespace)
+      abort "unresolvable class name" unless Object.const_get(exports::Board.name).equal?(exports::Board)
+    RUBY
+
+    stdout, stderr, status =
+      Open3.capture3(
+        {
+          "RUBY_BOX" => "1",
+          "HOME" => ENV.fetch("HOME", nil),
+          "PATH" => ENV.fetch("PATH", nil)
+        },
+        RbConfig.ruby,
+        "-I#{File.expand_path("..", __dir__)}",
+        "-e",
+        script,
+        unsetenv_others: true
+      )
+
+    assert(status.success?, "stdout:\n#{stdout}\nstderr:\n#{stderr}")
+  end
+
   def test_prepare_box_loads_runtime_once
     script = <<~RUBY
       require "klenod/runtime"

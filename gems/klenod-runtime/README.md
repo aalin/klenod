@@ -21,6 +21,12 @@ bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle")
 exports = bundle.exports("pages/server")
 ```
 
+Pass `namespace:` a named module when instances of bundled classes must be marshaled. The default anonymous namespace gives those classes names that Ruby cannot resolve:
+
+```ruby
+bundle = Klenod::Runtime.load_bundle("dist/klenod.bundle", namespace: MyApp::Modules)
+```
+
 Production servers can explicitly preload bundled modules:
 
 ```ruby
