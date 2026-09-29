@@ -91,7 +91,8 @@ module Klenod
               "imports" => encode_imports(spec.imports),
               "source_map" => encode_source_map(spec.source_map),
               "version" => spec.version,
-              "constant_name" => spec.constant_name
+              "constant_name" => spec.constant_name,
+              "transformed_hash" => spec.transformed_hash
             }
           ]
         end
@@ -109,7 +110,8 @@ module Klenod
               decode_imports(spec_payload.fetch("imports")),
               decode_source_map(spec_payload["source_map"], spec_payload.fetch("source")),
               spec_payload.fetch("version"),
-              spec_payload.fetch("constant_name")
+              spec_payload.fetch("constant_name"),
+              spec_payload["transformed_hash"]
             )
           ]
         end

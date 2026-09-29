@@ -934,7 +934,8 @@ module Klenod
               imports,
               record.source_map,
               record.version,
-              Runtime::Mod.constant_name_for(module_id.to_s)
+              Runtime::Mod.constant_name_for(module_id.to_s),
+              record.transformed_hash
             )
           ]
         end

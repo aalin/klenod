@@ -961,6 +961,21 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_build_bundle_includes_transformed_hash_in_module_specs
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/entry.rb", "VALUE = 42\n")
+      output = "#{dir}/bundle.mpk"
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.build(entrypoints: ["entry"], output: output)
+      record = context.graph.records.values.find { it.id.to_s == "app:/entry.rb" }
+      spec = Klenod::Runtime.load_bundle(output).modules.fetch("app:/entry.rb")
+
+      assert_equal(record.transformed_hash, spec.transformed_hash)
+      assert_equal(Digest::SHA256.hexdigest(spec.source), spec.transformed_hash)
+    end
+  end
+
   def test_build_bundle_includes_lazy_imported_modules
     Dir.mktmpdir do |dir|
       File.write("#{dir}/dep.rb", "VALUE = 41\n")

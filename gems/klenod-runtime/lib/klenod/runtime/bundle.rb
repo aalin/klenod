@@ -1,11 +1,20 @@
 # frozen_string_literal: true
 
+require "digest"
+
 require_relative "asset_url"
 
 module Klenod
   module Runtime
+    # `transformed_hash` is the SHA256 hex digest of `source`, the transformed
+    # module source. It is computed when omitted, e.g. for older bundles.
     ModuleSpec =
-      Data.define(:id, :source_path, :source, :imports, :source_map, :version, :constant_name)
+      Data.define(:id, :source_path, :source, :imports, :source_map, :version, :constant_name, :transformed_hash) do
+        def initialize(transformed_hash: nil, **fields)
+          transformed_hash ||= Digest::SHA256.hexdigest(fields.fetch(:source))
+          super
+        end
+      end
 
     ImportSpec = Data.define(:target_id, :value, :eager)
     DefaultImport = Data.define(:name)

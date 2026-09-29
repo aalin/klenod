@@ -415,6 +415,34 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert(payload.start_with?(Klenod::Runtime::BundleFormat::MAGIC))
   end
 
+  def test_module_spec_computes_transformed_hash_when_omitted
+    spec = Klenod::Runtime::ModuleSpec.new("entry.rb", "entry.rb", "VALUE = 1\n", {}, nil, 0, "Mod_entry")
+
+    assert_equal(Digest::SHA256.hexdigest("VALUE = 1\n"), spec.transformed_hash)
+    assert_equal("given", spec.with(transformed_hash: "given").transformed_hash)
+  end
+
+  def test_runtime_bundle_format_round_trips_transformed_hash
+    payload = board_bundle_payload
+    parsed = JSON.parse(payload.delete_prefix(Klenod::Runtime::BundleFormat::MAGIC))
+    spec_payload = parsed.fetch("modules").fetch("entry.rb")
+    loaded = Klenod::Runtime.load_bundle(StringIO.new(payload))
+
+    assert_equal(Digest::SHA256.hexdigest(spec_payload.fetch("source")), spec_payload.fetch("transformed_hash"))
+    assert_equal(spec_payload.fetch("transformed_hash"), loaded.modules.fetch("entry.rb").transformed_hash)
+  end
+
+  def test_runtime_bundle_format_computes_transformed_hash_for_older_bundles
+    parsed = JSON.parse(board_bundle_payload.delete_prefix(Klenod::Runtime::BundleFormat::MAGIC))
+    spec_payload = parsed.fetch("modules").fetch("entry.rb")
+    spec_payload.delete("transformed_hash")
+    payload = Klenod::Runtime::BundleFormat::MAGIC + JSON.generate(parsed)
+
+    loaded = Klenod::Runtime.load_bundle(StringIO.new(payload))
+
+    assert_equal(Digest::SHA256.hexdigest(spec_payload.fetch("source")), loaded.modules.fetch("entry.rb").transformed_hash)
+  end
+
   def test_runtime_bundle_format_does_not_duplicate_transformed_source_in_source_maps
     source = "# SourceMapMark:1\nVALUE = 1\n"
     source_map = Klenod::Runtime::SourceMap::SourceMap.parse("VALUE = 1\n", source)
