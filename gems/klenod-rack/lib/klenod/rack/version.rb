@@ -2,6 +2,6 @@
 
 module Klenod
   module Rack
-    VERSION = "0.0.27"
+    VERSION = "0.0.28"
   end
 end
