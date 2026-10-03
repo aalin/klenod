@@ -1973,6 +1973,28 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_invalidate_paths_recovers_collected_module_without_evaluating_it
+    Dir.mktmpdir do |dir|
+      entry_path = "#{dir}/entry.rb"
+      File.write(entry_path, "raise \"evaluated\"\n")
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      context.collect("entry.rb")
+
+      File.write(entry_path, "raise \"evaluated\"\ndef broken(\n")
+      failed_result = context.invalidate_paths([entry_path])
+
+      assert_equal(["app:/entry.rb"], failed_result.errors.map { |module_id, _error| module_id.to_s })
+
+      File.write(entry_path, "raise \"evaluated again\"\n")
+      recovered_result = context.invalidate_paths([entry_path])
+
+      assert_empty(recovered_result.errors)
+      assert_equal(["app:/entry.rb"], recovered_result.reloaded_module_ids.map(&:to_s))
+      assert_empty(context.graph.mods)
+    end
+  end
+
   def test_invalidate_paths_retries_failed_importer_when_missing_dependency_is_created
     Dir.mktmpdir do |dir|
       entry_path = "#{dir}/entry.rb"

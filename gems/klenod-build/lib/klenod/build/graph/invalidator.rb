@@ -223,7 +223,11 @@ module Klenod
               :failed
             )
           )
-          mods[module_id] = FailedModule.new(error)
+          # Only an evaluated module needs the placeholder, so demand raises the
+          # error instead of serving stale exports. The failed record already
+          # covers a collected-only module, and a placeholder would make the
+          # next update treat it as evaluated and run its code.
+          mods[module_id] = FailedModule.new(error) if mods.key?(module_id)
         end
 
         def diff_assets(previous_assets, current_assets)
