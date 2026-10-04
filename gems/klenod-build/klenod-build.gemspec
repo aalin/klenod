@@ -50,6 +50,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency "protocol-url", "~> 0.4"
   spec.add_dependency "rmagick", "~> 7.0"
   spec.add_dependency "samovar", "~> 2.5"
-  spec.add_dependency "toml-rb", "~> 4.2"
+  spec.add_dependency "toml-rb", "~> 6.0"
   spec.add_dependency "tsort", "~> 0.2.0"
 end

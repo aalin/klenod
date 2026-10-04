@@ -155,8 +155,8 @@ module Klenod
         end
 
         class ParseError < Klenod::Build::SourceError
-          # "Failed to parse input on line 2 at offset 9\ninvalid =\n\n         ^"
-          LOCATION = /\AFailed to parse input on line (?<line>\d+) at offset (?<column>\d+)/
+          # "Unexpected \"\\n\" at line 2, column 10: expected a value"
+          LOCATION = / at line (?<line>\d+), column (?<column>\d+)/
 
           def kind
             "TOML parse error"
@@ -165,16 +165,16 @@ module Klenod
           private
 
           def location(error)
+            # Invalid values such as "Invalid date: 1979-13-01" carry no location.
             found = LOCATION.match(error.message)
             return nil unless found
 
-            # toml-rb embeds its own caret diagram in the message; we render our
-            # own from the line and column instead.
+            # One-based. The location is rendered as the title and the caret, so
+            # drop the copy the parser puts in its message.
             Location.new(
               line: found[:line].to_i,
-              # citrus reports a zero-based offset into the line.
-              column: found[:column].to_i + 1,
-              detail: "Could not parse TOML"
+              column: found[:column].to_i,
+              detail: error.message.sub(LOCATION, "")
             )
           end
         end

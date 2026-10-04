@@ -101,10 +101,10 @@ class Klenod::Build::Plugins::DataPlugin::Test < Minitest::Test
 
     assert_equal("TOML parse error", error.kind)
     assert_equal(2, error.line)
-    # citrus reports a zero-based offset into the line.
     assert_equal(10, error.column)
-    # toml-rb embeds its own caret diagram, which we replace with our excerpt.
-    refute_includes(error.message, "Failed to parse input on line")
+    # The parser repeats the location in its message; the title and caret carry it.
+    assert_equal("Unexpected \"\\n\": expected a value", error.detail)
+    assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "╭─[app:/site.toml:2:10]")
   end
 
   def test_parse_errors_are_collected_during_invalidation_instead_of_raising
