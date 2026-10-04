@@ -24,6 +24,8 @@
 
       `source_dir` is where imports are resolved from. `entrypoint` names modules to collect into the bundle. `output` is the runtime bundle path. `assets_dir` is where emitted browser assets are written during builds.
 
+      `mode` is `:development`, the default, or `:build`. Any other value raises an error. `klenod build` always uses `:build`, in which plugins such as the CSS and JavaScript plugins minify their output. A script that calls `Klenod::Build::Context#build` itself should pass `mode: :build`.
+
   %DocsSection{ title: "Plugin Order" }
     :markdown
       Plugins run in order for resolving, loading, transforming, and import value hooks. Put special-purpose plugins before broad ones when they need first chance at a specifier.

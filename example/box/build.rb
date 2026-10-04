@@ -14,7 +14,7 @@ def build_bundle(name)
     Klenod::Build::Context.new(
       source_dir: source_dir,
       plugins: [Klenod::Build::Plugins::RubyPlugin.new],
-      mode: :production
+      mode: :build
     )
 
   context.build(entrypoints: ["main"], output: output)

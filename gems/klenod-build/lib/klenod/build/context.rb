@@ -88,6 +88,10 @@ module Klenod
 
       DEFAULT_PLUGINS = DefaultPlugins.new.freeze
 
+      # `:development` collects, evaluates, and reloads on demand. `:build`
+      # only collects, for writing a bundle; `klenod build` always uses it.
+      MODES = %i[development build].freeze
+
       def self.default_plugins
         [
           Plugins::RubyPlugin.new,
@@ -116,6 +120,12 @@ module Klenod
         namespace: Module.new,
         analysis: false
       )
+        # Plugins compare the mode with `==`, so an unknown one would quietly
+        # behave like neither, e.g. CSS that is not minified.
+        unless MODES.include?(mode)
+          raise ArgumentError, "Unknown mode #{mode.inspect}; expected one of #{MODES.map(&:inspect).join(", ")}"
+        end
+
         @source_dir = source_dir
         plugins = plugins.to_a if plugins.equal?(DEFAULT_PLUGINS)
         @plugins = plugins

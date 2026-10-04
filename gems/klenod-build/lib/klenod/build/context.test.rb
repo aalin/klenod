@@ -1764,6 +1764,12 @@ class Klenod::Build::Context::Test < Minitest::Test
     end
   end
 
+  def test_context_rejects_an_unknown_mode
+    error = assert_raises(ArgumentError) { Klenod::Build::Context.new(source_dir: Dir.pwd, mode: :production) }
+
+    assert_equal("Unknown mode :production; expected one of :development, :build", error.message)
+  end
+
   def test_build_refuses_to_ship_a_bundle_containing_a_syntax_error
     Dir.mktmpdir do |dir|
       # Never evaluated during a build, so this used to be serialized into the
@@ -1772,7 +1778,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       File.write("#{dir}/entry.rb", "Broken = import(\"./broken.rb\")\n")
       output = "#{dir}/dist/klenod.bundle"
 
-      context = Klenod::Build::Context.new(source_dir: dir, mode: :production)
+      context = Klenod::Build::Context.new(source_dir: dir, mode: :build)
       error =
         assert_raises(Klenod::Build::Plugins::RubyPlugin::ParseError) do
           context.build(entrypoints: ["entry.rb"], output: output, assets_dir: "#{dir}/dist/public")
@@ -1792,7 +1798,7 @@ class Klenod::Build::Context::Test < Minitest::Test
       context =
         Klenod::Build::Context.new(
           source_dir: dir,
-          mode: :production,
+          mode: :build,
           plugins: [BrokenCodegenPlugin.new, *Klenod::Build::Context.default_plugins]
         )
       error =
