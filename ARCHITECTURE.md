@@ -314,7 +314,7 @@ The example web server formats update errors and request errors consistently. It
 
 ## Build And Bundle
 
-Build mode collects entrypoints and runtime dependencies, writes emitted assets when requested, and serializes runtime module specs with `Marshal.dump`.
+Build mode collects entrypoints and runtime dependencies, writes emitted assets when requested, and serializes runtime module specs with `Klenod::Runtime::BundleFormat`: a header line followed by a versioned JSON payload. Values JSON cannot represent, such as symbols, dates, times, and non-finite floats, are stored as tagged objects.
 
 Runtime bundles contain:
 
@@ -324,7 +324,7 @@ Runtime bundles contain:
 - asset specs
 - source-root metadata
 
-Runtime loading evaluates modules lazily. A bundle can also be written as an executable Ruby file with a small Ruby prelude and binary marshal data after `__END__`.
+Runtime loading evaluates modules lazily. A bundle can also be written as an executable Ruby file with a small Ruby prelude and the same bundle payload after `__END__`.
 
 ## Example Framework Boundary
 

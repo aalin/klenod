@@ -158,7 +158,7 @@ Development invalidation must preserve that split:
 - Do not serialize plugin objects that require build dependencies.
 - Runtime-owned values belong under `Klenod::Runtime` or in serializable virtual-module data.
 - Image runtime values must not require RMagick or `image_size`.
-- Executable bundles prepend Ruby source and store binary marshal data after `__END__`; they are not intended to be editor-friendly.
+- Executable bundles prepend Ruby source and store the bundle's JSON payload after `__END__`; they are not intended to be editor-friendly.
 
 ## Haml And Markdown
 
