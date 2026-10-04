@@ -53,6 +53,16 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_equal("dash = \"–\"\n(@__state)[:text] || dash", source)
   end
 
+  def test_ruby_builder_leaves_variable_names_in_symbols_alone
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new(
+      variables: {global: "@__props", class: "context", instance: "@__state"}
+    )
+
+    source = builder.line_rewritten_source("instance_variable_get(:@timer) || @timer\n[:$title, :@@request]", nil)
+
+    assert_equal("instance_variable_get(:@timer) || (@__state)[:timer]\n[:$title, :@@request]", source)
+  end
+
   def test_ruby_builder_rewrites_line_constant_after_multibyte_characters
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
 

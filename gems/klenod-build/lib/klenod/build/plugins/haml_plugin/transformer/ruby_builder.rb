@@ -494,6 +494,9 @@ module Klenod
                   kind, prefix, pattern = VARIABLE_TOKEN_KINDS[type]
                   receiver = @variables[kind]
                   next unless receiver
+                  # `:@name` names the variable rather than reading it, as in
+                  # `instance_variable_get(:@name)`.
+                  next if tokens[index - 1]&.fetch(1) == :on_symbeg
 
                   # Parenthesize the receiver so a low-precedence expression
                   # such as `a || b` stays one operand, e.g. in `$*.fetch(:x)`.

@@ -173,7 +173,7 @@ Variable mappings turn Haml's convenient variable forms into indexed receiver ac
   %p= $summary
 ```
 
-Mappings also apply to assignment. If a mapped receiver needs assignment notifications, replace mutable values rather than changing them in place. Unconfigured variable kinds retain normal Ruby behavior; special globals such as `$!`, `$1`, and `$LOAD_PATH`, and underscore-prefixed instance variables such as `@__state`, are never remapped.
+Mappings also apply to assignment. If a mapped receiver needs assignment notifications, replace mutable values rather than changing them in place. Unconfigured variable kinds retain normal Ruby behavior; special globals such as `$!`, `$1`, and `$LOAD_PATH`, and underscore-prefixed instance variables such as `@__state`, are never remapped. Neither are variable names in symbols, so `instance_variable_get(:@timer)` reaches a plain instance variable outside the mapped receiver.
 
 ### Children And Slots
 
