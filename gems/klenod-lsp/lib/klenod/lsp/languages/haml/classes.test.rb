@@ -68,6 +68,26 @@ class Klenod::LSP::Languages::Haml::Classes::Test < Minitest::Test
     assert_equal({line: 1, character: 2}, {line: location.range.start.line, character: location.range.start.character})
   end
 
+  def test_method_chains_in_filters_are_not_classes
+    source = <<~HAML
+      :ruby
+        ITEMS =
+          [1, 2]
+            .map { it * 2 }
+            .freeze
+
+      %section.card.missing
+      :css
+        .card { padding: 1rem; }
+    HAML
+    analysis = @workspace.analyze(module_id("pages/Card.haml"), source)
+
+    diagnostics = @language.diagnostics(analysis, @workspace, @index)
+    assert_equal(["missing"], diagnostics.map { |diagnostic| diagnostic.message[/class "([^"]+)"/, 1] })
+    assert_nil(@language.definition(analysis, position(4, 8), @workspace, @index))
+    assert_nil(Klenod::LSP::Languages::Haml::Classes.completion_items("      .fr", position(4, 9), analysis, @workspace, @index))
+  end
+
   def test_completion_offers_stylesheet_classes
     analysis = analysis(@details_source.sub("%details.wrapper", "%details.w"))
 

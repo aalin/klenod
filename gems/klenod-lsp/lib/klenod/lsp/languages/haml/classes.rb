@@ -22,6 +22,7 @@ module Klenod
           SHORTHAND_PREFIX = /\A\s*(?:%[A-Za-z][\w:-]*)?(?:[.#][\w-]+)*\.(?<partial>[\w-]*)\z/
           LOOKUP_PREFIX = /ClassNames\[:(?<partial>[\w-]*)\z/
           STYLE_KINDS = %i[companion_style inline_style].freeze
+          FILTER_HEAD = /\A\s*:\w/
 
           Occurrence = Data.define(:name, :span)
           Definition = Data.define(:module_id, :generated)
@@ -64,10 +65,14 @@ module Klenod
             end
           end
 
+          # Shorthand classes are only read outside filters, so a `:ruby`
+          # method chain such as `.freeze` is not a class. `ClassNames[:name]`
+          # lookups count everywhere.
           def occurrences(lines)
+            filter_body = filter_body_lines(lines)
             lines.each_with_index.flat_map do |line_text, index|
               found = []
-              if (head = TAG_HEAD.match(line_text))
+              if !filter_body.include?(index) && (head = TAG_HEAD.match(line_text))
                 offset = head.begin(:shorthand)
                 Text.each_match(head[:shorthand], index, SHORTHAND_CLASS, group: :name) do |match, span|
                   found << Occurrence.new(match[:name], span.with(start_character: span.start_character + offset, end_character: span.end_character + offset))
@@ -79,11 +84,24 @@ module Klenod
           end
 
           def occurrence_at(lines, position)
-            line_text = lines[position.line]
-            return nil unless line_text
+            return nil unless lines[position.line]
 
-            occurrences([line_text]).map { |occurrence| occurrence.with(span: occurrence.span.with(line: position.line)) }
-              .find { |occurrence| occurrence.span.include?(position) }
+            occurrences(lines).find { |occurrence| occurrence.span.include?(position) }
+          end
+
+          # Indexes of the lines inside filters: every line after a `:name`
+          # line that is blank or indented deeper than it, as Haml reads them.
+          # Indentation alone also works while the document does not parse.
+          def filter_body_lines(lines)
+            filter_indent = nil
+            lines.each_with_index.with_object(Set.new) do |(line_text, index), body|
+              indent = line_text[/\A\s*/].length
+              if filter_indent && (line_text.strip.empty? || indent > filter_indent)
+                body << index
+              else
+                filter_indent = line_text.match?(FILTER_HEAD) ? indent : nil
+              end
+            end
           end
 
           # Warnings for classes the stylesheets do not define. Components
@@ -127,7 +145,8 @@ module Klenod
           end
 
           def completion_items(prefix, position, analysis, workspace, index)
-            match = SHORTHAND_PREFIX.match(prefix) || LOOKUP_PREFIX.match(prefix)
+            in_filter = filter_body_lines(analysis.lines).include?(position.line)
+            match = (!in_filter && SHORTHAND_PREFIX.match(prefix)) || LOOKUP_PREFIX.match(prefix)
             return nil unless match
 
             map = map(analysis, workspace, index)
