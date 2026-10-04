@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "date"
 require "json"
 require "toml-rb"
 require "yaml"
@@ -63,8 +64,41 @@ module Klenod
 
           def module_source(data)
             <<~RUBY
-              Default = #{data.inspect}
+              Default = #{ruby_literal(data)}
             RUBY
+          end
+
+          # `inspect` is not Ruby source for every parsed value: dates, times,
+          # and non-finite floats need constructor calls instead.
+          def ruby_literal(value)
+            case value
+            when Hash
+              entries = value.map { |key, entry| "#{ruby_literal(key)} => #{ruby_literal(entry)}" }
+              "{#{entries.join(", ")}}"
+            when Array
+              "[#{value.map { ruby_literal(it) }.join(", ")}]"
+            when Float
+              float_literal(value)
+            when Time
+              zone = value.utc? ? "UTC" : value.utc_offset
+              "::Time.at(#{value.to_i}, #{value.nsec}, :nsec, in: #{zone.inspect})"
+            when Date
+              "::Date.new(#{value.year}, #{value.month}, #{value.day})"
+            when nil, true, false, String, Symbol, Integer
+              value.inspect
+            else
+              raise TypeError, "Cannot write #{value.class} as data module source"
+            end
+          end
+
+          def float_literal(value)
+            if value.nan?
+              "::Float::NAN"
+            elsif value.infinite?
+              value.positive? ? "::Float::INFINITY" : "-::Float::INFINITY"
+            else
+              value.inspect
+            end
           end
         end
       end
@@ -186,7 +220,26 @@ module Klenod
           private
 
           def parse(code)
-            TomlRB.parse(code)
+            plain_values(TomlRB.parse(code))
+          end
+
+          # toml-rb returns its own Time subclasses for local values. Exports
+          # and bundles should not depend on toml-rb, so a local date becomes a
+          # Date, as in YAML, and a local datetime or time becomes a UTC Time
+          # with the same clock time. A local time falls on 1970-01-01.
+          def plain_values(value)
+            case value
+            when Hash
+              value.transform_values { plain_values(it) }
+            when Array
+              value.map { plain_values(it) }
+            when TomlRB::LocalDate
+              Date.new(value.year, value.month, value.day)
+            when TomlRB::LocalDateTime, TomlRB::LocalTime
+              Time.at(value, in: "UTC")
+            else
+              value
+            end
           end
         end
       end

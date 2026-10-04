@@ -32,6 +32,13 @@
 
       In runtime bundles, parsed data is serialized directly so production loading does not need the build plugin.
 
+      Dates and times import as plain Ruby values in development and in bundles:
+
+      - YAML and TOML dates become `Date`.
+      - Datetimes with an offset become `Time` with that offset.
+      - TOML local datetimes and local times become UTC `Time` values with the same clock time. A local time falls on 1970-01-01.
+      - TOML `inf` and `nan` become `Float::INFINITY` and `Float::NAN`.
+
   %DocsSection{ title: "When To Use Data Imports" }
     :markdown
       Use data imports for content and configuration that should participate in the dependency graph, invalidate on file changes, and serialize into runtime bundles. Use Ruby modules when the value needs Ruby behavior, dynamic computation, or explicit methods.

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "date"
 require "json"
 
 require_relative "asset_url"
@@ -13,7 +14,12 @@ module Klenod
 
     module BundleFormat
       MAGIC = "MODPACK_BUNDLE_V1\n"
-      FORMAT_VERSION = 3
+      FORMAT_VERSION = 4
+      NON_FINITE_FLOATS = {
+        "Infinity" => Float::INFINITY,
+        "-Infinity" => -Float::INFINITY,
+        "NaN" => Float::NAN
+      }.freeze
 
       module_function
 
@@ -71,7 +77,7 @@ module Klenod
         raise BundleFormatError, "Malformed Klenod bundle payload" unless payload.is_a?(Hash)
 
         version = payload["format_version"]
-        unless [1, 2, FORMAT_VERSION].include?(version)
+        unless [1, 2, 3, FORMAT_VERSION].include?(version)
           raise BundleFormatError, "Unsupported Klenod bundle format version: #{version.inspect}"
         end
 
@@ -212,10 +218,22 @@ module Klenod
 
       def encode_value(value)
         case value
-        when nil, true, false, String, Integer, Float
+        when nil, true, false, String, Integer
           value
+        when Float
+          # JSON has no Infinity or NaN, so non-finite floats are tagged.
+          value.finite? ? value : {"__klenod_type" => "float", "value" => value.to_s}
         when Symbol
           {"__klenod_type" => "symbol", "value" => value.to_s}
+        when Time
+          {
+            "__klenod_type" => "time",
+            "seconds" => value.to_i,
+            "nanoseconds" => value.nsec,
+            "zone" => value.utc? ? "UTC" : value.utc_offset
+          }
+        when Date
+          {"__klenod_type" => "date", "value" => value.iso8601}
         when Array
           value.map { |item| encode_value(item) }
         when Hash
@@ -241,8 +259,14 @@ module Klenod
           value.map { |item| decode_value(item) }
         when Hash
           case value["__klenod_type"]
+          when "float"
+            NON_FINITE_FLOATS.fetch(value.fetch("value"))
           when "symbol"
             value.fetch("value").to_sym
+          when "time"
+            Time.at(value.fetch("seconds"), value.fetch("nanoseconds"), :nsec, in: value.fetch("zone"))
+          when "date"
+            Date.iso8601(value.fetch("value"))
           when "hash"
             value.fetch("entries").to_h do |key, hash_value|
               [decode_value(key), decode_value(hash_value)]

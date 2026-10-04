@@ -506,6 +506,24 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     assert_includes(error.message, "Unsupported Klenod bundle format version")
   end
 
+  def test_bundle_format_round_trips_dates_times_and_non_finite_floats
+    value = {
+      date: Date.new(1979, 5, 27),
+      utc: Time.utc(1979, 5, 27, 7, 32, 0.5r),
+      offset: Time.new(1979, 5, 27, 7, 32, 0, "-05:00"),
+      floats: [Float::INFINITY, -Float::INFINITY, 1.5]
+    }
+    format = Klenod::Runtime::BundleFormat
+
+    copy = format.decode_value(JSON.parse(JSON.generate(format.encode_value(value))))
+
+    assert_equal(value.except(:floats), copy.except(:floats))
+    assert_predicate(copy.fetch(:utc), :utc?)
+    assert_equal(-18_000, copy.fetch(:offset).utc_offset)
+    assert_equal(value.fetch(:floats), copy.fetch(:floats))
+    assert_predicate(format.decode_value(format.encode_value(Float::NAN)), :nan?)
+  end
+
   def test_bundle_load_entrypoints_evaluates_each_entrypoint_once
     Dir.mktmpdir do |dir|
       result_path = "#{dir}/entries.txt"
