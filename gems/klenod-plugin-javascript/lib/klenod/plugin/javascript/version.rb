@@ -4,7 +4,7 @@ module Klenod
   module Build
     module Plugins
       module JavaScriptPlugin
-        VERSION = "0.0.28"
+        VERSION = "0.0.29"
       end
     end
   end
