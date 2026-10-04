@@ -16,7 +16,7 @@ PATH
       protocol-url (~> 0.4)
       rmagick (~> 7.0)
       samovar (~> 2.5)
-      toml-rb (~> 4.2)
+      toml-rb (>= 4.2, < 7.0)
       tsort (~> 0.2.0)
 
 PATH
@@ -94,7 +94,6 @@ GEM
     base64 (0.3.0)
     bigdecimal (4.1.2)
     brotli (0.8.0)
-    citrus (3.0.2)
     console (1.38.0)
       fiber-annotation
       fiber-local (~> 1.1)
@@ -164,7 +163,6 @@ GEM
       protocol-hpack (~> 1.4)
       protocol-http (~> 0.62)
     protocol-url (0.19.0)
-    racc (1.8.1)
     rake-compiler-dock (1.12.0)
     rb-fsevent (0.11.2)
     rb-inotify (0.11.1)
@@ -186,9 +184,7 @@ GEM
     temple (0.10.7)
     thor (1.5.0)
     tilt (2.9.0)
-    toml-rb (4.2.1)
-      citrus (~> 3.0, > 3.0)
-      racc (~> 1.7)
+    toml-rb (6.0.0)
     tsort (0.2.0)
     vernier (1.11.0)
 
@@ -233,7 +229,6 @@ CHECKSUMS
   base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
   bigdecimal (4.1.2) sha256=53d217666027eab4280346fba98e7d5b66baaae1b9c3c1c0ffe89d48188a3fbd
   brotli (0.8.0) sha256=0c5a42046b3b603fb109656881147fd76064c034b7d19c1b4fcc32a093a4d55d
-  citrus (3.0.2) sha256=4ec2412fc389ad186735f4baee1460f7900a8e130ffe3f216b30d4f9c684f650
   console (1.38.0) sha256=35b82f59130e95e9be6b832d9e539c8b3988fc192e4a8e9a86ab4922f44ad5de
   covered (0.30.0) sha256=93b1bf881812dd4f52e1c3330bf7fe0dcb6bc9bb72a200cbe5d282e902e947c5
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
@@ -287,7 +282,6 @@ CHECKSUMS
   protocol-http1 (0.41.0) sha256=9863874a1228948a896c3e7ea16d13a680c8f3ed50706007c78b7033018b0ea3
   protocol-http2 (0.28.0) sha256=b7c6195dcfa80ec2484670e9fd8fc21024cc654a391aa0792433aff1188c1691
   protocol-url (0.19.0) sha256=3f6b9f6aa742a259a0b3610fbbd9685dcd9506adf6734f428ff96259faabfb21
-  racc (1.8.1) sha256=4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f
   rake-compiler-dock (1.12.0) sha256=f13205c2738f3d2053afcd03491a9e4541b22a59a0bfc53fc8bc883bd8188023
   rb-fsevent (0.11.2) sha256=43900b972e7301d6570f64b850a5aa67833ee7d87b458ee92805d56b7318aefe
   rb-inotify (0.11.1) sha256=a0a700441239b0ff18eb65e3866236cd78613d6b9f78fea1f9ac47a85e47be6e
@@ -302,7 +296,7 @@ CHECKSUMS
   temple (0.10.7) sha256=369fe560adb6534674ce232899c2232df614bcb29c5359b05efedff7a57ed9c0
   thor (1.5.0) sha256=e3a9e55fe857e44859ce104a84675ab6e8cd59c650a49106a05f55f136425e73
   tilt (2.9.0) sha256=da5735d0280bba96e9a91041bb14aee435ccad5c17b0fa519249ae543d9aa3a5
-  toml-rb (4.2.1) sha256=e6c40e27905e86a7d38cc252eb4bc12d72c61576c826a358390c30f5de0b9dbb
+  toml-rb (6.0.0) sha256=35db853da1befde1cf49b0d0c61e50368ddb3ae1cde64d8f85267e500304127b
   tsort (0.2.0) sha256=9650a793f6859a43b6641671278f79cfead60ac714148aabe4e3f0060480089f
   vernier (1.11.0) sha256=ffc3859da1d53df96a109c6609892dab9f1d96ffbdd77cf13fa4d74032331216
 
