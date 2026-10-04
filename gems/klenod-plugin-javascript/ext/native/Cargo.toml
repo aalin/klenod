@@ -8,5 +8,5 @@ name = "native"
 crate-type = ["cdylib"]
 
 [dependencies]
-magnus = "0.8.2"
+magnus = "0.9.1"
 swc_core = { version = "81.0.1", features = ["common", "ecma_ast", "ecma_codegen", "ecma_parser", "ecma_parser_typescript", "ecma_transforms_react", "ecma_transforms_typescript", "ecma_visit"] }
