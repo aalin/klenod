@@ -125,6 +125,18 @@ module Klenod
         end
       end
 
+      # Every Ruby, Haml, and CSS file under the source directory, skipping
+      # dotfiles and dot directories.
+      def source_module_ids
+        Dir.glob("**/*", base: @workspace.source_dir).sort.filter_map do |relative|
+          next if relative.split("/").any? { |segment| segment.start_with?(".") }
+          next unless ROOT_EXTENSIONS.include?(File.extname(relative))
+          next unless File.file?(File.join(@workspace.source_dir, relative))
+
+          Klenod::Build::ModuleId.new("app:/#{relative}")
+        end
+      end
+
       private
 
       def root_module_ids
@@ -133,13 +145,7 @@ module Klenod
           module_id = resolve_entrypoint(specifier)
           roots << module_id if module_id
         end
-        Dir.glob("**/*", base: @workspace.source_dir).sort.each do |relative|
-          next if relative.split("/").any? { |segment| segment.start_with?(".") }
-          next unless ROOT_EXTENSIONS.include?(File.extname(relative))
-          next unless File.file?(File.join(@workspace.source_dir, relative))
-
-          roots << Klenod::Build::ModuleId.new("app:/#{relative}")
-        end
+        roots.concat(source_module_ids)
         roots.uniq
       end
 

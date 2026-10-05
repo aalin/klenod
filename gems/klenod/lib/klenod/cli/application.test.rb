@@ -7,12 +7,12 @@ require "tmpdir"
 require_relative "application"
 
 class Klenod::CLI::Application::Test < Minitest::Test
-  def test_help_lists_build_graph_lsp_test_and_coverage_commands
+  def test_help_lists_build_check_graph_lsp_test_and_coverage_commands
     output = StringIO.new
 
     Klenod::CLI::Application.new(["--help"], output:).call
 
-    assert_includes(output.string, "One of: build, coverage, graph, lsp, test")
+    assert_includes(output.string, "One of: build, check, coverage, graph, lsp, test")
     assert_includes(output.string, "Run and watch application tests")
     assert_includes(output.string, "Run the full application test suite with coverage")
   end
@@ -98,6 +98,82 @@ class Klenod::CLI::Application::Test < Minitest::Test
 
   def test_lsp_command_uses_klenod_lsp_when_installed
     assert_equal(Klenod::LSP::CLI::Command, Klenod::CLI.lsp_command)
+  end
+
+  def test_check_command_reports_diagnostics_relative_to_the_working_directory
+    Dir.mktmpdir do |directory|
+      source_dir = File.join(directory, "src")
+      Dir.mkdir(source_dir)
+      File.write(File.join(directory, "klenod.config.rb"), "source_dir \"src\"\nplugins [Klenod::Build::Plugins::RubyPlugin.new]\n")
+      File.write(File.join(source_dir, "main.rb"), "Missing = import(\"./missing\")\n")
+      File.write(File.join(source_dir, "clean.rb"), "VALUE = 1\n")
+      output = StringIO.new
+
+      status = Dir.chdir(source_dir) do
+        Klenod::CLI::Application.new(["check"], output:).call
+      end
+
+      assert_equal(1, status)
+      assert_equal(<<~TEXT, output.string)
+        main.rb:1:1: warning: Missing is imported but never used
+        main.rb:1:19: error: Could not resolve "./missing"
+        1 error, 1 warning, 2 files checked.
+      TEXT
+    end
+  end
+
+  def test_check_command_checks_only_the_given_paths
+    Dir.mktmpdir do |directory|
+      source_dir = File.join(directory, "src")
+      Dir.mkdir(source_dir)
+      File.write(File.join(directory, "klenod.config.rb"), "source_dir \"src\"\nplugins [Klenod::Build::Plugins::RubyPlugin.new]\n")
+      File.write(File.join(source_dir, "main.rb"), "Missing = import(\"./missing\")\n")
+      File.write(File.join(source_dir, "clean.rb"), "VALUE = 1\n")
+      output = StringIO.new
+
+      status = Dir.chdir(directory) do
+        Klenod::CLI::Application.new(["check", "src/clean.rb"], output:).call
+      end
+
+      assert_equal(0, status)
+      assert_equal("No problems found, 1 file checked.\n", output.string)
+    end
+  end
+
+  def test_check_command_rejects_missing_paths
+    Dir.mktmpdir do |directory|
+      output = StringIO.new
+
+      status = Dir.chdir(directory) do
+        Klenod::CLI::Application.new(["check", "nope.rb"], output:).call
+      end
+
+      assert_equal(1, status)
+      assert_equal("No such file or directory: nope.rb\n", output.string)
+    end
+  end
+
+  def test_check_command_reports_a_missing_config
+    Dir.mktmpdir do |directory|
+      output = StringIO.new
+
+      status = Dir.chdir(directory) do
+        Klenod::CLI::Application.new(["check"], output:).call
+      end
+
+      assert_equal(1, status)
+      assert_equal("Could not find klenod.config.rb\n", output.string)
+    end
+  end
+
+  def test_check_command_explains_when_klenod_lsp_is_not_installed
+    output = StringIO.new
+
+    result = Klenod::CLI::MissingCheckCommand.new([], output:).call
+
+    assert_equal(1, result)
+    assert_includes(output.string, "use `klenod check`")
+    assert_equal(Klenod::LSP::CLI::CheckCommand, Klenod::CLI.check_command)
   end
 
   def test_coverage_worker_uses_the_nearest_test_config

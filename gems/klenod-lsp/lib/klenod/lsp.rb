@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "lsp/version"
+require_relative "lsp/check"
 require_relative "lsp/server"
 
 module Klenod
