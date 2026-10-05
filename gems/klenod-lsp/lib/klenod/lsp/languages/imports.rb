@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "language_server-protocol"
+require "prism"
 
 require "klenod/build/module_id"
 
@@ -116,6 +117,7 @@ module Klenod
           tokens = []
           slots = []
           Haml::RubyRegions.each(source, lines) do |_line_index, _start_character, ruby_source|
+            ruby_source = without_comment(ruby_source)
             tokens.concat(ruby_source.scan(PROP_TOKEN).flatten)
             slots.concat(ruby_source.scan(SLOT_TOKEN).flatten)
           end
@@ -124,6 +126,13 @@ module Klenod
             splat: tokens.include?("*"),
             slots: slots.uniq.sort
           )
+        end
+
+        # The Ruby before a trailing `# comment`, so commented-out code reads
+        # no props. Prism tells a comment from `#` inside a string.
+        def without_comment(ruby_source)
+          comment = Prism.lex(ruby_source).value.find { |token, _state| token.type == :COMMENT }&.first
+          comment ? ruby_source.byteslice(0, comment.location.start_offset) : ruby_source
         end
 
         # Completion items for the path being typed inside an import literal,

@@ -60,8 +60,14 @@ module Klenod
               next [] unless props && !props.splat && !props.names.empty?
 
               allowed = props.names + IMPLICIT
-              keys.reject { |key| allowed.include?(key.name) }.map { |key| diagnostic(key, tag[:name], allowed) }
+              keys.reject { |key| allowed.include?(prop_name(key.name)) }.map { |key| diagnostic(key, tag[:name], allowed) }
             end
+          end
+
+          # Components receive `video-id` as `$video_id`, like `merge_props`
+          # in the Haml plugin's helper source.
+          def prop_name(key)
+            key.tr("-", "_")
           end
 
           # Keys from the tag's attribute regions, or nil when a splat or an
@@ -97,7 +103,7 @@ module Klenod
           end
 
           def diagnostic(key, tag_name, allowed)
-            suggestion = DidYouMean::SpellChecker.new(dictionary: allowed).correct(key.name).first
+            suggestion = DidYouMean::SpellChecker.new(dictionary: allowed).correct(prop_name(key.name)).first
             message = "Unknown prop `#{key.name}` for `#{tag_name}`"
             message += "; did you mean `#{suggestion}`?" if suggestion
 

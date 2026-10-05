@@ -9,7 +9,8 @@ module Klenod
         # Executable Ruby regions in a Haml document: Ruby filters, script
         # lines, tag attributes, and printed tag content.
         module RubyRegions
-          TAG_HEAD = /%[A-Za-z][\w:-]*(?:[.#][\w-]+)*/
+          # `%name.class#id`, or `.class#id` for an implicit `%div`.
+          TAG_HEAD = /\A\s*(?:%[A-Za-z][\w:-]*(?:[.#][\w-]+)*|(?:[.#][\w-]+)+)/
 
           module_function
 
@@ -35,22 +36,50 @@ module Klenod
               when :script, :silent_script
                 yield line_index, 0, lines[line_index].to_s
               when :tag
-                tag(node, lines[line_index].to_s, line_index, &block)
+                tag(node, lines, line_index, &block)
               end
               each_node(node.children, lines, &block) unless node.type == :filter
             end
           end
 
-          def tag(node, line_text, line_index)
+          def tag(node, lines, line_index, &block)
+            line_text = lines[line_index].to_s
             head = TAG_HEAD.match(line_text)
             return unless head
 
             rest_start = head.end(0)
             rest = line_text[rest_start..].to_s
+            regions = attribute_regions(rest)
             if node.value[:parse]
               yield line_index, rest_start, rest
             else
-              attribute_regions(rest).each { |offset, text| yield line_index, rest_start + offset, text }
+              regions.each { |offset, text| yield line_index, rest_start + offset, text }
+            end
+            continuation(lines, line_index + 1, regions.last&.last, parse: node.value[:parse], &block)
+          end
+
+          # The lines of an attribute region left open on the tag line, up to
+          # and including its closer. A tag printing Ruby content keeps the
+          # rest of the closing line too: `}= value`.
+          def continuation(lines, line_index, region, parse: false)
+            return unless region
+
+            opener = region[0]
+            closer = {"{" => "}", "(" => ")", "[" => "]"}.fetch(opener)
+            depth = region.count(opener) - region.count(closer)
+            while depth.positive? && line_index < lines.length
+              line_text = lines[line_index].to_s
+              length = line_text.length
+              line_text.each_char.with_index do |char, index|
+                depth += 1 if char == opener
+                depth -= 1 if char == closer
+                next unless depth.zero?
+
+                length = index + 1 unless parse
+                break
+              end
+              yield line_index, 0, line_text[0...length]
+              line_index += 1
             end
           end
 
