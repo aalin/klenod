@@ -74,12 +74,12 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
 
     diagnostics = diagnostics(source)
 
-    assert_equal(["Layout is imported but never used"], diagnostics.map(&:message))
+    assert_equal(["`Layout` is imported but never used"], diagnostics.map(&:message))
     assert_equal(2, diagnostics.fetch(0).range.start.line)
 
     diagnostics = diagnostics(@page_source.sub("%Layout\n", "- helper = Layout\n"))
 
-    refute(diagnostics.any? { |diagnostic| diagnostic.message == "Layout is imported but never used" })
+    refute(diagnostics.any? { |diagnostic| diagnostic.message == "`Layout` is imported but never used" })
     refute(diagnostics.any? { |diagnostic| diagnostic.message.include?("silent `-` script") })
   end
 

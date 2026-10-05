@@ -26,6 +26,20 @@ module Klenod
         Constant::DiagnosticSeverity::HINT => "hint"
       }.freeze
 
+      COLORS = {
+        path: "\e[4m",
+        location: "\e[2m",
+        error: "\e[31m",
+        warning: "\e[33m",
+        info: "\e[1;34m",
+        hint: "\e[2m",
+        detail: "\e[2m",
+        code: "\e[36m",
+        success: "\e[1;32m"
+      }.freeze
+      RESET = "\e[0m"
+      CODE = /`([^`\n]+)`/
+
       # One checked file and its diagnostics, which may be empty.
       Result = Data.define(:path, :diagnostics)
 
@@ -58,36 +72,76 @@ module Klenod
         end
       end
 
-      # Prints one `path:line:column: severity: message` entry per diagnostic
-      # with paths relative to `root`, then a summary. Returns the number of
-      # diagnostics.
-      def self.report(results, output:, root: Dir.pwd)
-        diagnostics = results.flat_map do |result|
-          result.diagnostics
+      # Prints the diagnostics grouped by file, like ESLint's stylish format,
+      # with paths relative to `root`, then a summary:
+      #
+      #   src/pages/Home.haml
+      #     4:3   warning  `Card` is imported but never used
+      #     9:12  error    Could not resolve "./Missing"
+      #
+      #   1 error, 1 warning, 42 files checked.
+      #
+      # Columns share one width across all files, so every row lines up.
+      # Returns the number of diagnostics. Colors default to on for a terminal
+      # unless NO_COLOR is set.
+      def self.report(results, output:, root: Dir.pwd, color: color?(output))
+        paint = color ? ->(name, text) { "#{COLORS.fetch(name)}#{text}#{RESET}" } : ->(_name, text) { text }
+        files = results.reject { |result| result.diagnostics.empty? }.map do |result|
+          rows = result.diagnostics
             .sort_by { |diagnostic| [diagnostic.range.start.line, diagnostic.range.start.character] }
-            .map { |diagnostic| [display_path(result.path, root), diagnostic] }
+            .map do |diagnostic|
+              start = diagnostic.range.start
+              [start.line + 1, start.character + 1, SEVERITY_NAMES.fetch(diagnostic.severity), diagnostic.message]
+            end
+          [result.path, rows]
+        end
+        rows = files.flat_map(&:last)
+
+        # Line numbers align right and columns left, so the colons line up.
+        line_width = rows.map { |line, _, _, _| line.to_s.length }.max
+        column_width = rows.map { |_, column, _, _| column.to_s.length }.max
+        severity_width = rows.map { |_, _, severity, _| severity.length }.max
+        indent = " " * (2 + line_width.to_i + 1 + column_width.to_i + 2 + severity_width.to_i + 2)
+
+        files.each do |path, file_rows|
+          output.puts paint.call(:path, display_path(path, root))
+          file_rows.each do |line, column, severity, message|
+            location = "#{line.to_s.rjust(line_width)}:#{column.to_s.ljust(column_width)}"
+            first_line, *rest = message.lines(chomp: true)
+            first_line = highlight(first_line) if color
+            output.puts "  #{paint.call(:location, location)}  #{paint.call(severity.to_sym, severity.ljust(severity_width))}  #{first_line}"
+            rest.each { |text| output.puts "#{indent}#{color ? highlight(text, COLORS.fetch(:detail)) : text}" }
+          end
+          output.puts
         end
 
-        diagnostics.each do |path, diagnostic|
-          start = diagnostic.range.start
-          first_line, *rest = diagnostic.message.lines(chomp: true)
-          output.puts "#{path}:#{start.line + 1}:#{start.character + 1}: #{SEVERITY_NAMES.fetch(diagnostic.severity)}: #{first_line}"
-          rest.each { |line| output.puts "  #{line}" }
-        end
-
-        output.puts summary(results, diagnostics.map(&:last))
+        diagnostics = results.flat_map(&:diagnostics)
+        output.puts summary(results, diagnostics, paint)
         diagnostics.length
       end
 
-      def self.summary(results, diagnostics)
+      def self.summary(results, diagnostics, paint = ->(_name, text) { text })
         files = "#{results.length} #{(results.length == 1) ? "file" : "files"} checked"
-        return "No problems found, #{files}." if diagnostics.empty?
+        return "#{paint.call(:success, "No problems found")}, #{files}." if diagnostics.empty?
 
         counts = diagnostics.group_by(&:severity).sort.map do |severity, group|
           name = SEVERITY_NAMES.fetch(severity)
-          "#{group.length} #{(group.length == 1) ? name : "#{name}s"}"
+          paint.call(name.to_sym, "#{group.length} #{(group.length == 1) ? name : "#{name}s"}")
         end
         "#{counts.join(", ")}, #{files}."
+      end
+
+      # Colors backticked names such as `Card` in place of their backticks.
+      # `base` is the color of the surrounding text, restored after each name.
+      def self.highlight(text, base = nil)
+        highlighted = text.gsub(CODE) { "#{COLORS.fetch(:code)}#{Regexp.last_match(1)}#{RESET}#{base}" }
+        base ? "#{base}#{highlighted}#{RESET}" : highlighted
+      end
+
+      def self.color?(output, env = ENV)
+        return false if env.key?("NO_COLOR")
+
+        output.respond_to?(:tty?) && output.tty?
       end
 
       def self.display_path(path, root)

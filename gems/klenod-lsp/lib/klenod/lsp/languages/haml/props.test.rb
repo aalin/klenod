@@ -21,6 +21,16 @@ class Klenod::LSP::Languages::Haml::Props::Test < Minitest::Test
     assert_empty(prop_diagnostics(@page_source.sub("%Details{ summary: \"More\" }", "%Details(summary=\"More\"){ children: nil, \"summary\" => 1 }")))
   end
 
+  def test_key_and_slot_are_accepted_by_every_component
+    assert_empty(prop_diagnostics(@page_source.sub("%Details{ summary: \"More\" }", "%Details(slot=\"aside\" key=1){ summary: \"More\", key: 2, slot: :aside }")))
+  end
+
+  def test_attributes_continuing_on_the_next_lines_are_not_checked
+    source = @page_source.sub("%Details{ summary: \"More\" }", "%Details(summary=\"Show source\"\n    nope=\"x\")")
+
+    assert_empty(prop_diagnostics(source))
+  end
+
   def test_unknown_props_warn_with_suggestions_for_both_attribute_syntaxes
     source = @page_source.sub("%Details{ summary: \"More\" }", "%Details.card(sumary=\"More\" title=\"x\"){ waz: 1, :summry => 2 }")
 
@@ -28,10 +38,10 @@ class Klenod::LSP::Languages::Haml::Props::Test < Minitest::Test
 
     assert_equal(
       [
-        "Unknown prop \"sumary\" for Details; did you mean \"summary\"?",
-        "Unknown prop \"title\" for Details",
-        "Unknown prop \"waz\" for Details",
-        "Unknown prop \"summry\" for Details; did you mean \"summary\"?"
+        "Unknown prop `sumary` for `Details`; did you mean `summary`?",
+        "Unknown prop `title` for `Details`",
+        "Unknown prop `waz` for `Details`",
+        "Unknown prop `summry` for `Details`; did you mean `summary`?"
       ],
       diagnostics.map(&:message)
     )
@@ -45,7 +55,7 @@ class Klenod::LSP::Languages::Haml::Props::Test < Minitest::Test
 
     diagnostics = prop_diagnostics(source)
 
-    assert_equal(["Unknown prop \"closed\" for Details", "Unknown prop \"href\" for Details"], diagnostics.map(&:message))
+    assert_equal(["Unknown prop `closed` for `Details`", "Unknown prop `href` for `Details`"], diagnostics.map(&:message))
     assert_equal("closed", source.lines[5][diagnostics.fetch(0).range.start.character...diagnostics.fetch(0).range.end.character])
     assert_empty(prop_diagnostics(@page_source.sub("%Details{ summary: \"More\" }", "%Details(summary)")))
   end

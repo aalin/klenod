@@ -20,7 +20,7 @@ class Klenod::LSP::Check::Test < Minitest::Test
     )
     assert_empty(diagnostics_for(results, "pages/Page.haml"))
     assert_match(/Intl parse error/, diagnostics_for(results, "pages/BrokenIntl.haml").first.message)
-    assert_equal(["LazyPage is imported but never used"], diagnostics_for(results, "pages/lazy.rb").map(&:message))
+    assert_equal(["`LazyPage` is imported but never used"], diagnostics_for(results, "pages/lazy.rb").map(&:message))
   end
 
   def test_checks_only_selected_files_and_directories
@@ -41,28 +41,59 @@ class Klenod::LSP::Check::Test < Minitest::Test
 
       results = Klenod::LSP::Check.new(context: fixture_context(source_dir: dir)).call([page])
 
-      assert_equal(["Unknown prop \"sumary\" for Details; did you mean \"summary\"?"], results.first.diagnostics.map(&:message))
+      assert_equal(["Unknown prop `sumary` for `Details`; did you mean `summary`?"], results.first.diagnostics.map(&:message))
     end
   end
 
-  def test_report_prints_sorted_locations_relative_to_the_root_and_a_summary
-    error = Klenod::LSP::Diagnostics.diagnostic(Klenod::LSP::Text::Span.new(2, 4, 8), "Broken\nhint")
+  def test_report_groups_sorted_diagnostics_by_file_aligned_across_files
+    error = Klenod::LSP::Diagnostics.diagnostic(Klenod::LSP::Text::Span.new(11, 4, 8), "Broken\nhint")
     warning = Klenod::LSP::Diagnostics.warning(Klenod::LSP::Text::Span.new(0, 0, 3), "Unused")
+    other = Klenod::LSP::Diagnostics.warning(Klenod::LSP::Text::Span.new(1, 2, 3), "Other")
     results = [
       Klenod::LSP::Check::Result.new(path: "/app/src/a.haml", diagnostics: [error, warning]),
-      Klenod::LSP::Check::Result.new(path: "/app/src/b.rb", diagnostics: [])
+      Klenod::LSP::Check::Result.new(path: "/app/src/b.rb", diagnostics: []),
+      Klenod::LSP::Check::Result.new(path: "/app/src/c.rb", diagnostics: [other])
     ]
     output = StringIO.new
 
     count = Klenod::LSP::Check.report(results, output: output, root: "/app")
 
-    assert_equal(2, count)
+    assert_equal(3, count)
     assert_equal(<<~TEXT, output.string)
-      src/a.haml:1:1: warning: Unused
-      src/a.haml:3:5: error: Broken
-        hint
-      1 error, 1 warning, 2 files checked.
+      src/a.haml
+         1:1  warning  Unused
+        12:5  error    Broken
+                       hint
+
+      src/c.rb
+         2:3  warning  Other
+
+      1 error, 2 warnings, 3 files checked.
     TEXT
+  end
+
+  def test_report_colors_paths_locations_severities_names_and_the_summary
+    warning = Klenod::LSP::Diagnostics.warning(Klenod::LSP::Text::Span.new(0, 0, 3), "`Card` is unused\nsee `Other` and `x`")
+    output = StringIO.new
+
+    Klenod::LSP::Check.report([Klenod::LSP::Check::Result.new(path: "/app/a.haml", diagnostics: [warning])], output: output, root: "/app", color: true)
+
+    assert_equal(<<~TEXT, output.string)
+      \e[4ma.haml\e[0m
+        \e[2m1:1\e[0m  \e[33mwarning\e[0m  \e[36mCard\e[0m is unused
+                      \e[2msee \e[36mOther\e[0m\e[2m and \e[36mx\e[0m\e[2m\e[0m
+
+      \e[33m1 warning\e[0m, 1 file checked.
+    TEXT
+  end
+
+  def test_colors_only_terminals_without_no_color
+    terminal = StringIO.new
+    def terminal.tty? = true
+
+    assert(Klenod::LSP::Check.color?(terminal, {}))
+    refute(Klenod::LSP::Check.color?(terminal, {"NO_COLOR" => "1"}))
+    refute(Klenod::LSP::Check.color?(StringIO.new, {}))
   end
 
   def test_report_keeps_absolute_paths_outside_the_root_and_says_when_clean

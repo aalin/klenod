@@ -117,7 +117,7 @@ module Klenod
                 range: occurrence.span.to_range,
                 severity: Constant::DiagnosticSeverity::WARNING,
                 source: "klenod",
-                message: "Unknown CSS class #{occurrence.name.inspect}: not defined in #{style_names(map, analysis).join(" or ")}"
+                message: "Unknown CSS class `#{occurrence.name}`: not defined in #{style_names(map, analysis).map { |name| "`#{name}`" }.join(" or ")}"
               )
             end
           end
