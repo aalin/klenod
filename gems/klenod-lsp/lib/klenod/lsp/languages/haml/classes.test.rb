@@ -27,7 +27,7 @@ class Klenod::LSP::Languages::Haml::Classes::Test < Minitest::Test
 
     diagnostics = @language.diagnostics(analysis(source), @workspace, @index)
 
-    assert_equal(["missing", "nope"], diagnostics.map { |diagnostic| diagnostic.message[/class "([^"]+)"/, 1] })
+    assert_equal(["missing", "nope"], diagnostics.map { |diagnostic| diagnostic.message[/class `([^`]+)`/, 1] })
     assert_equal([2, 2], diagnostics.map(&:severity))
     assert_equal("missing", source.lines[0][diagnostics.fetch(0).range.start.character...diagnostics.fetch(0).range.end.character])
     assert_includes(diagnostics.fetch(0).message, "components/Details.css")
@@ -60,7 +60,7 @@ class Klenod::LSP::Languages::Haml::Classes::Test < Minitest::Test
     analysis = @workspace.analyze(module_id("pages/Card.haml"), source)
 
     diagnostics = @language.diagnostics(analysis, @workspace, @index)
-    assert_equal(["missing"], diagnostics.map { |diagnostic| diagnostic.message[/class "([^"]+)"/, 1] })
+    assert_equal(["missing"], diagnostics.map { |diagnostic| diagnostic.message[/class `([^`]+)`/, 1] })
     assert_includes(diagnostics.fetch(0).message, "inline :css")
 
     location = @language.definition(analysis, position(3, 11), @workspace, @index)
@@ -83,7 +83,7 @@ class Klenod::LSP::Languages::Haml::Classes::Test < Minitest::Test
     analysis = @workspace.analyze(module_id("pages/Card.haml"), source)
 
     diagnostics = @language.diagnostics(analysis, @workspace, @index)
-    assert_equal(["missing"], diagnostics.map { |diagnostic| diagnostic.message[/class "([^"]+)"/, 1] })
+    assert_equal(["missing"], diagnostics.map { |diagnostic| diagnostic.message[/class `([^`]+)`/, 1] })
     assert_nil(@language.definition(analysis, position(4, 8), @workspace, @index))
     assert_nil(Klenod::LSP::Languages::Haml::Classes.completion_items("      .fr", position(4, 9), analysis, @workspace, @index))
   end

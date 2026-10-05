@@ -38,7 +38,7 @@ class Klenod::LSP::Languages::Ruby::Test < Minitest::Test
 
     diagnostics = diagnostics(source)
 
-    assert_equal(["Layout is imported but never used", "Details is imported but never used"], diagnostics.map(&:message))
+    assert_equal(["`Layout` is imported but never used", "`Details` is imported but never used"], diagnostics.map(&:message))
     assert_equal([2, 2], diagnostics.map(&:severity))
     assert_equal([[1]] * 2, diagnostics.map(&:tags))
     assert_equal([3, 4], diagnostics.map { |diagnostic| diagnostic.range.start.line })

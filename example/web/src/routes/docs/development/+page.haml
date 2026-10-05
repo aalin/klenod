@@ -56,6 +56,6 @@
 
       Applications with a `klenod.config.rb` run `bundle exec klenod lsp`. This example builds its configuration in Ruby, so `bin/lsp` starts `Klenod::LSP::Server` with the same configuration as `bin/dev`, built with `analysis: true` and the configured entrypoints. Point an LSP client at that command for the `haml` file type.
 
-      `bundle exec klenod check` reports the same diagnostics for every Ruby, Haml, and CSS file under the source directory as `path:line:column: severity: message` lines, and exits with status 1 when there are any. Pass files or directories to limit it. Frameworks with their own configuration call `Klenod::LSP::Check` with the same context and entrypoints as the server.
+      `bundle exec klenod check` reports the same diagnostics for every Ruby, Haml, and CSS file under the source directory, grouped by file with each diagnostic's line, column, and severity, and exits with status 1 when there are any. Pass files or directories to limit it. Frameworks with their own configuration call `Klenod::LSP::Check` with the same context and entrypoints as the server.
 
 %title= "Development Updates"

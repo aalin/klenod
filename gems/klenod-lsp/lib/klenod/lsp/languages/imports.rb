@@ -391,7 +391,7 @@ module Klenod
               range: span.to_range,
               severity: Imports::Constant::DiagnosticSeverity::WARNING,
               source: "klenod",
-              message: "#{name} is imported but never used",
+              message: "`#{name}` is imported but never used",
               tags: [Imports::Constant::DiagnosticTag::UNNECESSARY]
             )
           end

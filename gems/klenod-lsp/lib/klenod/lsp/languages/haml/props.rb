@@ -13,9 +13,9 @@ module Klenod
       class Haml
         # The props a `%Component` tag passes, checked against the props the
         # component reads. Only keys written out on the tag line count:
-        # `%Foo(bar="1"){ baz: 2 }`. A splat makes the tag unverifiable, and
-        # a component that reads no `$props`, or reads them all with `$*`,
-        # is left alone.
+        # `%Foo(bar="1"){ baz: 2 }`. A splat or attributes spanning several
+        # lines make the tag unverifiable, and a component that reads no
+        # `$props`, or reads them all with `$*`, is left alone.
         module Props
           Interface = LanguageServer::Protocol::Interface
           Constant = LanguageServer::Protocol::Constant
@@ -31,7 +31,10 @@ module Klenod
             /(?<=[{,]|\A)\s*"(?<key>[^"]+)"\s*=>/
           ].freeze
           SPLAT = /\*\*/
-          IMPLICIT = %w[children].freeze
+          CLOSERS = {"{" => "}", "(" => ")", "[" => "]"}.freeze
+          # Props every component accepts: Haml passes `children`, `%Foo[item]`
+          # passes `key`, and `slot` places the component in its parent's slot.
+          IMPLICIT = %w[children key slot].freeze
 
           Key = Data.define(:name, :span)
 
@@ -61,12 +64,13 @@ module Klenod
             end
           end
 
-          # Keys from the tag's attribute regions, or nil when a splat makes
-          # them unknowable.
+          # Keys from the tag's attribute regions, or nil when a splat or an
+          # attribute list continuing on the next lines makes them unknowable.
           def explicit_keys(rest, line_index, offset)
             keys = []
             RubyRegions.attribute_regions(rest).each do |region_offset, region|
               return nil if region.start_with?("{") && region.match?(SPLAT)
+              return nil unless region.end_with?(CLOSERS.fetch(region[0]))
 
               patterns = region.start_with?("(") ? [HTML_KEY] : HASH_KEYS
               inner = region[1...-1]
@@ -94,8 +98,8 @@ module Klenod
 
           def diagnostic(key, tag_name, allowed)
             suggestion = DidYouMean::SpellChecker.new(dictionary: allowed).correct(key.name).first
-            message = "Unknown prop #{key.name.inspect} for #{tag_name}"
-            message += "; did you mean #{suggestion.inspect}?" if suggestion
+            message = "Unknown prop `#{key.name}` for `#{tag_name}`"
+            message += "; did you mean `#{suggestion}`?" if suggestion
 
             Interface::Diagnostic.new(
               range: key.span.to_range,

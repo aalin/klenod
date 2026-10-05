@@ -115,8 +115,10 @@ class Klenod::CLI::Application::Test < Minitest::Test
 
       assert_equal(1, status)
       assert_equal(<<~TEXT, output.string)
-        main.rb:1:1: warning: Missing is imported but never used
-        main.rb:1:19: error: Could not resolve "./missing"
+        main.rb
+          1:1   warning  `Missing` is imported but never used
+          1:19  error    Could not resolve "./missing"
+
         1 error, 1 warning, 2 files checked.
       TEXT
     end

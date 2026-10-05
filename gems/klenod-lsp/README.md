@@ -54,14 +54,17 @@ bundle exec klenod check src/components src/pages/Home.haml
 ```
 
 ```
-src/pages/Home.haml:4:3: warning: Card is imported but never used
-src/pages/Home.haml:9:12: error: Could not resolve "./Missing"
+src/pages/Home.haml
+  4:3   warning  `Card` is imported but never used
+  9:12  error    Could not resolve "./Missing"
+
 1 error, 1 warning, 42 files checked.
 ```
 
 It collects the whole module graph first, so cross-file diagnostics such as
 unknown props and scoped classes are included. Paths limit which files are
 reported. The command exits with status 1 when it reports any diagnostic.
+Output is colored in a terminal; set `NO_COLOR` to turn colors off.
 
 Configure the editor to run that command for `.haml` files. Ruby and CSS files
 can also use it alongside their usual language servers.
