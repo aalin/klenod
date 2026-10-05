@@ -43,6 +43,26 @@ bundle exec klenod lsp
 The `klenod` command comes from the `klenod` meta gem. The meta gem does not
 install `klenod-lsp` automatically.
 
+## Checking a whole project
+
+`klenod check` reports the editor's diagnostics for every Ruby, Haml, and CSS
+file under the source directory, like a linter:
+
+```sh
+bundle exec klenod check
+bundle exec klenod check src/components src/pages/Home.haml
+```
+
+```
+src/pages/Home.haml:4:3: warning: Card is imported but never used
+src/pages/Home.haml:9:12: error: Could not resolve "./Missing"
+1 error, 1 warning, 42 files checked.
+```
+
+It collects the whole module graph first, so cross-file diagnostics such as
+unknown props and scoped classes are included. Paths limit which files are
+reported. The command exits with status 1 when it reports any diagnostic.
+
 Configure the editor to run that command for `.haml` files. Ruby and CSS files
 can also use it alongside their usual language servers.
 
@@ -89,6 +109,17 @@ exit Klenod::LSP::Server.new(
   none.
 - `input:` and `output:` — the JSON-RPC streams; default to stdin and stdout.
 - `logger:` — server logging; defaults to stderr.
+
+`Klenod::LSP::Check` runs the same checks without a server. It takes the same
+`context:`, `entrypoints:`, and `logger:`:
+
+```ruby
+results = Klenod::LSP::Check.new(context: context, entrypoints: config.entrypoints).call
+exit Klenod::LSP::Check.report(results, output: $stdout).zero? ? 0 : 1
+```
+
+`call` accepts absolute file and directory paths to limit the files checked.
+`report` prints each diagnostic and a summary, and returns the diagnostic count.
 
 The web example has a complete runner at `example/web/bin/lsp`.
 
