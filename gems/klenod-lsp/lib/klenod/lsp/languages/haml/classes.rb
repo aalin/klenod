@@ -22,7 +22,7 @@ module Klenod
           SHORTHAND_PREFIX = /\A\s*(?:%[A-Za-z][\w:-]*)?(?:[.#][\w-]+)*\.(?<partial>[\w-]*)\z/
           LOOKUP_PREFIX = /ClassNames\[:(?<partial>[\w-]*)\z/
           STYLE_KINDS = %i[companion_style inline_style].freeze
-          FILTER_HEAD = /\A\s*:\w/
+          FILTER_HEAD = /\A\s*:(?<name>\w+)/
 
           Occurrence = Data.define(:name, :span)
           Definition = Data.define(:module_id, :generated)
@@ -92,14 +92,16 @@ module Klenod
           # Indexes of the lines inside filters: every line after a `:name`
           # line that is blank or indented deeper than it, as Haml reads them.
           # Indentation alone also works while the document does not parse.
-          def filter_body_lines(lines)
+          # Filters named in `except` are left out.
+          def filter_body_lines(lines, except: [])
             filter_indent = nil
             lines.each_with_index.with_object(Set.new) do |(line_text, index), body|
               indent = line_text[/\A\s*/].length
               if filter_indent && (line_text.strip.empty? || indent > filter_indent)
                 body << index
               else
-                filter_indent = line_text.match?(FILTER_HEAD) ? indent : nil
+                head = FILTER_HEAD.match(line_text)
+                filter_indent = (head && !except.include?(head[:name])) ? indent : nil
               end
             end
           end

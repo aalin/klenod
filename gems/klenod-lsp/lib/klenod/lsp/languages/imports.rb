@@ -218,6 +218,11 @@ module Klenod
           Syntax::Ruby
         end
 
+        # Constant names bound to imports in a document, keyed by name.
+        def bindings(lines)
+          Imports.bindings(lines)
+        end
+
         def definition(analysis, position, workspace, _index = nil)
           target = target_at(analysis, position)
           module_id = target && Imports.resolve(target, analysis, workspace)
@@ -376,11 +381,14 @@ module Klenod
         def usage_spans(importer_id, lines, specifiers)
           return [] unless importer_id.extname == ".haml"
 
-          names = Imports.bindings(lines).select { |_name, specifier| specifiers.include?(specifier) }.keys
+          names = Languages::Haml.bindings(lines).select { |_name, specifier| specifiers.include?(specifier) }.keys
           return [] if names.empty?
 
           spans = []
+          filter_body = Languages::Haml::Classes.filter_body_lines(lines)
           lines.each_with_index do |line_text, index|
+            next if filter_body.include?(index)
+
             Text.each_match(line_text, index, Languages::Haml::COMPONENT_TAG, group: :name) do |match, span|
               spans << span if names.include?(match[:name].split("::").first)
             end
@@ -391,7 +399,7 @@ module Klenod
         # Bindings whose constant is never used in the file. Languages give
         # the spans a constant occupies, the binding included.
         def unused_binding_diagnostics(analysis)
-          Imports.bindings(analysis.lines).filter_map do |name, _specifier|
+          bindings(analysis.lines).filter_map do |name, _specifier|
             spans = rename_spans(analysis, name)
             next if spans.length > 1
 

@@ -5,6 +5,7 @@ require "language_server-protocol"
 
 require_relative "../../text"
 require_relative "../imports"
+require_relative "classes"
 require_relative "ruby_regions"
 
 module Klenod
@@ -42,10 +43,13 @@ module Klenod
 
           def diagnostics(analysis, workspace, index)
             lines = analysis.lines
-            bindings = Imports.bindings(lines)
+            bindings = Haml.bindings(lines)
             props_cache = {}
+            filter_body = Classes.filter_body_lines(lines)
 
             lines.each_with_index.flat_map do |line_text, line_index|
+              next [] if filter_body.include?(line_index)
+
               tag = TAG_LINE.match(line_text)
               next [] unless tag
 

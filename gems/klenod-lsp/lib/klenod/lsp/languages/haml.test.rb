@@ -83,6 +83,34 @@ class Klenod::LSP::Languages::Haml::Test < Minitest::Test
     refute(diagnostics.any? { |diagnostic| diagnostic.message.include?("silent `-` script") })
   end
 
+  def test_imports_in_text_filters_are_not_bindings
+    source = @page_source + <<~HAML
+      :markdown
+        ```haml
+        :ruby
+          Button = import("/components/Button")
+        %Button Click here!
+        ```
+    HAML
+
+    messages = diagnostics(source).map(&:message)
+
+    refute(messages.any? { |message| message.include?("Button") }, messages.inspect)
+    refute_includes(Klenod::LSP::Languages::Haml.bindings(source.lines(chomp: true)), "Button")
+  end
+
+  def test_component_tags_in_filters_are_text
+    source = @page_source.sub("%Layout\n", "%section\n") + <<~HAML
+      :markdown
+        %Layout(nope=1)
+    HAML
+    analysis = @workspace.analyze(@page_id, source)
+
+    assert_includes(diagnostics(source).map(&:message), "`Layout` is imported but never used")
+    assert_equal([[2, 2]], @language.rename_spans(analysis, "Layout").map { |span| [span.line, span.start_character] })
+    assert_nil(@language.prepare_rename(analysis, position(8, 4)))
+  end
+
   def test_haml_syntax_error_is_reported_on_its_line
     source = @page_source.sub("  %Details{", "      %Details{")
 

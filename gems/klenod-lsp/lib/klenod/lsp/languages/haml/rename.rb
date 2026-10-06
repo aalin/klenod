@@ -2,6 +2,7 @@
 
 require_relative "../../text"
 require_relative "../imports"
+require_relative "classes"
 require_relative "ruby_regions"
 
 module Klenod
@@ -9,9 +10,9 @@ module Klenod
     module Languages
       class Haml
         # Where a bound constant appears in a Haml document: the `%Name` tags
-        # and the whole-word uses inside Ruby, meaning `:ruby` filters, script
-        # lines, tag attributes, and printed tag content. Plain text keeps
-        # its words.
+        # outside filters and the whole-word uses inside Ruby, meaning `:ruby`
+        # filters, script lines, tag attributes, and printed tag content.
+        # Plain text keeps its words.
         module Rename
           module_function
 
@@ -25,7 +26,10 @@ module Klenod
               end
             end
 
+            filter_body = Classes.filter_body_lines(lines)
             lines.each_with_index do |line_text, index|
+              next if filter_body.include?(index)
+
               Text.each_match(line_text, index, Haml::COMPONENT_TAG, group: :name) do |match, span|
                 next unless match[:name].split("::").first == name
 

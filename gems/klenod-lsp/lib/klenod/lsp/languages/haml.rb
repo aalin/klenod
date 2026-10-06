@@ -68,13 +68,22 @@ module Klenod
 
         # `%Details` compiles to the constant `Details`, bound by an import in
         # the leading `:ruby` filter such as `Details = import("/components/Details")`.
+        # Imports in other filters, such as code samples in `:markdown`, are
+        # text.
         def self.bindings(lines)
-          Imports.bindings(lines)
+          text = Classes.filter_body_lines(lines, except: %w[ruby])
+          Imports.bindings(lines.reject.with_index { |_line_text, index| text.include?(index) })
+        end
+
+        def bindings(lines)
+          self.class.bindings(lines)
         end
 
         private
 
         def component_target_at(line_text, position, lines)
+          return nil if Classes.filter_body_lines(lines).include?(position.line)
+
           Text.each_match(line_text, position.line, COMPONENT_TAG, group: :name) do |match, span|
             next unless span.include?(position)
 
