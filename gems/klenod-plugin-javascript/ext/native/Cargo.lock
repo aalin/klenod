@@ -938,9 +938,9 @@ dependencies = [
 
 [[package]]
 name = "swc_config"
-version = "6.0.0"
+version = "6.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "733985ad1340ea469d0d4366bae9664aa8f246006fa822a7d9365b41e48d7986"
+checksum = "bf6924ef781f1f8af3dfdac9674e94f0ab0c20af6b88b2e116af57b1e755b591"
 dependencies = [
  "anyhow",
  "bytes-str",
@@ -964,9 +964,9 @@ dependencies = [
 
 [[package]]
 name = "swc_core"
-version = "81.0.1"
+version = "82.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07637800fae5d32516411ce831092309f3300c5676f04a4bec5ef863c469635a"
+checksum = "843d600a937bc9e87477ed6010fde466f0666d850927477b7e4c7199ed789ae5"
 dependencies = [
  "swc_allocator",
  "swc_atoms",
@@ -1048,9 +1048,9 @@ dependencies = [
 
 [[package]]
 name = "swc_ecma_parser"
-version = "45.1.6"
+version = "46.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4af66bb9a4cbd2a600b41c2592e27b7947b7e30aa6918d321f987f9e0ff63f5"
+checksum = "897d50838c9d3ef3d7ecac0f0d898d149d47b713b108c5ef1e987cee14c807d5"
 dependencies = [
  "bitflags",
  "compact_str",
@@ -1068,9 +1068,9 @@ dependencies = [
 
 [[package]]
 name = "swc_ecma_transforms_base"
-version = "49.0.1"
+version = "50.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c5b5b6a31a512d23854cb6fabc9347596bde4106cd3a65dc4f9072bbb0514b4"
+checksum = "d1620c8f84093bf63e619a29f8ef83d17fd4720f57d8b89a06d2b5d9ccf4f02e"
 dependencies = [
  "better_scoped_tls",
  "indexmap",
@@ -1090,9 +1090,9 @@ dependencies = [
 
 [[package]]
 name = "swc_ecma_transforms_react"
-version = "55.0.1"
+version = "56.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d051cd9043cd7ca24eb154606e6a6914ed13d0dca686bd681a5277d99a8e4c7"
+checksum = "1ad3fbc1e93c3671ea3cef9c6480ff4b558ab2d15e82869cc2ba8b18bc05cc17"
 dependencies = [
  "base64",
  "bytes-str",
@@ -1115,9 +1115,9 @@ dependencies = [
 
 [[package]]
 name = "swc_ecma_transforms_typescript"
-version = "55.0.4"
+version = "56.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9794ce264ba60fed86141043d8846fc522149d2144df3d56dadcd379f64adc84"
+checksum = "56dc3ffb560b68db6fdde19f37fb16723fc8debb675f70f0b518abefee87da78"
 dependencies = [
  "bytes-str",
  "rustc-hash",
