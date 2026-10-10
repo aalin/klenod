@@ -1,9 +1,17 @@
 # frozen_string_literal: true
 
+require "uri"
+
 module Example
   module Framework
+    # Translates route segments between locales. Segments are compared and
+    # passed as params in decoded form, like the router's params, and every
+    # segment of a generated path is percent-encoded again.
     class LocalizedRoutes
       LOCALE_PATTERN = /\A[a-z]{2,3}(?:-[A-Za-z]{2})?\z/
+      # Characters outside RFC 3986's `pchar`, which must be escaped inside a
+      # path segment. `/` is escaped so a param cannot add a segment.
+      UNSAFE_SEGMENT_CHARACTER = %r{[^A-Za-z0-9\-._~!$&'()*+,;=:@]}
 
       LocalizedPath = Data.define(:path, :visible_path, :locale, :route_locale)
       MatchedPath = Data.define(:route, :params, :canonical_path)
@@ -17,9 +25,13 @@ module Example
 
       attr_reader :default_locale
 
+      # A path that does not decode is passed on unchanged, so the router
+      # reports it as malformed.
       def canonicalize_path(path)
         visible_path = normalized_path(path)
-        parts = path_parts(visible_path)
+        parts = decoded_parts(visible_path)
+        return LocalizedPath.new(visible_path, visible_path, default_locale, route_locale_for(default_locale)) unless parts
+
         prefix = locale_prefix(parts)
         locale = prefix&.fetch(:locale) || default_locale
         route_locale = prefix&.fetch(:route_locale) || route_locale_for(default_locale)
@@ -35,10 +47,10 @@ module Example
         prefix = locale_prefix_for(requested_locale, route_locale)
         parts = localized_parts_for(pattern, route_locale, params)
 
-        path = "/#{[*prefix, *parts].join("/")}"
-        (path == "/") ? path : path.delete_suffix("/")
+        build_path([*prefix, *parts])
       end
 
+      # An href that does not decode is left as written.
       def localized_href(path, locale: nil)
         requested_locale = (locale || Context.current&.request&.locale || default_locale).to_s
         cache_key = [path.to_s, requested_locale]
@@ -47,19 +59,22 @@ module Example
 
         output_route_locale = route_locale_for(requested_locale) || route_locale_for(default_locale)
         visible_path = normalized_path(path)
-        parts = path_parts(visible_path)
+        parts = decoded_parts(visible_path)
+        return @localized_href_cache[cache_key] = visible_path unless parts
+
         prefix = locale_prefix(parts)
         input_route_locale = prefix&.fetch(:route_locale) || route_locale_for(default_locale)
         match_parts = prefix ? parts.drop(1) : parts
         matched = matched_path_for(match_parts, input_route_locale)
-        unless matched
-          return @localized_href_cache[cache_key] = localized_path("/#{match_parts.join("/")}", locale: requested_locale)
-        end
+        output_prefix = locale_prefix_for(requested_locale, output_route_locale)
+        parts =
+          if matched
+            localized_parts_for_match(matched.route, output_route_locale, matched.params)
+          else
+            match_parts.map { translate_segment(it, output_route_locale) }
+          end
 
-        prefix = locale_prefix_for(requested_locale, output_route_locale)
-        parts = localized_parts_for_match(matched.route, output_route_locale, matched.params)
-        path = "/#{[*prefix, *parts].join("/")}"
-        @localized_href_cache[cache_key] = (path == "/") ? path : path.delete_suffix("/")
+        @localized_href_cache[cache_key] = build_path([*output_prefix, *parts])
       end
 
       private
@@ -79,6 +94,28 @@ module Example
 
       def path_parts(path)
         normalized_path(path).split("/").reject(&:empty?)
+      end
+
+      # Percent-decoded segments, or nil when one is malformed or does not
+      # decode to UTF-8.
+      def decoded_parts(path)
+        path_parts(path).map do |part|
+          decoded = URI.decode_uri_component(part)
+          return nil unless decoded.valid_encoding?
+
+          decoded
+        end
+      rescue ArgumentError
+        nil
+      end
+
+      def build_path(parts)
+        path = "/#{parts.map { encode_segment(it) }.join("/")}"
+        (path == "/") ? path : path.delete_suffix("/")
+      end
+
+      def encode_segment(segment)
+        segment.to_s.gsub(UNSAFE_SEGMENT_CHARACTER) { |character| character.bytes.map { format("%%%02X", it) }.join }
       end
 
       def locale_prefix(parts)
@@ -160,7 +197,7 @@ module Example
 
         return nil unless cursor == parts.length
 
-        MatchedPath.new(route, params, "/#{canonical_parts.join("/")}")
+        MatchedPath.new(route, params, build_path(canonical_parts))
       end
 
       def localized_parts_for_match(route, route_locale, params)

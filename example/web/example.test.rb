@@ -1892,6 +1892,42 @@ class Klenod::ExampleTest < Minitest::Test
     assert_equal("/demo/blog/tillgangar", routes.canonicalize_path("/sv/demo/blogg/tillgangar").path)
   end
 
+  def test_example_localized_routes_encode_param_segments
+    routes = localized_routes
+
+    assert_equal("/sv/demo/blogg/a%20b%2Fc", routes.localized_path("/demo/blog/[slug]", locale: "sv", slug: "a b/c"))
+    assert_equal("/sv/demo/blogg/100%25", routes.localized_path("/demo/blog/[slug]", locale: "sv", slug: "100%"))
+    assert_equal("/sv/demo/blogg/caf%C3%A9", routes.localized_path("/demo/blog/[slug]", locale: "sv", slug: "café"))
+    assert_equal("/sv/demo/blogg/a+b:c@d", routes.localized_path("/demo/blog/[slug]", locale: "sv", slug: "a+b:c@d"))
+    assert_equal("/sv/demo/butik/sale%2Fred/blue", routes.localized_path("/demo/shop/[[...filters]]", locale: "sv", filters: ["sale/red", "blue"]))
+  end
+
+  def test_example_localized_routes_round_trip_encoded_segments
+    routes = localized_routes
+
+    assert_equal("/demo/blog/a%20b%2Fc", routes.canonicalize_path("/sv/demo/blogg/a%20b%2Fc").path)
+    assert_equal("/sv/demo/blogg/a%20b%2Fc", routes.localized_href("/demo/blog/a%20b%2Fc", locale: "sv"))
+    assert_equal("/sv/demo/blogg/caf%C3%A9", routes.localized_href("/demo/blog/café", locale: "sv"))
+    assert_equal("/sv/missing%20page", routes.localized_href("/missing%20page", locale: "sv"))
+  end
+
+  def test_example_localized_routes_match_non_ascii_translated_segments
+    routes = localized_routes(translations: {"en" => {"segments" => {}}, "sv" => {"segments" => {"assets" => "tillgångar"}}})
+
+    assert_equal("/sv/demo/tillg%C3%A5ngar", routes.localized_path("/demo/assets", locale: "sv"))
+    assert_equal("/demo/assets", routes.canonicalize_path("/sv/demo/tillg%C3%A5ngar").path)
+    assert_equal("/sv/demo/tillg%C3%A5ngar", routes.localized_href("/demo/assets", locale: "sv"))
+  end
+
+  def test_example_localized_routes_leave_malformed_paths_unchanged
+    routes = localized_routes
+
+    ["/sv/demo/%zz", "/demo/blog/100%", "/sv/demo/blogg/%E9"].each do |path|
+      assert_equal(path, routes.canonicalize_path(path).path)
+      assert_equal(path, routes.localized_href(path, locale: "sv"))
+    end
+  end
+
   def test_example_localized_routes_keep_unknown_locale_prefixes
     routes = localized_routes
     localized = routes.canonicalize_path("/fr/demo/tillgangar")
@@ -2106,6 +2142,23 @@ class Klenod::ExampleTest < Minitest::Test
       },
       JSON.parse(body.join)
     )
+  end
+
+  def test_example_app_passes_decoded_route_params_through_localized_paths
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    {
+      "/api/posts/a%20b%2Fc" => "a b/c",
+      "/sv/api/posts/caf%C3%A9" => "café",
+      "/sv/api/posts/100%25" => "100%"
+    }.each do |path, slug|
+      status, _headers, body = entry.call(request(path), context)
+
+      assert_equal(200, status, path)
+      assert_equal(slug, JSON.parse(body.join).fetch("slug"), path)
+    end
   end
 
   def test_example_app_emits_gallery_image_variants
