@@ -19,6 +19,27 @@ class Klenod::Build::Plugins::HamlPlugin::ParserTest < Klenod::Build::Plugins::H
     assert_equal({shorthand: ["image"], literal: []}, image.value.fetch(:klenod_class_metadata))
   end
 
+  def test_parse_haml_adds_class_metadata_only_for_old_attributes_that_haml_folds
+    {
+      %(%span{:class => "plain other"}) => {shorthand: [], literal: ["plain", "other"]},
+      %(%span{"class" => "plain"}) => {shorthand: [], literal: ["plain"]},
+      %(%span{'class' => 'plain'}) => {shorthand: [], literal: ["plain"]},
+      %(%span{:class => "plain", :id => "main"}) => {shorthand: [], literal: ["plain"]},
+      %(%span.card{:class => "plain"}) => {shorthand: ["card"], literal: ["plain"]},
+      %(%span{:class => :plain}) => {shorthand: ["plain"], literal: []},
+      %(%span{:class => ""}) => {shorthand: [], literal: []},
+      %(%span{:id => "main"}) => {shorthand: [], literal: []},
+      %(%span{class: "plain"}) => {shorthand: [], literal: []},
+      %(%span{class: :plain}) => {shorthand: [], literal: []},
+      %(%span.card{class: "plain", id: "main"}) => {shorthand: ["card"], literal: []},
+      %(%span{:class => plain}) => {shorthand: [], literal: []}
+    }.each do |source, metadata|
+      tag = Klenod::Build::Plugins::HamlPlugin.parse_haml("#{source}\n").children.fetch(0)
+
+      assert_equal(metadata, tag.value.fetch(:klenod_class_metadata), source)
+    end
+  end
+
   def test_parse_haml_supports_member_expressions_in_parenthesized_attributes
     tag =
       Klenod::Build::Plugins::HamlPlugin.parse_haml(

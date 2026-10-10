@@ -317,21 +317,34 @@ class Klenod::Build::Plugins::HamlPlugin::CompanionsTest < Klenod::Build::Plugin
     end
   end
 
-  def test_haml_keeps_old_style_static_class_attributes_literal
-    Dir.mktmpdir do |dir|
-      FileUtils.mkdir_p("#{dir}/pages")
-      File.write("#{dir}/pages/page.css", ".foo { color: red; }\n")
-      File.write("#{dir}/pages/page.haml", "%section.foo{ class: \"bar\" } Hello\n")
+  def test_haml_renders_each_static_class_attribute_syntax_once
+    {
+      %(%section.foo Hello) => [:foo],
+      %(%section.foo(class="bar") Hello) => [:foo, "bar"],
+      %(%section.foo{ class: "bar" } Hello) => [:foo, "bar"],
+      %(%section.foo{ class: "bar", id: "main" } Hello) => [:foo, "bar"],
+      %(%section.foo{ class: "bar", **{ id: "main" } } Hello) => [:foo, "bar"],
+      %(%section.foo{ :class => "bar" } Hello) => [:foo, "bar"],
+      %(%section.foo{ "class" => "bar baz" } Hello) => [:foo, "bar", "baz"],
+      %(%section.foo{ :class => "bar", :id => "main" } Hello) => [:foo, "bar"],
+      %(%section{ class: :foo } Hello) => [:foo],
+      %(%section{ :class => :foo } Hello) => [:foo],
+      %(%section.foo(class="bar"){ class: "baz" } Hello) => [:foo, "bar", "baz"]
+    }.each do |source, expected|
+      Dir.mktmpdir do |dir|
+        FileUtils.mkdir_p("#{dir}/pages")
+        File.write("#{dir}/pages/page.css", "section { display: block; }\n.foo { color: red; }\n")
+        File.write("#{dir}/pages/page.haml", "#{source}\n")
 
-      plugin = haml_plugin
-      context = context_for(dir, plugin:)
-      haml_record = context.evaluate("pages/page.haml")
-      styles = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::ClassNames
-      rendered = context.graph.mods.fetch(haml_record.id).const_get(:Exports)::Default.new.render
-      class_names = rendered.fetch(2).fetch(:class).split
+        context = context_for(dir)
+        haml_record = context.evaluate("pages/page.haml")
+        exports = context.graph.mods.fetch(haml_record.id).const_get(:Exports)
+        styles = exports::ClassNames
+        rendered = exports::Default.new.render
+        expected_class_names = [:__section, *expected].map { it.is_a?(Symbol) ? styles.fetch(it) : it }
 
-      assert_includes(class_names, styles.fetch(:foo))
-      assert_includes(class_names, "bar")
+        assert_equal(expected_class_names.join(" "), rendered.fetch(2).fetch(:class), source)
+      end
     end
   end
 

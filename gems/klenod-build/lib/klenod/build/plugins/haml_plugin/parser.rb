@@ -100,7 +100,9 @@ module Klenod
             end
 
             if (old_attributes = attribute_hashes[:old])
-              literal.concat(literal_class_names_from_old_attributes(old_attributes))
+              folded_shorthand, folded_literal = folded_class_names_from_old_attributes(old_attributes)
+              shorthand.concat(folded_shorthand)
+              literal.concat(folded_literal)
             end
 
             {shorthand: shorthand, literal: literal}
@@ -222,20 +224,26 @@ module Klenod
             attribute_sequence?(rest)
           end
 
-          def literal_class_names_from_old_attributes(source)
+          # Haml folds an old-style hash into the tag's static attributes only
+          # when `parse_static_hash` accepts it (hashrocket pairs of literals),
+          # and then drops the hash source. Any other hash, such as
+          # `{class: "plain"}`, stays a dynamic attribute that the transformer
+          # compiles itself, so only folded classes are recorded here. String
+          # classes stay literal and symbol classes stay scoped, matching how
+          # dynamic class values render.
+          def folded_class_names_from_old_attributes(source)
+            return [[], []] unless parse_static_hash(source)
+
             parsed = ::Haml::AttributeParser.parse(source)
-            return [] unless parsed&.key?("class")
+            return [[], []] unless parsed&.key?("class")
 
-            value = static_string_literal_value(parsed.fetch("class"))
-            value ? value.split : []
-          end
-
-          def static_string_literal_value(source)
-            case Ripper.sexp(source)
+            case Ripper.sexp(parsed.fetch("class"))
             in [:program, [[:string_literal, [:string_content, [:@tstring_content, String => value, _location]]]]]
-              value
+              [[], value.split]
+            in [:program, [[:symbol_literal, [:symbol, [_type, String => name, _location]]]]]
+              [[name], []]
             else
-              nil
+              [[], []]
             end
           end
         end
