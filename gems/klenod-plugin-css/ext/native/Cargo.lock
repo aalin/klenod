@@ -603,6 +603,7 @@ dependencies = [
  "cssparser 0.38.0",
  "lightningcss",
  "magnus",
+ "parcel_selectors",
  "parcel_sourcemap",
  "serde_json",
  "sha2",

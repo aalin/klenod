@@ -1,7 +1,7 @@
 use lightningcss::dependencies::DependencyOptions;
 use lightningcss::{
     properties::{css_modules::Specifier, custom::Variable},
-    selector::{Component, Selector},
+    selector::{Component, PseudoClass, Selector},
     stylesheet::{MinifyOptions, ParserOptions, PrinterOptions, StyleSheet},
     values::ident::DashedIdent,
     visitor::{Visit, VisitTypes, Visitor},
@@ -10,6 +10,7 @@ use magnus::{
     exception::ExceptionClass, function, gc::register_mark_object, prelude::*, value::Lazy, Error,
     RHash, RModule, Ruby, TryConvert,
 };
+use parcel_selectors::parser::NthOfSelectorData;
 use parcel_sourcemap::SourceMap;
 use std::{collections::HashMap, convert::Infallible};
 
@@ -56,38 +57,7 @@ impl<'a, 'i> Visitor<'i> for TransformNamesVisitor<'a> {
     }
 
     fn visit_selector(&mut self, selector: &mut Selector<'i>) -> Result<(), Self::Error> {
-        for component in selector.iter_mut_raw_match_order() {
-            match component {
-                Component::Class(class_name) => {
-                    let original = class_name.to_string();
-                    let formatted = format_selector(
-                        &self.options.class_pattern,
-                        &self.options.component,
-                        &original,
-                        &self.options.hash,
-                    );
-                    self.classes.insert(original, formatted.clone());
-                    if self.options.transform_names {
-                        *component = Component::Class(formatted.into());
-                    }
-                }
-                Component::LocalName(local_name) => {
-                    let original = local_name.name.to_string();
-                    let formatted = format_selector(
-                        &self.options.tag_pattern,
-                        &self.options.component,
-                        &original,
-                        &self.options.hash,
-                    );
-                    self.elements.insert(original, formatted.clone());
-                    if self.options.transform_names {
-                        *component = Component::Class(formatted.into());
-                    }
-                }
-                _ => {}
-            }
-        }
-
+        self.transform_selector(selector);
         Ok(())
     }
 
@@ -122,6 +92,68 @@ impl<'a, 'i> Visitor<'i> for TransformNamesVisitor<'a> {
         }
 
         Ok(())
+    }
+}
+
+impl<'a> TransformNamesVisitor<'a> {
+    // Nested selector lists such as `:is(h1, .title)` and `:not(.kicker)` are
+    // scoped like the outer selector. `:global(...)` stays unscoped, and
+    // `::cue(...)` is left alone because it matches WebVTT cue classes rather
+    // than document classes.
+    fn transform_selector<'i>(&mut self, selector: &mut Selector<'i>) {
+        for component in selector.iter_mut_raw_match_order() {
+            match component {
+                Component::Negation(selectors)
+                | Component::Is(selectors)
+                | Component::Where(selectors)
+                | Component::Has(selectors)
+                | Component::Any(_, selectors) => {
+                    for nested in selectors.iter_mut() {
+                        self.transform_selector(nested);
+                    }
+                }
+                Component::Slotted(nested) | Component::Host(Some(nested)) => {
+                    self.transform_selector(nested);
+                }
+                Component::NthOf(data) => {
+                    let mut selectors = data.clone_selectors();
+                    for nested in selectors.iter_mut() {
+                        self.transform_selector(nested);
+                    }
+                    *data = NthOfSelectorData::new(*data.nth_data(), selectors);
+                }
+                Component::NonTSPseudoClass(PseudoClass::Local { selector: nested }) => {
+                    self.transform_selector(nested);
+                }
+                Component::Class(class_name) => {
+                    let original = class_name.to_string();
+                    let formatted = format_selector(
+                        &self.options.class_pattern,
+                        &self.options.component,
+                        &original,
+                        &self.options.hash,
+                    );
+                    self.classes.insert(original, formatted.clone());
+                    if self.options.transform_names {
+                        *component = Component::Class(formatted.into());
+                    }
+                }
+                Component::LocalName(local_name) => {
+                    let original = local_name.name.to_string();
+                    let formatted = format_selector(
+                        &self.options.tag_pattern,
+                        &self.options.component,
+                        &original,
+                        &self.options.hash,
+                    );
+                    self.elements.insert(original, formatted.clone());
+                    if self.options.transform_names {
+                        *component = Component::Class(formatted.into());
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 }
 

@@ -173,6 +173,7 @@ Scoped CSS maps:
 
 - Class selectors use normal symbol keys, e.g. `:button`.
 - Tag selectors use `__`-prefixed symbol keys, e.g. `:__figure`.
+- Selectors nested in pseudo-classes such as `:is()`, `:where()`, `:not()`, and `:has()` are scoped too; `:global()` keeps a selector unscoped.
 
 The Haml transformer can automatically apply scoped tag classes and explicit Haml classes. Class joining should be centralized in a `clsx`-style helper.
 

@@ -35,6 +35,50 @@ class Klenod::Build::Plugins::CSSPlugin::TransformerTest < Minitest::Test
     assert_includes(result.code, "img")
   end
 
+  def test_transform_scopes_classes_and_tags_inside_nested_selectors
+    result =
+      Klenod::Build::Plugins::CSSPlugin::Transformer.transform(
+        "components/Card.css",
+        <<~CSS,
+          :is(h1, .title) { order: 1; }
+          :where(.lead) { order: 2; }
+          p:not(.kicker) { order: 3; }
+          .card:has(> .image) { order: 4; }
+          :-webkit-any(.legacy) { order: 5; }
+          :nth-child(2 of .item) { order: 6; }
+          :host(.dark) { order: 7; }
+          ::slotted(.slot) { order: 8; }
+          :local(.local) { order: 9; }
+          :global(.global) .inner { order: 10; }
+          ::cue(.vtt) { order: 11; }
+        CSS
+        class_pattern: "c_[local]",
+        tag_pattern: "t_[local]"
+      )
+
+    assert_equal(
+      [
+        ":is(.t_h1,.c_title){order:1}",
+        ":where(.c_lead){order:2}",
+        ".t_p:not(.c_kicker){order:3}",
+        ".c_card:has(>.c_image){order:4}",
+        ":-webkit-any(.c_legacy){order:5}",
+        ":nth-child(2 of .c_item){order:6}",
+        ":host(.c_dark){order:7}",
+        "::slotted(.c_slot){order:8}",
+        ".c_local{order:9}",
+        ".global .c_inner{order:10}",
+        "::cue(.vtt){order:11}"
+      ].join,
+      result.code
+    )
+    assert_equal(
+      %i[card dark image inner item kicker lead legacy local slot title],
+      result.classes.keys.sort
+    )
+    assert_equal(%i[h1 p], result.elements.keys.sort)
+  end
+
   def test_transform_accepts_custom_patterns
     result =
       Klenod::Build::Plugins::CSSPlugin::Transformer.transform(
