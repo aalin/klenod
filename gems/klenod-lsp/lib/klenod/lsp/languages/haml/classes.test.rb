@@ -34,6 +34,77 @@ class Klenod::LSP::Languages::Haml::Classes::Test < Minitest::Test
     assert_empty(@language.diagnostics(@workspace.analyze(module_id("pages/Page.haml"), "%section.unstyled\n"), @workspace, @index))
   end
 
+  def test_unknown_symbols_in_class_attributes_warn
+    source = <<~HAML
+      %details.wrapper{ class: :nope }
+        %summary{ class: [:summary, :missing, { wrapper: true, absent: false }, "plain", helper] }= $summary
+        %p{ :class => :gone, id: :not_a_class }
+        %p{ "class" => :also_gone, title: "class: :ignored" }
+        %p{ class: open? ? :computed : :summary }
+        %p{ class: ClassNames[:summary] }
+        %Details{ class: :passed }
+        %p{ class: :multi,
+          id: "x" }
+    HAML
+
+    diagnostics = @language.diagnostics(analysis(source), @workspace, @index)
+    unknown = diagnostics.filter_map { |diagnostic| diagnostic.message[/class `([^`]+)`/, 1] }
+
+    assert_equal(%w[nope missing absent gone also_gone passed], unknown)
+    ranges = diagnostics.select { it.message.include?("Unknown CSS class") }.map(&:range)
+    assert_equal(
+      %w[nope missing absent gone also_gone passed],
+      ranges.map { |range| source.lines[range.start.line][range.start.character...range.end.character] }
+    )
+  end
+
+  def test_class_attribute_symbols_in_filters_are_not_classes
+    source = <<~HAML
+      %details.wrapper
+        :plain
+          %p{ class: :nope }
+    HAML
+
+    assert_empty(@language.diagnostics(analysis(source), @workspace, @index).select { it.message.include?("Unknown CSS class") })
+  end
+
+  def test_definition_and_hover_on_class_attribute_symbols
+    analysis = analysis(@details_source.sub("ClassNames[:summary]", "[:wrapper, { summary: true }]"))
+
+    location = @language.definition(analysis, position(1, 22), @workspace, @index)
+    assert_equal(fixture_uri("components/Details.css"), location.uri)
+    assert_equal(0, location.range.start.line)
+
+    location = @language.definition(analysis, position(1, 34), @workspace, @index)
+    assert_equal(2, location.range.start.line)
+
+    hover = @language.hover(analysis, position(1, 22), @workspace, @index)
+    assert_includes(hover.contents.value, "**.wrapper** · `components/Details.css`")
+  end
+
+  def test_completion_offers_stylesheet_classes_for_class_attribute_symbols
+    [
+      ["  %summary{ class: :", %w[summary wrapper]],
+      ["  %summary{ class: :s", %w[summary]],
+      ["  %summary{ :class => :w", %w[wrapper]],
+      ["  %summary{ \"class\" => :w", %w[wrapper]],
+      ["  %summary{ class: [:wrapper, :s", %w[summary]],
+      ["  %summary{ class: [:wrapper, { s", nil],
+      ["  %summary{ class: :wrapper, id: :", nil],
+      ["  %summary{ title: :", nil],
+      ["  - x = { class: :", nil]
+    ].each do |line, expected|
+      analysis = analysis(@details_source.sub(/^  %summary.*$/, line))
+      list = @language.completion(analysis, position(1, line.length), @workspace, @index)
+
+      if expected
+        assert_equal(expected, list.items.map(&:label).sort, line)
+      else
+        assert_nil(list, line)
+      end
+    end
+  end
+
   def test_definition_and_hover_on_shorthand_and_lookups
     analysis = analysis(@details_source)
 

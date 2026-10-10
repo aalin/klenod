@@ -1,17 +1,20 @@
 # frozen_string_literal: true
 
 require "language_server-protocol"
+require "prism"
 
 require_relative "../../text"
+require_relative "ruby_regions"
 
 module Klenod
   module LSP
     module Languages
       class Haml
-        # CSS class names in a Haml component: the `.name` shorthand on tags
-        # and `ClassNames[:name]` lookups, checked against the class map of
-        # the companion stylesheet and any inline `:css` filters. The map
-        # comes from the graph's records, collected on demand.
+        # CSS class names in a Haml component: the `.name` shorthand on tags,
+        # symbols in a tag's `class:` attribute, and `ClassNames[:name]`
+        # lookups, checked against the class map of the companion stylesheet
+        # and any inline `:css` filters. The map comes from the graph's
+        # records, collected on demand.
         module Classes
           Interface = LanguageServer::Protocol::Interface
           Constant = LanguageServer::Protocol::Constant
@@ -21,6 +24,10 @@ module Klenod
           LOOKUP = /ClassNames\[:(?<name>[\w-]+)\]/
           SHORTHAND_PREFIX = /\A\s*(?:%[A-Za-z][\w:-]*)?(?:[.#][\w-]+)*\.(?<partial>[\w-]*)\z/
           LOOKUP_PREFIX = /ClassNames\[:(?<partial>[\w-]*)\z/
+          CLASS_KEY_PREFIX = /(?:(?<![\w:])class:|:class\s*=>|["']class["']\s*(?::|=>))/
+          SYMBOL_PREFIX = /(?:\A|[\s\[,]):(?<partial>[\w-]*)\z/
+          OPENERS = "[{("
+          CLOSERS = "]})"
           STYLE_KINDS = %i[companion_style inline_style].freeze
           FILTER_HEAD = /\A\s*:(?<name>\w+)/
 
@@ -65,21 +72,73 @@ module Klenod
             end
           end
 
-          # Shorthand classes are only read outside filters, so a `:ruby`
-          # method chain such as `.freeze` is not a class. `ClassNames[:name]`
-          # lookups count everywhere.
+          # Shorthand and `class:` attribute classes are only read outside
+          # filters, so a `:ruby` method chain such as `.freeze` is not a
+          # class. `ClassNames[:name]` lookups count everywhere.
           def occurrences(lines)
             filter_body = filter_body_lines(lines)
             lines.each_with_index.flat_map do |line_text, index|
               found = []
-              if !filter_body.include?(index) && (head = TAG_HEAD.match(line_text))
-                offset = head.begin(:shorthand)
-                Text.each_match(head[:shorthand], index, SHORTHAND_CLASS, group: :name) do |match, span|
-                  found << Occurrence.new(match[:name], span.with(start_character: span.start_character + offset, end_character: span.end_character + offset))
+              unless filter_body.include?(index)
+                if (head = TAG_HEAD.match(line_text))
+                  offset = head.begin(:shorthand)
+                  Text.each_match(head[:shorthand], index, SHORTHAND_CLASS, group: :name) do |match, span|
+                    found << Occurrence.new(match[:name], span.with(start_character: span.start_character + offset, end_character: span.end_character + offset))
+                  end
                 end
+                found.concat(attribute_occurrences(line_text, index))
               end
               Text.each_match(line_text, index, LOOKUP, group: :name) { |match, span| found << Occurrence.new(match[:name], span) }
               found
+            end
+          end
+
+          # Symbols in the `class:` value of an attribute hash closed on the
+          # tag line: `class: :name`, `:class => :name`, symbols in an array,
+          # and symbol keys of a conditional hash such as `{ active: open? }`.
+          # Computed values are left alone, and strings are unscoped classes.
+          def attribute_occurrences(line_text, line_index)
+            head = RubyRegions::TAG_HEAD.match(line_text)
+            return [] unless head
+
+            RubyRegions.attribute_regions(line_text[head.end(0)..].to_s).flat_map do |region_offset, region|
+              next [] unless region.start_with?("{")
+
+              result = Prism.parse(region)
+              hash = result.value.statements.body.first
+              next [] unless result.success? && hash.is_a?(Prism::HashNode)
+
+              offset = head.end(0) + region_offset
+              hash.elements.flat_map do |element|
+                next [] unless element.is_a?(Prism::AssocNode) && class_key?(element.key)
+
+                class_symbols(element.value).map do |symbol|
+                  location = symbol.value_loc
+                  Occurrence.new(
+                    symbol.unescaped,
+                    Text::Span.new(line_index, offset + location.start_character_offset, offset + location.end_character_offset)
+                  )
+                end
+              end
+            end
+          end
+
+          def class_key?(node)
+            (node.is_a?(Prism::SymbolNode) || node.is_a?(Prism::StringNode)) && node.unescaped == "class"
+          end
+
+          def class_symbols(node)
+            case node
+            when Prism::SymbolNode
+              node.value_loc ? [node] : []
+            when Prism::ArrayNode
+              node.elements.flat_map { class_symbols(it) }
+            when Prism::HashNode, Prism::KeywordHashNode
+              node.elements.flat_map do |element|
+                (element.is_a?(Prism::AssocNode) && element.key.is_a?(Prism::SymbolNode)) ? class_symbols(element.key) : []
+              end
+            else
+              []
             end
           end
 
@@ -148,7 +207,7 @@ module Klenod
 
           def completion_items(prefix, position, analysis, workspace, index)
             in_filter = filter_body_lines(analysis.lines).include?(position.line)
-            match = (!in_filter && SHORTHAND_PREFIX.match(prefix)) || LOOKUP_PREFIX.match(prefix)
+            match = (!in_filter && (SHORTHAND_PREFIX.match(prefix) || class_symbol_prefix(prefix))) || LOOKUP_PREFIX.match(prefix)
             return nil unless match
 
             map = map(analysis, workspace, index)
@@ -166,6 +225,26 @@ module Klenod
                 text_edit: Interface::TextEdit.new(range: range, new_text: name)
               )
             end
+          end
+
+          # A symbol being typed in a tag's `class:` value, such as
+          # `%p{ class: [:lead, :k`. A comma outside brackets ends the value,
+          # so the next attribute's symbols are not completed as classes.
+          def class_symbol_prefix(prefix)
+            return nil unless RubyRegions::TAG_HEAD.match?(prefix)
+
+            key = prefix.to_enum(:scan, CLASS_KEY_PREFIX).map { Regexp.last_match }.last
+            return nil unless key
+
+            value = prefix[key.end(0)..]
+            depth = 0
+            value.each_char do |char|
+              depth += 1 if OPENERS.include?(char)
+              depth -= 1 if CLOSERS.include?(char)
+              return nil if depth.negative? || (depth.zero? && char == ",")
+            end
+
+            SYMBOL_PREFIX.match(value)
           end
 
           def style_record(module_id, workspace, index)

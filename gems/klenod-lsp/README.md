@@ -18,7 +18,9 @@ application code.
   files or directories move.
 - Prop and slot information for Haml components, including spelling suggestions
   for unknown props.
-- Scoped CSS class definition, hover, completion, and validation in Haml.
+- Scoped CSS class definition, hover, completion, and validation in Haml, for
+  `.name` shorthand, symbols in `class:` attributes such as
+  `class: [:name, { active: open? }]`, and `ClassNames[:name]` lookups.
 - Route lenses and hovers when `RouterPlugin` is configured.
 
 Ruby support is intentionally limited to Klenod imports and their bound
