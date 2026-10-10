@@ -376,11 +376,17 @@ module Klenod
           def generate_router_source(manifest)
             imports = import_refs(manifest)
             <<~RUBY
+              require "uri"
+
               Segment = Data.define(:name, :kind, :param_name, :path_part)
               Param = Data.define(:name, :kind)
               #{import_definitions(imports)}
 
               module Default
+                # Raised for a request path with a malformed percent-encoding
+                # or an escape that does not decode to UTF-8.
+                MalformedPathError = Class.new(StandardError)
+
                 Route = Data.define(:path, :page_module_id, :handler_module_id, :segments, :match_parts, :layout_module_ids, :slot_layout_module_id, :page_ref, :handler_ref, :layout_refs) do
                   def params
                     segments
@@ -528,7 +534,7 @@ module Klenod
                 end
 
                 def self.match(path)
-                  parts = normalize_path(path)
+                  parts = request_parts(path)
                   route = main_route_for(parts)
                   return nil unless route
 
@@ -551,6 +557,22 @@ module Klenod
                   normalized = path.to_s.split("?", 2).first
                   normalized = "/\#{normalized}" unless normalized.start_with?("/")
                   normalized.split("/").reject(&:empty?)
+                end
+
+                # Request path segments, each percent-decoded after splitting so
+                # an encoded slash stays inside its segment. `.` and `..` are
+                # kept as ordinary segments; nothing is normalized.
+                def self.request_parts(path)
+                  normalize_path(path).map do |part|
+                    decoded = begin
+                      URI.decode_uri_component(part)
+                    rescue ArgumentError
+                      nil
+                    end
+                    raise MalformedPathError, "Malformed percent-encoding in path segment \#{part.inspect}" unless decoded&.valid_encoding?
+
+                    decoded
+                  end
                 end
 
                 def self.build_tree(routes)
@@ -632,7 +654,7 @@ module Klenod
                 end
 
                 def self.special_match(views, path)
-                  parts = normalize_path(path)
+                  parts = request_parts(path)
                   view = special_view_for(views, parts)
                   return nil unless view
 

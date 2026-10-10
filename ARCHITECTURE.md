@@ -260,6 +260,8 @@ Generated router matches expose:
 - `match.params`
 - `match.route`
 
+Request paths are split on `/` before each segment is percent-decoded, so an encoded slash stays inside its param. Params are not otherwise normalized: `.` and `..` arrive as ordinary segments. Malformed escapes raise `Router::MalformedPathError`; the example server turns that into a 400 response.
+
 A directory can contain both a page and `+route.rb`. The router exposes both; the framework decides which one to use for a request.
 
 When no page route matches, the router resolves the closest `not-found` module for the URL path. When a page render raises, the example framework renders the closest `error` module for the failed route. Error and not-found pages use layouts closest to the fallback module being rendered, not necessarily layouts closest to the originally requested page.

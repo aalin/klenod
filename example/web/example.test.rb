@@ -1053,6 +1053,24 @@ class Klenod::ExampleTest < Minitest::Test
     assert_includes(html, "Browse the demo routes")
   end
 
+  def test_example_app_rejects_malformed_path_escapes
+    config = example_config
+    context = config.context
+    entry = context.entry(config.entrypoints.fetch(0))
+
+    ["/demo/%zz", "/sv/demo/100%", "/demo/%E9"].each do |path|
+      status, headers, body = entry.call(request(path), context)
+
+      assert_equal(400, status, path)
+      assert_equal("text/plain; charset=utf-8", headers.fetch("content-type"), path)
+      assert_equal("Bad request\n", body.join, path)
+    end
+
+    status, _headers, body = entry.call(request("/demo/a%20b"), context)
+    assert_equal(404, status)
+    assert_includes(body.join, "No route matched /demo/a%20b.")
+  end
+
   def test_example_app_renders_not_found_page_for_not_found_error
     config = example_config
     context = config.context

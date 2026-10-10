@@ -280,6 +280,32 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
+  def test_virtual_router_decodes_each_path_segment
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/café")
+      FileUtils.mkdir_p("#{dir}/pages/blog/[slug]")
+      FileUtils.mkdir_p("#{dir}/pages/docs/[...parts]")
+      File.write("#{dir}/pages/café/+page.rb", "NAME = :cafe\n")
+      File.write("#{dir}/pages/blog/[slug]/+page.rb", "NAME = :blog\n")
+      File.write("#{dir}/pages/docs/[...parts]/+page.rb", "NAME = :docs\n")
+      File.write("#{dir}/pages/+not-found.rb", "NAME = :not_found\n")
+
+      router = router_for(dir, mode: :development)
+
+      assert_equal(:cafe, router.match("/caf%C3%A9").page::NAME)
+      assert_equal({slug: "a b"}, router.match("/blog/a%20b").params)
+      assert_equal({slug: "a+b"}, router.match("/blog/a+b").params)
+      assert_equal({slug: "../../etc"}, router.match("/blog/..%2F..%2Fetc").params)
+      assert_equal({parts: ["..", "a/b", "."]}, router.match("/docs/../a%2Fb/.").params)
+      assert_equal({slug: "a b"}, router.match("/blog/a%20b?q=%zz").params)
+
+      ["/blog/%zz", "/blog/100%", "/blog/%E9", "/caf%"].each do |path|
+        assert_raises(router::MalformedPathError, path) { router.match(path) }
+        assert_raises(router::MalformedPathError, path) { router.not_found(path) }
+      end
+    end
+  end
+
   def test_virtual_router_matches_closest_not_found_view
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/demo/[section]")

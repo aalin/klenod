@@ -18,7 +18,12 @@ module Example
       def call(raw_request, context)
         path = request_path(raw_request)
         localized = localized_request_path(path)
-        match = router.match(localized.path)
+        match =
+          begin
+            router.match(localized.path)
+          rescue router::MalformedPathError
+            return Response.text("Bad request\n", status: 400).to_a
+          end
         unless match
           not_found_match = router.not_found(localized.path)
           return [404, {"content-type" => "text/plain"}, ["Not found\n"]] unless not_found_match
