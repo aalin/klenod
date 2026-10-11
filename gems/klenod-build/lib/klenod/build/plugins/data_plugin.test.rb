@@ -86,6 +86,29 @@ class Klenod::Build::Plugins::DataPlugin::Test < Minitest::Test
     end
   end
 
+  def test_data_imports_are_deeply_frozen_in_development_and_bundles
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/site.toml", "released = 1979-05-27\nat = 1979-05-27T07:32:00Z\n[meta]\ntags = [\"a\", \"b\"]\n")
+      File.write("#{dir}/entry.rb", "Site = import(\"site.toml\")\n")
+      output = "#{dir}/bundle.mpk"
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.evaluate("entry")
+      development = context.graph.mods.fetch(record.id).const_get(:Exports)::Site
+
+      context.build(entrypoints: ["entry"], output: output)
+      bundled = Klenod::Runtime.load_bundle(output).exports("entry")::Site
+
+      [development, bundled].each do |site|
+        assert_predicate(site, :frozen?)
+        assert_predicate(site.fetch("released"), :frozen?)
+        assert_predicate(site.fetch("at"), :frozen?)
+        assert_predicate(site.fetch("meta"), :frozen?)
+        assert_predicate(site.fetch("meta").fetch("tags"), :frozen?)
+        assert(site.fetch("meta").fetch("tags").all?(&:frozen?))
+      end
+    end
+  end
+
   DATED_TOML = <<~TOML
     released = 1979-05-27
     local = 1979-05-27T07:32:00.5

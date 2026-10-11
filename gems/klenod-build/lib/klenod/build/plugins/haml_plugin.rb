@@ -6,6 +6,7 @@ require_relative "../plugin"
 require_relative "../dependency"
 require_relative "../module_id"
 require_relative "../ruby_import_rewriter"
+require_relative "../ruby_literal"
 require_relative "../transform_result"
 require_relative "../watched_pattern"
 require_relative "intl_plugin"
@@ -176,7 +177,7 @@ module Klenod
             styles_source = styles_source_for(builder, style_dependencies, class_names_runtime_dependency: class_names_runtime_dependency)
             haml_helper_dependency = haml_helper_dependency(module_id)
             dependencies << haml_helper_dependency
-            translations_source = builder.frozen_literal(translations_for(context, module_id)).source
+            translations_source = RubyLiteral.frozen(translations_for(context, module_id))
             component_class_name = component_class_name(module_id)
             import_rewriter =
               lambda do |source, source_line_offset: 0, source_column_offset: 0|

@@ -189,24 +189,6 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     refute_same(builder.literal("Hello"), builder.literal("Hello"))
   end
 
-  def test_ruby_builder_builds_frozen_literals
-    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
-    value = {
-      "en-US" => {
-        "title" => "Hello \#{name}",
-        "items" => [1, 2]
-      }
-    }
-    literal = builder.frozen_literal(value)
-
-    assert_equal('{"en-US" => {"title" => "Hello \\#{name}", "items" => [1, 2].freeze}.freeze}.freeze', literal.source)
-
-    evaluated = eval(literal.source) # standard:disable Security/Eval
-    assert_equal(value, evaluated)
-    assert_predicate(evaluated, :frozen?)
-    assert_predicate(evaluated.fetch("en-US").fetch("items"), :frozen?)
-  end
-
   def test_ruby_builder_builds_import_calls
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     fragment = builder.import_call("pages/page.haml:companion_style")

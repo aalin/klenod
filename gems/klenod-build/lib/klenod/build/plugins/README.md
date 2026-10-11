@@ -331,6 +331,7 @@ Behavior:
 - Transforms supported files into Ruby modules exporting `Default`.
 - Development imports return the parsed/default value.
 - Runtime bundle imports serialize the parsed data directly.
+- Imported values are deeply frozen in development and in bundles.
 - Dates import as `Date` and datetimes as `Time`. TOML local datetimes and local times become UTC `Time` values with the same clock time.
 - Non-finite floats such as TOML `inf` and `nan` survive development imports and bundles.
 

@@ -6,6 +6,7 @@ require "toml-rb"
 require "yaml"
 
 require_relative "../plugin"
+require_relative "../ruby_literal"
 require_relative "../source_error"
 require_relative "../transform_result"
 
@@ -64,41 +65,8 @@ module Klenod
 
           def module_source(data)
             <<~RUBY
-              Default = #{ruby_literal(data)}
+              Default = #{RubyLiteral.frozen(data)}
             RUBY
-          end
-
-          # `inspect` is not Ruby source for every parsed value: dates, times,
-          # and non-finite floats need constructor calls instead.
-          def ruby_literal(value)
-            case value
-            when Hash
-              entries = value.map { |key, entry| "#{ruby_literal(key)} => #{ruby_literal(entry)}" }
-              "{#{entries.join(", ")}}"
-            when Array
-              "[#{value.map { ruby_literal(it) }.join(", ")}]"
-            when Float
-              float_literal(value)
-            when Time
-              zone = value.utc? ? "UTC" : value.utc_offset
-              "::Time.at(#{value.to_i}, #{value.nsec}, :nsec, in: #{zone.inspect})"
-            when Date
-              "::Date.new(#{value.year}, #{value.month}, #{value.day})"
-            when nil, true, false, String, Symbol, Integer
-              value.inspect
-            else
-              raise TypeError, "Cannot write #{value.class} as data module source"
-            end
-          end
-
-          def float_literal(value)
-            if value.nan?
-              "::Float::NAN"
-            elsif value.infinite?
-              value.positive? ? "::Float::INFINITY" : "-::Float::INFINITY"
-            else
-              value.inspect
-            end
           end
         end
       end

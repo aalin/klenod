@@ -251,7 +251,14 @@ module Klenod
         end
       end
 
+      # Decoded values are deeply frozen, like the generated module literals
+      # they stand in for, so data imports behave the same in development
+      # and in a bundle.
       def decode_value(value)
+        decode_unfrozen_value(value).freeze
+      end
+
+      def decode_unfrozen_value(value)
         case value
         when nil, true, false, String, Integer, Float
           value

@@ -4,6 +4,7 @@ require_relative "../dependency"
 require_relative "../errors"
 require_relative "../module_id"
 require_relative "../plugin"
+require_relative "../ruby_literal"
 require "klenod/runtime/source_map"
 require_relative "../transform_result"
 require_relative "../watched_pattern"
@@ -764,7 +765,7 @@ module Klenod
                 "      #{route.handler_module_id&.path.inspect},",
                 "      #{segments_source(route.segments)},",
                 "      #{match_parts_source(route.segments)},",
-                "      #{route.layout_module_ids.map(&:path).inspect},",
+                "      #{RubyLiteral.frozen(route.layout_module_ids.map(&:path))},",
                 "      #{route.slot_layout_module_id&.path.inspect},",
                 "      #{route.page_module_id ? imports.fetch(route.page_module_id.to_s) : "nil"},",
                 "      #{route.handler_module_id ? imports.fetch(route.handler_module_id.to_s) : "nil"},",
@@ -785,7 +786,7 @@ module Klenod
                 "      #{view.view_module_id.path.inspect},",
                 "      #{segments_source(view.segments)},",
                 "      #{match_parts_source(view.segments)},",
-                "      #{view.layout_module_ids.map(&:path).inspect},",
+                "      #{RubyLiteral.frozen(view.layout_module_ids.map(&:path))},",
                 "      #{imports.fetch(view.view_module_id.to_s)},",
                 "      #{layouts_source(layouts)}",
                 "    )"
@@ -863,11 +864,11 @@ module Klenod
           end
 
           def segments_source(segments)
-            "[#{segments.map { |segment| segment_source(segment) }.join(", ")}]"
+            "[#{segments.map { |segment| segment_source(segment) }.join(", ")}].freeze"
           end
 
           def match_parts_source(segments)
-            route_match_parts_for(segments).inspect
+            RubyLiteral.frozen(route_match_parts_for(segments))
           end
 
           def segment_source(segment)
@@ -905,7 +906,7 @@ module Klenod
           end
 
           def layouts_source(layouts)
-            "[#{layouts.join(", ")}]"
+            "[#{layouts.join(", ")}].freeze"
           end
 
           def route_handler_module_id?(module_id, context)

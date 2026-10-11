@@ -203,10 +203,6 @@ module Klenod
               Fragment.new(literal_source(value))
             end
 
-            def frozen_literal(value)
-              Fragment.new(frozen_literal_source(value))
-            end
-
             def import_call(dependency_id)
               Fragment.new("__klenod_import__(#{literal_source(dependency_id)})")
             end
@@ -628,17 +624,6 @@ module Klenod
               return "#{name}:" if name.match?(/\A[a-zA-Z_]\w*\z/)
 
               "#{symbol_source(name)} =>"
-            end
-
-            def frozen_literal_source(value)
-              case value
-              when Hash
-                "{#{value.map { |key, child| "#{literal_source(key)} => #{frozen_literal_source(child)}" }.join(", ")}}.freeze"
-              when Array
-                "[#{value.map { |child| frozen_literal_source(child) }.join(", ")}].freeze"
-              else
-                literal_source(value)
-              end
             end
 
             def literal_source(value)

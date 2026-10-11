@@ -280,6 +280,24 @@ class Klenod::Build::Plugins::RouterPlugin::Test < Minitest::Test
     end
   end
 
+  def test_virtual_router_route_table_is_frozen
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/pages/blog/[slug]")
+      File.write("#{dir}/pages/+layout.rb", "NAME = :layout\n")
+      File.write("#{dir}/pages/blog/[slug]/+page.rb", "NAME = :blog\n")
+
+      router = router_for(dir, mode: :development)
+      route = router.routes.fetch(0)
+
+      assert_predicate(router.routes, :frozen?)
+      assert_predicate(route.segments, :frozen?)
+      assert(route.match_parts.all?(&:frozen?))
+      assert_predicate(route.match_parts, :frozen?)
+      assert_predicate(route.layout_module_ids, :frozen?)
+      assert_predicate(route.layout_refs, :frozen?)
+    end
+  end
+
   def test_virtual_router_decodes_each_path_segment
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p("#{dir}/pages/café")
