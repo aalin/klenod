@@ -43,6 +43,36 @@ class Klenod::Runtime::Mod::Test < Minitest::Test
     refute_equal(Encoding::BINARY, mod.const_get(:Exports)::Page.name.encoding)
   end
 
+  def test_evaluates_string_literals_frozen
+    mod = Klenod::Runtime::Mod.new("entry.rb", "VALUE = \"text\"")
+
+    assert_predicate(mod.const_get(:Exports)::VALUE, :frozen?)
+  end
+
+  def test_explicit_frozen_string_literal_comment_opts_out
+    mod =
+      Klenod::Runtime::Mod.new(
+        "entry.rb",
+        "# Comment\n\n# frozen_string_literal: false\nVALUE = \"text\""
+      )
+
+    refute_predicate(mod.const_get(:Exports)::VALUE, :frozen?)
+  end
+
+  def test_frozen_string_literal_prefix_keeps_line_numbers
+    mod =
+      Klenod::Runtime::Mod.new(
+        "entry.rb",
+        "LINE = __LINE__\n\ndef self.fail!\n  raise \"boom\"\nend",
+        eval_path: "/app/src/entry.rb"
+      )
+    exports = mod.const_get(:Exports)
+    error = assert_raises(RuntimeError) { exports.fail! }
+
+    assert_equal(1, exports::LINE)
+    assert_equal(4, error.backtrace_locations.find { it.path == "/app/src/entry.rb" }.lineno)
+  end
+
   def test_marshal_round_trip_preserves_identity_fields
     mod = Klenod::Runtime::Mod.new("entry.rb", "VALUE = 1", version: 3)
     copy = Marshal.load(Marshal.dump(mod))

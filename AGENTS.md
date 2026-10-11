@@ -121,6 +121,7 @@ Graph collection and module evaluation are separate:
 - `context.entry(...)` and `context.collect(...)` collect without evaluating application code.
 - `entry.exports`, `entry.call(...)`, `context.exports(...)`, and `context.evaluate(...)` evaluate on demand.
 - Build mode serializes collected records without evaluating application modules.
+- `Klenod::Runtime::Mod` evaluates every module with frozen string literals by prefixing `# frozen_string_literal: true` as line 0, unless the source's leading comments set a magic comment. Plugins do not need to emit it, and line numbers stay unchanged.
 
 Development invalidation must preserve that split:
 

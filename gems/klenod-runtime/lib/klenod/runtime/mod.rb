@@ -55,6 +55,9 @@ module Klenod
         end
       end
 
+      FROZEN_STRING_LITERAL_PREFIX = "# frozen_string_literal: true\n"
+      MAGIC_COMMENT_PATTERN = /\A#.*\b(?:frozen_string_literal|(?:en)?coding)\s*[:=]/i
+
       attr_reader :path, :source, :source_map, :version, :constant_name, :eval_path, :namespace
 
       def self.constant_name_for(path)
@@ -107,7 +110,27 @@ module Klenod
 
         exports = Exports.new(self, @imports)
         const_set(:Exports, exports)
-        exports.module_eval(@source, @eval_path, 1)
+        exports.module_eval(*evaluated_source)
+      end
+
+      # Modules are evaluated with frozen string literals unless their leading
+      # comments set a magic comment themselves. The prefix is evaluated as
+      # line 0, so every line keeps its number in backtraces and coverage.
+      def evaluated_source
+        return [@source, @eval_path, 1] if leading_magic_comment?
+
+        [FROZEN_STRING_LITERAL_PREFIX + @source, @eval_path, 0]
+      end
+
+      def leading_magic_comment?
+        @source.each_line do |line|
+          stripped = line.strip
+          next if stripped.empty?
+          return false unless stripped.start_with?("#")
+          return true if stripped.match?(MAGIC_COMMENT_PATTERN)
+        end
+
+        false
       end
     end
   end

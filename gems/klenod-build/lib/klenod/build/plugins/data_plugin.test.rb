@@ -38,6 +38,29 @@ class Klenod::Build::Plugins::DataPlugin::Test < Minitest::Test
     end
   end
 
+  def test_evaluates_ruby_and_data_modules_with_frozen_string_literals
+    Dir.mktmpdir do |dir|
+      File.write("#{dir}/config.json", JSON.dump({"name" => "Klenod"}))
+      File.write("#{dir}/readme.txt", "Plain text\n")
+      File.write(
+        "#{dir}/entry.rb",
+        <<~RUBY
+          Config = import("config.json")
+          Readme = import("readme.txt")
+          TITLE = "Title"
+        RUBY
+      )
+
+      context = Klenod::Build::Context.new(source_dir: dir)
+      record = context.evaluate("entry")
+      exports = context.graph.mods.fetch(record.id).const_get(:Exports)
+
+      assert_predicate(exports::TITLE, :frozen?)
+      assert_predicate(exports::Config.fetch("name"), :frozen?)
+      assert_predicate(exports::Readme, :frozen?)
+    end
+  end
+
   def test_data_files_can_be_loaded_as_entrypoints
     Dir.mktmpdir do |dir|
       File.write("#{dir}/config.json", JSON.dump({"name" => "Klenod"}))

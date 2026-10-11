@@ -118,6 +118,8 @@ Each collected module is evaluated as a `Klenod::Runtime::Mod`.
 
 Runtime modules get stable generated constant names so instances can be marshaled and unmarshaled. Each runtime bundle and development graph owns a separate generated-module namespace by default, so module IDs can overlap across contexts without replacing one another. Instances are only marshalable when that namespace is named, so `Klenod::Runtime.load_bundle` accepts a `namespace:` module; bundles sharing a named namespace replace each other's generated modules. Transformed source is evaluated inside the generated runtime module, and exported values live under `Exports`.
 
+Modules are evaluated with frozen string literals. Unless the source's leading comments set a `frozen_string_literal` or encoding magic comment, `Mod` evaluates it with a `# frozen_string_literal: true` prefix numbered as line 0. Source lines, source maps, coverage, and backtraces keep their numbers, and plugins do not need to emit the comment.
+
 Ruby and Haml modules assign `Default` for the default export. Importing a Haml file returns the component class; importing a Ruby file returns its `Default` when it defines one.
 
 `__FILE__` is rewritten through runtime source-root handling so bundles can be built in one path and loaded in another. Source maps and backtrace rewriting handle transformed sources such as Haml. They are runtime-owned because production error pages need them without loading build plugins.
