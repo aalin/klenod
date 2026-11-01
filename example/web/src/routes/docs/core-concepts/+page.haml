@@ -32,6 +32,8 @@
 
       Runtime bundles keep the same lazy behavior. Use `bundle.preload_entrypoints` when a production server should evaluate reachable modules at startup.
 
+      Every module is evaluated with frozen string literals, as if its source started with `# frozen_string_literal: true`. This covers Ruby files and the Ruby that plugins generate for data, images, styles, and other imports. Line numbers stay unchanged. A file that sets its own `frozen_string_literal` or encoding magic comment in its leading comments keeps it.
+
   %DocsSection{ title: "Imports Are Graph Edges" }
     :markdown
       `import("...")` records an eager dependency. `lazy_import("...")` records a dependency but returns a callable that loads it later. `import_glob("...")` expands a literal glob into a deterministic hash of imports.

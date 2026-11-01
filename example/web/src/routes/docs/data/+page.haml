@@ -32,6 +32,8 @@
 
       In runtime bundles, parsed data is serialized directly so production loading does not need the build plugin.
 
+      Imported data is deeply frozen in development and in bundles: hashes, arrays, strings, dates, and times all raise `FrozenError` when modified. Use `dup` or build a new value when you need a mutable copy.
+
       Dates and times import as plain Ruby values in development and in bundles:
 
       - YAML and TOML dates become `Date`.

@@ -32,6 +32,18 @@
       ClassNames[:__article]
       ```
 
+      Selectors nested in `:is()`, `:where()`, `:not()`, `:has()`, `:nth-child(… of …)`, `:host()`, and `::slotted()` are scoped the same way and appear in the class map. Wrap a selector in `:global()` to keep it unscoped:
+
+      ```css
+      .card > p:not(.lead) {
+        color: var(--color-muted);
+      }
+
+      :global(.dark) .card {
+        background: black;
+      }
+      ```
+
   %DocsSection{ title: "CSS Imports" }
     :markdown
       CSS imported from Ruby or Haml returns a class map. CSS imported from CSS records stylesheet dependencies and returns transformed asset paths.
