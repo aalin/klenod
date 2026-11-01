@@ -62,18 +62,44 @@
 
       Generated router modules use `lazy_import` so matching a route can load only the selected page, handler, layouts, and slots.
 
-      The router splits the path on `/` and then percent-decodes each segment, so `/blog/a%20b` matches `[slug]` with `{slug: "a b"}`. An encoded slash stays inside its segment: `/blog/a%2Fb` gives `{slug: "a/b"}`. Params are otherwise raw. The router does not resolve `.` or `..`, so `/docs/../x` gives `{parts: ["..", "x"]}` and `/blog/..%2Fx` gives `{slug: "../x"}`. Never join a param into a filesystem path without validating it.
+    .examples
+      :markdown
+        The router splits the path on `/` and then percent-decodes each segment. An encoded slash stays inside its segment, and `.` and `..` are preserved:
 
-      A segment with a malformed escape, such as `%zz`, or one that does not decode to UTF-8 makes `match`, `not_found`, and `error` raise `Router::MalformedPathError`. The example server answers those requests with `400 Bad Request`.
+        | Request | Route | `match.params` |
+        | --- | --- | --- |
+        | `GET /blog/a%20b` | `/blog/[slug]` | `{slug: "a b"}` |
+        | `GET /blog/a%2Fb` | `/blog/[slug]` | `{slug: "a/b"}` |
+        | `GET /blog/.` | `/blog/[slug]` | `{slug: "."}` |
+        | `GET /docs/../x` | `/docs/[...parts]` | `{parts: ["..", "x"]}` |
+        | `GET /blog/..%2Fx` | `/blog/[slug]` | `{slug: "../x"}` |
 
+        Never join a param into a filesystem path without validating it.
+
+        Malformed escapes and segments that do not decode to UTF-8 make `match`, `not_found`, and `error` raise `Router::MalformedPathError`. The example server returns:
+
+        | Request | Response | Reason |
+        | --- | --- | --- |
+        | `GET /blog/%zz` | `400 Bad Request` | Malformed percent escape |
+        | `GET /blog/%FF` | `400 Bad Request` | Invalid UTF-8 |
+
+    :markdown
       When no page route matches, the router returns the closest `not-found` module for that URL path. Frameworks can use the closest `error` module when rendering raises.
 
   %DocsSection{ title: "Framework Boundary" }
     :markdown
       RouterPlugin does not decide request dispatch or rendering policy. Hybrid directories can contain both a page and `+route.rb`; the router exposes both and the consuming framework decides which one to use for a request.
 
-      The example configures `Example::Framework::Route` as the route-handler base class. It makes `Response` and `localized_path` available directly inside `+route.rb` files. `localized_path("/blog/[slug]", slug: request.params[:slug])` percent-encodes each segment, so a decoded param such as `"a/b"` links back to the same route.
+      The example configures `Example::Framework::Route` as the route-handler base class. It makes `Response` and `localized_path` available directly inside `+route.rb` files. `localized_path` percent-encodes each segment so decoded params link back to the same route. For an English request, with no locale prefix:
 
+    .examples
+      :markdown
+        | Call | Generated path |
+        | --- | --- |
+        | `localized_path("/blog/[slug]", slug: "a b")` | `/blog/a%20b` |
+        | `localized_path("/blog/[slug]", slug: "a/b")` | `/blog/a%2Fb` |
+
+    :markdown
       The example application keeps its document shell in `/root.haml`, separately from filesystem route layouts. `RouterApp` composes the matched page and layouts, discovers their route-scoped assets, and passes the ordered asset references only to the root component. The root Haml template renders `html`, `head`, `body`, stylesheet links, module scripts, and the composed route content.
 
       Route content remains lazy until the document is prepared, so a `provide_context` boundary in the root can wrap route components. Preparation evaluates every component and lazy child once under the active request and rendering contexts. A route can render `%title` to replace the root template's default document title; preparation collects all title declarations before output starts, and the last declaration wins.
