@@ -2,6 +2,7 @@
 
 require "did_you_mean"
 require "language_server-protocol"
+require "prism"
 
 require_relative "../../text"
 require_relative "../imports"
@@ -25,13 +26,6 @@ module Klenod
           # `key="value"`, `key=value`, or a bare boolean `key`; a consumed
           # value cannot be mistaken for the next key.
           HTML_KEY = /(?<![\w-])(?<key>[A-Za-z_][\w-]*)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s()]+))?/
-          HASH_KEYS = [
-            /(?<=[{,]|\A)\s*(?<key>[A-Za-z_]\w*):(?!:)/,
-            /(?<=[{,]|\A)\s*"(?<key>[^"]+)":/,
-            /(?<=[{,]|\A)\s*:(?<key>\w+)\s*=>/,
-            /(?<=[{,]|\A)\s*"(?<key>[^"]+)"\s*=>/
-          ].freeze
-          SPLAT = /\*\*/
           CLOSERS = {"{" => "}", "(" => ")", "[" => "]"}.freeze
           # Props every component accepts: Haml passes `children`, `%Foo[item]`
           # passes `key`, and `slot` places the component in its parent's slot.
@@ -79,19 +73,42 @@ module Klenod
           def explicit_keys(rest, line_index, offset)
             keys = []
             RubyRegions.attribute_regions(rest).each do |region_offset, region|
-              return nil if region.start_with?("{") && region.match?(SPLAT)
               return nil unless region.end_with?(CLOSERS.fetch(region[0]))
 
-              patterns = region.start_with?("(") ? [HTML_KEY] : HASH_KEYS
-              inner = region[1...-1]
-              patterns.each do |pattern|
-                Text.each_match(inner, line_index, pattern, group: :key) do |match, span|
+              if region.start_with?("{")
+                hash_keys = explicit_hash_keys(region, line_index, offset + region_offset)
+                return nil unless hash_keys
+
+                keys.concat(hash_keys)
+              elsif region.start_with?("(")
+                Text.each_match(region[1...-1], line_index, HTML_KEY, group: :key) do |match, span|
                   start = offset + region_offset + 1 + span.start_character
                   keys << Key.new(match[:key], Text::Span.new(line_index, start, start + match[:key].length))
                 end
               end
             end
             keys.uniq { |key| key.span.start_character }
+          end
+
+          # Only the outer hash supplies props. Keys in nested hashes, blocks,
+          # and strings belong to values, and only an outer splat prevents us
+          # from knowing which props the component receives.
+          def explicit_hash_keys(source, line_index, offset)
+            result = Prism.parse(source, partial_script: true)
+            hash = result.value.statements.body.first
+            return nil unless result.success? && hash.is_a?(Prism::HashNode)
+            return nil if hash.elements.any? { |element| element.is_a?(Prism::AssocSplatNode) }
+
+            hash.elements.filter_map do |element|
+              name, location =
+                case (key = element.key)
+                when Prism::SymbolNode then [key.value, key.value_loc]
+                when Prism::StringNode then [key.unescaped, key.content_loc]
+                else next
+                end
+              start = offset + source.byteslice(0, location.start_offset).length
+              Key.new(name, Text::Span.new(line_index, start, start + location.slice.length))
+            end
           end
 
           def component_props(specifier, analysis, workspace, index)

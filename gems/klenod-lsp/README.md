@@ -17,7 +17,8 @@ application code.
 - Symbol rename within a Haml or Ruby file and import-preserving edits when
   files or directories move.
 - Prop and slot information for Haml components, including spelling suggestions
-  for unknown props.
+  for unknown props. Prop checks inspect the outer attribute hash and leave
+  nested hash keys and text inside values alone.
 - Scoped CSS class definition, hover, completion, and validation in Haml, for
   `.name` shorthand, symbols in `class:` attributes such as
   `class: [:name, { active: open? }]`, and `ClassNames[:name]` lookups.

@@ -74,6 +74,53 @@ class Klenod::LSP::Languages::Haml::Props::Test < Minitest::Test
     assert_empty(prop_diagnostics(@page_source.sub("%Details{ summary: \"More\" }", "%Details(summary)")))
   end
 
+  def test_only_outer_hash_keys_are_checked_as_props
+    source = @page_source.sub(
+      '%Details{ summary: "More" }',
+      '%Details{ summary: {"type" => "string", "required" => true}, :sumary => {nested: 1} }'
+    )
+
+    diagnostics = prop_diagnostics(source)
+
+    assert_equal(["Unknown prop `sumary` for `Details`; did you mean `summary`?"], diagnostics.map(&:message))
+    range = diagnostics.fetch(0).range
+    assert_equal("sumary", source.lines[range.start.line][range.start.character...range.end.character])
+  end
+
+  def test_nested_splats_and_key_like_strings_do_not_hide_unknown_props
+    source = @page_source.sub(
+      '%Details{ summary: "More" }',
+      '%Details{ summary: [{**extra}, "type: value, required: true"], "sumary" => "More" }'
+    )
+
+    diagnostics = prop_diagnostics(source)
+
+    assert_equal(["Unknown prop `sumary` for `Details`; did you mean `summary`?"], diagnostics.map(&:message))
+    range = diagnostics.fetch(0).range
+    assert_equal("sumary", source.lines[range.start.line][range.start.character...range.end.character])
+  end
+
+  def test_prop_ranges_after_multibyte_values
+    source = @page_source.sub('%Details{ summary: "More" }', '%Details{ summary: "café, nested: value", "sumary": 1 }')
+
+    diagnostics = prop_diagnostics(source)
+
+    assert_equal(1, diagnostics.length)
+    range = diagnostics.fetch(0).range
+    assert_equal("sumary", source.lines[range.start.line][range.start.character...range.end.character])
+  end
+
+  def test_props_with_block_values_and_method_scoped_expressions
+    [
+      "%Details{ summary: [1].map { |value| {nested: value} }, sumary: 1 }",
+      "%Details{ summary: yield, sumary: 1 }"
+    ].each do |tag|
+      source = @page_source.sub('%Details{ summary: "More" }', tag)
+
+      assert_equal(["Unknown prop `sumary` for `Details`; did you mean `summary`?"], prop_diagnostics(source).map(&:message))
+    end
+  end
+
   def test_splats_unknown_components_and_ruby_targets_are_not_checked
     assert_empty(prop_diagnostics(@page_source.sub("%Details{ summary: \"More\" }", "%Details{ nope: 1, **extra }")))
     assert_empty(prop_diagnostics(@page_source.sub("%Layout\n", "%Layout{ nope: 1 }\n")), "Ruby modules declare no props")

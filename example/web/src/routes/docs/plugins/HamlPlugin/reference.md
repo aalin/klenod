@@ -77,6 +77,12 @@ Use `%tag.class#id` shortcuts and brace or parenthesized props. Both forms end u
 
 Brace props are ordinary Ruby hash expressions and are the right form for conditionals, keyword splats, and nested values. Parenthesized props accept literals, bare attributes such as `open`, and ordinary member or index expressions such as `video_id=video.id` and `href=link[:href]`.
 
+```haml
+%Field{spec: {"type" => "string", "required" => true}, name: "reason"}
+```
+
+This passes two props, `spec` and `name`. The editor checks those outer keys against the component's props; `type` and `required` are part of the nested value.
+
 Long parenthesized prop lists can span lines, including member and index expressions. Unlike upstream Haml, Klenod also accepts a list whose first prop starts on the line after the opening parenthesis:
 
 ```haml
