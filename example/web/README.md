@@ -4,6 +4,15 @@ This example is a small web application built with Klenod.
 
 ## Getting started
 
+The image examples generate AVIF and WebP assets, so ImageMagick must support
+encoding and decoding both formats. On Ubuntu 26.04, install the codec plugins
+explicitly alongside ImageMagick:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y imagemagick libmagickwand-dev pkg-config libheif-plugin-aomenc libheif-plugin-dav1d
+```
+
 From the repository root, install the dependencies and compile the native
 JavaScript and CSS plugin extensions once:
 

@@ -28,11 +28,23 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Install native dependencies
-        run: sudo apt-get update && sudo apt-get install -y imagemagick libmagickwand-dev pkg-config
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick libmagickwand-dev pkg-config libheif-plugin-aomenc libheif-plugin-dav1d
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
+      - name: Verify image codecs
+        run: |
+          bundle exec ruby -rrmagick -e '
+            %w[AVIF WEBP].each do |format|
+              bytes = Magick::Image.new(2, 2).to_blob { |image| image.format = format }
+              decoded = Magick::Image.from_blob(bytes).first
+              abort "#{format} round trip failed" unless [decoded.columns, decoded.rows] == [2, 2]
+              puts "#{format} encode/decode OK"
+            end
+          '
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
