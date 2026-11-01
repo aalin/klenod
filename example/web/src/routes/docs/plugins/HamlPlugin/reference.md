@@ -152,6 +152,16 @@ Use childless `-` scripts for setup and side effects; they evaluate to `nil` and
 
 Silent control-flow forms support `if`/`unless`, `case` with `when` or pattern-matching `in`, `begin`/`rescue`/`ensure`, and `while`, `until`, and `for` blocks. Their nested Haml is returned; iterator and loop bodies are captured as child collections.
 
+Iterator receivers can contain chained calls and hash arguments. Both `do` and brace blocks work; a hash argument does not change the block's delimiter:
+
+```haml
+- role.fetch(:spec).fetch("properties", {}).each do |name, spec|
+  %p= name
+
+- role.fetch(:editor, {}).fetch('showRelated', []).each do |name|
+  %p= name
+```
+
 ```haml
 - case $result
 - in { ok: value }

@@ -1410,6 +1410,38 @@ class Klenod::Build::Plugins::HamlPlugin::EvaluationTest < Klenod::Build::Plugin
     end
   end
 
+  def test_iterators_with_hash_arguments_render_their_haml_children
+    plugin = haml_plugin
+    [
+      ['- role.fetch(:spec).fetch("properties", {}).each do |name, spec|', ["title"]],
+      ["- role.fetch(:editor, {}).fetch('showRelated', []).each do |name|", ["owner", "category"]],
+      ["- role.fetch(:missing, {}).fetch('showRelated', []).each do |name|", []],
+      ['= role.fetch(:spec).fetch("properties", {}).map { |name, spec|', ["title"]]
+    ].each do |script, names|
+      evaluate_haml(
+        {
+          "pages/list.haml" => <<~HAML
+            :ruby
+              def role
+                {
+                  spec: {"properties" => {"title" => {}}},
+                  editor: {"showRelated" => ["owner", "category"]}
+                }
+              end
+
+            #{script}
+              %p= name
+          HAML
+        },
+        entry: "pages/list.haml",
+        plugin: plugin,
+        plugins: [plugin]
+      ) do |_dir, _context, _record, exports|
+        assert_equal(names.map { [:p, it] }, exports::Default.new.render, script)
+      end
+    end
+  end
+
   def test_silent_iterator_capture_preserves_next_and_break
     plugin = haml_plugin
     evaluate_haml(

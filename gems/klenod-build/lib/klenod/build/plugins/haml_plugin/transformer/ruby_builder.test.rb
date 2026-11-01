@@ -499,6 +499,22 @@ class Klenod::Build::Plugins::HamlPlugin::RubyBuilderTest < Klenod::Build::Plugi
     assert_equal("items.map { |item| H[:li, item] }", fragment.source)
   end
 
+  def test_ruby_builder_uses_the_block_opener_instead_of_hash_or_string_braces
+    builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
+    body = builder.expression("H[:li, item]")
+
+    [
+      'role.fetch(:spec).fetch("properties", {}).map do |item|',
+      "role.fetch(:editor, {}).fetch('showRelated', []).map do |item|",
+      'items.fetch("{", []).map do |item|',
+      "items.map do |item = {}|",
+      "items.fetch(:missing, {}).map { |item|"
+    ].each do |source|
+      assert_valid_ruby(builder.script_block(source, body).source)
+      assert_valid_ruby(builder.silent_script_block(source, body).source)
+    end
+  end
+
   def test_ruby_builder_captures_silent_script_block_children
     builder = Klenod::Build::Plugins::HamlPlugin::Transformer::RubyBuilder.new
     body = builder.expression("H[:li, item]")

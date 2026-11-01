@@ -439,12 +439,15 @@ module Klenod
             # Whether the script opens a literal block for its Haml children.
             # Calls, `super`, and zsuper can take one; lambdas cannot.
             def block_script?(source)
-              node = parse_expression(fix_syntax_by_adding_missing_pairs(source), context: :block_script)
-
-              node.respond_to?(:block) && node.block.is_a?(Prism::BlockNode)
+              !script_block_node(source).nil?
             end
 
             private
+
+            def script_block_node(source)
+              node = parse_expression(fix_syntax_by_adding_missing_pairs(source), context: :block_script)
+              node.block if node.respond_to?(:block) && node.block.is_a?(Prism::BlockNode)
+            end
 
             def rewrite_ruby_source(source, line_no)
               source = rewrite_line_constant(source, line_no)
@@ -576,7 +579,9 @@ module Klenod
             def block_source(source, body)
               body_source = to_source(body)
 
-              if source.include?("{") && !source.end_with?(" do")
+              # Hash arguments, strings, and parameter defaults can contain
+              # braces without opening the block that owns the Haml children.
+              if script_block_node(source)&.opening_loc&.slice == "{"
                 "#{source} #{body_source} }"
               else
                 [source, indent(body_source, 2), "end"].join("\n")
