@@ -8,6 +8,10 @@ MARKDOWN_LIST_ITEM = import("/components/markdown/ListItem.haml")
 MARKDOWN_INLINE_CODE = import("/components/markdown/InlineCode.haml")
 MARKDOWN_STRONG = import("/components/markdown/Strong.haml")
 MARKDOWN_EMPHASIS = import("/components/markdown/Emphasis.haml")
+MARKDOWN_TABLE = import("/components/markdown/Table.haml")
+MARKDOWN_TABLE_ROW = import("/components/markdown/TableRow.haml")
+MARKDOWN_TABLE_HEADER = import("/components/markdown/TableHeader.haml")
+MARKDOWN_TABLE_CELL = import("/components/markdown/TableCell.haml")
 MarkdownHeading = import("/components/markdown/Heading.rb")
 
 # rubocop:disable Naming/ConstantName
@@ -27,6 +31,10 @@ Default = {
   p: MARKDOWN_PARAGRAPH,
   pre: MARKDOWN_CODE_BLOCK,
   strong: MARKDOWN_STRONG,
+  table: MARKDOWN_TABLE,
+  td: MARKDOWN_TABLE_CELL,
+  th: MARKDOWN_TABLE_HEADER,
+  tr: MARKDOWN_TABLE_ROW,
   ul: MARKDOWN_LIST
 }.freeze
 # rubocop:enable Naming/ConstantName

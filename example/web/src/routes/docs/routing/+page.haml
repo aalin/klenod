@@ -62,28 +62,25 @@
 
       Generated router modules use `lazy_import` so matching a route can load only the selected page, handler, layouts, and slots.
 
-    .examples
-      :markdown
-        The router splits the path on `/` and then percent-decodes each segment. An encoded slash stays inside its segment, and `.` and `..` are preserved:
+      The router splits the path on `/` and then percent-decodes each segment. An encoded slash stays inside its segment, and `.` and `..` are preserved:
 
-        | Request | Route | `match.params` |
-        | --- | --- | --- |
-        | `GET /blog/a%20b` | `/blog/[slug]` | `{slug: "a b"}` |
-        | `GET /blog/a%2Fb` | `/blog/[slug]` | `{slug: "a/b"}` |
-        | `GET /blog/.` | `/blog/[slug]` | `{slug: "."}` |
-        | `GET /docs/../x` | `/docs/[...parts]` | `{parts: ["..", "x"]}` |
-        | `GET /blog/..%2Fx` | `/blog/[slug]` | `{slug: "../x"}` |
+      | Request | Route | `match.params` |
+      | --- | --- | --- |
+      | `GET /blog/a%20b` | `/blog/[slug]` | `{slug: "a b"}` |
+      | `GET /blog/a%2Fb` | `/blog/[slug]` | `{slug: "a/b"}` |
+      | `GET /blog/.` | `/blog/[slug]` | `{slug: "."}` |
+      | `GET /docs/../x` | `/docs/[...parts]` | `{parts: ["..", "x"]}` |
+      | `GET /blog/..%2Fx` | `/blog/[slug]` | `{slug: "../x"}` |
 
-        Never join a param into a filesystem path without validating it.
+      Never join a param into a filesystem path without validating it.
 
-        Malformed escapes and segments that do not decode to UTF-8 make `match`, `not_found`, and `error` raise `Router::MalformedPathError`. The example server returns:
+      Malformed escapes and segments that do not decode to UTF-8 make `match`, `not_found`, and `error` raise `Router::MalformedPathError`. The example server returns:
 
-        | Request | Response | Reason |
-        | --- | --- | --- |
-        | `GET /blog/%zz` | `400 Bad Request` | Malformed percent escape |
-        | `GET /blog/%FF` | `400 Bad Request` | Invalid UTF-8 |
+      | Request | Response | Reason |
+      | --- | --- | --- |
+      | `GET /blog/%zz` | `400 Bad Request` | Malformed percent escape |
+      | `GET /blog/%FF` | `400 Bad Request` | Invalid UTF-8 |
 
-    :markdown
       When no page route matches, the router returns the closest `not-found` module for that URL path. Frameworks can use the closest `error` module when rendering raises.
 
   %DocsSection{ title: "Framework Boundary" }
@@ -92,14 +89,11 @@
 
       The example configures `Example::Framework::Route` as the route-handler base class. It makes `Response` and `localized_path` available directly inside `+route.rb` files. `localized_path` percent-encodes each segment so decoded params link back to the same route. For an English request, with no locale prefix:
 
-    .examples
-      :markdown
-        | Call | Generated path |
-        | --- | --- |
-        | `localized_path("/blog/[slug]", slug: "a b")` | `/blog/a%20b` |
-        | `localized_path("/blog/[slug]", slug: "a/b")` | `/blog/a%2Fb` |
+      | Call | Generated path |
+      | --- | --- |
+      | `localized_path("/blog/[slug]", slug: "a b")` | `/blog/a%20b` |
+      | `localized_path("/blog/[slug]", slug: "a/b")` | `/blog/a%2Fb` |
 
-    :markdown
       The example application keeps its document shell in `/root.haml`, separately from filesystem route layouts. `RouterApp` composes the matched page and layouts, discovers their route-scoped assets, and passes the ordered asset references only to the root component. The root Haml template renders `html`, `head`, `body`, stylesheet links, module scripts, and the composed route content.
 
       Route content remains lazy until the document is prepared, so a `provide_context` boundary in the root can wrap route components. Preparation evaluates every component and lazy child once under the active request and rendering contexts. A route can render `%title` to replace the root template's default document title; preparation collects all title declarations before output starts, and the last declaration wins.
