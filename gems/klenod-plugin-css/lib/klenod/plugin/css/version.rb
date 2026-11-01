@@ -4,7 +4,7 @@ module Klenod
   module Build
     module Plugins
       module CSSPlugin
-        VERSION = "0.0.32"
+        VERSION = "0.0.33"
       end
     end
   end
