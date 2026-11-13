@@ -46,7 +46,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "kramdown", "~> 2.5"
   spec.add_dependency "kramdown-parser-gfm", "~> 1.1"
   spec.add_dependency "listen", "~> 3.10"
-  spec.add_dependency "prism", "~> 1.9"
+  spec.add_dependency "prism", ">= 1.9", "< 3.0"
   spec.add_dependency "protocol-url", "~> 0.4"
   spec.add_dependency "rmagick", "~> 7.0"
   spec.add_dependency "samovar", "~> 2.5"
