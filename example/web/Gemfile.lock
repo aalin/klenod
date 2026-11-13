@@ -93,7 +93,7 @@ GEM
       samovar (~> 2.1)
     base64 (0.3.0)
     bigdecimal (4.1.2)
-    brotli (0.9.2)
+    brotli (0.9.3)
     console (1.38.0)
       fiber-annotation
       fiber-local (~> 1.1)
@@ -228,7 +228,7 @@ CHECKSUMS
   bake (0.25.0) sha256=a47bdc6a26addc048827debc36fe27bb4d5d71ac2958ad910b5386e9baf49869
   base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
   bigdecimal (4.1.2) sha256=53d217666027eab4280346fba98e7d5b66baaae1b9c3c1c0ffe89d48188a3fbd
-  brotli (0.9.2) sha256=8d5e3b8f267bad385c53d73e1575e617567eee1a05e7aaee1c08bdeb8abf3024
+  brotli (0.9.3) sha256=645eb1ebb7b3776ed4f794f636cc21ab0a0923f6f8e87eff2b111e70bbe02607
   console (1.38.0) sha256=35b82f59130e95e9be6b832d9e539c8b3988fc192e4a8e9a86ab4922f44ad5de
   covered (0.30.0) sha256=93b1bf881812dd4f52e1c3330bf7fe0dcb6bc9bb72a200cbe5d282e902e947c5
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
