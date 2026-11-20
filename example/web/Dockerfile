@@ -2,7 +2,7 @@
 
 ARG KLENOD_VERSION="0.0.7"
 
-FROM ruby:4.0.6-slim AS build
+FROM ruby:4.0.10-slim AS build
 
 ARG KLENOD_VERSION
 
@@ -30,7 +30,7 @@ COPY tsconfig.json ./
 
 RUN bundle exec bin/build
 
-FROM ruby:4.0.6-alpine3.24 AS runtime-gems
+FROM ruby:4.0.10-alpine3.24 AS runtime-gems
 
 ARG KLENOD_VERSION
 
@@ -47,7 +47,7 @@ COPY Gemfile ./
 RUN sed -i "s/, path: \"[^\"]*\"/, \"${KLENOD_VERSION}\"/" Gemfile \
   && bundle install
 
-FROM ruby:4.0.6-alpine3.24 AS runtime
+FROM ruby:4.0.10-alpine3.24 AS runtime
 
 ENV GEM_HOME=/usr/local/bundle
 ENV PATH="${GEM_HOME}/bin:${PATH}"

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM ruby:4.0.6-slim AS klenod-gems
+FROM ruby:4.0.10-slim AS klenod-gems
 
 WORKDIR /repo
 
@@ -17,7 +17,7 @@ RUN mkdir -p /tmp/klenod-gems \
   && cd ../klenod \
   && gem build klenod.gemspec --output /tmp/klenod-gems/klenod.gem
 
-FROM ruby:4.0.6-slim AS build
+FROM ruby:4.0.10-slim AS build
 
 WORKDIR /app
 
@@ -35,7 +35,7 @@ RUN bundle install \
   && npm ci \
   && bundle exec bin/build
 
-FROM ruby:4.0.6-alpine3.24 AS runtime-gems
+FROM ruby:4.0.10-alpine3.24 AS runtime-gems
 
 ENV GEM_HOME=/usr/local/bundle
 ENV PATH="${GEM_HOME}/bin:${PATH}"
@@ -51,7 +51,7 @@ RUN gem install --no-document /tmp/klenod-gems/klenod-runtime.gem \
   && gem install --no-document rouge -v "~> 5.0" \
   && rm -rf /tmp/klenod-gems
 
-FROM ruby:4.0.6-alpine3.24 AS runtime
+FROM ruby:4.0.10-alpine3.24 AS runtime
 
 ENV GEM_HOME=/usr/local/bundle
 ENV PATH="${GEM_HOME}/bin:${PATH}"
