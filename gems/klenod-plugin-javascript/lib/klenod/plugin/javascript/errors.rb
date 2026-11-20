@@ -12,7 +12,7 @@ module Klenod
         # SourceError that carries the source lets it be collected like a Haml
         # parse error and rendered in the browser error dialog.
         class ParseError < Klenod::Build::SourceError
-          # "app:/pages/thing.tsx:33:9: Expected '</', got ':'"
+          # "app:/pages/thing.tsx:33:9: Expected '}', got ':'"
           LOCATION = /\A(?<file>.+?):(?<line>\d+):(?<column>\d+):\s*(?<message>.*)\z/m
 
           def kind

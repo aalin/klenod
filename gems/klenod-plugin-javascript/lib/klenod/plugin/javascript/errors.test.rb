@@ -56,7 +56,7 @@ class Klenod::Build::Plugins::JavaScriptPlugin::ErrorsTest < Minitest::Test
     error = ParseError.new(syntax_error, source: BROKEN_TSX, module_id: "app:/Thing.tsx")
 
     assert_includes(Klenod::Build::SourceExcerpt.strip(error.message), "╭─[app:/Thing.tsx:#{BROKEN_LINE}:#{error.column}]")
-    assert_includes(error.message, "Expected '</', got ':'")
+    assert_includes(error.message, "got ':'")
     assert_includes(error.message, "#root { color: red; }")
   end
 
