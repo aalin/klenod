@@ -131,7 +131,7 @@ GEM
     io-stream (0.14.0)
       openssl (>= 3.3)
     json (3.0.2)
-    kramdown (2.5.2)
+    kramdown (2.6.1)
       rexml (>= 3.4.4)
     kramdown-parser-gfm (1.1.0)
       kramdown (~> 2.0)
@@ -154,7 +154,7 @@ GEM
     nokolexbor (0.8.0-x86_64-linux)
     observer (0.1.2)
     openssl (4.0.2)
-    pkg-config (1.6.6)
+    pkg-config (1.6.8)
     prism (2.1.0)
     prism (2.1.0-aarch64-linux-gnu)
     prism (2.1.0-aarch64-linux-musl)
@@ -181,7 +181,7 @@ GEM
     rbnacl (7.1.2)
       ffi (~> 1)
     rexml (3.4.4)
-    rmagick (7.2.0)
+    rmagick (7.3.1)
       observer (~> 0.1)
       pkg-config (~> 1.4)
     rouge (5.1.0)
@@ -270,7 +270,7 @@ CHECKSUMS
   klenod-rack (0.0.33)
   klenod-runtime (0.0.33)
   klenod-test (0.0.33)
-  kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
+  kramdown (2.6.1) sha256=fbef3479b69c875aacb118dde77a40d6cc3a91e2c1d505a4c3f3f9e92d142641
   kramdown-parser-gfm (1.1.0) sha256=fb39745516427d2988543bf01fc4cf0ab1149476382393e0e9c48592f6581729
   language_server-protocol (3.17.0.6) sha256=5ef2c0c138f8267e1bc631d3328347d354f96724b0af22f2c79516120443b7f0
   listen (3.10.1) sha256=4c3f32855657f348747da4dd2372ff3790d90a6b1d3e4f21a3706adb2d04783c
@@ -285,7 +285,7 @@ CHECKSUMS
   nokolexbor (0.8.0-x86_64-linux) sha256=ee6ab8b313a5748101dd6f726d1d3b240243b99beefe2d2b1e122b5fdf61c04c
   observer (0.1.2) sha256=d8a3107131ba661138d748e7be3dbafc0d82e732fffba9fccb3d7829880950ac
   openssl (4.0.2) sha256=1037ad2868ae58df9ad917891c0c0f9815a1172f6846d4bcdd508e4c2ee747c2
-  pkg-config (1.6.6) sha256=fe84528c7695ee2042d98891dae1d85beb9d2e5f4695395aac52663937fa2e1d
+  pkg-config (1.6.8) sha256=7045fa6e185929fa7329f39c6fac934b0df70d643f3e0954c4a2e592355ea2e8
   prism (2.1.0) sha256=1c0a7c6dea0e93183390fb123f007564dbe663198e2f86ad87204151147601f3
   prism (2.1.0-aarch64-linux-gnu) sha256=808dddc72def68e1a0463689414c97e0ba211938eddbab05387a4844aa2b3ec2
   prism (2.1.0-aarch64-linux-musl) sha256=dd1a0732620c1e575dabb07a297a62911fabd72f8e20ce850b522a866f877930
@@ -306,7 +306,7 @@ CHECKSUMS
   rb_sys (0.9.130) sha256=7d486d99c1da02635515deaf9860fc5aea90bb4ab2589b2deec7fdc7d3548615
   rbnacl (7.1.2) sha256=c58433e93b390a7b8c03a9da9e54f2de67e6cc3d6731553265299c6aac889a60
   rexml (3.4.4) sha256=19e0a2c3425dfbf2d4fc1189747bdb2f849b6c5e74180401b15734bc97b5d142
-  rmagick (7.2.0) sha256=6d0669260aef7cc84b578d4fff4fcfa3717b5074fe7ba5531f357b769eadc543
+  rmagick (7.3.1) sha256=44c64ef42033b4bacf646c8d51d39bb846eb5ae798ed3e9c8a83774f86a721b4
   rouge (5.1.0) sha256=b77c632842ab7f5147940212f0345808cccfbce864fd5b631d7d12a35ac85452
   ruby-coverage (0.1.3) sha256=5ac56578c600544e672ebd2b631e4bd43309f9c42a1d0db3ab912ed34f81cf20
   samovar (2.5.1) sha256=8a9fc41eb8868084f0321eb41678c485cfbc7d282fb306c0be67c3284b1d2394
